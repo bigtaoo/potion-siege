@@ -7,16 +7,13 @@ import type { PotionLook } from './potion';
 
 const FILES = [
   'hero_slime_1',
-  'hero_fire_2',
-  'hero_fire_4',
-  'hero_ice_2',
-  'hero_ice_4',
   'enemy_grunt',
   'icon_crit',
   'commander',
   'potion_fire_body',
   'potion_fire_ult',
   'potion_ice_body',
+  'potion_ice_ult',
 ] as const;
 
 const textures = new Map<string, Texture>();
@@ -37,7 +34,7 @@ export async function loadArt(): Promise<void> {
 /** The small figure a cell shows one to three of, for levels 1-3. */
 const FIGURE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1' };
 /** The single big hero of the top level. */
-const ULTIMATE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1', fire: 'potion_fire_ult', ice: 'hero_ice_4' };
+const ULTIMATE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1', fire: 'potion_fire_ult', ice: 'potion_ice_ult' };
 
 export function figureTexture(kind: HeroKind): Texture | undefined {
   const f = FIGURE[kind];
