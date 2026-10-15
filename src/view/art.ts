@@ -9,6 +9,7 @@ const FILES = [
   'potion_arcane_body',
   'potion_arcane_ult',
   'enemy_grunt',
+  'enemy_runner',
   'icon_crit',
   'commander',
   'potion_fire_body',

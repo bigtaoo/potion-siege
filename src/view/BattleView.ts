@@ -213,8 +213,8 @@ export class BattleView extends Container {
       }
       drawEnemy(u, e, 'under');
       drawEnemy(w, e, 'over');
-      // waddle: hop and sway, out of step with each other
-      const step = t * 9 + e.id * 1.7;
+      // waddle: hop and sway, out of step with each other, faster walkers taking quicker steps
+      const step = t * 9 * Math.sqrt(BALANCE.enemies[e.kind].speed / BALANCE.enemies.grunt.speed) + e.id * 1.7;
       const hop = Math.abs(Math.sin(step));
       const s = this.enemyArt.put(tex, e.x, e.y + e.radius * ENEMY_ART.feet - hop * 8, e.radius * ENEMY_ART.height);
       s.rotation = Math.cos(step) * 0.07;
