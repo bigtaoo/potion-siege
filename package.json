@@ -1,0 +1,30 @@
+{
+  "name": "potion-siege",
+  "private": true,
+  "version": "0.0.1",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "dev:crazygames": "vite --config vite.crazygames.config.js",
+    "build": "tsc --noEmit && vite build",
+    "build:crazygames": "tsc --noEmit && vite build --config vite.crazygames.config.js",
+    "preview:crazygames": "vite preview --config vite.crazygames.config.js --port 4174 --strictPort",
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "balance": "vitest run --config scripts/vitest.balance.config.js",
+    "check": "npm run typecheck && npm run test && npm run build:crazygames",
+    "collector": "node scripts/collector.mjs",
+    "report": "node scripts/report.mjs"
+  },
+  "dependencies": {
+    "pixi.js": "^8.6.6"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^6.4.1",
+    "vitest": "^4.1.10"
+  },
+  "allowScripts": {
+    "esbuild@0.25.12": true
+  }
+}

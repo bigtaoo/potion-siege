@@ -1,0 +1,125 @@
+{
+  "startGold": 50,
+  "summonCostBase": 10,
+  "summonCostStep": 10,
+  "summonCostSquare": 0.4,
+  "wallHp": 1000,
+  "field": {
+    "top": 200,
+    "left": 60,
+    "right": 1020,
+    "wallY": 1460
+  },
+  "grid": {
+    "cols": 7,
+    "rows": 3,
+    "x0": 50,
+    "y0": 1190,
+    "cellW": 140,
+    "cellH": 140
+  },
+  "commander": {
+    "summonsPerCell": 5,
+    "extraCells": 6,
+    "damage": 10,
+    "damageStep": 0.35,
+    "interval": 0.8,
+    "x": 540,
+    "y": 1890
+  },
+  "maxStar": 4,
+  "lineup": ["slime", "fire", "ice", "lightning"],
+  "starDamage": [1, 2.4, 5.5, 12],
+  "starSpeed": [1, 1.1, 1.2, 1.35],
+  "projectileSpeed": 1800,
+  "critMultiplier": 2,
+  "heroes": {
+    "slime": {
+      "damage": 12,
+      "interval": 0.5
+    },
+    "fire": {
+      "damage": 16,
+      "interval": 1.2,
+      "splash": 110
+    },
+    "ice": {
+      "damage": 8,
+      "interval": 1.0,
+      "slow": 0.4,
+      "slowTime": 1.5
+    },
+    "lightning": {
+      "damage": 13,
+      "interval": 1.1,
+      "chains": 2,
+      "chainRange": 260,
+      "chainFalloff": 0.8
+    },
+    "poison": {
+      "damage": 4,
+      "interval": 0.9,
+      "poisonDps": 9,
+      "poisonTime": 3
+    }
+  },
+  "enemies": {
+    "grunt": {
+      "hp": 1,
+      "speed": 80,
+      "radius": 36,
+      "wallDps": 12,
+      "gold": 6
+    },
+    "runner": {
+      "hp": 0.6,
+      "speed": 140,
+      "radius": 30,
+      "wallDps": 8,
+      "gold": 6
+    },
+    "brute": {
+      "hp": 3.5,
+      "speed": 50,
+      "radius": 50,
+      "wallDps": 30,
+      "gold": 15
+    },
+    "boss": {
+      "hp": 36,
+      "speed": 32,
+      "radius": 90,
+      "wallDps": 150,
+      "gold": 150
+    }
+  },
+  "waves": {
+    "count": 10,
+    "spawnWindow": 20,
+    "gap": 4,
+    "baseCount": 14,
+    "countStep": 3,
+    "baseHp": 40,
+    "hpGrowth": 1.205,
+    "waveBonusGold": 30,
+    "bossWaves": [5, 10]
+  },
+  "upgrade": {
+    "costs": [100, 200, 400, 600, 1000, 1500],
+    "costStep": 500
+  },
+  "skills": {
+    "allDamage": 0.15,
+    "allSpeed": 0.12,
+    "crit": 0.1,
+    "gold": 2,
+    "wallRepair": 0.3,
+    "wallMax": 0.2,
+    "classDamage": 0.4,
+    "fireRadius": 0.35,
+    "iceFreezeChance": 0.15,
+    "iceFreezeTime": 1,
+    "lightningChains": 2,
+    "poisonSpreadRadius": 160
+  }
+}
