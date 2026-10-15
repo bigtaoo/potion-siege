@@ -41,6 +41,8 @@ export class Battle {
   /** The skill offer waiting for the player; the battle is paused while it is set. */
   choices: SkillId[] | null = null;
   choiceReason: OfferReason = 'upgrade';
+  /** Whether the waiting offer has been rerolled already (once per offer). */
+  rerolled = false;
   result: 'won' | 'lost' | null = null;
   readonly slots: (Hero | null)[] = new Array(SLOT_COUNT).fill(null);
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
@@ -54,6 +56,7 @@ export class Battle {
   private pending: Spawn[] = [];
   private events: BattleEvent[] = [];
   private nextId = 1;
+  private offerFocus: HeroKind | undefined;
 
   /** The stage and the upgrades bought between battles. */
   constructor(
@@ -179,6 +182,18 @@ export class Battle {
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: 0.2 };
     this.events.push({ type: 'merge', slot: to, star });
     if (star === B.maxStar) this.offer('ultimate', kind);
+    return true;
+  }
+
+  canReroll(): boolean {
+    return this.choices !== null && !this.rerolled;
+  }
+
+  /** Swaps the waiting offer for other cards, once per offer (the rewarded refresh). */
+  reroll(): boolean {
+    if (!this.canReroll()) return false;
+    this.choices = this.roll(this.offerFocus, this.choices ?? []);
+    this.rerolled = true;
     return true;
   }
 
@@ -481,12 +496,18 @@ export class Battle {
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */
   private offer(reason: OfferReason, focus?: HeroKind): boolean {
-    const fielded = new Set(this.slots.flatMap((h) => (h ? [h.kind] : [])));
-    const offer = rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus);
+    const offer = this.roll(focus);
     if (offer.length === 0) return false;
     this.choices = offer;
     this.choiceReason = reason;
+    this.offerFocus = focus;
+    this.rerolled = false;
     this.events.push({ type: 'offer', reason });
     return true;
+  }
+
+  private roll(focus?: HeroKind, exclude: readonly SkillId[] = []): SkillId[] {
+    const fielded = new Set(this.slots.flatMap((h) => (h ? [h.kind] : [])));
+    return rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus, exclude);
   }
 }

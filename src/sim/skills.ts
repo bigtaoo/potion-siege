@@ -54,6 +54,11 @@ export function skillHeroes(id: SkillId): { hero?: HeroKind; with?: HeroKind } {
   return { hero: DEFS[id].hero, with: DEFS[id].with };
 }
 
+/** How many times a skill can be taken. */
+export function skillMax(id: SkillId): number {
+  return DEFS[id].max;
+}
+
 /** Passive boosts a milestone gives to a skill the hero already has. */
 export const PERK_IDS = ['fireBurnPlus'] as const;
 export type PerkId = (typeof PERK_IDS)[number];
@@ -101,13 +106,15 @@ export function emptySkills(): SkillLevels {
 
 /** Up to three offers: maxed skills are left out, hero skills only when that hero is fielded
  *  (and levelled far enough to have it). With `focus` (the hero that just went ultimate) its
- *  own skills come first. */
+ *  own skills come first. A reroll passes the cards it replaces as `exclude`; they come back
+ *  only when there is not enough else. */
 export function rollChoices(
   rng: Rng,
   levels: SkillLevels,
   fielded: ReadonlySet<HeroKind>,
   heroLevels: Record<HeroKind, number>,
   focus?: HeroKind,
+  exclude: readonly SkillId[] = [],
 ): SkillId[] {
   const open = SKILL_IDS.filter((id) => {
     const d = DEFS[id];
@@ -115,9 +122,11 @@ export function rollChoices(
     if (d.hero === undefined) return true;
     return fielded.has(d.hero) && heroLevels[d.hero] >= unlockLevel(id) && (d.with === undefined || fielded.has(d.with));
   });
-  const own = focus ? open.filter((id) => DEFS[id].hero === focus || DEFS[id].with === focus) : [];
+  const fresh = open.filter((id) => !exclude.includes(id));
+  const own = focus ? fresh.filter((id) => DEFS[id].hero === focus || DEFS[id].with === focus) : [];
   const first = rng.sample(own, 3);
-  return [...first, ...rng.sample(open.filter((id) => !first.includes(id)), 3 - first.length)];
+  const rest = [...first, ...rng.sample(fresh.filter((id) => !first.includes(id)), 3 - first.length)];
+  return [...rest, ...rng.sample(open.filter((id) => !rest.includes(id)), 3 - rest.length)];
 }
 
 /** Modifiers derived from the skill levels and perks, as the battle uses them. */

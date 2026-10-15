@@ -60,6 +60,14 @@ export class RunTracker {
     this.a.track('ad_result', { placement: 'revive', ok, run: this.run, wave: this.battle.wave });
   }
 
+  onRerollOffer(): void {
+    this.a.track('ad_offer', { placement: 'reroll', run: this.run, wave: this.battle.wave });
+  }
+
+  onRerollResult(ok: boolean): void {
+    this.a.track('ad_result', { placement: 'reroll', ok, run: this.run, wave: this.battle.wave });
+  }
+
   /** Called on every result screen; a revived run reports again when it ends for good. */
   onEnd(): void {
     this.a.track('run_end', this.summary());

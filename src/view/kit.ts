@@ -2,9 +2,10 @@
 // brass name plates and glossy potion buttons, all cel-shaded with the same dark outline as
 // the art. Every menu screen is built from these.
 
-import { Container, Graphics, Sprite, type Text, type TextStyleOptions } from 'pixi.js';
+import { CanvasTextMetrics, Container, Graphics, Sprite, type Text, type TextStyleOptions } from 'pixi.js';
 import { ultimateTexture } from './art';
-import { gem, label } from './ui';
+import { COLORS, gem, label } from './ui';
+import { slab } from './stone';
 import type { HeroKind } from '../sim/types';
 
 export const P = {
@@ -36,6 +37,30 @@ export type ButtonKind = Exclude<keyof typeof BUTTON, 'off'>;
 /** Dark ink on parchment, without the outline the labels on wood need. */
 export function ink(text: string, size: number, style: TextStyleOptions = {}): Text {
   return label(text, size, { fill: P.ink, stroke: { color: P.ink, width: 0 }, ...style });
+}
+
+/** Closing punctuation stays at the end of a line instead of starting the next one. */
+const NO_START = /^[，。、；：！？）」』%,.;:!?)]/;
+
+/** Ink text wrapped to `width`: Latin words and numbers stay whole, and Chinese breaks
+ *  between characters but never before closing punctuation (Pixi's own wrap does both). */
+export function inkWrapped(text: string, size: number, width: number, style: TextStyleOptions = {}): Text {
+  const out = ink(text, size, style);
+  const tokens = text.match(/[A-Za-z0-9+%.×-]+|\s+|./gu) ?? [];
+  const lines: string[] = [];
+  let line = '';
+  for (const tok of tokens) {
+    const next = line + tok;
+    if (line.trim() && !NO_START.test(tok) && CanvasTextMetrics.measureText(next, out.style).width > width) {
+      lines.push(line.trimEnd());
+      line = tok.trimStart();
+    } else {
+      line = next;
+    }
+  }
+  lines.push(line);
+  out.text = lines.join('\n');
+  return out;
 }
 
 /** A walnut board in a brass frame with a rivet in each corner, centred on its position. */
@@ -266,28 +291,74 @@ export function chestIcon(): Graphics {
     .stroke({ width: 4, color: P.line });
 }
 
+/** One sword, point up, about 110 long. */
+function sword(): Graphics {
+  return new Graphics()
+    .poly([-9, 22, -9, -40, 0, -54, 9, -40, 9, 22])
+    .fill(0xe4edf2)
+    .stroke({ width: 5, color: P.line, join: 'round' })
+    .rect(-2, -44, 4, 60)
+    .fill({ color: 0xffffff, alpha: 0.8 })
+    .roundRect(-26, 20, 52, 12, 6)
+    .fill(P.brass)
+    .stroke({ width: 4, color: P.line })
+    .roundRect(-6, 32, 12, 22, 4)
+    .fill(P.woodDark)
+    .stroke({ width: 4, color: P.line })
+    .circle(0, 58, 8)
+    .fill(P.brass)
+    .stroke({ width: 4, color: P.line });
+}
+
 export function swordsIcon(): Container {
   const c = new Container();
   for (const s of [-1, 1]) {
-    const g = new Graphics()
-      .poly([-9, 22, -9, -40, 0, -54, 9, -40, 9, 22])
-      .fill(0xe4edf2)
-      .stroke({ width: 5, color: P.line, join: 'round' })
-      .rect(-2, -44, 4, 60)
-      .fill({ color: 0xffffff, alpha: 0.8 })
-      .roundRect(-26, 20, 52, 12, 6)
-      .fill(P.brass)
-      .stroke({ width: 4, color: P.line })
-      .roundRect(-6, 32, 12, 22, 4)
-      .fill(P.woodDark)
-      .stroke({ width: 4, color: P.line })
-      .circle(0, 58, 8)
-      .fill(P.brass)
-      .stroke({ width: 4, color: P.line });
+    const g = sword();
     g.rotation = (s * Math.PI) / 4;
     c.addChild(g);
   }
   return c;
+}
+
+export function swordIcon(): Graphics {
+  const g = sword();
+  g.rotation = Math.PI / 4;
+  return g;
+}
+
+/** A stopwatch: attack speed. */
+export function stopwatchIcon(): Graphics {
+  return new Graphics()
+    .roundRect(-10, -56, 20, 14, 4)
+    .fill(P.brass)
+    .stroke({ width: 4, color: P.line })
+    .circle(0, 4, 44)
+    .fill(P.brass)
+    .stroke({ width: 5, color: P.line })
+    .circle(0, 4, 34)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line })
+    .poly([0, 4, 0, -22])
+    .stroke({ width: 6, color: P.line, cap: 'round' })
+    .poly([0, 4, 18, 14])
+    .stroke({ width: 6, color: P.red, cap: 'round' })
+    .circle(0, 4, 6)
+    .fill(P.line);
+}
+
+/** Two courses of wall stone. */
+export function wallIcon(): Graphics {
+  const g = new Graphics();
+  slab(g, -46, -30, 92, 30, 0);
+  slab(g, -46, 0, 92, 30, 1);
+  return g;
+}
+
+/** A little heap of gold coins. */
+export function coinsIcon(): Graphics {
+  const g = new Graphics();
+  for (const [x, y] of [[-14, 14], [16, 10], [0, -12]]) g.circle(x, y, 24).fill(COLORS.gold).stroke({ width: 5, color: P.line });
+  return g;
 }
 
 export function calendarIcon(): Graphics {

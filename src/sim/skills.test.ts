@@ -34,6 +34,22 @@ function hit(b: Battle, kind: HeroKind, target: Enemy, damage: number): void {
   b.step(1 / 60);
 }
 
+describe('rerolls', () => {
+  it('leaves the replaced cards out, and brings them back only when nothing else is left', () => {
+    const lv = newMeta().heroes;
+    const shown: SkillId[] = ['allDamage', 'allSpeed', 'crit'];
+    for (let seed = 1; seed < 50; seed++) {
+      const next = rollChoices(new Rng(seed), emptySkills(), new Set<HeroKind>(['arcane']), lv, undefined, shown);
+      expect(next).toHaveLength(3);
+      expect(next.some((id) => shown.includes(id))).toBe(false);
+    }
+    // only gold and wallRepair besides these: one of the old cards has to come back
+    const levels = { ...emptySkills(), allSpeed: 5, crit: 4 };
+    const next = rollChoices(new Rng(1), levels, new Set(), lv, undefined, ['allDamage', 'gold', 'wallRepair']);
+    expect(next.sort()).toEqual(['allDamage', 'gold', 'wallRepair']);
+  });
+});
+
 describe('hero skills', () => {
   it('opens fire cards with the fire level, and the recipe only with arcane fielded too', () => {
     expect(pool(['fire'], { fire: 1 })).not.toContain('fireBurn');

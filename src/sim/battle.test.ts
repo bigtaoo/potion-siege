@@ -144,8 +144,14 @@ describe('Battle', () => {
     const time = b.time;
     b.step(1);
     expect(b.time).toBe(time);
+    // one reroll per offer, and it brings other cards while there are others to bring
+    const first = [...b.choices!];
+    expect(b.reroll()).toBe(true);
+    expect(b.choices!.some((id) => !first.includes(id))).toBe(true);
+    expect(b.reroll()).toBe(false);
     b.choose(b.choices![0]);
     expect(b.choices).toBeNull();
+    expect(b.canReroll()).toBe(false);
     expect(b.upgrades).toBe(1);
     b.upgrades = U.costs.length + 1;
     expect(b.upgradeCost()).toBe(U.costs[U.costs.length - 1] + 2 * U.costStep);

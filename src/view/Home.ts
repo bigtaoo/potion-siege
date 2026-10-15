@@ -16,6 +16,7 @@ import { commanderTexture, enemyTexture } from './art';
 import {
   bookIcon,
   bottle,
+  coinsIcon,
   calendarIcon,
   chestIcon,
   gearIcon,
@@ -30,10 +31,10 @@ import {
   scrollIcon,
   swordsIcon,
   tappable,
+  wallIcon,
   woodPanel,
 } from './kit';
-import { slab } from './stone';
-import { COLORS, gem, HERO_COLORS, label } from './ui';
+import { gem, HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
@@ -395,16 +396,9 @@ function soonTab(root: Container, tab: HomeTab, a: Area): void {
 }
 
 function shopIcon(id: WorkshopId): Container {
-  const g = new Graphics();
-  if (id === 'wall') {
-    slab(g, -46, -30, 92, 30, 0);
-    slab(g, -46, 0, 92, 30, 1);
-  } else if (id === 'startGold') {
-    for (const [x, y] of [[-14, 14], [16, 10], [0, -12]]) g.circle(x, y, 24).fill(COLORS.gold).stroke({ width: 5, color: P.line });
-  } else {
-    gem(g, 0, 0, 38);
-  }
-  return g;
+  if (id === 'wall') return wallIcon();
+  if (id === 'startGold') return coinsIcon();
+  return gem(new Graphics(), 0, 0, 38);
 }
 
 // ---- panels over the page ----

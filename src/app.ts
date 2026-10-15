@@ -177,11 +177,30 @@ class Game {
       if (this.run && !this.autoplay) this.countDaily(events);
       this.view.react(events);
       this.hud.react(events);
-      if (b.choices) this.overlay.showSkills(b.choices, t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick'), (id) => this.pick(id));
+      if (b.choices) this.showSkills(b);
       else if (b.result) this.finish(b);
     }
     this.view.update(dt);
     this.hud.update(dt);
+  }
+
+  private showSkills(b: Battle): void {
+    const canReroll = b.canReroll() && !this.autoplay && this.platform.rewardedAvailable();
+    if (canReroll) this.run?.onRerollOffer();
+    const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick');
+    this.overlay.showSkills(b.choices ?? [], b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null);
+  }
+
+  /** The rewarded refresh: a new set of cards for the waiting offer. */
+  private async reroll(b: Battle): Promise<void> {
+    this.overlay.interactiveChildren = false; // no second tap while the ad plays
+    const ok = await this.platform.rewarded(() => this.mute(true));
+    this.overlay.interactiveChildren = true;
+    this.mute(false);
+    this.run?.onRerollResult(ok);
+    if (ok) b.reroll();
+    else b.rerolled = true; // one offer of the ad per pick, even when it failed
+    if (b.choices && this.overlay.visible) this.showSkills(b);
   }
 
   private pick(id: Parameters<Battle['choose']>[0]): void {
