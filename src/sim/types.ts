@@ -39,6 +39,12 @@ export interface Enemy {
   freezeTime: number;
   poisonDps: number;
   poisonTime: number;
+  /** Burning from the fire skill, like poison. */
+  burnDps: number;
+  burnTime: number;
+  /** The last fire hit and how long it still counts: a death meanwhile is a death by fire. */
+  scorch: number;
+  scorchTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
 }

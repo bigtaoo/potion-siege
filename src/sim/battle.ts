@@ -4,7 +4,7 @@
 
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { Rng } from './rng';
-import { emptySkills, mods, rollChoices, type Mods, type SkillId, type SkillLevels } from './skills';
+import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, LINEUP, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile } from './types';
 import { isBossWave, planWave, type Spawn } from './waves';
 
@@ -48,7 +48,9 @@ export class Battle {
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
   skills: SkillLevels = emptySkills();
-  private mods: Mods = mods(this.skills);
+  /** Milestone perks of the heroes' levels. */
+  readonly perks: ReadonlySet<PerkId>;
+  private mods: Mods;
   private pending: Spawn[] = [];
   private events: BattleEvent[] = [];
   private nextId = 1;
@@ -59,6 +61,8 @@ export class Battle {
     readonly setup: BattleSetup = BASE_SETUP,
   ) {
     this.rng = new Rng(seed);
+    this.perks = perksFor(setup.heroLevels);
+    this.mods = mods(this.skills, this.perks);
     this.gold = setup.startGold;
     this.wallMax = this.wall = setup.wallHp;
     this.startWave(1);
@@ -185,7 +189,7 @@ export class Battle {
       this.wallMax *= 1 + B.skills.wallMax;
       this.wall = Math.min(this.wallMax, this.wall + this.wallMax * B.skills.wallRepair);
     }
-    this.mods = mods(this.skills);
+    this.mods = mods(this.skills, this.perks);
     this.choices = null;
   }
 
@@ -257,6 +261,10 @@ export class Battle {
       freezeTime: 0,
       poisonDps: 0,
       poisonTime: 0,
+      burnDps: 0,
+      burnTime: 0,
+      scorch: 0,
+      scorchTime: 0,
       atWall: false,
     });
   }
@@ -269,6 +277,12 @@ export class Battle {
         e.poisonTime -= dt;
         if (e.poisonTime <= 0) e.poisonDps = 0;
       }
+      if (e.burnTime > 0) {
+        e.hp -= e.burnDps * Math.min(dt, e.burnTime);
+        e.burnTime -= dt;
+        if (e.burnTime <= 0) e.burnDps = 0;
+      }
+      e.scorchTime = Math.max(0, e.scorchTime - dt);
       e.slowTime = Math.max(0, e.slowTime - dt);
       if (e.freezeTime > 0) {
         e.freezeTime -= dt;
@@ -376,7 +390,7 @@ export class Battle {
     switch (p.kind) {
       case 'fire': {
         const radius = h.fire.splash * this.mods.fireRadius;
-        for (const e of this.enemies) if (Math.hypot(e.x - p.tx, e.y - p.ty) <= radius + e.radius) e.hp -= p.damage;
+        for (const e of this.enemies) if (Math.hypot(e.x - p.tx, e.y - p.ty) <= radius + e.radius) this.scorch(e, p.damage);
         this.events.push({ type: 'hit', kind: 'fire', x: p.tx, y: p.ty, radius });
         return;
       }
@@ -399,6 +413,14 @@ export class Battle {
     }
     if (!target) return;
     target.hp -= p.damage;
+    if (p.kind === 'arcane' && this.mods.burstBolts) {
+      // the fire-and-arcane recipe: the bolt bursts and singes what stands around its target
+      const radius = B.skills.burstBoltRadius;
+      for (const e of this.enemies) {
+        if (e !== target && e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.scorch(e, p.damage * B.skills.burstBolt);
+      }
+      this.events.push({ type: 'hit', kind: 'fire', x: target.x, y: target.y, radius });
+    }
     if (p.kind === 'ice') {
       target.slowFactor = 1 - h.ice.slow;
       target.slowTime = h.ice.slowTime;
@@ -409,6 +431,18 @@ export class Battle {
       target.poisonTime = h.poison.poisonTime;
     }
     this.events.push({ type: 'hit', kind: p.kind, x: target.x, y: target.y, radius: 30 });
+  }
+
+  /** Fire damage: remembered for a while (a death soon after counts as burnt, for the chain
+   *  explosion) and, with the burn skill, it keeps burning. */
+  private scorch(e: Enemy, damage: number): void {
+    e.hp -= damage;
+    e.scorch = Math.max(e.scorchTime > 0 ? e.scorch : 0, damage);
+    e.scorchTime = B.skills.burnTime;
+    if (this.mods.burn > 0) {
+      e.burnDps = Math.max(e.burnDps, damage * this.mods.burn);
+      e.burnTime = B.skills.burnTime;
+    }
   }
 
   private nearest(from: Enemy, range: number, skip: Set<number>): Enemy | undefined {
@@ -435,12 +469,12 @@ export class Battle {
       this.gold += gold;
       this.kills++;
       this.events.push({ type: 'kill', x: e.x, y: e.y, gold, boss: e.kind === 'boss' });
-      if (this.mods.poisonSpread && e.poisonTime > 0) {
-        for (const o of this.enemies) {
-          if (Math.hypot(o.x - e.x, o.y - e.y) > B.skills.poisonSpreadRadius) continue;
-          o.poisonDps = Math.max(o.poisonDps, e.poisonDps);
-          o.poisonTime = B.heroes.poison.poisonTime;
-        }
+      if (this.mods.fireChain && e.scorchTime > 0) {
+        // burnt to death: it bursts once more (the blast itself does not count as fire, so it
+        // cannot set off an endless chain)
+        const radius = B.heroes.fire.splash * this.mods.fireRadius * B.skills.fireChainRadius;
+        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) o.hp -= e.scorch * B.skills.fireChain;
+        this.events.push({ type: 'hit', kind: 'fire', x: e.x, y: e.y, radius });
       }
     }
   }
@@ -448,7 +482,7 @@ export class Battle {
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */
   private offer(reason: OfferReason, focus?: HeroKind): boolean {
     const fielded = new Set(this.slots.flatMap((h) => (h ? [h.kind] : [])));
-    const offer = rollChoices(this.rng, this.skills, fielded, focus);
+    const offer = rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus);
     if (offer.length === 0) return false;
     this.choices = offer;
     this.choiceReason = reason;

@@ -4,10 +4,11 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import type { MetaSave, Reward } from '../sim/meta';
-import type { SkillId } from '../sim/skills';
-import { iconTexture } from './art';
+import type { HeroKind } from '../sim/types';
+import { skillHeroes, type SkillId } from '../sim/skills';
+import { iconTexture, ultimateTexture } from './art';
 import { buildHome, type HomeActions, type HomePanel } from './Home';
-import { Button, COLORS, gem, label } from './ui';
+import { Button, COLORS, gem, HERO_COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
 export class Overlay extends Container {
@@ -59,24 +60,24 @@ export class Overlay extends Container {
     choices.forEach((id, i) => {
       const card = new Container();
       card.position.set(DESIGN_W / 2, 760 + i * 280);
+      const { hero, with: other } = skillHeroes(id);
+      // a hero's card is edged in its colour; a recipe in both
       const bg = new Graphics()
         .roundRect(-430, -115, 860, 230, 36)
         .fill(COLORS.card)
-        .stroke({ width: 6, color: COLORS.gold, alpha: 0.7 });
+        .stroke({ width: 7, color: hero ? HERO_COLORS[hero] : COLORS.gold, alpha: hero ? 1 : 0.7 });
+      if (other) bg.roundRect(-418, -103, 836, 206, 28).stroke({ width: 4, color: HERO_COLORS[other] });
       const name = label(t(`skill.${id}.name`), 60, { fill: COLORS.gold });
       name.position.set(0, -42);
-      const desc = label(t(`skill.${id}.desc`), 42, { wordWrap: true, wordWrapWidth: 800 });
+      const desc = label(t(`skill.${id}.desc`), 40, { wordWrap: true, breakWords: true, wordWrapWidth: 800 });
       desc.position.set(0, 40);
       card.addChild(bg, name, desc);
-      const tex = iconTexture(id);
-      if (tex) {
-        // icon on the left, text shifted right of it
-        const icon = new Sprite(tex);
-        icon.anchor.set(0.5);
-        icon.scale.set(150 / tex.height);
-        icon.position.set(-330, 0);
-        name.x = desc.x = 80;
-        desc.style.wordWrapWidth = 620;
+      const icon = cardIcon(id, hero, other);
+      if (icon) {
+        // the portrait on the left, text shifted right of it
+        icon.position.set(-320, 0);
+        name.x = desc.x = 90;
+        desc.style.wordWrapWidth = 560;
         card.addChild(icon);
       }
       card.eventMode = 'static';
@@ -115,4 +116,33 @@ export class Overlay extends Container {
       this.addChild(revive);
     }
   }
+}
+
+/** A card's picture: the bottle of the hero it belongs to (a recipe shows both), or the
+ *  skill's own icon for the ones that serve every hero. */
+function cardIcon(id: SkillId, hero?: HeroKind, other?: HeroKind): Container | null {
+  const c = new Container();
+  const bottle = (kind: HeroKind, h: number, x: number, y: number) => {
+    const tex = ultimateTexture(kind);
+    if (!tex) return;
+    const s = new Sprite(tex);
+    s.anchor.set(0.5);
+    s.scale.set(h / Math.max(tex.width, tex.height));
+    s.position.set(x, y);
+    c.addChild(s);
+  };
+  if (hero && other) {
+    bottle(other, 140, -40, -14);
+    bottle(hero, 150, 38, 14);
+  } else if (hero) {
+    bottle(hero, 190, 0, 0);
+  } else {
+    const tex = iconTexture(id);
+    if (!tex) return null;
+    const s = new Sprite(tex);
+    s.anchor.set(0.5);
+    s.scale.set(150 / tex.height);
+    c.addChild(s);
+  }
+  return c;
 }

@@ -222,7 +222,7 @@ export class BattleView extends Container {
       s.rotation = tracks ? 0 : Math.cos(step) * 0.07;
       s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
-      s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
+      s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }
     this.enemyArt.end();
     this.shotArt.begin();

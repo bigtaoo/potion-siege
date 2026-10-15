@@ -24,6 +24,13 @@ export const en = {
   potions: 'Potions',
   workshop: 'Workshop',
   heroLevel: 'Lv {n}   damage +{p}%',
+  heroDamage: 'Damage +{p}% per level, now +{n}%',
+  baseCards: 'Starting skill cards',
+  unlockSkill: 'Unlocks the {name} card',
+  unlockRecipe: 'Unlocks the {name} recipe (needs {with} fielded too)',
+  perk: {
+    fireBurnPlus: 'Burn +60% damage',
+  },
   maxed: 'MAX',
   reward: '+{n}',
   firstClear: 'Stage cleared! The next one is open',
@@ -65,9 +72,12 @@ export const en = {
     arcanePower: { name: 'Concentrate', desc: 'Arcane tonics +40% damage' },
     arcaneMulti: { name: 'Double Brew', desc: 'Arcane tonics fire one more bolt' },
     fireRadius: { name: 'Wildfire', desc: 'Fire blasts 35% wider' },
+    fireDamage: { name: 'Blaze', desc: 'Fire tonics +40% damage' },
+    fireBurn: { name: 'Burn', desc: 'Fire sets enemies alight for 3s, 15% of the hit per second' },
+    fireChain: { name: 'Chain Blast', desc: 'Enemies burnt to death explode again for 50% damage' },
+    fireArcane: { name: 'Burst Bolt', desc: 'Recipe: arcane bolts burst on impact, 40% damage around' },
     iceFreeze: { name: 'Deep Freeze', desc: 'Frost hits may freeze for 1s' },
     lightningChain: { name: 'Overcharge', desc: 'Lightning jumps 2 more times' },
-    poisonSpread: { name: 'Contagion', desc: 'Poisoned enemies spread poison on death' },
   },
 };
 

@@ -5,6 +5,8 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
+import { BALANCE } from '../sim/types';
+import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { heroCost, heroDamage, LEVELLED_HEROES, maxStage, stageHp, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { ultimateTexture } from './art';
@@ -12,7 +14,7 @@ import { slab } from './stone';
 import { Button, COLORS, gem, HERO_COLORS, label } from './ui';
 import { DESIGN_W } from './viewport';
 
-export type HomePanel = 'login' | 'tasks' | null;
+export type HomePanel = 'login' | 'tasks' | HeroKind | null;
 
 export interface HomeActions {
   panel(p: HomePanel): void;
@@ -69,7 +71,22 @@ export function buildHome(m: MetaSave, act: HomeActions, panel: HomePanel, today
       icon.addChild(new Graphics().circle(0, 0, 44).fill(HERO_COLORS[kind]).stroke({ width: 5, color: 0x0e0c12 }));
     }
     const desc = t('heroLevel', { n: lv, p: Math.round((heroDamage(lv) - 1) * 100) });
-    row(root, 570 + i * ROW.gap, icon, t(`hero.${kind}`), desc, heroCost(lv), m.crystals, () => act.hero(kind));
+    const r = row(root, 570 + i * ROW.gap, icon, t(`hero.${kind}`), desc, heroCost(lv), m.crystals, () => act.hero(kind));
+    // the milestones as small tags after the name, lit once reached; the row opens the hero
+    const name = r.getChildAt(2) as Container;
+    MILESTONES[kind].forEach((ms, j) => {
+      const on = lv >= ms.level;
+      const tag = new Container();
+      tag.position.set(name.x + name.width + 50 + j * 72, -24);
+      tag.addChild(new Graphics().roundRect(-32, -22, 64, 44, 14).fill(on ? COLORS.gold : 0x16263a).stroke({ width: 4, color: 0x0e0c12 }));
+      const n = label(String(ms.level), 26, { fill: on ? 0x0e0c12 : DESC });
+      tag.addChild(n);
+      r.addChild(tag);
+    });
+    const bg = r.getChildAt(0);
+    bg.eventMode = 'static';
+    bg.cursor = 'pointer';
+    bg.on('pointertap', () => act.panel(kind));
   });
 
   section(root, t('workshop'), 1150);
@@ -85,6 +102,7 @@ export function buildHome(m: MetaSave, act: HomeActions, panel: HomePanel, today
   root.addChild(play);
   if (panel === 'login') root.addChild(loginPanel(m, act, today));
   if (panel === 'tasks') root.addChild(tasksPanel(m, act));
+  if (panel && panel !== 'login' && panel !== 'tasks') root.addChild(heroPanel(m, act, panel));
   return root;
 }
 
@@ -195,6 +213,85 @@ function tasksPanel(m: MetaSave, act: HomeActions): Container {
   return panel;
 }
 
+/** One hero: its level, the skill cards it starts with and what each milestone unlocks. */
+function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind): Container {
+  const h = 1240;
+  const { panel, box } = frame(act, t(`hero.${kind}`), h);
+  const lv = m.heroes[kind];
+  const top = -h / 2;
+  const tex = ultimateTexture(kind);
+  if (tex) {
+    const s = new Sprite(tex);
+    s.anchor.set(0.5);
+    s.scale.set(220 / Math.max(tex.width, tex.height));
+    s.position.set(-300, top + 260);
+    box.addChild(s);
+  }
+  const level = label(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56, { fill: COLORS.gold });
+  level.anchor.set(0, 0.5);
+  level.position.set(-150, top + 220);
+  const dmg = label(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: DESC });
+  dmg.anchor.set(0, 0.5);
+  dmg.position.set(-150, top + 300);
+  box.addChild(level, dmg);
+
+  const head = label(t('baseCards'), 38, { fill: COLORS.gold });
+  head.position.set(0, top + 420);
+  const cards = label(baseSkills(kind).map((id) => t(`skill.${id}.name`)).join('  ·  '), 40);
+  cards.position.set(0, top + 480);
+  box.addChild(head, cards);
+
+  MILESTONES[kind].forEach((ms, i) => {
+    const on = lv >= ms.level;
+    const r = new Container();
+    r.position.set(0, top + 620 + i * 150);
+    r.addChild(new Graphics().roundRect(-430, -66, 860, 132, 22).fill(on ? 0x2a4868 : 0x16263a).stroke({ width: 5, color: on ? COLORS.gold : 0x0e0c12 }));
+    const lvTag = label(`Lv.${ms.level}`, 38, { fill: on ? COLORS.gold : DESC });
+    lvTag.position.set(-350, 0);
+    let what: string;
+    let detail = '';
+    if ('perk' in ms) {
+      what = t(`perk.${ms.perk}`);
+    } else {
+      const other = skillHeroes(ms.skill).with;
+      const name = t(`skill.${ms.skill}.name`);
+      what = other ? t('unlockRecipe', { name, with: t(`hero.${other}`) }) : t('unlockSkill', { name });
+      detail = t(`skill.${ms.skill}.desc`);
+    }
+    // the line and its detail as one block, centred in the row however they wrap
+    const text = new Container();
+    const a = label(what, 34, { wordWrap: true, breakWords: true, wordWrapWidth: 580, align: 'left' });
+    a.anchor.set(0, 0);
+    text.addChild(a);
+    if (detail) {
+      const d = label(detail, 26, { fill: DESC, wordWrap: true, breakWords: true, wordWrapWidth: 580, align: 'left' });
+      d.anchor.set(0, 0);
+      d.y = a.height + 4;
+      text.addChild(d);
+    }
+    text.position.set(-260, -text.height / 2);
+    r.addChild(lvTag, text);
+    if (on) {
+      const tick = label('✓', 48, { fill: 0x7ed957 });
+      tick.position.set(380, 0);
+      r.addChild(tick);
+    } else {
+      r.addChild(
+        new Graphics()
+          .roundRect(358, -24, 44, 24, 6) // shackle, half hidden by the body
+          .stroke({ width: 7, color: DESC })
+          .roundRect(350, -8, 60, 42, 8)
+          .fill(DESC)
+          .circle(380, 10, 6)
+          .fill(0x16263a),
+      );
+    }
+    if (!on) r.alpha = 0.75;
+    box.addChild(r);
+  });
+  return panel;
+}
+
 function section(root: Container, text: string, y: number): void {
   const head = label(text, 50, { fill: COLORS.gold });
   head.position.set(DESIGN_W / 2, y);
@@ -209,7 +306,7 @@ function section(root: Container, text: string, y: number): void {
 }
 
 /** One upgrade: icon, name, what it gives now, and a buy button with its price (or MAX). */
-function row(root: Container, y: number, icon: Container, name: string, desc: string, cost: number | null, crystals: number, onBuy: () => void): void {
+function row(root: Container, y: number, icon: Container, name: string, desc: string, cost: number | null, crystals: number, onBuy: () => void): Container {
   const r = new Container();
   r.position.set(DESIGN_W / 2, y);
   const bg = new Graphics()
@@ -236,6 +333,7 @@ function row(root: Container, y: number, icon: Container, name: string, desc: st
     r.addChild(buy);
   }
   root.addChild(r);
+  return r;
 }
 
 function shopIcon(id: WorkshopId): Container {

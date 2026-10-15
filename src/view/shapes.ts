@@ -67,6 +67,7 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
       .stroke({ width: 5, color: 0x0a1320 });
   }
   g.circle(x - r * 0.3, y, r * 0.16).circle(x + r * 0.3, y, r * 0.16).fill(0xff3344);
+  if (e.burnTime > 0) g.circle(x, y, r + 6).stroke({ width: 5, color: HERO_COLORS.fire, alpha: 0.8 });
   if (e.poisonTime > 0) g.circle(x, y, r + 6).stroke({ width: 5, color: HERO_COLORS.poison, alpha: 0.8 });
   if (e.slowTime > 0 && !frozen) g.circle(x, y, r + 12).stroke({ width: 4, color: HERO_COLORS.ice, alpha: 0.7 });
   enemyBars(g, e, y - r - (e.kind === 'boss' ? 60 : 22));

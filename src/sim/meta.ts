@@ -30,6 +30,8 @@ export interface BattleSetup {
   /** Multiplier on enemy hit points. */
   enemyHp: number;
   heroDamage: Record<HeroKind, number>;
+  /** Hero levels, for the skills and perks their milestones unlock. */
+  heroLevels: Record<HeroKind, number>;
   wallHp: number;
   startGold: number;
 }
@@ -129,6 +131,7 @@ export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
     stage,
     enemyHp: stageHp(stage),
     heroDamage: heroes,
+    heroLevels: { ...m.heroes },
     wallHp: BALANCE.wallHp * (1 + workshopValue('wall', m.workshop.wall)),
     startGold: BALANCE.startGold + workshopValue('startGold', m.workshop.startGold),
   };

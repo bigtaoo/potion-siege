@@ -1,7 +1,9 @@
 // Roguelike skills, bought with gold or granted for an ultimate hero: a stack of modifiers the battle reads when heroes fire.
+// Most skills belong to a hero and are only offered with it on the board; some are unlocked by
+// levelling that hero between battles, and the recipe cards also need a second hero fielded.
 
 import type { Rng } from './rng';
-import { BALANCE, type HeroKind } from './types';
+import { BALANCE, HERO_KINDS, type HeroKind } from './types';
 
 export const SKILL_IDS = [
   'allDamage',
@@ -12,36 +14,84 @@ export const SKILL_IDS = [
   'arcanePower',
   'arcaneMulti',
   'fireRadius',
+  'fireDamage',
+  'fireBurn',
+  'fireChain',
+  'fireArcane',
   'iceFreeze',
   'lightningChain',
-  'poisonSpread',
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
-/** How many times each skill can be taken. */
-const MAX_LEVEL: Record<SkillId, number> = {
-  allDamage: 5,
-  allSpeed: 5,
-  crit: 4,
-  gold: 3,
-  wallRepair: 99,
-  arcanePower: 3,
-  arcaneMulti: 2,
-  fireRadius: 3,
-  iceFreeze: 3,
-  lightningChain: 3,
-  poisonSpread: 1,
+interface SkillDef {
+  /** How many times it can be taken. */
+  max: number;
+  /** Only offered with this hero on the board. */
+  hero?: HeroKind;
+  /** A recipe: also needs this hero on the board. */
+  with?: HeroKind;
+}
+
+const DEFS: Record<SkillId, SkillDef> = {
+  allDamage: { max: 5 },
+  allSpeed: { max: 5 },
+  crit: { max: 4 },
+  gold: { max: 3 },
+  wallRepair: { max: 99 },
+  arcanePower: { max: 3, hero: 'arcane' },
+  arcaneMulti: { max: 2, hero: 'arcane' },
+  fireRadius: { max: 3, hero: 'fire' },
+  fireDamage: { max: 3, hero: 'fire' },
+  fireBurn: { max: 2, hero: 'fire' },
+  fireChain: { max: 1, hero: 'fire' },
+  fireArcane: { max: 1, hero: 'fire', with: 'arcane' },
+  iceFreeze: { max: 3, hero: 'ice' },
+  lightningChain: { max: 3, hero: 'lightning' },
 };
 
-/** Skills that only matter with that hero on the board. */
-const NEEDS_HERO: Partial<Record<SkillId, HeroKind>> = {
-  arcanePower: 'arcane',
-  arcaneMulti: 'arcane',
-  fireRadius: 'fire',
-  iceFreeze: 'ice',
-  lightningChain: 'lightning',
-  poisonSpread: 'poison',
+/** The hero a skill belongs to and, for a recipe, the second one it needs. */
+export function skillHeroes(id: SkillId): { hero?: HeroKind; with?: HeroKind } {
+  return { hero: DEFS[id].hero, with: DEFS[id].with };
+}
+
+/** Passive boosts a milestone gives to a skill the hero already has. */
+export const PERK_IDS = ['fireBurnPlus'] as const;
+export type PerkId = (typeof PERK_IDS)[number];
+
+/** What levelling a hero opens up: a new card in the pool, or a perk. */
+export type Milestone = { level: number } & ({ skill: SkillId } | { perk: PerkId });
+
+export const MILESTONES: Record<HeroKind, Milestone[]> = {
+  arcane: [],
+  fire: [
+    { level: 5, skill: 'fireBurn' },
+    { level: 10, perk: 'fireBurnPlus' },
+    { level: 15, skill: 'fireChain' },
+    { level: 20, skill: 'fireArcane' },
+  ],
+  ice: [],
+  lightning: [],
+  poison: [],
 };
+
+/** The hero level a skill needs, 1 when it is in the pool from the start. */
+function unlockLevel(id: SkillId): number {
+  const hero = DEFS[id].hero;
+  const m = hero && MILESTONES[hero].find((s) => 'skill' in s && s.skill === id);
+  return m ? m.level : 1;
+}
+
+/** The skills of a hero that are in the pool from level 1. */
+export function baseSkills(kind: HeroKind): SkillId[] {
+  return SKILL_IDS.filter((id) => DEFS[id].hero === kind && unlockLevel(id) === 1);
+}
+
+/** The perks reached by the given hero levels. */
+export function perksFor(levels: Record<HeroKind, number>): Set<PerkId> {
+  const out = new Set<PerkId>();
+  for (const k of HERO_KINDS) for (const m of MILESTONES[k]) if ('perk' in m && levels[k] >= m.level) out.add(m.perk);
+  return out;
+}
 
 export type SkillLevels = Record<SkillId, number>;
 
@@ -49,19 +99,28 @@ export function emptySkills(): SkillLevels {
   return Object.fromEntries(SKILL_IDS.map((id) => [id, 0])) as SkillLevels;
 }
 
-/** Up to three offers: maxed skills are left out, hero skills only when that hero is fielded.
- *  With `focus` (the hero that just went ultimate) its own skills come first. */
-export function rollChoices(rng: Rng, levels: SkillLevels, fielded: ReadonlySet<HeroKind>, focus?: HeroKind): SkillId[] {
+/** Up to three offers: maxed skills are left out, hero skills only when that hero is fielded
+ *  (and levelled far enough to have it). With `focus` (the hero that just went ultimate) its
+ *  own skills come first. */
+export function rollChoices(
+  rng: Rng,
+  levels: SkillLevels,
+  fielded: ReadonlySet<HeroKind>,
+  heroLevels: Record<HeroKind, number>,
+  focus?: HeroKind,
+): SkillId[] {
   const open = SKILL_IDS.filter((id) => {
-    const hero = NEEDS_HERO[id];
-    return levels[id] < MAX_LEVEL[id] && (hero === undefined || fielded.has(hero));
+    const d = DEFS[id];
+    if (levels[id] >= d.max) return false;
+    if (d.hero === undefined) return true;
+    return fielded.has(d.hero) && heroLevels[d.hero] >= unlockLevel(id) && (d.with === undefined || fielded.has(d.with));
   });
-  const own = focus ? open.filter((id) => NEEDS_HERO[id] === focus) : [];
+  const own = focus ? open.filter((id) => DEFS[id].hero === focus || DEFS[id].with === focus) : [];
   const first = rng.sample(own, 3);
   return [...first, ...rng.sample(open.filter((id) => !first.includes(id)), 3 - first.length)];
 }
 
-/** Modifiers derived from the skill levels, as the battle uses them. */
+/** Modifiers derived from the skill levels and perks, as the battle uses them. */
 export interface Mods {
   damage: (kind: HeroKind) => number;
   speed: number;
@@ -69,22 +128,33 @@ export interface Mods {
   goldPerKill: number;
   extraArrows: number;
   fireRadius: number;
+  /** Burn per second, as a fraction of the fire hit that lit it; 0 without the skill. */
+  burn: number;
+  /** Enemies that die burnt by fire explode again. */
+  fireChain: boolean;
+  /** Arcane bolts explode on impact. */
+  burstBolts: boolean;
   freezeChance: number;
   extraChains: number;
-  poisonSpread: boolean;
 }
 
-export function mods(levels: SkillLevels): Mods {
+export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()): Mods {
   const s = BALANCE.skills;
+  const own: Partial<Record<HeroKind, number>> = {
+    arcane: 1 + s.classDamage * levels.arcanePower,
+    fire: 1 + s.classDamage * levels.fireDamage,
+  };
   return {
-    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (kind === 'arcane' ? 1 + s.classDamage * levels.arcanePower : 1),
+    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (own[kind] ?? 1),
     speed: 1 + s.allSpeed * levels.allSpeed,
     crit: s.crit * levels.crit,
     goldPerKill: s.gold * levels.gold,
     extraArrows: levels.arcaneMulti,
     fireRadius: 1 + s.fireRadius * levels.fireRadius,
+    burn: s.fireBurn * levels.fireBurn * (perks.has('fireBurnPlus') ? 1 + s.fireBurnPlus : 1),
+    fireChain: levels.fireChain > 0,
+    burstBolts: levels.fireArcane > 0,
     freezeChance: s.iceFreezeChance * levels.iceFreeze,
     extraChains: s.lightningChains * levels.lightningChain,
-    poisonSpread: levels.poisonSpread > 0,
   };
 }

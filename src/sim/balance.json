@@ -120,7 +120,13 @@
     "iceFreezeChance": 0.15,
     "iceFreezeTime": 1,
     "lightningChains": 2,
-    "poisonSpreadRadius": 160
+    "fireBurn": 0.15,
+    "fireBurnPlus": 0.6,
+    "burnTime": 3,
+    "fireChain": 0.5,
+    "fireChainRadius": 0.8,
+    "burstBolt": 0.4,
+    "burstBoltRadius": 80
   },
   "meta": {
     "stageHpGrowth": 1.12,
