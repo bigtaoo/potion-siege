@@ -17,10 +17,10 @@ import { BALANCE, type BattleEvent } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
-import type { HomePanel } from './view/Home';
+import { buildHome, type HomePanel, type HomeTab } from './view/Home';
 import { Overlay } from './view/Overlay';
 import { COLORS } from './view/ui';
-import { fitDesign } from './view/viewport';
+import { fitDesign, fitMenu, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
 
@@ -77,6 +77,11 @@ class Game {
   private readonly view = new BattleView();
   private readonly hud: Hud;
   private readonly overlay = new Overlay();
+  /** The home screen, laid out on the whole screen rather than the battle's board. */
+  private readonly menu = new Container();
+  private menuFit: MenuFit | null = null;
+  private tab: HomeTab = 'battle';
+  private panel: HomePanel = null;
   private battle: Battle | null = null;
   private run: RunTracker | null = null;
   private save: MetaSave;
@@ -103,7 +108,8 @@ class Game {
       () => this.battle?.upgrade(),
     );
     this.root.addChild(this.view, this.hud, this.overlay);
-    app.stage.addChild(this.root);
+    this.menu.visible = false;
+    app.stage.addChild(this.root, this.menu);
     app.ticker.add((ticker) => this.tick(Math.min(ticker.deltaMS / 1000, 0.1)));
   }
 
@@ -150,6 +156,15 @@ class Game {
     const fit = fitDesign(this.app.screen.width, this.app.screen.height);
     this.root.scale.set(fit.scale);
     this.root.position.set(fit.x, fit.y);
+
+    if (this.menu.visible) {
+      const m = fitMenu(this.app.screen.width, this.app.screen.height);
+      this.menu.scale.set(m.scale);
+      const old = this.menuFit;
+      // a new page size is a new layout
+      if (!old || old.wide !== m.wide || Math.abs(old.w - m.w) > 1 || Math.abs(old.h - m.h) > 1) this.home(this.panel);
+      return;
+    }
 
     const b = this.battle;
     if (b && !this.overlay.visible) {
@@ -213,8 +228,19 @@ class Game {
     if (panel === null && canClaimLogin(this.save, today) && this.loginShown !== today) panel = 'login';
     if (panel === 'login') this.loginShown = today;
     this.newBattle(null);
-    this.hud.visible = false;
-    this.overlay.showHome(this.save, {
+    this.panel = panel;
+    this.overlay.hide();
+    this.root.visible = false;
+    const fit = fitMenu(this.app.screen.width, this.app.screen.height);
+    this.menuFit = fit;
+    this.menu.scale.set(fit.scale);
+    this.menu.visible = true;
+    this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.menu.addChild(buildHome(this.save, {
+      tab: (tab) => {
+        this.tab = tab;
+        this.home();
+      },
       panel: (p) => this.home(p),
       claimLogin: () => {
         const n = claimLogin(this.save, today);
@@ -234,11 +260,12 @@ class Game {
       workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
       play: () => {
         this.newBattle('again');
-        this.hud.visible = true;
-        this.overlay.hide();
+        this.menu.visible = false;
+        this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+        this.root.visible = true;
         this.platform.gameplayStart();
       },
-    }, panel, today);
+    }, this.tab, panel, today, fit));
   }
 
   private claimed(item: string, crystals: number, panel: HomePanel): void {

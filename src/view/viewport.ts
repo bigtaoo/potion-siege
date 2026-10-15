@@ -17,3 +17,20 @@ export function fitDesign(screenW: number, screenH: number): Fit {
   const scale = Math.min(screenW / DESIGN_W, screenH / DESIGN_H);
   return { scale, x: (screenW - DESIGN_W * scale) / 2, y: (screenH - DESIGN_H * scale) / 2 };
 }
+
+/** The menus are laid out on the whole screen instead: portrait screens get a 1080-wide page
+ *  at least 1920 tall, landscape ones (desktop) a 1080-tall page at least 1920 wide, with the
+ *  navigation down the left side. */
+export interface MenuFit {
+  scale: number;
+  /** The page size in menu units. */
+  w: number;
+  h: number;
+  wide: boolean;
+}
+
+export function fitMenu(screenW: number, screenH: number): MenuFit {
+  const wide = screenW > screenH * 1.1;
+  const scale = wide ? Math.min(screenW / DESIGN_H, screenH / DESIGN_W) : Math.min(screenW / DESIGN_W, screenH / DESIGN_H);
+  return { scale, w: screenW / scale, h: screenH / scale, wide };
+}
