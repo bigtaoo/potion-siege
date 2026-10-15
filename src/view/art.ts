@@ -15,6 +15,7 @@ const FILES = [
   'potion_ice_body',
   'potion_lightning_body',
   'potion_ice_ult',
+  'potion_lightning_ult',
 ] as const;
 
 const textures = new Map<string, Texture>();
@@ -35,7 +36,7 @@ export async function loadArt(): Promise<void> {
 /** The small figure a cell shows one to three of, for levels 1-3. */
 const FIGURE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1' };
 /** The single big hero of the top level. */
-const ULTIMATE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1', fire: 'potion_fire_ult', ice: 'potion_ice_ult' };
+const ULTIMATE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult' };
 
 export function figureTexture(kind: HeroKind): Texture | undefined {
   const f = FIGURE[kind];
