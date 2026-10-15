@@ -1,5 +1,5 @@
 """Cut a character out and push it toward the house style: flat colours and a uniform outline.
-usage: python flatten.py <in> <out.png> <height> [colours] [outline px at output size]
+usage: python flatten.py <in> <out.png> <height> [colours] [outline px at output size] [mediancut|octree]
 AI images come with glossy highlights, soft gradients, a pale ground shadow and a white sticker
 border. This cuts the background (including pale tinted shadows), reduces the figure to a small
 palette so gradients become flat bands, then draws one even black outline around the silhouette."""
@@ -9,7 +9,7 @@ from PIL import Image, ImageChops, ImageFilter
 from cutout import background_mask
 
 
-def flatten(src, height, colours=18, outline=6):
+def flatten(src, height, colours=18, outline=6, method='mediancut'):
     im = Image.open(src).convert("RGBA")
     rgb = im.convert("RGB")
     # a looser chroma limit also takes the lavender ground shadow and the grey sticker rim
@@ -23,7 +23,9 @@ def flatten(src, height, colours=18, outline=6):
     # work at full resolution and shrink last, so edges stay smooth
     scale = height / rgb.height
     line = max(1, round(outline / scale))
-    flat = rgb.quantize(colors=colours, method=Image.Quantize.MEDIANCUT, dither=Image.Dither.NONE)
+    # median cut can merge small bright accents (gold, yellow) into skin tones; octree keeps them
+    quant = Image.Quantize.FASTOCTREE if method == 'octree' else Image.Quantize.MEDIANCUT
+    flat = rgb.quantize(colors=colours, method=quant, dither=Image.Dither.NONE)
     flat = flat.convert("RGB").filter(ImageFilter.ModeFilter(5)).filter(ImageFilter.MedianFilter(5))
 
     pad = line + 4
@@ -44,4 +46,5 @@ if __name__ == "__main__":
     src, dst, h = sys.argv[1], sys.argv[2], int(sys.argv[3])
     colours = int(sys.argv[4]) if len(sys.argv) > 4 else 18
     outline = int(sys.argv[5]) if len(sys.argv) > 5 else 6
-    flatten(src, h, colours, outline).save(dst, optimize=True)
+    method = sys.argv[6] if len(sys.argv) > 6 else 'mediancut'
+    flatten(src, h, colours, outline, method).save(dst, optimize=True)
