@@ -3,7 +3,7 @@
 
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 
-const INK = 0x0e0c12;
+export const INK = 0x0e0c12;
 /** The ⚡ outline in a unit box centred on 0, top to tip. */
 const BOLT: [number, number][] = [[0.16, -0.5], [-0.34, 0.1], [-0.02, 0.1], [-0.2, 0.5], [0.36, -0.12], [0.06, -0.12], [0.4, -0.5]];
 
@@ -244,7 +244,7 @@ function flame(g: Graphics, x: number, base: number, w: number, h: number, tip: 
 }
 
 /** A chubby five-pointed star centred on (x, y), `size` to its tips, with a pale core. */
-function star(g: Graphics, x: number, y: number, size: number, angle: number, glow: [number, number, number], line: number): void {
+export function star(g: Graphics, x: number, y: number, size: number, angle: number, glow: [number, number, number], line: number): void {
   const pts = (k: number): number[] => {
     const out: number[] = [];
     for (let i = 0; i < 10; i++) {
@@ -259,7 +259,7 @@ function star(g: Graphics, x: number, y: number, size: number, angle: number, gl
 }
 
 /** A six-armed ice crystal centred on (x, y), arms `size` long, turned by `angle`. */
-function snowflake(g: Graphics, x: number, y: number, size: number, angle: number, glow: [number, number, number], line: number): void {
+export function snowflake(g: Graphics, x: number, y: number, size: number, angle: number, glow: [number, number, number], line: number): void {
   const draw = (width: number, color: number): void => {
     for (let k = 0; k < 6; k++) {
       const a = angle + (k * Math.PI) / 3;

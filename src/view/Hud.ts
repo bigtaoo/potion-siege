@@ -16,7 +16,7 @@ export class Hud extends Container {
   private readonly waveText = label('', 56);
   private readonly goldText = label('', 56, { fill: COLORS.gold });
   private readonly hintText = label(t('hint'), 36, { wordWrap: true, wordWrapWidth: 900 });
-  private readonly banner = label('', 110, { fill: COLORS.gold });
+  private readonly banner = label('', 76, { fill: COLORS.gold });
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
   private bannerTime = 0;
@@ -33,7 +33,8 @@ export class Hud extends Container {
     this.goldText.anchor.set(0, 0.5);
     this.goldText.position.set(130, 60);
     this.hintText.position.set(DESIGN_W / 2, 150);
-    this.banner.position.set(DESIGN_W / 2, 560);
+    // high on the field, above where the enemies walk in, so it does not hide them
+    this.banner.position.set(DESIGN_W / 2, 270);
     this.banner.alpha = 0;
     this.addChild(this.coin, this.waveText, this.goldText, this.hintText, this.banner, this.upgradeButton, this.summonButton);
   }
@@ -63,7 +64,7 @@ export class Hud extends Container {
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);
-    this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.5) * 0.6);
+    this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.7) * 0.6);
   }
 
   private show(text: string): void {

@@ -1,14 +1,15 @@
 // Draws a battle (field, wall, enemies, shots, effects, the heroes on the wall) and turns drags
 // between cells into moves and merges.
 
-import { Container, Graphics, Rectangle, type FederatedPointerEvent, type Text, type Texture } from 'pixi.js';
+import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, type Text, type Texture } from 'pixi.js';
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, WALL_ROW, slotCenter, type Battle } from '../sim/battle';
 import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
-import { SpriteLayer, commanderTexture, enemyTexture, figureTexture, potionLook, ultimateTexture } from './art';
-import { PotionLayer, popScale, recoil, throwingHand } from './potion';
+import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
+import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell } from './effects';
+import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
-import { COLORS, HERO_COLORS, label } from './ui';
+import { COLORS, label } from './ui';
 import { DESIGN_W } from './viewport';
 
 const F = BALANCE.field;
@@ -59,6 +60,8 @@ interface Effect {
   draw: (g: Graphics, life: number) => void;
   /** Drawn above the heroes instead of under them. */
   top?: boolean;
+  /** Drawn on the ground, under the enemies. */
+  ground?: boolean;
 }
 
 export class BattleView extends Container {
@@ -74,6 +77,7 @@ export class BattleView extends Container {
   private readonly dragArt = new SpriteLayer();
   private readonly dragPotions = new PotionLayer();
   private readonly fx = new Graphics();
+  private readonly fxGround = new Graphics();
   private readonly fxTop = new Graphics();
   private cellAnims: (CellAnim | null)[] = [];
   /** Thrown vials still leaving the hand: how far the hand was from where the sim spawned them. */
@@ -96,7 +100,7 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40);
-    this.addChild(this.ground, this.under, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.ground, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.cmdNext.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.cmdNext, this.children.indexOf(this.wallText));
     this.drawGround();
@@ -124,15 +128,12 @@ export class BattleView extends Container {
     for (const ev of events) {
       switch (ev.type) {
         case 'hit':
-          this.burst(ev.x, ev.y, ev.radius, HERO_COLORS[ev.kind], ev.kind === 'fire' ? 0.35 : 0.2);
+          // the fire blast is wide, so it goes on the ground and the enemies in it stay visible
+          this.effect(HIT_TIME[ev.kind], (g, life) => hitEffect(g, ev.kind, ev.x, ev.y, ev.radius, 1 - life), ev.kind === 'fire');
           break;
         case 'chain': {
           const pts = ev.points;
-          this.effect(0.18, (g, life) => {
-            g.moveTo(pts[0].x, pts[0].y);
-            for (const p of pts.slice(1)) g.lineTo(p.x + (Math.random() - 0.5) * 20, p.y);
-            g.stroke({ width: 8, color: HERO_COLORS.lightning, alpha: life });
-          });
+          this.effect(0.22, (g, life) => chainBolt(g, pts, life));
           break;
         }
         case 'shot': {
@@ -154,7 +155,7 @@ export class BattleView extends Container {
           break;
         }
         case 'kill':
-          this.burst(ev.x, ev.y, ev.boss ? 200 : 50, 0xffffff, ev.boss ? 0.6 : 0.25);
+          this.effect(ev.boss ? 0.9 : 0.6, (g, life) => gearBurst(g, ev.x, ev.y, ev.boss, 1 - life));
           this.floater(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
           if (ev.boss) this.shake = 0.5;
           break;
@@ -207,6 +208,7 @@ export class BattleView extends Container {
       const s = this.enemyArt.put(tex, e.x, e.y + e.radius * ENEMY_ART.feet - hop * 8, e.radius * ENEMY_ART.height);
       s.rotation = Math.cos(step) * 0.07;
       s.scale.y *= 0.96 + hop * 0.06;
+      if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }
     this.enemyArt.end();
@@ -228,8 +230,10 @@ export class BattleView extends Container {
       const len = Math.hypot(p.tx - p.x, p.ty - p.y) || 1;
       const dx = (p.x - p.tx) / len;
       const dy = (p.y - p.ty) / len;
-      for (let i = 3; i >= 1; i--) w.circle(p.x + dx * i * 14, p.y + dy * i * 14, 16 - i * 3).fill({ color: look.glow[i - 1], alpha: 0.9 - i * 0.15 });
-      const s = this.shotArt.put(look.body, p.x, p.y, 40 + p.star * 4);
+      // the trail: one inked outline under all three blobs, so it reads as a single streak
+      for (let i = 3; i >= 1; i--) w.circle(p.x + dx * i * 16, p.y + dy * i * 16, 20 - i * 3 + 4).fill(INK);
+      for (let i = 3; i >= 1; i--) w.circle(p.x + dx * i * 16, p.y + dy * i * 16, 20 - i * 3).fill(look.glow[i - 1]);
+      const s = this.shotArt.put(look.body, p.x, p.y, 44 + p.star * 4);
       s.anchor.set(0.5);
       s.rotation = t * 14 + p.id;
     }
@@ -244,8 +248,9 @@ export class BattleView extends Container {
 
     const fx = this.fx.clear();
     const fxTop = this.fxTop.clear();
+    const fxGround = this.fxGround.clear();
     this.fxList = this.fxList.filter((e) => (e.ttl -= dt) > 0);
-    for (const e of this.fxList) e.draw(e.top ? fxTop : fx, e.ttl / e.max);
+    for (const e of this.fxList) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
     for (const f of [...this.floaters.children]) {
       f.y -= 120 * dt;
       f.alpha -= dt * 1.2;
@@ -445,9 +450,17 @@ export class BattleView extends Container {
   private drawGround(): void {
     const g = this.ground;
     // the field runs right down to the wall, so built cells stand out on it
-    g.rect(F.left - 20, 0, F.right - F.left + 40, WALL_TOP).fill(COLORS.fieldEdge);
-    g.rect(F.left, 0, F.right - F.left, WALL_TOP).fill(COLORS.field);
-    for (let y = 120; y < WALL_TOP; y += 160) g.rect(F.left, y, F.right - F.left, 4).fill({ color: 0xffffff, alpha: 0.04 });
+    const bg = fieldTexture();
+    if (bg) {
+      const s = new Sprite(bg);
+      s.width = DESIGN_W;
+      s.height = WALL_TOP;
+      this.addChildAt(s, this.getChildIndex(g));
+    } else {
+      g.rect(F.left - 20, 0, F.right - F.left + 40, WALL_TOP).fill(COLORS.fieldEdge);
+      g.rect(F.left, 0, F.right - F.left, WALL_TOP).fill(COLORS.field);
+      for (let y = 120; y < WALL_TOP; y += 160) g.rect(F.left, y, F.right - F.left, 4).fill({ color: 0xffffff, alpha: 0.04 });
+    }
     // the wall: a stone band with towers at both ends, the bottom row of cells set into it
     const x0 = G.x0 - 30;
     const x1 = G.x0 + G.cellW * G.cols + 30;
@@ -458,8 +471,8 @@ export class BattleView extends Container {
     }
   }
 
-  private effect(ttl: number, draw: Effect['draw']): void {
-    this.fxList.push({ ttl, max: ttl, draw });
+  private effect(ttl: number, draw: Effect['draw'], ground = false): void {
+    this.fxList.push({ ttl, max: ttl, draw, ground });
   }
 
   private burst(x: number, y: number, r: number, color: number, ttl: number): void {

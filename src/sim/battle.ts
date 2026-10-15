@@ -282,7 +282,8 @@ export class Battle {
       if (h.cooldown > 0) continue;
       targets ??= this.targets();
       if (targets.length === 0) {
-        h.cooldown = 0;
+        // waiting: a small offset per hero, so the first enemy is not met by one big volley
+        h.cooldown = (h.id % 5) * 0.07;
         continue;
       }
       h.cooldown += B.heroes[h.kind].interval / B.starSpeed[h.star - 1];

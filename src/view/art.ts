@@ -17,6 +17,7 @@ const FILES = [
   'potion_lightning_body',
   'potion_ice_ult',
   'potion_lightning_ult',
+  'bg_field.jpg',
 ] as const;
 
 const textures = new Map<string, Texture>();
@@ -26,7 +27,8 @@ export async function loadArt(): Promise<void> {
   await Promise.all(
     FILES.map(async (f) => {
       try {
-        textures.set(f, await Assets.load<Texture>(`${base}art/${f}.png`));
+        const file = f.includes('.') ? f : `${f}.png`;
+        textures.set(f.replace(/\.\w+$/, ''), await Assets.load<Texture>(`${base}art/${file}`));
       } catch (err) {
         console.warn(`art: ${f} failed to load, keeping the placeholder`, err);
       }
@@ -103,6 +105,11 @@ export function potionLook(kind: HeroKind): PotionLook | undefined {
 
 export function commanderTexture(): Texture | undefined {
   return textures.get('commander');
+}
+
+/** The playfield above the wall. */
+export function fieldTexture(): Texture | undefined {
+  return textures.get('bg_field');
 }
 
 export function enemyTexture(kind: EnemyKind): Texture | undefined {
