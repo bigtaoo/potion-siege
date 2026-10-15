@@ -1,5 +1,6 @@
 // The game shell: owns the Pixi app, fits the 1080x1920 design to the screen and runs the
-// flow title -> battle (with skill picks) -> end -> battle again.
+// flow title -> battle (with skill picks) -> end -> home (upgrades) -> battle. The very first
+// battle starts from the title with one tap; the home screen comes after it.
 
 import { Application, Container } from 'pixi.js';
 import pkg from '../package.json';
@@ -9,6 +10,7 @@ import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
+import { applyRun, battleSetup, buyHero, buyWorkshop, maxStage, parseMeta, runReward, type MetaSave, type Reward } from './sim/meta';
 import { botAct } from './sim/bot';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
@@ -19,19 +21,6 @@ import { fitDesign } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
 
-interface Save {
-  bestWave: number;
-  runs: number;
-}
-
-function loadSave(platform: Platform): Save {
-  try {
-    const raw = JSON.parse(platform.storage.getItem(SAVE_KEY) ?? '{}') as Partial<Save>;
-    return { bestWave: Number(raw.bestWave) || 0, runs: Number(raw.runs) || 0 };
-  } catch {
-    return { bestWave: 0, runs: 0 };
-  }
-}
 
 export async function boot(platform: Platform): Promise<void> {
   const params = new URLSearchParams(location.search);
@@ -87,8 +76,11 @@ class Game {
   private readonly overlay = new Overlay();
   private battle: Battle | null = null;
   private run: RunTracker | null = null;
-  private save: Save;
+  private save: MetaSave;
+  /** Crystals already paid for the current battle (a revived battle pays the difference). */
+  private paid = 0;
   private revived = false;
+  private reward: Reward = { crystals: 0, firstClear: false };
   private readonly autoplay: boolean;
   private readonly speed: number;
 
@@ -98,7 +90,7 @@ class Game {
     params: URLSearchParams,
     readonly analytics: Analytics,
   ) {
-    this.save = loadSave(platform);
+    this.save = parseMeta(platform.storage.getItem(SAVE_KEY));
     this.autoplay = params.has('autoplay');
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
     this.hud = new Hud(
@@ -114,6 +106,10 @@ class Game {
     if (this.autoplay) {
       this.newBattle('autoplay');
       this.platform.gameplayStart();
+      return;
+    }
+    if (this.save.runs > 0) {
+      this.home();
       return;
     }
     this.newBattle(null);
@@ -135,9 +131,11 @@ class Game {
   /** `cause` null: the title screen is up and the run starts when the player taps. */
   private newBattle(cause: 'again' | 'autoplay' | null): void {
     this.run?.close('again');
-    this.battle = new Battle((Math.random() * 2 ** 32) >>> 0);
+    this.battle = new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    this.paid = 0;
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
+    this.reward = { crystals: 0, firstClear: false };
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
   }
@@ -173,12 +171,51 @@ class Game {
   private finish(b: Battle): void {
     this.platform.gameplayStop();
     if (!this.revived) this.save.runs++; // a revived run ending again is still one run
-    this.save.bestWave = Math.max(this.save.bestWave, b.wave);
-    this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
+    const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
+    const reward = runReward(this.save, result);
+    // a revived battle ending again pays only what it earned on top
+    const gain = Math.max(0, reward.crystals - this.paid);
+    this.paid += gain;
+    this.reward = { crystals: this.paid, firstClear: reward.firstClear || this.reward.firstClear };
+    applyRun(this.save, result, { crystals: gain, firstClear: reward.firstClear });
+    this.store();
     if (b.result === 'won') this.platform.celebrate();
     this.run?.onEnd();
+    this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: reward.firstClear });
     this.showEnd(b);
     if (this.autoplay) setTimeout(() => void this.again(), 1500);
+  }
+
+  private store(): void {
+    this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
+  }
+
+  /** The home screen over an idle battle of the chosen stage. */
+  private home(): void {
+    this.newBattle(null);
+    this.hud.visible = false;
+    this.overlay.showHome(this.save, {
+      stage: (d) => {
+        this.save.stage = Math.min(maxStage(this.save), Math.max(1, this.save.stage + d));
+        this.store();
+        this.home();
+      },
+      hero: (kind) => this.buy(buyHero(this.save, kind), `hero_${kind}`),
+      workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
+      play: () => {
+        this.newBattle('again');
+        this.hud.visible = true;
+        this.overlay.hide();
+        this.platform.gameplayStart();
+      },
+    });
+  }
+
+  private buy(ok: boolean, item: string): void {
+    if (!ok) return;
+    this.store();
+    this.analytics.track('meta_buy', { item, crystals: this.save.crystals });
+    this.home();
   }
 
   private showEnd(b: Battle): void {
@@ -186,7 +223,7 @@ class Game {
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
     const canRevive = b.result === 'lost' && !this.revived && this.platform.rewardedAvailable();
     if (canRevive) this.run?.onReviveOffer();
-    this.overlay.showEnd(b.result === 'won', stats, () => void this.again(), canRevive ? () => void this.revive(b) : null);
+    this.overlay.showEnd(b.result === 'won', stats, this.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null);
   }
 
   private async revive(b: Battle): Promise<void> {
@@ -212,7 +249,11 @@ class Game {
       this.analytics.track('ad_midgame', { run: this.save.runs });
     }
     this.mute(false);
-    this.newBattle(this.autoplay ? 'autoplay' : 'again');
+    if (!this.autoplay) {
+      this.home();
+      return;
+    }
+    this.newBattle('autoplay');
     this.platform.gameplayStart();
   }
 

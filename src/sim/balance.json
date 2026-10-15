@@ -121,5 +121,18 @@
     "iceFreezeTime": 1,
     "lightningChains": 2,
     "poisonSpreadRadius": 160
+  },
+  "meta": {
+    "stageHpGrowth": 1.12,
+    "stageCount": 20,
+    "reward": { "perWave": 4, "perKills": 10, "winBonus": 40, "firstClear": 60, "stageStep": 0.25 },
+    "heroMax": 20,
+    "heroDamage": 0.15,
+    "heroCost": { "base": 30, "growth": 1.18 },
+    "workshop": {
+      "wall": { "max": 10, "step": 0.1, "base": 60, "growth": 1.5 },
+      "startGold": { "max": 10, "step": 15, "base": 50, "growth": 1.5 },
+      "crystals": { "max": 10, "step": 0.1, "base": 80, "growth": 1.55 }
+    }
   }
 }

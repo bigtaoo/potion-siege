@@ -88,3 +88,17 @@ export class Button extends Container {
       .fill({ color: 0xffffff, alpha: 0.22 });
   }
 }
+
+/** The crystal, the currency kept between battles: a cut gem in the cel-shaded style. */
+export function gem(g: Graphics, x: number, y: number, r: number): Graphics {
+  const top = [x - r, y - r * 0.35, x - r * 0.55, y - r, x + r * 0.55, y - r, x + r, y - r * 0.35];
+  return g
+    .poly([...top, x, y + r])
+    .fill(0x4fd6ff)
+    .poly([x - r, y - r * 0.35, x + r, y - r * 0.35, x, y + r])
+    .fill(0x2a9fd8)
+    .poly([x - r * 0.55, y - r, x - r * 0.1, y - r, x - r * 0.45, y - r * 0.35])
+    .fill(0xd8f7ff)
+    .poly([...top, x, y + r])
+    .stroke({ width: Math.max(3, r / 5), color: 0x0e0c12, join: 'round' });
+}

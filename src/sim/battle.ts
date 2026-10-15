@@ -2,6 +2,7 @@
 // the view reads the state and the events each frame and only calls the player commands
 // (summon, move, upgrade, choose).
 
+import { BASE_SETUP, type BattleSetup } from './meta';
 import { Rng } from './rng';
 import { emptySkills, mods, rollChoices, type Mods, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, LINEUP, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile } from './types';
@@ -22,9 +23,9 @@ const C = B.commander;
 
 export class Battle {
   readonly rng: Rng;
-  gold = B.startGold;
-  wallMax = B.wallHp;
-  wall = B.wallHp;
+  gold: number;
+  wallMax: number;
+  wall: number;
   /** 1-based; 0 before the first wave starts. */
   wave = 0;
   waveTime = 0;
@@ -52,8 +53,14 @@ export class Battle {
   private events: BattleEvent[] = [];
   private nextId = 1;
 
-  constructor(seed: number) {
+  /** The stage and the upgrades bought between battles. */
+  constructor(
+    seed: number,
+    readonly setup: BattleSetup = BASE_SETUP,
+  ) {
     this.rng = new Rng(seed);
+    this.gold = setup.startGold;
+    this.wallMax = this.wall = setup.wallHp;
     this.startWave(1);
   }
 
@@ -218,7 +225,7 @@ export class Battle {
   private startWave(wave: number): void {
     this.wave = wave;
     this.waveTime = 0;
-    this.pending = planWave(wave, this.rng);
+    this.pending = planWave(wave, this.rng).map((s) => ({ ...s, hp: s.hp * this.setup.enemyHp }));
     if (wave > 1) this.gold += B.waves.waveBonusGold;
     this.events.push({ type: 'wave', wave, boss: isBossWave(wave) });
   }
@@ -322,7 +329,7 @@ export class Battle {
   private fire(h: Hero, target: Enemy): void {
     const from = slotCenter(h.slot);
     this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
-    this.shoot(h.kind, h.star, from.x, from.y - 40, target, B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind));
+    this.shoot(h.kind, h.star, from.x, from.y - 40, target, B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind]);
   }
 
   private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number): void {
@@ -397,7 +404,7 @@ export class Battle {
       target.slowTime = h.ice.slowTime;
       if (target.kind !== 'boss' && this.rng.next() < this.mods.freezeChance) target.freezeTime = B.skills.iceFreezeTime;
     } else if (p.kind === 'poison') {
-      const dps = h.poison.poisonDps * B.starDamage[p.star - 1] * this.mods.damage('poison');
+      const dps = h.poison.poisonDps * B.starDamage[p.star - 1] * this.mods.damage('poison') * this.setup.heroDamage.poison;
       target.poisonDps = Math.max(target.poisonDps, dps);
       target.poisonTime = h.poison.poisonTime;
     }
