@@ -215,10 +215,12 @@ export class BattleView extends Container {
       drawEnemy(w, e, 'over');
       // waddle: hop and sway, out of step with each other, faster walkers taking quicker steps
       const step = t * 9 * Math.sqrt(BALANCE.enemies[e.kind].speed / BALANCE.enemies.grunt.speed) + e.id * 1.7;
-      const hop = Math.abs(Math.sin(step));
+      // the tank rolls on tracks: no steps, only a rumble
+      const tracks = e.kind === 'boss';
+      const hop = tracks ? Math.abs(Math.sin(step * 3)) * 0.3 : Math.abs(Math.sin(step));
       const s = this.enemyArt.put(tex, e.x, e.y + e.radius * ENEMY_ART.feet - hop * 8, e.radius * ENEMY_ART.height);
-      s.rotation = Math.cos(step) * 0.07;
-      s.scale.y *= 0.96 + hop * 0.06;
+      s.rotation = tracks ? 0 : Math.cos(step) * 0.07;
+      s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }
