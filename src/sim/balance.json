@@ -28,13 +28,13 @@
     "y": 1890
   },
   "maxStar": 4,
-  "lineup": ["slime", "fire", "ice", "lightning"],
+  "lineup": ["arcane", "fire", "ice", "lightning"],
   "starDamage": [1, 2.4, 5.5, 12],
   "starSpeed": [1, 1.1, 1.2, 1.35],
   "projectileSpeed": 1800,
   "critMultiplier": 2,
   "heroes": {
-    "slime": {
+    "arcane": {
       "damage": 12,
       "interval": 0.5
     },

@@ -57,7 +57,7 @@ describe('Battle', () => {
   it('will not move a hero onto a closed cell', () => {
     const b = new Battle(1);
     const closed = Array.from({ length: SLOT_COUNT }, (_, s) => s).find((s) => !b.isOpen(s))!;
-    b.slots[W] = { id: 100, kind: 'slime', star: 1, slot: W, cooldown: 0 };
+    b.slots[W] = { id: 100, kind: 'arcane', star: 1, slot: W, cooldown: 0 };
     expect(b.move(W, closed)).toBe(false);
     expect(b.slots[W]).not.toBeNull();
   });
@@ -104,8 +104,8 @@ describe('Battle', () => {
 
   it('merges two equal heroes into one a level higher, and moves onto free cells', () => {
     const b = new Battle(1);
-    b.slots[W] = { id: 100, kind: 'slime', star: 1, slot: W, cooldown: 0 };
-    b.slots[W + 1] = { id: 101, kind: 'slime', star: 1, slot: W + 1, cooldown: 0 };
+    b.slots[W] = { id: 100, kind: 'arcane', star: 1, slot: W, cooldown: 0 };
+    b.slots[W + 1] = { id: 101, kind: 'arcane', star: 1, slot: W + 1, cooldown: 0 };
     b.slots[W + 2] = { id: 102, kind: 'fire', star: 2, slot: W + 2, cooldown: 0 };
     expect(b.move(W, W + 2)).toBe(false);
     expect(b.move(W, W + 1)).toBe(true);

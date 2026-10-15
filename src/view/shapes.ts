@@ -17,7 +17,7 @@ export function drawHero(g: Graphics, kind: HeroKind, x: number, y: number, r = 
   const color = HERO_COLORS[kind];
   g.ellipse(x, y + r * 0.85, r * 0.8, r * 0.25).fill({ color: 0x000000, alpha: 0.3 * alpha });
   switch (kind) {
-    case 'slime':
+    case 'arcane':
       g.poly(polygon(x, y, r * 1.1, 3));
       break;
     case 'fire':

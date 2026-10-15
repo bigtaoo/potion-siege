@@ -18,11 +18,11 @@ export const COLORS = {
 };
 
 export const HERO_COLORS = {
-  slime: 0x8ee6c0,
+  arcane: 0xb46cff,
   fire: 0xff6a3d,
   ice: 0x6fd8ff,
   lightning: 0xffe14d,
-  poison: 0xb072ff,
+  poison: 0x7ed957,
 } as const;
 
 export function label(text: string, size: number, style: TextStyleOptions = {}): Text {

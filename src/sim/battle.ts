@@ -286,12 +286,12 @@ export class Battle {
         continue;
       }
       h.cooldown += B.heroes[h.kind].interval / B.starSpeed[h.star - 1];
-      const shots = h.kind === 'slime' ? 1 + this.mods.extraArrows : 1;
+      const shots = h.kind === 'arcane' ? 1 + this.mods.extraArrows : 1;
       for (let i = 0; i < shots && i < targets.length; i++) this.fire(h, targets[i]);
     }
   }
 
-  /** The commander shoots plain slime shots, harder with each level; only the all-hero skills
+  /** The commander shoots plain arcane bolts, harder with each level; only the all-hero skills
    *  (damage, speed, crit) apply to it. */
   private stepCommander(dt: number): void {
     this.commanderCooldown -= dt * this.mods.speed;
@@ -303,7 +303,7 @@ export class Battle {
     }
     this.commanderCooldown += C.interval;
     const damage = C.damage * (1 + C.damageStep * (this.commanderLevel - 1)) * (1 + B.skills.allDamage * this.skills.allDamage);
-    this.shoot('slime', 1, C.x, C.y - 120, target, damage);
+    this.shoot('arcane', 1, C.x, C.y - 120, target, damage);
   }
 
   private fire(h: Hero, target: Enemy): void {

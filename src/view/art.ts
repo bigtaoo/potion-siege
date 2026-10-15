@@ -6,7 +6,8 @@ import type { SkillId } from '../sim/skills';
 import type { PotionLook } from './potion';
 
 const FILES = [
-  'hero_slime_1',
+  'potion_arcane_body',
+  'potion_arcane_ult',
   'enemy_grunt',
   'icon_crit',
   'commander',
@@ -34,9 +35,9 @@ export async function loadArt(): Promise<void> {
 }
 
 /** The small figure a cell shows one to three of, for levels 1-3. */
-const FIGURE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1' };
+const FIGURE: Partial<Record<HeroKind, string>> = {};
 /** The single big hero of the top level. */
-const ULTIMATE: Partial<Record<HeroKind, string>> = { slime: 'hero_slime_1', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult' };
+const ULTIMATE: Partial<Record<HeroKind, string>> = { arcane: 'potion_arcane_ult', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult' };
 
 export function figureTexture(kind: HeroKind): Texture | undefined {
   const f = FIGURE[kind];
@@ -50,6 +51,17 @@ export function ultimateTexture(kind: HeroKind): Texture | undefined {
 
 /** Kinds drawn as living potions at levels 1-3: the bottle art and where its parts are. */
 const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: string }>> = {
+  arcane: {
+    file: 'potion_arcane_body',
+    eyes: [[0.336, 0.53], [0.649, 0.53]],
+    eyeSize: [0.09, 0.07],
+    lid: 0x8a0dd0,
+    limb: 0x7a1fc4,
+    mark: 'star',
+    glow: [0x9b3df0, 0xd9a6ff, 0xffffff],
+    neck: [0.5, 0.04],
+    size: 0.9,
+  },
   fire: {
     file: 'potion_fire_body',
     eyes: [[0.333, 0.582], [0.674, 0.584]],

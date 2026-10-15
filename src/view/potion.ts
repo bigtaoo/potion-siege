@@ -17,7 +17,7 @@ export interface PotionLook {
   lid: number;
   limb: number;
   /** What rises from its neck: the element mark. */
-  mark: 'flame' | 'frost' | 'spark';
+  mark: 'flame' | 'frost' | 'spark' | 'star';
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];
@@ -125,7 +125,8 @@ class PotionFigure extends Container {
     if (pose.tilt === undefined) {
       if (look.mark === 'flame') this.drawFlame(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else if (look.mark === 'frost') this.drawFrost(f, look, pose, t, nx, ny, bw, bh, w, r, line);
-      else this.drawSpark(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else if (look.mark === 'spark') this.drawSpark(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else this.drawStars(f, look, pose, t, nx, ny, bw, bh, w, r, line);
     }
     this.drawArms(f, look, t, at, bh, w, r, line);
   }
@@ -171,6 +172,20 @@ class PotionFigure extends Container {
       const sy = cy + (rand(i + 5) - 0.5) * size * 0.6;
       const step = size * 0.12;
       f.moveTo(sx, sy).lineTo(sx + side * step, sy - step).lineTo(sx + side * step, sy + step * 0.3).lineTo(sx + side * step * 2, sy - step * 0.7).stroke({ width: line * 1.6, color: look.glow[0], cap: 'round', join: 'round' });
+    }
+  }
+
+  /** Three little stars circling over the neck, twinkling; they spin faster on a throw. */
+  private drawStars(f: Graphics, look: PotionLook, pose: PotionPose, t: number, nx: number, ny: number, bw: number, bh: number, w: number, r: number, line: number): void {
+    const cy = ny - bh * 0.2 - r * bh * 0.06;
+    const spin = t * (1.6 + 2.5 * w) + pose.phase;
+    for (let i = 0; i < 3; i++) {
+      const a = spin + (i * Math.PI * 2) / 3;
+      // a flat orbit: stars at the front are bigger than the ones going round the back
+      const depth = 0.75 + 0.25 * Math.sin(a);
+      const twinkle = 1 + 0.15 * Math.sin(t * 7 + i * 2.1);
+      const size = bh * 0.13 * depth * twinkle * (1 + 0.4 * r + 0.2 * w);
+      star(f, nx + Math.cos(a) * bw * 0.3, cy + Math.sin(a) * bh * 0.06, size, Math.sin(t * 2 + i) * 0.3, look.glow, line);
     }
   }
 
@@ -226,6 +241,21 @@ function flame(g: Graphics, x: number, base: number, w: number, h: number, tip: 
     .closePath()
     .fill(color);
   if (outline) g.stroke({ width: outline, color: INK });
+}
+
+/** A chubby five-pointed star centred on (x, y), `size` to its tips, with a pale core. */
+function star(g: Graphics, x: number, y: number, size: number, angle: number, glow: [number, number, number], line: number): void {
+  const pts = (k: number): number[] => {
+    const out: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = angle - Math.PI / 2 + (i * Math.PI) / 5;
+      const d = (i % 2 ? size * 0.5 : size) * k;
+      out.push(x + Math.cos(a) * d, y + Math.sin(a) * d);
+    }
+    return out;
+  };
+  g.poly(pts(1)).fill(glow[1]).stroke({ width: line, color: INK, join: 'round' });
+  g.poly(pts(0.45)).fill(glow[2]);
 }
 
 /** A six-armed ice crystal centred on (x, y), arms `size` long, turned by `angle`. */

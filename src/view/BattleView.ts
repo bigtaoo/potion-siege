@@ -26,6 +26,8 @@ const FIGURES: { spots: [number, number][]; height: number }[] = [
   { spots: [[0, -22], [-30, 8], [30, 8]], height: 74 },
 ];
 const ULTIMATE_HEIGHT = 150;
+/** Wide ultimates (arms spread out) are drawn shorter so they stay inside their cell. */
+const ULTIMATE_WIDTH = 155;
 /** Seconds without touching the grid before a mergeable pair starts hopping. */
 const HINT_AFTER = 5;
 /** Seconds a merge spends pouring one potion into the other before the result pops out. */
@@ -321,7 +323,9 @@ export class BattleView extends Container {
       const pulse = 0.8 + 0.2 * Math.sin(this.time * 4 + phase);
       under.circle(x, y - 10 * size, 64 * size * pulse * grow).fill({ color: COLORS.gold, alpha: 0.5 * alpha });
       under.circle(x, y - 10 * size, 46 * size * grow).fill({ color: 0xfff3c0, alpha: 0.5 * alpha });
-      this.figure(under, over, layer, ultimateTexture(kind), kind, x, feet, ULTIMATE_HEIGHT * size, alpha, phase, dim, a);
+      const tex = ultimateTexture(kind);
+      const h = tex ? Math.min(ULTIMATE_HEIGHT, (ULTIMATE_WIDTH * tex.height) / tex.width) : ULTIMATE_HEIGHT;
+      this.figure(under, over, layer, tex, kind, x, feet, h * size, alpha, phase, dim, a);
       return;
     }
     const { spots, height } = FIGURES[star - 1];
@@ -428,7 +432,7 @@ export class BattleView extends Container {
       const s = this.heroArt.put(tex, CMD.x, CMD.feet, CMD.height * pop);
       s.scale.y *= 1 + Math.sin(this.time * 2.2) * 0.03;
     } else {
-      drawHero(over, 'slime', CMD.x, CMD.feet - CMD.height / 2, 80 * pop);
+      drawHero(over, 'arcane', CMD.x, CMD.feet - CMD.height / 2, 80 * pop);
     }
     const next = b.summonsToNextCell();
     this.cmdNext.visible = next !== null;

@@ -9,8 +9,8 @@ export const SKILL_IDS = [
   'crit',
   'gold',
   'wallRepair',
-  'slimePower',
-  'slimeMulti',
+  'arcanePower',
+  'arcaneMulti',
   'fireRadius',
   'iceFreeze',
   'lightningChain',
@@ -25,8 +25,8 @@ const MAX_LEVEL: Record<SkillId, number> = {
   crit: 4,
   gold: 3,
   wallRepair: 99,
-  slimePower: 3,
-  slimeMulti: 2,
+  arcanePower: 3,
+  arcaneMulti: 2,
   fireRadius: 3,
   iceFreeze: 3,
   lightningChain: 3,
@@ -35,8 +35,8 @@ const MAX_LEVEL: Record<SkillId, number> = {
 
 /** Skills that only matter with that hero on the board. */
 const NEEDS_HERO: Partial<Record<SkillId, HeroKind>> = {
-  slimePower: 'slime',
-  slimeMulti: 'slime',
+  arcanePower: 'arcane',
+  arcaneMulti: 'arcane',
   fireRadius: 'fire',
   iceFreeze: 'ice',
   lightningChain: 'lightning',
@@ -77,11 +77,11 @@ export interface Mods {
 export function mods(levels: SkillLevels): Mods {
   const s = BALANCE.skills;
   return {
-    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (kind === 'slime' ? 1 + s.classDamage * levels.slimePower : 1),
+    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (kind === 'arcane' ? 1 + s.classDamage * levels.arcanePower : 1),
     speed: 1 + s.allSpeed * levels.allSpeed,
     crit: s.crit * levels.crit,
     goldPerKill: s.gold * levels.gold,
-    extraArrows: levels.slimeMulti,
+    extraArrows: levels.arcaneMulti,
     fireRadius: 1 + s.fireRadius * levels.fireRadius,
     freezeChance: s.iceFreezeChance * levels.iceFreeze,
     extraChains: s.lightningChains * levels.lightningChain,

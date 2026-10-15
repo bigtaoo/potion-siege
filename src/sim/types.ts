@@ -3,7 +3,7 @@ import balanceJson from './balance.json';
 export type Balance = typeof balanceJson;
 export const BALANCE: Balance = balanceJson;
 
-export const HERO_KINDS = ['slime', 'fire', 'ice', 'lightning', 'poison'] as const;
+export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison'] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
 
 /** The four heroes brought into battle: every summon and every merge rolls one of them. */
