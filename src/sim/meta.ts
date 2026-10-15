@@ -2,6 +2,7 @@
 // levels and workshop upgrades, and the stages, each one tougher than the last. Pure data and
 // rules; the shell loads and stores it and the battle only sees the resulting BattleSetup.
 
+import { newDaily, parseDaily, type DailySave } from './daily';
 import { BALANCE, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
@@ -20,6 +21,7 @@ export interface MetaSave {
   stage: number;
   bestWave: number;
   runs: number;
+  daily: DailySave;
 }
 
 /** What a battle is set up with, from the stage and the upgrades. */
@@ -41,6 +43,7 @@ export function newMeta(): MetaSave {
     stage: 1,
     bestWave: 0,
     runs: 0,
+    daily: newDaily(),
   };
 }
 
@@ -69,6 +72,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.stage = int(data.stage, 1, maxStage(out), 1);
   out.bestWave = int(data.bestWave, 0, 999, 0);
   out.runs = int(data.runs, 0, Number.MAX_SAFE_INTEGER, 0);
+  out.daily = parseDaily(data.daily);
   return out;
 }
 

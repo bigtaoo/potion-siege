@@ -10,11 +10,14 @@ import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
+import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import { applyRun, battleSetup, buyHero, buyWorkshop, maxStage, parseMeta, runReward, type MetaSave, type Reward } from './sim/meta';
 import { botAct } from './sim/bot';
+import { BALANCE, type BattleEvent } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
+import type { HomePanel } from './view/Home';
 import { Overlay } from './view/Overlay';
 import { COLORS } from './view/ui';
 import { fitDesign } from './view/viewport';
@@ -80,6 +83,8 @@ class Game {
   /** Crystals already paid for the current battle (a revived battle pays the difference). */
   private paid = 0;
   private revived = false;
+  /** The day the login panel last opened by itself. */
+  private loginShown = '';
   private reward: Reward = { crystals: 0, firstClear: false };
   private readonly autoplay: boolean;
   private readonly speed: number;
@@ -123,6 +128,7 @@ class Game {
 
   /** The page is going away: report the run in progress and the session length. */
   leave(): void {
+    this.store(); // task progress made in the battle so far
     this.run?.close('pagehide');
     this.analytics.track('session_end', { secs: this.analytics.sessionSeconds, runs: this.save.runs, best: this.save.bestWave });
     this.analytics.flush();
@@ -153,6 +159,7 @@ class Game {
       }
       const events = b.drain();
       this.run?.onEvents(events);
+      if (this.run && !this.autoplay) this.countDaily(events);
       this.view.react(events);
       this.hud.react(events);
       if (b.choices) this.overlay.showSkills(b.choices, t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick'), (id) => this.pick(id));
@@ -163,14 +170,22 @@ class Game {
   }
 
   private pick(id: Parameters<Battle['choose']>[0]): void {
-    if (this.battle?.choices) this.run?.onSkillPick(id, this.battle.choices);
+    if (this.battle?.choices) {
+      this.run?.onSkillPick(id, this.battle.choices);
+      if (!this.autoplay) addProgress(this.save, 'skill');
+    }
     this.battle?.choose(id);
     this.overlay.hide();
   }
 
   private finish(b: Battle): void {
     this.platform.gameplayStop();
-    if (!this.revived) this.save.runs++; // a revived run ending again is still one run
+    rollDay(this.save, dayOf(new Date()));
+    if (!this.revived) {
+      this.save.runs++; // a revived run ending again is still one run
+      if (!this.autoplay) addProgress(this.save, 'play');
+    }
+    if (b.result === 'won' && !this.autoplay) addProgress(this.save, 'win');
     const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
     const reward = runReward(this.save, result);
     // a revived battle ending again pays only what it earned on top
@@ -190,11 +205,26 @@ class Game {
     this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
   }
 
-  /** The home screen over an idle battle of the chosen stage. */
-  private home(): void {
+  /** The home screen over an idle battle of the chosen stage; the login reward opens by itself
+   *  the first time each day it can be claimed. */
+  private home(panel: HomePanel = null): void {
+    const today = dayOf(new Date());
+    rollDay(this.save, today);
+    if (panel === null && canClaimLogin(this.save, today) && this.loginShown !== today) panel = 'login';
+    if (panel === 'login') this.loginShown = today;
     this.newBattle(null);
     this.hud.visible = false;
     this.overlay.showHome(this.save, {
+      panel: (p) => this.home(p),
+      claimLogin: () => {
+        const n = claimLogin(this.save, today);
+        if (n > 0) this.claimed('login', n, panel);
+      },
+      claimTask: (i) => {
+        const id = this.save.daily.tasks[i]?.id;
+        const n = claimTask(this.save, i);
+        if (n > 0) this.claimed(`task_${id}`, n, panel);
+      },
       stage: (d) => {
         this.save.stage = Math.min(maxStage(this.save), Math.max(1, this.save.stage + d));
         this.store();
@@ -208,7 +238,28 @@ class Game {
         this.overlay.hide();
         this.platform.gameplayStart();
       },
-    });
+    }, panel, today);
+  }
+
+  private claimed(item: string, crystals: number, panel: HomePanel): void {
+    this.store();
+    this.analytics.track('daily_claim', { item, crystals, total: this.save.crystals });
+    this.home(panel);
+  }
+
+  /** Counts this battle's events toward today's tasks. */
+  private countDaily(events: BattleEvent[]): void {
+    const m = this.save;
+    for (const ev of events) {
+      if (ev.type === 'summon') addProgress(m, 'summon');
+      else if (ev.type === 'merge') {
+        addProgress(m, 'merge');
+        if (ev.star === BALANCE.maxStar) addProgress(m, 'ultimate');
+      } else if (ev.type === 'kill') {
+        addProgress(m, 'kill');
+        if (ev.boss) addProgress(m, 'boss');
+      }
+    }
   }
 
   private buy(ok: boolean, item: string): void {

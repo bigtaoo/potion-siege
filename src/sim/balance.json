@@ -134,5 +134,19 @@
       "startGold": { "max": 10, "step": 15, "base": 50, "growth": 1.5 },
       "crystals": { "max": 10, "step": 0.1, "base": 80, "growth": 1.55 }
     }
+  },
+  "daily": {
+    "login": [50, 80, 120, 160, 200, 250, 500],
+    "taskCount": 3,
+    "tasks": {
+      "play": { "n": 3, "reward": 60 },
+      "win": { "n": 1, "reward": 80 },
+      "kill": { "n": 300, "reward": 60 },
+      "summon": { "n": 40, "reward": 50 },
+      "merge": { "n": 25, "reward": 60 },
+      "ultimate": { "n": 1, "reward": 80 },
+      "skill": { "n": 6, "reward": 50 },
+      "boss": { "n": 2, "reward": 80 }
+    }
   }
 }

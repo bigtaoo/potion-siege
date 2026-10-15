@@ -6,7 +6,7 @@ import { t } from '../i18n';
 import type { MetaSave, Reward } from '../sim/meta';
 import type { SkillId } from '../sim/skills';
 import { iconTexture } from './art';
-import { buildHome, type HomeActions } from './Home';
+import { buildHome, type HomeActions, type HomePanel } from './Home';
 import { Button, COLORS, gem, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -46,9 +46,9 @@ export class Overlay extends Container {
     area.once('pointertap', onStart);
   }
 
-  showHome(m: MetaSave, act: HomeActions): void {
+  showHome(m: MetaSave, act: HomeActions, panel: HomePanel, today: string): void {
     this.open(0.82);
-    this.addChild(buildHome(m, act));
+    this.addChild(buildHome(m, act, panel, today));
   }
 
   showSkills(choices: SkillId[], title: string, onPick: (id: SkillId) => void): void {
