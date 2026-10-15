@@ -4,6 +4,8 @@
 import { Container, Graphics, Sprite, type Texture } from 'pixi.js';
 
 const INK = 0x0e0c12;
+/** The ⚡ outline in a unit box centred on 0, top to tip. */
+const BOLT: [number, number][] = [[0.16, -0.5], [-0.34, 0.1], [-0.02, 0.1], [-0.2, 0.5], [0.36, -0.12], [0.06, -0.12], [0.4, -0.5]];
 
 /** How one kind of potion looks. Positions are fractions of the body art (0,0 top left). */
 export interface PotionLook {
@@ -15,7 +17,7 @@ export interface PotionLook {
   lid: number;
   limb: number;
   /** What rises from its neck: the element mark. */
-  mark: 'flame' | 'frost';
+  mark: 'flame' | 'frost' | 'spark';
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];
@@ -119,7 +121,8 @@ class PotionFigure extends Container {
     const [nx, ny] = at(look.neck[0], look.neck[1]);
     if (pose.tilt === undefined) {
       if (look.mark === 'flame') this.drawFlame(f, look, pose, t, nx, ny, bw, bh, w, r, line);
-      else this.drawFrost(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else if (look.mark === 'frost') this.drawFrost(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else this.drawSpark(f, look, pose, t, nx, ny, bw, bh, w, r, line);
     }
     this.drawArms(f, look, t, at, bh, w, r, line);
   }
@@ -136,6 +139,35 @@ class PotionFigure extends Container {
       const p = (t * 0.9 + i / 3 + pose.phase * 0.37) % 1;
       const ex = nx + Math.sin(i * 7.3 + pose.phase) * bw * 0.12 + Math.sin(t * 5 + i) * bh * 0.03;
       f.circle(ex, ny - bh * 0.15 - p * bh * 0.45, bh * 0.028 * (1 - p)).fill({ color: look.glow[2], alpha: 1 - p });
+    }
+  }
+
+  /** A cartoon lightning bolt hovering over the neck, redrawn a few times a second, with little
+   *  arcs jumping off it. */
+  private drawSpark(f: Graphics, look: PotionLook, pose: PotionPose, t: number, nx: number, ny: number, bw: number, bh: number, w: number, r: number, line: number): void {
+    const tick = Math.floor(t * 9 + pose.phase * 3);
+    const rand = (k: number): number => {
+      const v = Math.sin(tick * 12.9898 + k * 78.233 + pose.phase * 37.7) * 43758.5453;
+      return v - Math.floor(v);
+    };
+    // a chunky cartoon bolt hovering over the neck, jittering every redraw
+    const size = bh * 0.4 * (1 + 0.45 * r + 0.2 * w) * (0.94 + rand(0) * 0.12);
+    const cx = nx + (rand(1) - 0.5) * bw * 0.05;
+    const cy = ny - bh * 0.3 - r * bh * 0.08;
+    const lean = -0.12 + (rand(2) - 0.5) * 0.18;
+    const cos = Math.cos(lean), sin = Math.sin(lean);
+    const bolt = (k: number): number[] =>
+      BOLT.flatMap(([x, y]) => [cx + (x * cos - y * sin) * size * k, cy + (x * sin + y * cos) * size * k]);
+    f.poly(bolt(1)).fill(look.glow[1]).stroke({ width: line * 1.2, color: INK, join: 'round' });
+    f.poly(bolt(0.45)).fill(look.glow[2]);
+    // two short arcs flickering on and off around it
+    for (let i = 0; i < 2; i++) {
+      if (rand(i + 1) < 0.45) continue;
+      const side = i === 0 ? -1 : 1;
+      const sx = cx + side * size * (0.38 + rand(i + 3) * 0.12);
+      const sy = cy + (rand(i + 5) - 0.5) * size * 0.6;
+      const step = size * 0.12;
+      f.moveTo(sx, sy).lineTo(sx + side * step, sy - step).lineTo(sx + side * step, sy + step * 0.3).lineTo(sx + side * step * 2, sy - step * 0.7).stroke({ width: line * 1.6, color: look.glow[0], cap: 'round', join: 'round' });
     }
   }
 

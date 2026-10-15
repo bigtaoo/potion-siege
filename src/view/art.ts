@@ -13,6 +13,7 @@ const FILES = [
   'potion_fire_body',
   'potion_fire_ult',
   'potion_ice_body',
+  'potion_lightning_body',
   'potion_ice_ult',
 ] as const;
 
@@ -67,6 +68,16 @@ const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: strin
     mark: 'frost',
     glow: [0x3fb8e6, 0xa8f4ff, 0xffffff],
     neck: [0.5, 0.05],
+  },
+  lightning: {
+    file: 'potion_lightning_body',
+    eyes: [[0.311, 0.428], [0.672, 0.43]],
+    eyeSize: [0.1, 0.12],
+    lid: 0xfed501,
+    limb: 0xe0a000,
+    mark: 'spark',
+    glow: [0xf5b800, 0xffe94a, 0xffffff],
+    neck: [0.49, 0.03],
   },
 };
 
