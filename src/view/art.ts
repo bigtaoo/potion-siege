@@ -10,6 +10,7 @@ const FILES = [
   'potion_arcane_ult',
   'enemy_grunt',
   'enemy_runner',
+  'enemy_brute',
   'icon_crit',
   'commander',
   'potion_fire_body',
