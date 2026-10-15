@@ -3,11 +3,12 @@
 
 import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, type Text, type Texture } from 'pixi.js';
 import { t as tr } from '../i18n';
-import { SLOT_COUNT, WALL_ROW, slotCenter, type Battle } from '../sim/battle';
+import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
-import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
+import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
+import { STONE, slab, wallTop, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
 import { COLORS, label } from './ui';
 import { DESIGN_W } from './viewport';
@@ -17,15 +18,22 @@ const G = BALANCE.grid;
 const C = BALANCE.commander;
 /** Where the commander stands: feet on this point, below the wall between the two buttons. */
 const CMD = { x: C.x, feet: C.y, height: 180 };
-/** Top and bottom of the stone band the wall row sits on. */
-const WALL_TOP = G.y0 + G.cellH * WALL_ROW - 14;
-const WALL_BOTTOM = G.y0 + G.cellH * G.rows + 10;
+/** Front of the thinnest wall (the bottom row only), and the wall's back edge. */
+const WALL_TOP = G.y0 + G.cellH * (G.rows - 1) - F.parapet;
+const WALL_BOTTOM = G.y0 + G.cellH * G.rows;
+/** How far down the field art reaches; the wall covers its bottom. */
+const FIELD_H = WALL_BOTTOM;
+/** Design y of the top of the wall's inner face in the floor art (tools/make_base_bg.py). */
+const BASE_TOP = 1607;
 /** Where the figures of a level 1-3 cell stand, back to front, and how tall they are. */
 const FIGURES: { spots: [number, number][]; height: number }[] = [
   { spots: [[0, 0]], height: 92 },
   { spots: [[-28, 0], [28, 0]], height: 80 },
   { spots: [[0, -22], [-30, 8], [30, 8]], height: 74 },
 ];
+/** The wall's health bar, set into the wall's inner face. */
+const BAR_H = 30;
+const BAR_Y = BASE_TOP + 14;
 const ULTIMATE_HEIGHT = 150;
 /** Wide ultimates (arms spread out) are drawn shorter so they stay inside their cell. */
 const ULTIMATE_WIDTH = 155;
@@ -68,6 +76,9 @@ export class BattleView extends Container {
   private readonly ground = new Graphics();
   private readonly grid = new Graphics();
   private readonly under = new Graphics();
+  /** The wall's top, under the enemies so they stand behind its merlons' shadows. */
+  private readonly wall = new Graphics();
+  private wallKey = '';
   private readonly enemyArt = new SpriteLayer();
   private readonly world = new Graphics();
   private readonly heroArt = new SpriteLayer();
@@ -100,7 +111,7 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40);
-    this.addChild(this.ground, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.ground, this.wall, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.cmdNext.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.cmdNext, this.children.indexOf(this.wallText));
     this.drawGround();
@@ -240,11 +251,11 @@ export class BattleView extends Container {
     this.shotArt.end();
     // wall health
     const frac = Math.max(0, b.wall / b.wallMax);
-    const barY = WALL_BOTTOM + 14;
-    w.roundRect(F.left, barY, F.right - F.left, 30, 15).fill(COLORS.hpBack);
-    w.roundRect(F.left, barY, Math.max(30, (F.right - F.left) * frac), 30, 15).fill(frac > 0.3 ? 0x4cd964 : COLORS.hp);
+    const barY = BAR_Y;
+    w.roundRect(F.left, barY, F.right - F.left, BAR_H, BAR_H / 2).fill(COLORS.hpBack);
+    w.roundRect(F.left, barY, Math.max(BAR_H, (F.right - F.left) * frac), BAR_H, BAR_H / 2).fill(frac > 0.3 ? 0x4cd964 : COLORS.hp);
     this.wallText.text = `${Math.ceil(Math.max(0, b.wall))} / ${Math.round(b.wallMax)}`;
-    this.wallText.position.set(DESIGN_W / 2, barY + 15);
+    this.wallText.position.set(DESIGN_W / 2, barY + BAR_H / 2);
 
     const fx = this.fx.clear();
     const fxTop = this.fxTop.clear();
@@ -264,6 +275,7 @@ export class BattleView extends Container {
     const from = this.dragFrom;
     this.idle = from !== null || b.paused ? 0 : this.idle + dt;
     const hint = this.idle > HINT_AFTER ? mergeablePair(b) : null;
+    this.drawWall(b);
     for (let s = 0; s < SLOT_COUNT; s++) {
       const h = b.slots[s];
       const c = slotCenter(s);
@@ -277,10 +289,8 @@ export class BattleView extends Container {
       // cells not built yet are just ground
       if (!b.isOpen(s)) continue;
       if (match) g.roundRect(x - 10, y - 10, w + 20, ht + 20, 32).fill({ color: COLORS.gold, alpha: 0.3 + 0.2 * Math.sin(t * 10) });
-      // a built cell is a stone block standing on the one below; wall cells sit in the wall
-      if (Math.floor(s / G.cols) !== WALL_ROW) g.rect(x + 6, y + ht - 10, w - 12, 26).fill(COLORS.wall);
-      // an ultimate hero's cell is framed in gold
-      g.roundRect(x, y, w, ht, 20).fill(COLORS.cell).stroke({ width: 6, color: h && h.star >= BALANCE.maxStar ? COLORS.gold : COLORS.wallTop });
+      // the cell's slab is part of the wall (drawWall); an ultimate hero's is ringed in gold
+      if (h && h.star >= BALANCE.maxStar) g.roundRect(x, y, w, ht, 12).stroke({ width: 6, color: COLORS.gold });
       if (match) g.roundRect(x, y, w, ht, 20).stroke({ width: 6, color: COLORS.gold });
       if (!h) {
         this.cellAnims[s] = null;
@@ -430,7 +440,7 @@ export class BattleView extends Container {
   private drawCommander(under: Graphics, over: Graphics, b: Battle, dt: number): void {
     this.cmdPulse = Math.max(0, this.cmdPulse - dt * 1.5);
     const pop = 1 + this.cmdPulse * 0.25;
-    under.ellipse(CMD.x, CMD.feet, 104, 22).fill(0x10233a).stroke({ width: 6, color: COLORS.gold });
+    under.ellipse(CMD.x, CMD.feet, 104, 22).fill({ color: 0x1e140e, alpha: 0.45 }).stroke({ width: 5, color: COLORS.gold });
     const tex = commanderTexture();
     if (tex) {
       heroShadow(under, CMD.x, CMD.feet - 4, CMD.height * 0.6);
@@ -454,20 +464,52 @@ export class BattleView extends Container {
     if (bg) {
       const s = new Sprite(bg);
       s.width = DESIGN_W;
-      s.height = WALL_TOP;
+      s.height = FIELD_H;
       this.addChildAt(s, this.getChildIndex(g));
     } else {
       g.rect(F.left - 20, 0, F.right - F.left + 40, WALL_TOP).fill(COLORS.fieldEdge);
       g.rect(F.left, 0, F.right - F.left, WALL_TOP).fill(COLORS.field);
       for (let y = 120; y < WALL_TOP; y += 160) g.rect(F.left, y, F.right - F.left, 4).fill({ color: 0xffffff, alpha: 0.04 });
     }
-    // the wall: a stone band with towers at both ends, the bottom row of cells set into it
+    // the workshop floor, and the wall's inner face with a groove for the health bar
+    const base = baseTexture();
+    if (base) {
+      const s = new Sprite(base);
+      s.width = DESIGN_W;
+      s.height = (base.height * DESIGN_W) / base.width;
+      s.y = BASE_TOP;
+      this.addChildAt(s, this.getChildIndex(g));
+      g.roundRect(F.left - 8, BAR_Y - 8, F.right - F.left + 16, BAR_H + 16, (BAR_H + 16) / 2).fill(STONE.shadow).stroke({ width: 4, color: STONE.line });
+      return;
+    }
+    // without the art: a stone band with towers at both ends, the bottom row of cells set into it
     const x0 = G.x0 - 30;
     const x1 = G.x0 + G.cellW * G.cols + 30;
     g.rect(x0, WALL_TOP, x1 - x0, WALL_BOTTOM - WALL_TOP).fill(COLORS.wall).stroke({ width: 4, color: 0x5c5040 });
     for (const tx of [x0 - 10, x1 - 40]) {
       g.rect(tx, WALL_TOP - 50, 50, WALL_BOTTOM - WALL_TOP + 50).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
       g.rect(tx, WALL_TOP - 70, 20, 24).rect(tx + 30, WALL_TOP - 70, 20, 24).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
+    }
+  }
+
+  /** The wall from above, redrawn only when a cell is built: a slab for every built cell, each
+   *  column as thick as its cells, with the parapet along its front. */
+  private drawWall(b: Battle): void {
+    const key = b.open.map(Number).join('');
+    if (key === this.wallKey) return;
+    this.wallKey = key;
+    const g = this.wall.clear();
+    const columns: WallColumn[] = [];
+    for (let col = 0; col < G.cols; col++) {
+      const x0 = col === 0 ? 0 : G.x0 + G.cellW * col;
+      const x1 = col === G.cols - 1 ? DESIGN_W : G.x0 + G.cellW * (col + 1);
+      columns.push({ x0, x1, front: b.wallFront(G.x0 + G.cellW * (col + 0.5)) + F.parapet });
+    }
+    wallTop(g, columns, WALL_BOTTOM);
+    for (let s = 0; s < SLOT_COUNT; s++) {
+      if (!b.isOpen(s)) continue;
+      const c = slotCenter(s);
+      slab(g, c.x - G.cellW / 2 + 8, c.y - G.cellH / 2 + 10, G.cellW - 16, G.cellH - 22, s);
     }
   }
 

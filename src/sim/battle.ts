@@ -76,6 +76,16 @@ export class Battle {
     return C.summonsPerCell - (this.summons % C.summonsPerCell);
   }
 
+  /** The wall's front edge above x: every built cell makes its column of the wall one cell
+   *  thicker, so the front is the top of the column's outermost cell, less the parapet. */
+  wallFront(x: number): number {
+    const g = B.grid;
+    const col = Math.min(g.cols - 1, Math.max(0, Math.floor((x - g.x0) / g.cellW)));
+    let row = WALL_ROW;
+    while (row > 0 && this.open[(row - 1) * g.cols + col]) row--;
+    return g.y0 + g.cellH * row - B.field.parapet;
+  }
+
   /** Closed cells standing on an open one: new cells always join on top of what is built. */
   buildable(): number[] {
     const cols = B.grid.cols;
@@ -257,10 +267,12 @@ export class Battle {
         e.freezeTime -= dt;
         continue;
       }
-      const stop = B.field.wallY - e.radius;
+      const stop = this.wallFront(e.x) - e.radius;
       if (e.y < stop) {
         e.y = Math.min(stop, e.y + e.speed * (e.slowTime > 0 ? e.slowFactor : 1) * dt);
       } else {
+        // a cell just built under it pushes it back to the new front
+        e.y = stop;
         e.atWall = true;
         this.wall -= B.enemies[e.kind].wallDps * dt;
         hitWall = true;
