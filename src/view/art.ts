@@ -78,6 +78,7 @@ const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: strin
     mark: 'spark',
     glow: [0xf5b800, 0xffe94a, 0xffffff],
     neck: [0.49, 0.03],
+    size: 0.82,
   },
 };
 

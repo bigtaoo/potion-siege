@@ -21,6 +21,8 @@ export interface PotionLook {
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];
+  /** Height relative to the other potions, so a wide bottle does not crowd its cell. */
+  size?: number;
 }
 
 /** Where and how a potion is drawn this frame. */
@@ -58,6 +60,7 @@ export function recoil(since: number): number {
 /** Where the throwing hand is at the moment of release, relative to the feet, for a potion
  *  `height` tall: thrown vials start from here. */
 export function throwingHand(look: PotionLook, height: number): { x: number; y: number } {
+  height *= look.size ?? 1;
   const bw = (height * look.body.width) / look.body.height;
   return { x: 0.37 * bw - 0.02 * height, y: -height * (0.1 + 0.38 + 0.36 + 0.14) };
 }
@@ -75,7 +78,7 @@ class PotionFigure extends Container {
 
   draw(look: PotionLook, pose: PotionPose): void {
     const t = pose.time + pose.phase * 0.77;
-    const bh = pose.height;
+    const bh = pose.height * (look.size ?? 1);
     const bw = (bh * look.body.width) / look.body.height;
     const lift = bh * 0.1;
     const at = (fx: number, fy: number): [number, number] => [(fx - 0.5) * bw, -lift - (1 - fy) * bh];
