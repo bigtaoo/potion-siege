@@ -2,6 +2,7 @@
 // gold piles up, otherwise summons, merges the highest pair it finds and takes the first skill.
 
 import { Battle, SLOT_COUNT } from './battle';
+import { TICK_RATE } from './math/fixed';
 import type { BattleSetup } from './meta';
 
 export function botAct(b: Battle): void {
@@ -26,12 +27,12 @@ export function botAct(b: Battle): void {
   else if (best && b.slots[best[0]]!.star >= 2) b.move(best[0], best[1]);
 }
 
-/** Plays a whole battle headless at a fixed step; returns the battle at its end. */
-export function playOut(seed: number, dt = 1 / 30, maxSeconds = 1200, setup?: BattleSetup): Battle {
+/** Plays a whole battle headless, the bot acting once a tick; returns the battle at its end. */
+export function playOut(seed: number, maxSeconds = 1200, setup?: BattleSetup): Battle {
   const b = new Battle(seed, setup);
-  for (let t = 0; t < maxSeconds && b.result === null; t += dt) {
+  for (let t = 0; t < maxSeconds * TICK_RATE && b.result === null; t++) {
     botAct(b);
-    b.step(dt);
+    b.step();
     b.drain();
   }
   return b;

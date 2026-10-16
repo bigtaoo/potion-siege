@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { enemyStats, RESIST, resist, resistLabel, resists } from './enemies';
 import { heroUnlocked, newMeta, stageHp } from './meta';
-import { Rng } from './rng';
+import { FP } from './math/fixed';
+import { Prng } from './math/prng';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from './types';
 import { FIRST_STAGE, FIRST_WAVE, flyerShare, planWave, waveKinds } from './waves';
 
@@ -50,16 +51,16 @@ describe('enemy resistances', () => {
 describe('enemy stats', () => {
   it('gives the hit points of the first wave a kind turns up in, scaled for the stage', () => {
     for (const stage of [1, 4]) {
-      const boss = planWave(FIRST_WAVE.boss, new Rng(1)).find((s) => s.kind === 'boss');
+      const boss = planWave(FIRST_WAVE.boss, new Prng(1)).find((s) => s.kind === 'boss');
       expect(FIRST_WAVE.boss).toBe(5);
-      expect(enemyStats('boss', stage).hp).toBeCloseTo(boss!.hp * stageHp(stage));
+      expect(enemyStats('boss', stage).hp).toBeCloseTo((boss!.hp / FP) * stageHp(stage), 1);
     }
   });
 
   it('starts each kind on a stage and wave that can actually spawn it', () => {
     const kinds = (wave: number, stage: number) => {
       const seen = new Set<string>();
-      for (let seed = 1; seed < 40; seed++) for (const s of planWave(wave, new Rng(seed), stage)) seen.add(s.kind);
+      for (let seed = 1; seed < 40; seed++) for (const s of planWave(wave, new Prng(seed), stage)) seen.add(s.kind);
       return seen;
     };
     for (const kind of ENEMY_KINDS) {
@@ -82,7 +83,7 @@ describe('enemy stats', () => {
 describe('the new kinds in the wave plan', () => {
   it('plans the stages before them exactly as it did', () => {
     for (let wave = 1; wave <= BALANCE.waves.count; wave++) {
-      for (const seed of [1, 7, 42]) expect(planWave(wave, new Rng(seed), FIRST_STAGE.flyer - 1)).toEqual(planWave(wave, new Rng(seed)));
+      for (const seed of [1, 7, 42]) expect(planWave(wave, new Prng(seed), FIRST_STAGE.flyer - 1)).toEqual(planWave(wave, new Prng(seed)));
     }
   });
 
@@ -95,12 +96,12 @@ describe('the new kinds in the wave plan', () => {
 
   it('sends one winder a wave from its stage, two later on, without moving the others', () => {
     const W = BALANCE.winder;
-    const count = (stage: number) => planWave(W.wave, new Rng(3), stage).filter((s) => s.kind === 'winder').length;
+    const count = (stage: number) => planWave(W.wave, new Prng(3), stage).filter((s) => s.kind === 'winder').length;
     expect(count(W.stage)).toBe(1);
     expect(count(W.twoFrom)).toBe(2);
-    const rest = planWave(W.wave, new Rng(3), W.stage).filter((s) => s.kind !== 'winder');
-    expect(rest).toEqual(planWave(W.wave, new Rng(3), W.stage - 1));
-    const plan = planWave(5, new Rng(3), W.stage);
+    const rest = planWave(W.wave, new Prng(3), W.stage).filter((s) => s.kind !== 'winder');
+    expect(rest).toEqual(planWave(W.wave, new Prng(3), W.stage - 1));
+    const plan = planWave(5, new Prng(3), W.stage);
     expect(plan.map((s) => s.at)).toEqual([...plan.map((s) => s.at)].sort((a, b) => a - b));
   });
 });
@@ -120,7 +121,7 @@ describe('wave forecast', () => {
       for (let wave = 1; wave <= BALANCE.waves.count; wave++) {
         const forecast = waveKinds(wave, stage);
         const seen = new Set<string>();
-        for (let seed = 1; seed <= 40; seed++) planWave(wave, new Rng(seed), stage).forEach((s) => seen.add(s.kind));
+        for (let seed = 1; seed <= 40; seed++) planWave(wave, new Prng(seed), stage).forEach((s) => seen.add(s.kind));
         for (const kind of seen) expect(forecast, `stage ${stage} wave ${wave}`).toContain(kind);
         for (const kind of forecast) expect(seen.has(kind), `stage ${stage} wave ${wave} ${kind}`).toBe(true);
       }

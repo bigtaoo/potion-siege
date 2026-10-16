@@ -11,6 +11,7 @@
 // the enemy hit points of stages 1, 2, ... to try a softer start without touching the code.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
+import { TICK_RATE } from '../src/sim/math/fixed';
 import { botAct } from '../src/sim/bot';
 import { addProgress, claimLogin, claimTask, rollDay } from '../src/sim/daily';
 import { battleSetup, buyHero, buyWorkshop, claimAd, claimChest, heroCost, newMeta, Purse, workshopCost, type MetaSave, type WorkshopId } from '../src/sim/meta';
@@ -86,10 +87,10 @@ function play(seed: number, setup: ReturnType<typeof battleSetup>, revive: boole
   let lostFirst = false;
   let revived = false;
   for (;;) {
-    for (let t = 0; t < 1200 && b.result === null; t += 1 / 30) {
+    for (let t = 0; t < 1200 * TICK_RATE && b.result === null; t++) {
       if (b.choices) skills++;
       botAct(b);
-      b.step(1 / 30);
+      b.step();
       onEvents?.(b);
       b.drain();
     }

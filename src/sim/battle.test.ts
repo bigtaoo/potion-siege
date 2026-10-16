@@ -1,11 +1,31 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, SLOT_COUNT, WALL_ROW } from './battle';
 import { playOut } from './bot';
+import { FP, TICK_RATE, ticks, toFp } from './math/fixed';
 import { skillHeroes } from './skills';
-import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP } from './types';
+import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP, type Projectile } from './types';
 
 /** The first cell of the wall row, open from the start. */
 const W = WALL_ROW * BALANCE.grid.cols;
+
+/** A grunt standing still at (x, y) with `hp` hit points, all in world units. */
+function grunt(id: number, x: number, y: number, hp: number): Enemy {
+  [x, y, hp] = [toFp(x), toFp(y), toFp(hp)];
+  return {
+    id, kind: 'grunt', x, y, px: x, py: y, hp, maxHp: hp, speed: 0, radius: toFp(30),
+    slowFactor: 1000, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+    markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false,
+  };
+}
+
+/** A shot of `kind` already on `target` (`damage` in world units), landing on the next tick. */
+function shot(kind: HeroKind, target: Enemy, damage: number): Projectile {
+  const { x, y } = target;
+  return { id: 1, kind, star: 1, x, y, px: x, py: y, targetId: target.id, tx: x, ty: y, damage: toFp(damage) };
+}
+
+/** Hit points back in world units. */
+const u = (v: number) => v / FP;
 
 describe('Battle', () => {
   it('summons onto a free open slot and raises the cost', () => {
@@ -65,13 +85,9 @@ describe('Battle', () => {
 
   it('lets the commander shoot on its own', () => {
     const b = new Battle(6);
-    b.enemies.push({
-      id: 999, kind: 'grunt', x: 500, y: 600, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false,
-    });
-    for (let i = 0; i < 60; i++) b.step(1 / 30);
-    expect(b.enemies.find((e) => e.id === 999)!.hp).toBeLessThan(1e6);
+    b.enemies.push(grunt(999, 500, 600, 1e6));
+    for (let i = 0; i < 60; i++) b.step();
+    expect(b.enemies.find((e) => e.id === 999)!.hp).toBeLessThan(toFp(1e6));
   });
 
   it('has a lineup of known heroes', () => {
@@ -144,7 +160,7 @@ describe('Battle', () => {
     expect(b.choices?.length).toBeGreaterThan(0);
     expect(b.upgrade()).toBe(false);
     const time = b.time;
-    b.step(1);
+    b.step();
     expect(b.time).toBe(time);
     // one reroll per offer, and it brings other cards while there are others to bring
     const first = [...b.choices!];
@@ -161,8 +177,8 @@ describe('Battle', () => {
 
   it('loses when the wall falls and can be revived once', () => {
     const b = new Battle(5);
-    b.wall = 0.001;
-    for (let i = 0; i < 2000 && !b.result; i++) b.step(1 / 30);
+    b.wall = 1;
+    for (let i = 0; i < 2000 && !b.result; i++) b.step();
     expect(b.result).toBe('lost');
     b.revive();
     expect(b.result).toBeNull();
@@ -191,19 +207,15 @@ describe('damage dealt', () => {
   }
 
   function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
-    const e: Enemy = {
-      id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false,
-    };
+    const e = grunt(9000 + b.enemies.length, x, y, hp);
     b.enemies.push(e);
     return e;
   }
 
   /** A projectile of `kind` already on `target`, landing on the next step. */
   function hit(b: Battle, kind: HeroKind, target: Enemy, damage: number): void {
-    b.projectiles.push({ id: 1, kind, star: 1, x: target.x, y: target.y, targetId: target.id, tx: target.x, ty: target.y, damage });
-    b.step(1 / 60);
+    b.projectiles.push(shot(kind, target, damage));
+    b.step();
   }
 
   it('credits the fire splash on every enemy it reaches', () => {
@@ -211,15 +223,15 @@ describe('damage dealt', () => {
     const a = enemy(b, 500, 400, 1000);
     enemy(b, 540, 400, 1000);
     hit(b, 'fire', a, 100);
-    expect(b.dealt.fire).toBeCloseTo(200);
+    expect(u(b.dealt.fire)).toBeCloseTo(200);
   });
 
   it('credits poison with its ticks', () => {
     const b = quiet();
     const e = enemy(b, 500, 400, 1e6);
     hit(b, 'poison', e, 10);
-    for (let i = 0; i < 60; i++) b.step(1 / 60);
-    expect(b.dealt.poison).toBeGreaterThan(10 + BALANCE.heroes.poison.poisonDps * 0.9);
+    for (let i = 0; i < TICK_RATE; i++) b.step();
+    expect(u(b.dealt.poison)).toBeGreaterThan(10 + BALANCE.heroes.poison.poisonDps * 0.9);
   });
 
   it('credits lightning with its chain jumps', () => {
@@ -228,17 +240,17 @@ describe('damage dealt', () => {
     enemy(b, 560, 400, 1e6);
     enemy(b, 620, 400, 1e6);
     hit(b, 'lightning', a, 100);
-    expect(b.dealt.lightning).toBeGreaterThan(100 + 100 * BALANCE.heroes.lightning.chainFalloff * 0.99);
+    expect(u(b.dealt.lightning)).toBeGreaterThan(100 + 100 * BALANCE.heroes.lightning.chainFalloff * 0.99);
   });
 
   it('leaves out overkill and the commander', () => {
     const b = quiet();
     hit(b, 'arcane', enemy(b, 500, 400, 10), 1000);
-    expect(b.dealt.arcane).toBeCloseTo(10);
+    expect(u(b.dealt.arcane)).toBeCloseTo(10);
     b.commanderCooldown = 0;
     enemy(b, 500, 400, 1e6);
-    for (let i = 0; i < 60; i++) b.step(1 / 30);
-    expect(b.dealt.arcane).toBeCloseTo(10);
+    for (let i = 0; i < 60; i++) b.step();
+    expect(u(b.dealt.arcane)).toBeCloseTo(10);
   });
 
   it('never credits more than the enemies lost', () => {
@@ -248,12 +260,12 @@ describe('damage dealt', () => {
     let lost = 0;
     for (let i = 0; i < 900 && !b.paused && !b.result; i++) {
       const before = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
-      b.step(1 / 30);
+      b.step();
       const after = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
       for (const [id, hp] of before) lost += hp - (after.get(id) ?? 0);
     }
     expect(credited()).toBeGreaterThan(0);
-    expect(credited()).toBeLessThanOrEqual(lost + 1e-6);
+    expect(credited()).toBeLessThanOrEqual(lost);
   });
 });
 
@@ -264,18 +276,14 @@ describe('rust', () => {
     const b = new Battle(5);
     b.enemies = [];
     b.commanderCooldown = 1e9;
-    const e: Enemy = {
-      id: 9000, kind: 'grunt', x: 500, y: 400, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false,
-    };
+    const e = grunt(9000, 500, 400, 1e6);
     b.enemies.push(e);
     return { b, e };
   }
 
   function shoot(b: Battle, kind: HeroKind, e: Enemy, damage: number): void {
-    b.projectiles.push({ id: 1, kind, star: 1, x: e.x, y: e.y, targetId: e.id, tx: e.x, ty: e.y, damage });
-    b.step(1 / 60);
+    b.projectiles.push(shot(kind, e, damage));
+    b.step();
   }
 
   it('stacks one rust per corrosion hit up to the cap', () => {
@@ -289,24 +297,24 @@ describe('rust', () => {
   it('wears off once the corrosion stops', () => {
     const { b, e } = rig();
     shoot(b, 'poison', e, 1);
-    for (let i = 0; i < (P.rustTime + 0.5) * 30; i++) b.step(1 / 30);
+    for (let i = 0; i < ticks(P.rustTime + 0.5); i++) b.step();
     expect(e.rust).toBe(0);
   });
 
   it('makes every hit land harder, on top of the arcane mark', () => {
     const { b, e } = rig();
     e.rust = 3;
-    e.rustTime = 99;
+    e.rustTime = ticks(99);
     let before = e.hp;
     shoot(b, 'arcane', e, 100);
-    expect(before - e.hp).toBeCloseTo(100 * (1 + P.rustStep * 3));
+    expect(u(before - e.hp)).toBeCloseTo(100 * (1 + P.rustStep * 3));
     // one Arcane Mark level, taken as an offered skill
     b.choices = ['arcaneMark'];
     b.choose('arcaneMark');
-    e.markTime = 99;
+    e.markTime = ticks(99);
     before = e.hp;
     shoot(b, 'arcane', e, 100);
-    expect(before - e.hp).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark) * (1 + P.rustStep * 3));
+    expect(u(before - e.hp)).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark) * (1 + P.rustStep * 3));
   });
 });
 

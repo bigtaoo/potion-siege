@@ -10,7 +10,7 @@ function runs(stage: number, seeds: number, heroLevel = 1, workshop = 0) {
   for (const k of HERO_KINDS) m.heroes[k] = heroLevel;
   m.workshop = { wall: workshop, startGold: workshop, crystals: workshop };
   const setup = battleSetup(m, stage);
-  return Array.from({ length: seeds }, (_, i) => playOut(1000 + i, 1 / 30, 1200, setup));
+  return Array.from({ length: seeds }, (_, i) => playOut(1000 + i, 1200, setup));
 }
 
 const winRate = (bs: ReturnType<typeof runs>) => bs.filter((b) => b.result === 'won').length / bs.length;

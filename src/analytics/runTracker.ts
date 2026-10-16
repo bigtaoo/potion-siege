@@ -99,7 +99,7 @@ export class RunTracker {
       run: this.run,
       result: b.result ?? 'quit',
       wave: b.wave,
-      secs: Math.round(b.time),
+      secs: Math.round(b.seconds),
       kills: b.kills,
       upgrades: b.upgrades,
       summons: b.summons,

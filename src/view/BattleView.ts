@@ -5,6 +5,8 @@ import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, typ
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair } from '../sim/tutorial';
+import { FP, TICK_RATE, toFp } from '../sim/math/fixed';
+import { BRAD_FULL } from '../sim/math/trig';
 import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
 import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
@@ -12,6 +14,7 @@ import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { STONE, slab, wallTop, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
 import { COLORS, label } from './ui';
+import { lerpX, lerpY } from './fixedStep';
 import { DESIGN_W } from './viewport';
 
 const F = BALANCE.field;
@@ -109,6 +112,8 @@ export class BattleView extends Container {
   private readonly floaters = new Container();
   /** The enemies in drawing order, refilled every frame. */
   private readonly depth: Enemy[] = [];
+  /** The enemies as drawn: world units, between their last two ticks; reused every frame. */
+  private readonly drawn: Enemy[] = [];
   private fxList: Effect[] = [];
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
@@ -214,15 +219,16 @@ export class BattleView extends Container {
         case 'push': {
           // the lines trail the enemy as it flies back
           const e = this.battle?.enemies.find((o) => o.id === ev.id);
-          const r = e?.radius ?? 36;
-          this.effect(0.35, (g, life) => pushLines(g, e?.x ?? ev.x, e ? e.y : ev.y, r, 1 - life));
+          const r = e ? e.radius / FP : 36;
+          this.effect(0.35, (g, life) => pushLines(g, e ? e.x / FP : ev.x, e ? e.y / FP : ev.y, r, 1 - life));
           break;
         }
       }
     }
   }
 
-  update(dt: number): void {
+  /** Draws the battle `alpha` of the way through its last tick (see FixedStep). */
+  update(dt: number, alpha = 1): void {
     const b = this.battle;
     if (!b) return;
     this.shake = Math.max(0, this.shake - dt);
@@ -235,7 +241,15 @@ export class BattleView extends Container {
     this.enemyArt.begin();
     const depth = this.depth;
     depth.length = 0;
-    for (const e of b.enemies) depth.push(e);
+    for (let i = 0; i < b.enemies.length; i++) {
+      const e = b.enemies[i];
+      const o = (this.drawn[i] ??= { ...e });
+      Object.assign(o, e);
+      o.x = lerpX(e, alpha);
+      o.y = lerpY(e, alpha);
+      o.radius = e.radius / FP;
+      depth.push(o);
+    }
     depth.sort(byDepth);
     for (const e of depth) {
       const tex = enemyTexture(e.kind);
@@ -254,10 +268,10 @@ export class BattleView extends Container {
         const beat = Math.sin(t * 14 + e.id * 1.7);
         s = this.enemyArt.put(tex, e.x, feet - e.radius * ENEMY_ART.lift - beat * 6, e.radius * ENEMY_ART.height);
         s.scale.y *= 0.97 + beat * 0.03;
-        s.rotation = e.atWall ? 0 : Math.cos((e.phase ?? 0) + b.time * BALANCE.flyer.weaveRate) * 0.14;
+        s.rotation = e.atWall ? 0 : Math.cos((((e.phase ?? 0) / BRAD_FULL) * 2 * Math.PI) + b.seconds * BALANCE.flyer.weaveRate) * 0.14;
       } else if (e.kind === 'winder') {
         // eight legs: a quick low scuttle, and a jolt each time it winds the others back
-        const jolt = Math.max(0, (e.windTime ?? 0) - (BALANCE.winder.every - 0.3)) / 0.3;
+        const jolt = Math.max(0, (e.windTime ?? 0) / TICK_RATE - (BALANCE.winder.every - 0.3)) / 0.3;
         const hop = Math.abs(Math.sin(step * 2)) * 0.35;
         s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height * (1 + jolt * 0.12));
         s.rotation = Math.sin(step * 2) * 0.03;
@@ -278,12 +292,14 @@ export class BattleView extends Container {
     for (const p of b.projectiles) {
       const look = potionLook(p.kind);
       if (!look) {
-        drawProjectile(w, p.kind, p.x, p.y);
+        drawProjectile(w, p.kind, lerpX(p, alpha), lerpY(p, alpha));
         continue;
       }
       // a thrown vial tumbling end over end, trailing fire; it leaves from the thrower's hand
-      let px = p.x;
-      let py = p.y;
+      let px = lerpX(p, alpha);
+      let py = lerpY(p, alpha);
+      const tx = p.tx / FP;
+      const ty = p.ty / FP;
       const launch = this.launches.get(p.id);
       if (launch) {
         const k = 1 - (t - launch.at) / LEAVE_HAND;
@@ -293,9 +309,9 @@ export class BattleView extends Container {
           py += launch.dy * k * k;
         }
       }
-      const len = Math.hypot(p.tx - px, p.ty - py) || 1;
-      const dx = (px - p.tx) / len;
-      const dy = (py - p.ty) / len;
+      const len = Math.hypot(tx - px, ty - py) || 1;
+      const dx = (px - tx) / len;
+      const dy = (py - ty) / len;
       // the trail: one inked outline under all three blobs, so it reads as a single streak
       for (let i = 3; i >= 1; i--) w.circle(px + dx * i * 16, py + dy * i * 16, 20 - i * 3 + 4).fill(INK);
       for (let i = 3; i >= 1; i--) w.circle(px + dx * i * 16, py + dy * i * 16, 20 - i * 3).fill(look.glow[i - 1]);
@@ -309,7 +325,7 @@ export class BattleView extends Container {
     const barY = BAR_Y;
     w.roundRect(F.left, barY, F.right - F.left, BAR_H, BAR_H / 2).fill(COLORS.hpBack);
     w.roundRect(F.left, barY, Math.max(BAR_H, (F.right - F.left) * frac), BAR_H, BAR_H / 2).fill(frac > 0.3 ? 0x4cd964 : COLORS.hp);
-    this.wallText.text = `${Math.ceil(Math.max(0, b.wall))} / ${Math.round(b.wallMax)}`;
+    this.wallText.text = `${Math.ceil(Math.max(0, b.wall) / FP)} / ${Math.round(b.wallMax / FP)}`;
     this.wallText.position.set(DESIGN_W / 2, barY + BAR_H / 2);
 
     const fx = this.fx.clear();
@@ -317,7 +333,7 @@ export class BattleView extends Container {
     const fxGround = this.fxGround.clear();
     this.fxList = this.fxList.filter((e) => (e.ttl -= dt) > 0);
     for (const e of this.fxList) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
-    for (const v of b.vortices) vortexSwirl(fxGround, v.x, v.y, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / 0.4));
+    for (const v of b.vortices) vortexSwirl(fxGround, v.x / FP, v.y / FP, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / TICK_RATE / 0.4));
     for (const f of this.floaters.children) {
       if (!f.visible) continue;
       f.y -= 120 * dt;
@@ -361,7 +377,9 @@ export class BattleView extends Container {
       // the figures of a cell take turns to throw; the next one draws back just before
       const cell = a;
       const n = h.star >= BALANCE.maxStar ? 1 : h.star;
-      const wind = h.cooldown > 0 && h.cooldown < WIND_UP ? 1 - h.cooldown / WIND_UP : 0;
+      // the cooldown is in thousandths of a tick
+      const left = h.cooldown / (TICK_RATE * 1000);
+      const wind = left > 0 && left < WIND_UP ? 1 - left / WIND_UP : 0;
       const anim = (i: number): FigureAnim => ({
         wind: i === cell.shots % n ? wind : 0,
         since: cell.shots > 0 && i === (cell.shots - 1) % n ? t - cell.lastShot : Infinity,
@@ -561,7 +579,7 @@ export class BattleView extends Container {
     for (let col = 0; col < G.cols; col++) {
       const x0 = col === 0 ? 0 : G.x0 + G.cellW * col;
       const x1 = col === G.cols - 1 ? DESIGN_W : G.x0 + G.cellW * (col + 1);
-      columns.push({ x0, x1, front: b.wallFront(G.x0 + G.cellW * (col + 0.5)) + F.parapet });
+      columns.push({ x0, x1, front: b.wallFront(toFp(G.x0 + G.cellW * (col + 0.5))) / FP + F.parapet });
     }
     wallTop(g, columns, WALL_BOTTOM);
     for (let s = 0; s < SLOT_COUNT; s++) {
