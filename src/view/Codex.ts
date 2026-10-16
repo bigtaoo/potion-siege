@@ -9,7 +9,7 @@ import { enemyStats, resistLabel, resists } from '../sim/enemies';
 import { heroUnlocked, type MetaSave } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types';
 import { potionLook } from './art';
-import { bossTag, bottle, enemySprite, fit, ink, lock, P, paperCard, plate, woodPanel } from './kit';
+import { bossTag, bottle, enemySprite, fit, ink, LIGHT, lightPanel, lightTile, lock, P, plate } from './kit';
 import { INK, star, stillPotion } from './potion';
 import { COLORS, HERO_COLORS, label } from './ui';
 
@@ -26,8 +26,8 @@ export interface CodexArea {
 const HEAD = 76;
 const FOOT = 34;
 const GAP = 14;
-const WEAK = 0x2f8a3a;
-const STRONG = 0xc0392b;
+const WEAK = 0x26732f;
+const STRONG = 0xb3352a;
 const GREY = 0x8a7d6a;
 
 export function buildCodex(m: MetaSave, a: CodexArea): Container {
@@ -57,7 +57,7 @@ function board(title: string, w: number, h: number): Container {
   const c = new Container();
   const p = plate(title, 40, 300);
   p.y = -h / 2 + 4;
-  c.addChild(woodPanel(w, h), p);
+  c.addChild(lightPanel(w, h), p);
   return c;
 }
 
@@ -80,10 +80,10 @@ function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container
   const look = potionLook(kind);
   const open = heroUnlocked(m, kind) && !!look;
   const r = new Container();
-  r.addChild(paperCard(rw, rh, 22));
+  r.addChild(lightTile(rw, rh, 22));
   const sw = Math.min(240, rw * 0.27);
   const sx = -rw / 2 + 10 + sw / 2;
-  r.addChild(new Graphics().roundRect(-rw / 2 + 10, -rh / 2 + 10, sw, rh - 30, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: P.line }));
+  r.addChild(new Graphics().roundRect(-rw / 2 + 10, -rh / 2 + 10, sw, rh - 30, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: LIGHT.edge }));
   const name = fit(label(t(`hero.${kind}`), 36, { stroke: { color: P.line, width: 7 } }), sw - 24);
   name.position.set(sx, -rh / 2 + 10 + (rh - 30) * 0.34);
   const sub = fit(label(open ? `Lv ${m.heroes[kind]}` : t('codex.locked'), 28, { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
@@ -161,7 +161,7 @@ function flasks(r: Container, cx: number, feet: number, n: number, rh: number): 
  *  for the stage picked on the battle tab. */
 function monsterBoard(stage: number, w: number, h: number, rows: boolean): Container {
   const c = board(t('codex.monsters'), w, h);
-  const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.cream });
+  const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
   note.position.set(w / 2 - 34, -h / 2 + 52);
   c.addChild(note);
@@ -185,7 +185,7 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
 /** A tall card: art, name, the numbers, then the resistances two by two. */
 function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Container {
   const c = new Container();
-  c.addChild(paperCard(cw, ch, 22));
+  c.addChild(lightTile(cw, ch, 22));
   const top = -ch / 2;
   const artH = ch - 412;
   c.addChild(art(kind, cw - 30, artH, 0, top + 16 + artH / 2));
@@ -212,7 +212,7 @@ function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Co
 /** A wide row: art, then name and numbers, then the resistances three by two. */
 function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number): Container {
   const c = new Container();
-  c.addChild(paperCard(rw, rh, 22));
+  c.addChild(lightTile(rw, rh, 22));
   const artW = Math.min(170, rw * 0.24);
   c.addChild(art(kind, artW, rh - 30, -rw / 2 + 14 + artW / 2, -4));
   const tx = -rw / 2 + 26 + artW;

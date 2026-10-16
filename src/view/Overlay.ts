@@ -21,7 +21,10 @@ import {
   swordsIcon,
   tappable,
   wallIcon,
-  woodPanel,
+  inset,
+  LIGHT,
+  lightPanel,
+  lightTile,
   type ButtonKind,
 } from './kit';
 import { iconTexture, ultimateTexture } from './art';
@@ -136,8 +139,8 @@ export class Overlay extends Container {
     const BW = W * cols.length;
     const box = this.box(BW + 60, H + 220);
     box.y += 40; // room for the crest over the board
-    box.addChild(woodPanel(BW, H));
-    if (wide) box.addChild(new Graphics().rect(-3, -H / 2 + 40, 6, H - 80).fill({ color: P.line, alpha: 0.45 }));
+    box.addChild(lightPanel(BW, H));
+    if (wide) box.addChild(new Graphics().rect(-3, -H / 2 + 40, 6, H - 80).fill(LIGHT.seam));
     cols.forEach((col, i) => {
       const x = (i - (cols.length - 1) / 2) * W;
       // the second column sits in the middle of the board's height
@@ -198,7 +201,7 @@ function statTiles(stats: string, cw: number): Section {
   parts.forEach((part, i) => {
     const tile = new Container();
     tile.position.set((i - (parts.length - 1) / 2) * (tw + gap), 135);
-    tile.addChild(paperCard(tw, 220, 24));
+    tile.addChild(lightTile(tw, 220, 24));
     const icon = icons[i]();
     icon.scale.set(0.8);
     icon.y = -38;
@@ -215,13 +218,13 @@ function statTiles(stats: string, cw: number): Section {
  *  right the rewarded ×2 (or a brass ×2 seal once it was paid). */
 function purse(reward: Reward, more: EndExtras, iw: number): Section {
   const c = new Container();
-  c.addChild(new Graphics().roundRect(-iw / 2, -64, iw, 128, 30).fill(P.woodDark).stroke({ width: 4, color: P.line }));
-  const what = label(t('earned'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  c.addChild(inset(iw, 128, -64, 30));
+  const what = ink(t('earned'), 44);
   what.anchor.set(0, 0.5);
   what.x = -iw / 2 + 40;
   c.addChild(what);
   // with the ×2 on offer the gem and count follow the words; otherwise they sit on the right
-  const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: P.line, width: 10 } });
+  const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
   count.anchor.set(1, 0.5);
   if (more.onDouble) {
     const x0 = what.x + what.width + 100;
@@ -247,7 +250,7 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
 /** Each potion's share of the damage as a bar in its colour, the biggest one the MVP. */
 function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
   const c = new Container();
-  const title = label(t('damage'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  const title = ink(t('damage'), 44);
   title.y = 34;
   c.addChild(title);
   const rows = [...dealt].sort((a, b) => b.damage - a.damage);
@@ -256,15 +259,15 @@ function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
   const top = 80;
   const bx = -cw / 2 + 100;
   const bw = cw - 100 - 130;
-  c.addChild(new Graphics().roundRect(-cw / 2, top - 8, cw, rows.length * rh + 16, 26).fill(P.woodDark).stroke({ width: 4, color: P.line }));
+  c.addChild(inset(cw, rows.length * rh + 16, top - 8, 26));
   rows.forEach((r, i) => {
     const y = top + i * rh + rh / 2;
     if (i === 0) c.addChild(new Graphics().roundRect(-cw / 2 + 10, y - rh / 2 + 4, cw - 20, rh - 8, 20).fill({ color: P.brass, alpha: 0.28 }));
     const b = bottle(r.kind, 84);
     b.position.set(-cw / 2 + 52, y);
-    const g = new Graphics().roundRect(bx, y - 18, bw, 36, 18).fill({ color: 0x000000, alpha: 0.35 });
+    const g = new Graphics().roundRect(bx, y - 18, bw, 36, 18).fill({ color: P.ink, alpha: 0.14 });
     g.roundRect(bx, y - 18, Math.max(36, (bw * r.damage) / rows[0].damage), 36, 18).fill(HERO_COLORS[r.kind]).stroke({ width: 4, color: P.line });
-    const pct = label(`${Math.round((100 * r.damage) / total)}%`, 40, { stroke: { color: P.line, width: 6 } });
+    const pct = ink(`${Math.round((100 * r.damage) / total)}%`, 40);
     pct.anchor.set(1, 0.5);
     pct.position.set(cw / 2 - 24, y);
     c.addChild(g, b, pct);
@@ -295,7 +298,7 @@ function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: numbe
   items.forEach(([tab, key, icon], i) => {
     const row = new Container();
     row.y = top + i * (rh + gap) + rh / 2;
-    row.addChild(paperCard(cw, rh, 22));
+    row.addChild(lightTile(cw, rh, 22));
     const pic = icon();
     pic.x = -cw / 2 + 64;
     if (key === 'stage') pic.scale.set(0.7);
@@ -416,9 +419,9 @@ function skillCard(id: SkillId, level: number): Container {
   // a recipe's band turns into the second hero's colour along a slant
   if (other) g.poly([w / 2 - 10 + x + 40, top + 10, x + w - 22, top + 10, x + w, top + 32, x + w, top + 10 + band - 22, x + w - 22, top + 10 + band, x + w / 2 - 40, top + 10 + band]).fill(HERO_COLORS[other]);
   g.rect(x + 18, top + 18, w - 36, 10).fill({ color: 0xffffff, alpha: 0.35 });
-  g.roundRect(x, top + 10, w, band, 22).stroke({ width: 5, color: P.line });
+  g.roundRect(x, top + 10, w, band, 22).stroke({ width: 4, color: LIGHT.edge });
   card.addChild(g);
-  const name = label(t(`skill.${id}.name`), 50, { wordWrap: true, breakWords: true, wordWrapWidth: w - 30, stroke: { color: P.line, width: 8 } });
+  const name = label(t(`skill.${id}.name`), 50, { wordWrap: true, breakWords: true, wordWrapWidth: w - 30, stroke: { color: P.line, width: 6 } });
   name.position.set(0, top + 10 + band / 2);
   if (name.height > band - 16) name.scale.set((band - 16) / name.height);
   card.addChild(name);

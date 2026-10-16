@@ -25,6 +25,9 @@ import {
   enemySprite,
   gearIcon,
   ink,
+  LIGHT,
+  lightPanel,
+  lightTile,
   lock,
   medal,
   P,
@@ -37,7 +40,6 @@ import {
   tappable,
   workshopWall,
   wallIcon,
-  woodPanel,
 } from './kit';
 import { gem, HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
@@ -97,7 +99,7 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
     const c = tappable(new Container(), onTap);
     c.position.set(x, y);
     icon.scale.set(0.72);
-    const cap = label(text, 26, { fill: P.cream, stroke: { color: P.line, width: 6 } });
+    const cap = ink(text, 26);
     cap.y = 54;
     c.addChild(medal(56), icon, cap);
     if (dot) redDot(c, 42, -42);
@@ -107,12 +109,12 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
   button(left + 240, scrollIcon(), t('tasks'), tasksClaimable(m), () => act.panel('tasks'));
 
   // the crystals in a dark inset, top right
-  const count = label(String(m.crystals), 50, { fill: 0x9beaff });
+  const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });
   const pw = Math.max(240, count.width + 120);
   const purse = new Container();
   purse.position.set(w - 40 - pw / 2, y);
   purse.addChild(
-    new Graphics().roundRect(-pw / 2, -40, pw, 80, 40).fill(P.woodDark).stroke({ width: 5, color: P.line }),
+    new Graphics().roundRect(-pw / 2, -40, pw, 80, 40).fill(LIGHT.inset).stroke({ width: 4, color: LIGHT.edge }),
     gem(new Graphics(), -pw / 2 + 40, 0, 34),
   );
   count.x = 22;
@@ -126,11 +128,11 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
   const { w, h, wide } = fit;
   const bar = new Graphics();
   if (wide) {
-    bar.rect(0, 0, RAIL, h).fill(P.wood).rect(RAIL - 14, 0, 14, h).fill(P.brass).rect(RAIL - 14, 0, 4, h).fill(P.brassLight);
-    bar.rect(RAIL, 0, 5, h).fill(P.line);
+    bar.rect(0, 0, RAIL, h).fill(LIGHT.bar).rect(RAIL - 14, 0, 14, h).fill(P.brass).rect(RAIL - 14, 0, 4, h).fill(P.brassLight);
+    bar.rect(RAIL, 0, 4, h).fill(LIGHT.edge);
   } else {
-    bar.rect(0, h - NAV, w, NAV).fill(P.wood).rect(0, h - NAV, w, 14).fill(P.brass).rect(0, h - NAV + 2, w, 4).fill(P.brassLight);
-    bar.rect(0, h - NAV - 5, w, 5).fill(P.line);
+    bar.rect(0, h - NAV, w, NAV).fill(LIGHT.bar).rect(0, h - NAV, w, 14).fill(P.brass).rect(0, h - NAV + 2, w, 4).fill(P.brassLight);
+    bar.rect(0, h - NAV - 4, w, 4).fill(LIGHT.edge);
   }
   root.addChild(bar);
   HOME_TABS.forEach((id, i) => {
@@ -144,14 +146,14 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
       slot.addChild(
         new Graphics()
           .roundRect(-span / 2 + 14, -NAV / 2 + 18, span - 28, NAV - 40, 26)
-          .fill({ color: P.brass, alpha: 0.35 })
-          .stroke({ width: 4, color: P.brassLight, alpha: 0.8 }),
+          .fill({ color: P.brass, alpha: 0.25 })
+          .stroke({ width: 4, color: P.brass, alpha: 0.8 }),
       );
     }
     const icon = navIcon(id);
     if (big) {
       const lift = wide ? 0 : -34;
-      const md = medal(92, on ? 0x3c9a4a : P.woodDark);
+      const md = medal(92, on ? 0x3c9a4a : P.wood);
       md.y = lift - 14;
       icon.y = lift - 14;
       icon.scale.set(0.95);
@@ -160,10 +162,7 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
       icon.y = -22;
       icon.scale.set(on ? 0.95 : 0.8);
     }
-    const cap = label(t(`tabs.${id}`), 34, {
-      fill: on ? P.brassLight : P.soft,
-      stroke: { color: P.line, width: 6 },
-    });
+    const cap = ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink });
     cap.y = big ? (wide ? 92 : 70) : 58;
     slot.addChild(icon, cap);
     if (!on) slot.alpha = big ? 1 : 0.85;
@@ -197,7 +196,7 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area): voi
     root.addChild(p);
     arrow(-ax, '◀', m.stage > 1, -1);
     arrow(ax, '▶', m.stage < maxStage(m), 1);
-    const hp = label(t('stageHp', { n: stageHp(m.stage).toFixed(2) }), 38, { fill: P.soft, stroke: { color: P.line, width: 7 } });
+    const hp = ink(t('stageHp', { n: stageHp(m.stage).toFixed(2) }), 38);
     hp.position.set(x, y + 100);
     root.addChild(hp);
   };
@@ -219,7 +218,7 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area): voi
       s.anchor.set(0.5, 1);
       s.scale.set(400 / tex.height);
       s.position.set(lx, a.y + a.h - 260);
-      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.35 }), s);
+      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.2 }), s);
     }
     start(lx, a.y + a.h - 130);
     enemiesPanel(root, rx, a.y + 235, rw);
@@ -240,7 +239,7 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
   c.position.set(x, y);
   const p = plate(title, 40, 280);
   p.y = -h / 2 + 4;
-  c.addChild(woodPanel(w, h), p);
+  c.addChild(lightPanel(w, h), p);
   root.addChild(c);
   return c;
 }
@@ -252,7 +251,7 @@ function enemiesPanel(root: Container, x: number, y: number, w: number): void {
   ENEMY_KINDS.forEach((kind, i) => {
     const tile = new Container();
     tile.position.set((i - (ENEMY_KINDS.length - 1) / 2) * step, 30);
-    tile.addChild(paperCard(step - 20, 220, 22));
+    tile.addChild(lightTile(step - 20, 220, 22));
     const s = enemySprite(kind, 170);
     s.y = -4;
     tile.addChild(s);
@@ -272,10 +271,10 @@ function lineupPanel(root: Container, m: MetaSave, act: HomeActions, x: number, 
   LEVELLED_HEROES.forEach((kind, i) => {
     const b = tappable(new Container(), () => act.panel(kind));
     b.position.set((i - (LEVELLED_HEROES.length - 1) / 2) * step, 10);
-    b.addChild(new Graphics().ellipse(0, 86, 66, 16).fill({ color: 0x000000, alpha: 0.35 }));
+    b.addChild(new Graphics().ellipse(0, 86, 66, 16).fill({ color: 0x000000, alpha: 0.18 }));
     const bt = bottle(kind, 190);
     b.addChild(bt);
-    const lv = label(`Lv ${m.heroes[kind]}`, 34, { fill: P.cream, stroke: { color: P.line, width: 7 } });
+    const lv = ink(`Lv ${m.heroes[kind]}`, 34);
     lv.y = 126;
     b.addChild(lv);
     c.addChild(b);
@@ -304,23 +303,23 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
   const c = tappable(new Container(), () => act.panel(kind));
   const top = -ch / 2;
   c.addChild(paperCard(cw, ch));
-  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(HERO_COLORS[kind]).stroke({ width: 4, color: P.line }));
+  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(HERO_COLORS[kind]).stroke({ width: 4, color: LIGHT.edge }));
   const name = label(t(`hero.${kind}`), 42, { stroke: { color: P.line, width: 7 } });
   name.y = top + 50;
   const glow = new Graphics().circle(0, top + 250, 120).fill({ color: HERO_COLORS[kind], alpha: 0.18 });
   const bt = bottle(kind, 250);
   bt.y = top + 250;
   const level = ink(`Lv ${lv}`, 50);
-  level.y = top + 420;
+  level.y = top + 404;
   const dmg = ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 30, { fill: P.inkSoft });
-  dmg.y = top + 468;
+  dmg.y = top + 450;
   c.addChild(name, glow, bt, level, dmg);
   // the milestones as pips, lit once reached
   const ms = MILESTONES[kind];
   ms.forEach((s, i) => {
     const on = lv >= s.level;
     const pip = new Container();
-    pip.position.set((i - (ms.length - 1) / 2) * 76, top + 522);
+    pip.position.set((i - (ms.length - 1) / 2) * 76, top + 504);
     pip.addChild(new Graphics().roundRect(-32, -20, 64, 40, 12).fill(on ? P.brass : P.paperDark).stroke({ width: 4, color: on ? P.line : P.inkSoft }));
     pip.addChild(ink(String(s.level), 26, { fill: on ? P.line : P.inkSoft }));
     c.addChild(pip);
@@ -378,7 +377,7 @@ function soonTab(root: Container, tab: HomeTab, a: Area): void {
   const icon = navIcon(tab);
   icon.scale.set(1.6);
   icon.y = -10;
-  const s = label(t('soon'), 44, { fill: P.soft, stroke: { color: P.line, width: 7 } });
+  const s = ink(t('soon'), 44, { fill: P.inkSoft });
   s.y = 140;
   c.addChild(icon, s);
 }
@@ -395,13 +394,13 @@ function shopIcon(id: WorkshopId): Container {
  *  closes it. */
 function frame(act: HomeActions, title: string, h: number, fit: MenuFit): { panel: Container; box: Container } {
   const p = new Container();
-  const shade = new Graphics().rect(0, 0, fit.w, fit.h).fill({ color: 0x000000, alpha: 0.6 });
+  const shade = new Graphics().rect(0, 0, fit.w, fit.h).fill({ color: 0x3a2614, alpha: 0.45 });
   shade.eventMode = 'static';
   shade.on('pointertap', () => act.panel(null));
   const box = new Container();
   box.position.set(fit.w / 2, fit.h / 2 + 20);
   box.scale.set(Math.min(1, (fit.h - 80) / (h + 60)));
-  const bg = woodPanel(940, h);
+  const bg = lightPanel(940, h);
   bg.eventMode = 'static'; // taps on the panel itself do not close it
   const head = plate(title, 54, 420);
   head.y = -h / 2 + 6;
@@ -427,8 +426,8 @@ function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit):
     const tile = new Container();
     tile.position.set(last ? 210 : -315 + (i % 4) * 210, i < 4 ? -150 : 110);
     const lit = can && i === done;
-    tile.addChild(paperCard(w, 220, 24));
-    if (lit) tile.addChild(new Graphics().roundRect(-w / 2 - 6, -116, w + 12, 232, 28).stroke({ width: 8, color: P.brassLight }));
+    tile.addChild(lightTile(w, 220, 24));
+    if (lit) tile.addChild(new Graphics().roundRect(-w / 2 - 6, -116, w + 12, 232, 28).stroke({ width: 8, color: P.brass }));
     const day = ink(t('day', { n: i + 1 }), 34, { fill: lit ? P.brassDark : P.inkSoft });
     day.position.set(0, -76);
     const amount = ink(String(loginReward(i)), 40);
@@ -469,7 +468,7 @@ function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
       .stroke({ width: 4, color: P.line });
     const count = label(`${task.progress}/${goal}`, 28, { stroke: { color: P.line, width: 6 } });
     count.position.set(-190, 31);
-    r.addChild(paperCard(860, 160), desc, bar, count);
+    r.addChild(lightTile(860, 160), desc, bar, count);
     if (task.claimed) {
       const c = ink(t('claimed'), 40, { fill: P.inkSoft });
       c.position.set(270, 0);
@@ -493,17 +492,17 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
   const bt = bottle(kind, 220);
   bt.position.set(-300, top + 250);
   box.addChild(new Graphics().circle(-300, top + 250, 120).fill({ color: HERO_COLORS[kind], alpha: 0.2 }), bt);
-  const level = label(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56, { fill: P.brassLight, stroke: { color: P.line, width: 8 } });
+  const level = ink(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56);
   level.anchor.set(0, 0.5);
   level.position.set(-150, top + 210);
-  const dmg = label(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  const dmg = ink(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.inkSoft });
   dmg.anchor.set(0, 0.5);
   dmg.position.set(-150, top + 290);
   box.addChild(level, dmg);
 
-  const head = label(t('baseCards'), 38, { fill: P.brassLight, stroke: { color: P.line, width: 6 } });
+  const head = ink(t('baseCards'), 38, { fill: P.brassDark });
   head.position.set(0, top + 420);
-  const cards = label(baseSkills(kind).map((id) => t(`skill.${id}.name`)).join('  ·  '), 40, { stroke: { color: P.line, width: 6 } });
+  const cards = ink(baseSkills(kind).map((id) => t(`skill.${id}.name`)).join('  ·  '), 40);
   cards.position.set(0, top + 480);
   box.addChild(head, cards);
 
@@ -538,8 +537,8 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     const rh = Math.max(132, text.height + 32);
     r.position.set(0, y + rh / 2);
     y += rh + 18;
-    r.addChild(paperCard(860, rh, 22));
-    if (on) r.addChild(new Graphics().roundRect(-436, -rh / 2 - 6, 872, rh + 12, 26).stroke({ width: 7, color: P.brassLight }));
+    r.addChild(lightTile(860, rh, 22));
+    if (on) r.addChild(new Graphics().roundRect(-436, -rh / 2 - 6, 872, rh + 12, 26).stroke({ width: 7, color: P.brass }));
     text.position.set(-260, -text.height / 2);
     r.addChild(lvTag, text);
     if (on) {
