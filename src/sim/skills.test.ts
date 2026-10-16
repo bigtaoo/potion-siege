@@ -34,7 +34,7 @@ function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
   const e: Enemy = {
     id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
     slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
+      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false,
   };
   b.enemies.push(e);
   return e;
@@ -454,7 +454,7 @@ describe('the corrosion line', () => {
   it('holds more rust with deep rust, and each stack counts more with the perk', () => {
     expect(mods(emptySkills()).rustMax).toBe(P.rustMax);
     expect(mods({ ...emptySkills(), poisonRust: 2 }).rustMax).toBe(P.rustMax + 2 * BALANCE.skills.rustExtra);
-    expect(mods(emptySkills(), perksFor({ arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 10 })).rustStep).toBeCloseTo(P.rustStep * (1 + BALANCE.skills.rustPlus));
+    expect(mods(emptySkills(), perksFor({ arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 10, wind: 1 })).rustStep).toBeCloseTo(P.rustStep * (1 + BALANCE.skills.rustPlus));
     const b = withSkills(['poisonRust']);
     const e = enemy(b, 500, 600, 1e6);
     for (let i = 0; i < P.rustMax + BALANCE.skills.rustExtra + 2; i++) hit(b, 'poison', e, 1);
@@ -491,6 +491,181 @@ describe('the corrosion line', () => {
     const f = enemy(plain, 500, 600, 1e6);
     hit(plain, 'lightning', f, 1);
     expect(f.rust).toBe(0);
+  });
+});
+
+describe('the gale line', () => {
+  const W = BALANCE.heroes.wind;
+  const S = BALANCE.skills;
+  /** A wind shot of `star` straight onto `target`. */
+  function gale(b: Battle, target: Enemy, damage = 1, star = 1, gust = false): void {
+    b.projectiles.push({ id: 1, kind: 'wind', star, x: target.x, y: target.y, targetId: target.id, tx: target.x, ty: target.y, damage, ...(gust ? { gust } : {}) });
+    b.step(1 / 60);
+  }
+  /** A star-1 wind hero in the first open cell. */
+  function windHero(b: Battle): void {
+    const open = b.slots.findIndex((_, i) => b.isOpen(i));
+    b.slots[open] = { id: 70, kind: 'wind', star: 1, slot: open, cooldown: 0 };
+  }
+
+  it('offers its cards by level, and the recipe only with fire fielded', () => {
+    expect(pool(['wind'], { wind: 1 })).toEqual(new Set([...pool([], {}), 'windDamage', 'windPush', 'windHaste']));
+    const all = pool(['wind'], { wind: 20 });
+    expect(all.has('windGust') && all.has('windVortex')).toBe(true);
+    expect(pool(['wind'], { wind: 14 }).has('windVortex')).toBe(false);
+    expect(all.has('windFire')).toBe(false);
+    expect(pool(['wind', 'fire'], { wind: 20 }).has('windFire')).toBe(true);
+    expect(pool(['wind', 'fire'], { wind: 19 }).has('windFire')).toBe(false);
+  });
+
+  it('knocks an enemy back off the wall, then not again until its cooldown is over', () => {
+    const b = withSkills([]);
+    const e = enemy(b, 500, 900, 1e6);
+    e.atWall = true;
+    gale(b, e);
+    expect(e.y).toBeCloseTo(900 - W.push);
+    expect(e.atWall).toBe(false);
+    const y = e.y;
+    gale(b, e);
+    expect(e.y).toBeCloseTo(y);
+    e.pushTime = 0;
+    gale(b, e, 1, 4);
+    expect(e.y).toBeCloseTo(y - W.push * W.pushStar[3]);
+  });
+
+  it('blows the light ones further and the boiler golem half as far, unless the perk or frost', () => {
+    const at = (kind: Enemy['kind'], skills: SkillId[] = [], levels: Partial<Record<HeroKind, number>> = {}, frozen = false) => {
+      const b = withSkills(skills, levels);
+      const e = enemy(b, 500, 900, 1e6);
+      e.kind = kind;
+      if (kind === 'flyer') {
+        e.x0 = 500;
+        e.phase = 0;
+      }
+      if (frozen) e.freezeTime = 5;
+      gale(b, e);
+      return 900 - e.y;
+    };
+    expect(at('runner')).toBeCloseTo(W.push * W.weight.runner);
+    expect(at('flyer')).toBeCloseTo(W.push * W.weight.flyer);
+    expect(at('brute')).toBeCloseTo(W.push * W.weight.brute);
+    expect(at('brute', [], {}, true)).toBeCloseTo(W.push);
+    expect(at('brute', [], { wind: 10 })).toBeCloseTo(W.push * (1 + S.windPushPlus));
+    expect(at('grunt', ['windPush'])).toBeCloseTo(W.push * (1 + S.windPush));
+  });
+
+  it('only slows the boss', () => {
+    const b = withSkills([]);
+    const e = enemy(b, 500, 900, 1e6);
+    e.kind = 'boss';
+    gale(b, e);
+    expect(e.y).toBe(900);
+    expect(e.slowTime).toBeGreaterThan(0);
+    expect(e.slowFactor).toBeCloseTo(1 - W.bossSlow);
+  });
+
+  it('spins a winder\'s key back: its rewind starts over', () => {
+    const b = withSkills([]);
+    const e = enemy(b, 500, 900, 1e6);
+    e.kind = 'winder';
+    e.windTime = 0.1;
+    gale(b, e);
+    expect(e.windTime).toBeCloseTo(BALANCE.winder.every);
+  });
+
+  it('goes for an ornithopter or a winder before the front enemy', () => {
+    const b = withSkills([]);
+    const front = enemy(b, 500, 700, 1e9);
+    const back = enemy(b, 300, 400, 1e9);
+    back.kind = 'flyer';
+    back.x0 = 300;
+    back.phase = 0;
+    windHero(b);
+    b.step(1 / 60);
+    expect(b.projectiles.map((p) => p.targetId)).toEqual([back.id]);
+    expect(front.hp).toBe(1e9);
+  });
+
+  it('shoots faster with tailwind', () => {
+    const shots = (skills: SkillId[]) => {
+      const b = withSkills(skills);
+      enemy(b, 500, 400, 1e12);
+      windHero(b);
+      let n = 0;
+      for (let i = 0; i < 60 * 10; i++) {
+        b.step(1 / 60);
+        n += b.drain().filter((ev) => ev.type === 'shot').length;
+      }
+      return n;
+    };
+    expect(shots(['windHaste'])).toBeGreaterThan(shots([]) * 1.12);
+  });
+
+  it('sweeps a gust across the whole field, as deep as the target', () => {
+    const b = withSkills(['windGust']);
+    const e = enemy(b, 500, 900, 1e6);
+    const side = enemy(b, 100, 900 + S.gustDepth / 2, 1e6);
+    const far = enemy(b, 500, 900 - S.gustDepth * 3, 1e6);
+    gale(b, e, 10, 1, true);
+    expect(e.hp).toBeCloseTo(1e6 - 10 * S.gust);
+    expect(side.hp).toBeCloseTo(1e6 - 10 * S.gust);
+    expect(side.y).toBeLessThan(900 + S.gustDepth / 2);
+    expect(far.hp).toBe(1e6);
+  });
+
+  it('makes every fourth shot of a hero a gust', () => {
+    const b = withSkills(['windGust']);
+    enemy(b, 500, 400, 1e12);
+    windHero(b);
+    const seen = new Set<number>();
+    const gusts: boolean[] = [];
+    for (let i = 0; i < 60 * 8 && gusts.length < 8; i++) {
+      b.step(1 / 60);
+      for (const p of b.projectiles) {
+        if (seen.has(p.id)) continue;
+        seen.add(p.id);
+        gusts.push(!!p.gust);
+      }
+    }
+    expect(gusts.slice(0, 8)).toEqual([false, false, false, true, false, false, false, true]);
+  });
+
+  it('leaves a whirlwind where a wind shot kills, pulling the others in', () => {
+    const b = withSkills(['windVortex']);
+    const e = enemy(b, 500, 600, 5);
+    const near = enemy(b, 600, 600, 1e6);
+    gale(b, e, 100);
+    expect(b.vortices).toHaveLength(1);
+    for (let i = 0; i < 30; i++) b.step(1 / 60);
+    expect(near.x).toBeLessThan(600);
+    for (let i = 0; i < 60 * S.vortexTime; i++) b.step(1 / 60);
+    expect(b.vortices).toHaveLength(0);
+    const plain = withSkills([]);
+    gale(plain, enemy(plain, 500, 600, 5), 100);
+    expect(plain.vortices).toHaveLength(0);
+  });
+
+  it('fans the flames onto those around with the gale-and-fire recipe', () => {
+    const b = withSkills(['windFire']);
+    const e = enemy(b, 500, 600, 1e6);
+    const near = enemy(b, 560, 600, 1e6);
+    const far = enemy(b, 500 + S.windFireRadius * 3, 600, 1e6);
+    e.burnTime = 2;
+    e.burnDps = 5;
+    e.scorch = 100;
+    e.scorchTime = 2;
+    gale(b, e);
+    expect(near.burnTime).toBeGreaterThan(0);
+    expect(near.burnDps).toBeCloseTo(100 * S.windFire);
+    expect(far.burnTime).toBe(0);
+    const plain = withSkills([]);
+    const f = enemy(plain, 500, 600, 1e6);
+    const g = enemy(plain, 560, 600, 1e6);
+    f.burnTime = 2;
+    f.scorch = 100;
+    f.scorchTime = 2;
+    gale(plain, f);
+    expect(g.burnTime).toBe(0);
   });
 });
 

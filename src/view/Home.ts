@@ -719,6 +719,8 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
     const tk = tick(18);
     tk.x = 22 - word.width / 2 - 30;
     owned.addChild(tk, word);
+    // six tiles to a row in portrait leave little width
+    owned.scale.set(Math.min(1, (tw - 16) / owned.width));
     c.addChild(bt, owned);
     return c;
   }
@@ -731,7 +733,7 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
   note.y = th / 2 - 122;
   c.addChild(note);
   if (price !== null) {
-    const b = new PillButton(String(price), tw - 30, 84, 'purple', () => act.unlock(kind), 38, true).setEnabled(m.crystals >= price);
+    const b = new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true).setEnabled(m.crystals >= price);
     b.y = th / 2 - 58;
     c.addChild(b);
   }

@@ -10,9 +10,11 @@ const ICE: [number, number, number] = [0x3fb8e6, 0xa8f4ff, 0xffffff];
 // deeper than the potion's own stars: pale lilac fades on the stone road
 const ARCANE: [number, number, number] = [0x7a1fc4, 0xa45cf5, 0xf0e0ff];
 const BOLT_FILL = 0xffe94a;
+const WIND: [number, number] = [0x8fe3c8, 0xeafff8];
+const LEAF = 0x7cc35a;
 
 /** How long each kind's hit effect lasts, in seconds. */
-export const HIT_TIME: Record<HeroKind | 'poison', number> = { fire: 0.4, ice: 0.35, lightning: 0.3, arcane: 0.35, poison: 0.3 };
+export const HIT_TIME: Record<HeroKind | 'poison', number> = { fire: 0.4, ice: 0.35, lightning: 0.3, arcane: 0.35, poison: 0.3, wind: 0.3 };
 
 const easeOut = (p: number): number => 1 - (1 - p) * (1 - p);
 /** Full strength for most of the life, then fading out. */
@@ -86,6 +88,15 @@ export function hitEffect(g: Graphics, kind: HeroKind | 'poison', x: number, y: 
         const d = 10 + 58 * e;
         if (p < 0.85) star(g, x + Math.cos(ang) * d, y + Math.sin(ang) * d, 22 * (1 - p * 0.6), p * 4 + i, ARCANE, 3.5);
       }
+      break;
+    }
+    case 'wind': {
+      // three curls of wind spinning out of the hit, and a leaf blown off
+      for (let i = 0; i < 3; i++) {
+        const ang = seed + (i * 2 * Math.PI) / 3 + p * 2.5;
+        curl(g, x + Math.cos(ang) * (8 + 26 * e), y + Math.sin(ang) * (8 + 26 * e), 20 * (1 - p * 0.4), ang, a);
+      }
+      leaf(g, x + 46 * e, y - 30 * e, 10, seed + p * 6, a);
       break;
     }
     case 'poison': {
@@ -205,4 +216,82 @@ export function rewindWave(g: Graphics, x: number, y: number, radius: number, p:
   }
   g.poly(arc, false).stroke({ width: 5, color: 0x3f9a96, alpha: a, cap: 'round' });
   g.circle(x, y, 9).fill({ color: 0xc9a24a, alpha: a }).stroke({ width: 3, color: INK, alpha: a });
+}
+
+/** A curl of wind: a spiral stroke, ink under a pale mint line. */
+function curl(g: Graphics, x: number, y: number, r: number, angle: number, alpha: number): void {
+  const pts: number[] = [];
+  for (let j = 0; j <= 14; j++) {
+    const t = j / 14;
+    const ang = angle + t * Math.PI * 1.6;
+    const d = r * (0.25 + 0.75 * t);
+    pts.push(x + Math.cos(ang) * d, y + Math.sin(ang) * d);
+  }
+  g.poly(pts, false).stroke({ width: 9, color: INK, alpha, cap: 'round', join: 'round' });
+  g.poly(pts, false).stroke({ width: 4.5, color: WIND[1], alpha, cap: 'round', join: 'round' });
+}
+
+/** A small green leaf tumbling in the wind. */
+function leaf(g: Graphics, x: number, y: number, r: number, angle: number, alpha: number): void {
+  const c = Math.cos(angle);
+  const s = Math.sin(angle);
+  const pts: number[] = [];
+  for (let j = 0; j < 12; j++) {
+    const t = (j / 12) * Math.PI * 2;
+    const lx = Math.cos(t) * r * 1.6;
+    const ly = Math.sin(t) * r * 0.7;
+    pts.push(x + lx * c - ly * s, y + lx * s + ly * c);
+  }
+  g.poly(pts).fill({ color: LEAF, alpha }).stroke({ width: 3, color: INK, alpha, join: 'round' });
+}
+
+/** A gale gust: wind streaks sweeping across the field from `left` to `right`, `depth` deep
+ *  either side of y, with leaves carried along. */
+export function gustWave(g: Graphics, left: number, right: number, y: number, depth: number, p: number): void {
+  const a = fade(p);
+  const span = right - left;
+  for (let i = 0; i < 7; i++) {
+    const row = y + ((i / 6) * 2 - 1) * depth * 0.8;
+    // each streak runs out from the left, staggered, bending a little as the wind would
+    const head = left + span * Math.min(1, easeOut(Math.min(1, p * 1.8)) * 1.15 - (i % 3) * 0.08);
+    const tail = Math.max(left, head - span * 0.45);
+    if (head <= tail) continue;
+    const pts: number[] = [];
+    for (let j = 0; j <= 10; j++) {
+      const x = tail + ((head - tail) * j) / 10;
+      pts.push(x, row + Math.sin(x / 90 + i) * 10);
+    }
+    g.poly(pts, false).stroke({ width: 12, color: INK, alpha: a * 0.8, cap: 'round', join: 'round' });
+    g.poly(pts, false).stroke({ width: 6, color: i % 2 ? WIND[0] : WIND[1], alpha: a, cap: 'round', join: 'round' });
+    if (i % 2 === 0) leaf(g, head + 12, row - 6, 9, p * 9 + i, a);
+  }
+}
+
+/** Speed lines under an enemy that has just been knocked back up the field. */
+export function pushLines(g: Graphics, x: number, y: number, r: number, p: number): void {
+  const a = fade(p);
+  for (let i = -1; i <= 1; i++) {
+    const lx = x + i * r * 0.55;
+    const y0 = y + r * (0.9 + 0.4 * p);
+    const y1 = y0 + r * (1.1 - 0.5 * p) * (i === 0 ? 1.2 : 0.8);
+    g.moveTo(lx, y0).lineTo(lx, y1).stroke({ width: 10, color: INK, alpha: a, cap: 'round' });
+    g.moveTo(lx, y0).lineTo(lx, y1).stroke({ width: 5, color: WIND[1], alpha: a, cap: 'round' });
+  }
+}
+
+/** A whirlwind on the ground, turning: spiral arms round an eye, squashed like the field. */
+export function vortexSwirl(g: Graphics, x: number, y: number, radius: number, time: number, alpha: number): void {
+  const sy = 0.55;
+  g.ellipse(x, y, radius, radius * sy).fill({ color: WIND[0], alpha: 0.16 * alpha });
+  for (let k = 0; k < 3; k++) {
+    const pts: number[] = [];
+    for (let j = 0; j <= 16; j++) {
+      const t = j / 16;
+      const ang = time * 5 + (k * 2 * Math.PI) / 3 + t * Math.PI * 1.5;
+      const d = radius * (0.15 + 0.85 * t);
+      pts.push(x + Math.cos(ang) * d, y + Math.sin(ang) * d * sy);
+    }
+    g.poly(pts, false).stroke({ width: 10, color: INK, alpha: alpha * 0.8, cap: 'round', join: 'round' });
+    g.poly(pts, false).stroke({ width: 5, color: k % 2 ? WIND[0] : WIND[1], alpha, cap: 'round', join: 'round' });
+  }
 }

@@ -32,6 +32,9 @@ export function drawHero(g: Graphics, kind: HeroKind, x: number, y: number, r = 
     case 'poison':
       g.roundRect(x - r * 0.8, y - r * 0.8, r * 1.6, r * 1.6, r * 0.35);
       break;
+    case 'wind':
+      g.ellipse(x, y, r * 0.95, r * 0.7);
+      break;
   }
   g.fill({ color, alpha }).stroke({ width: 7, color: 0x0a1320, alpha });
   // eyes, so the shapes read as characters

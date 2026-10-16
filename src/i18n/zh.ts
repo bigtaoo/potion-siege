@@ -57,6 +57,7 @@ export const zh: Table = {
     iceFreezePlus: '所有冻结时间 +50%',
     lightningStaticPlus: '「静电」伤害 +50%',
     poisonRustPlus: '每层锈蚀效果 +50%',
+    windPushPlus: '击退 +50%，锅炉魔像也能被吹满距离',
   },
   maxed: '已满',
   reward: '+{n}',
@@ -135,6 +136,7 @@ export const zh: Table = {
     ice: '冰霜药剂',
     lightning: '雷电药剂',
     poison: '腐蚀药剂',
+    wind: '疾风药剂',
   },
   codex: {
     heroes: '药剂',
@@ -191,5 +193,11 @@ export const zh: Table = {
     poisonSplash: { name: '酸液飞溅', desc: '腐蚀命中时向周围飞溅毒素与锈蚀' },
     poisonMelt: { name: '熔蚀', desc: '带锈蚀的敌人死亡时，把锈蚀传给周围敌人' },
     poisonLightning: { name: '电解', desc: '闪电命中叠加一层锈蚀' },
+    windDamage: { name: '锋利疾风', desc: '疾风药剂伤害 +40%' },
+    windPush: { name: '强风', desc: '疾风击退距离 +35%' },
+    windHaste: { name: '顺风', desc: '疾风药剂攻速 +20%' },
+    windGust: { name: '风墙', desc: '疾风每第 4 发化作横扫全场的风墙' },
+    windVortex: { name: '旋风', desc: '疾风击杀处留下旋风，2 秒内把周围敌人吸过去' },
+    windFire: { name: '煽风点火', desc: '疾风命中燃烧的敌人，把火吹到周围敌人身上' },
   },
 };

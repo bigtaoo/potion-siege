@@ -80,7 +80,7 @@ export interface BattleModifiers {
 export function newMeta(): MetaSave {
   return {
     crystals: 0,
-    heroes: { arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 1 },
+    heroes: { arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 1, wind: 1 },
     workshop: { wall: 0, startGold: 0, crystals: 0 },
     cleared: 0,
     stage: 1,

@@ -4,7 +4,7 @@
 // BAL='{"waves":{"hpGrowth":1.16}}' npm run balance tries overrides without editing the file;
 // SEEDS=20 STAGES=1-8 LEVELS=fresh,mid narrow the run, FORCED_SETS the forced rows,
 // FORCED_SEEDS=300 steadies them (±7pp at the default 100), FORCED_LINEUP=arcane,fire,lightning,poison
-// fields corrosion for them, LINEUPS=0 skips the 4-of-5 lineups.
+// fields corrosion for them (or ...,wind the gale tonic), LINEUPS=0 skips the swapped-in lineups.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { botAct, playOut } from '../src/sim/bot';
@@ -62,7 +62,7 @@ const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.le
 
 /** Damage share per potion, pooled over the runs. */
 function shares(runs: Battle[], kinds: readonly HeroKind[]): Record<HeroKind, number> {
-  const sum = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0 } as Record<HeroKind, number>;
+  const sum = Object.fromEntries(HERO_KINDS.map((k) => [k, 0])) as Record<HeroKind, number>;
   for (const b of runs) for (const k of kinds) sum[k] += b.dealt[k];
   const total = kinds.reduce((s, k) => s + sum[k], 0) || 1;
   for (const k of kinds) sum[k] /= total;
@@ -160,6 +160,14 @@ const FORCED: SkillId[][] = [
   ['poisonMelt'],
   ['poisonLightning'],
   ['poisonSplash', 'poisonMelt'],
+  // the gale line, with FORCED_LINEUP=arcane,fire,lightning,wind (windFire needs fire fielded)
+  ['windDamage'],
+  ['windPush'],
+  ['windHaste'],
+  ['windGust'],
+  ['windVortex'],
+  ['windFire'],
+  ['windPush', 'windGust'],
 ];
 
 function playForced(seed: number, setup: ReturnType<typeof battleSetup>, skills: SkillId[]): Battle {
@@ -222,27 +230,30 @@ it('balance report', () => {
   }
 
   if (env.LINEUPS !== '0') {
-    // corrosion opens with the first clear of its unlock stage: from then on a player picks 4 of
-    // the 5 potions. Every lineup on each level's contested stages past that point.
-    const from = (BALANCE.heroes.poison as { unlockStage?: number }).unlockStage ?? 5;
-    const lineups: HeroKind[][] = [[...LINEUP], ...LINEUP.map((out) => LINEUP.map((k) => (k === out ? 'poison' : k)))];
-    const rows = [`| lvl | st | lineup | win | wave μ | ${HERO_KINDS.map((k) => k.slice(0, 5)).join(' | ')} |`, `|---|---|---|---|---|${HERO_KINDS.map(() => '---').join('|')}|`];
-    for (const level of levels) {
-      const contested = cells.filter((c) => {
-        const w = c.runs.filter((b) => b.result === 'won').length / c.runs.length;
-        return c.level === level && c.stage > from && w >= 0.1 && w <= 0.9;
-      });
-      for (const c of contested) {
-        for (const lineup of lineups) {
-          const lc = play(level, c.stage, seeds, lineup);
-          const win = lc.runs.filter((b) => b.result === 'won').length / lc.runs.length;
-          const sh = shares(lc.runs, HERO_KINDS);
-          const name = lineup.includes('poison') ? `−${LINEUP.find((k) => !lineup.includes(k))} +poison` : 'starting four';
-          rows.push(`| ${level} | ${c.stage} | ${name} | ${pct(win)} | ${mean(lc.runs.map((b) => b.wave)).toFixed(1)} | ${HERO_KINDS.map((k) => pct(sh[k])).join(' | ')} |`);
+    // corrosion and the gale tonic open with the first clear of their unlock stages: from then on
+    // a player picks 4 of the potions. Each one swapped in for each starting potion, on each
+    // level's contested stages past its unlock.
+    for (const extra of HERO_KINDS.filter((k) => !LINEUP.includes(k))) {
+      const from = (BALANCE.heroes[extra] as { unlockStage?: number }).unlockStage ?? 5;
+      const lineups: HeroKind[][] = [[...LINEUP], ...LINEUP.map((out) => LINEUP.map((k) => (k === out ? extra : k)))];
+      const rows = [`| lvl | st | lineup | win | wave μ | ${HERO_KINDS.map((k) => k.slice(0, 5)).join(' | ')} |`, `|---|---|---|---|---|${HERO_KINDS.map(() => '---').join('|')}|`];
+      for (const level of levels) {
+        const contested = cells.filter((c) => {
+          const w = c.runs.filter((b) => b.result === 'won').length / c.runs.length;
+          return c.level === level && c.stage > from && w >= 0.1 && w <= 0.9;
+        });
+        for (const c of contested) {
+          for (const lineup of lineups) {
+            const lc = play(level, c.stage, seeds, lineup);
+            const win = lc.runs.filter((b) => b.result === 'won').length / lc.runs.length;
+            const sh = shares(lc.runs, HERO_KINDS);
+            const name = lineup.includes(extra) ? `−${LINEUP.find((k) => !lineup.includes(k))} +${extra}` : 'starting four';
+            rows.push(`| ${level} | ${c.stage} | ${name} | ${pct(win)} | ${mean(lc.runs.map((b) => b.wave)).toFixed(1)} | ${HERO_KINDS.map((k) => pct(sh[k])).join(' | ')} |`);
+          }
         }
       }
+      lines.push(`## Lineups with ${extra} (from stage ${from + 1})`, '', ...rows, '');
     }
-    lines.push(`## Lineups with corrosion (from stage ${from + 1})`, '', ...rows, '');
   }
   lines.push(`_${cells.length} cells in ${((Date.now() - t0) / 1000).toFixed(0)}s_`);
   const text = lines.join('\n');
