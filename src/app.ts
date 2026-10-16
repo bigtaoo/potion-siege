@@ -10,6 +10,7 @@ import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
+import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challenge, type ChallengeResult } from './sim/challenge';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
   adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
@@ -102,6 +103,9 @@ class Game {
   private purse = new Purse();
   /** A reserve potion tapped on the lineup row, waiting for the one it replaces. */
   private picked: HeroKind | null = null;
+  /** The battle is today's challenge: which one, the streak bonus its start paid and, once it
+   *  ended, what it booked. */
+  private challenge: { ch: Challenge; streakBonus: number; result: ChallengeResult | null } | null = null;
   private revived = false;
   /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
   private offered = { revive: false, double: false };
@@ -158,9 +162,10 @@ class Game {
   }
 
   /** `cause` null: the title screen is up and the run starts when the player taps. */
-  private newBattle(cause: 'again' | 'autoplay' | null): void {
+  private newBattle(cause: 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
     this.run?.close('again');
-    this.battle = new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    this.challenge = null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
@@ -322,6 +327,10 @@ class Game {
   }
 
   private finish(b: Battle): void {
+    if (this.challenge) {
+      this.finishChallenge(b, this.challenge);
+      return;
+    }
     this.platform.gameplayStop();
     // the tutorial belongs to the first battle only, however far it got
     if (this.tutorial) this.endTutorial(true);
@@ -340,6 +349,57 @@ class Game {
     this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: firstClear });
     this.showEnd(b);
     if (this.autoplay) setTimeout(() => void this.again(), 1500);
+  }
+
+  /** Books a challenge attempt: the tier it reached pays what it adds to today's best; no
+   *  campaign crystals, no revive and no ×2. */
+  private finishChallenge(b: Battle, run: NonNullable<Game['challenge']>): void {
+    this.platform.gameplayStop();
+    rollDay(this.save, dayOf(new Date()));
+    this.save.runs++;
+    addProgress(this.save, 'play');
+    addProgress(this.save, 'challenge');
+    if (b.result === 'won') addProgress(this.save, 'win');
+    run.result = bookAttempt(this.save, b.wave);
+    this.save.bestWave = Math.max(this.save.bestWave, b.wave);
+    this.store();
+    if (run.result.tier > 0) this.platform.celebrate();
+    this.run?.onEnd();
+    this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
+    this.showEnd(b);
+  }
+
+  /** Starts today's challenge (`ad`: the retry a rewarded ad bought). */
+  private playChallenge(ad: boolean): void {
+    const today = dayOf(new Date());
+    const ch = todaysChallenge(this.save, today);
+    const bonus = beginAttempt(this.save, today, ad);
+    if (bonus === null) return;
+    this.store();
+    this.analytics.track('challenge_start', { day: today, stage: ch.stage, mods: ch.mods.join(','), ad, streak: this.save.challenge.streak });
+    this.newBattle('challenge', ch);
+    this.challenge = { ch, streakBonus: bonus, result: null };
+    this.menu.visible = false;
+    this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.root.visible = true;
+    this.platform.gameplayStart();
+  }
+
+  /** The rewarded ad for a second go at today's challenge; the menu takes no taps while it plays. */
+  private async challengeAd(): Promise<void> {
+    this.menu.interactiveChildren = false;
+    let ok = false;
+    try {
+      ok = await this.platform.rewarded(() => this.mute(true));
+    } catch {
+      // not watched: no retry
+    } finally {
+      this.menu.interactiveChildren = true;
+      this.mute(false);
+    }
+    this.analytics.track('ad_challenge', { ok });
+    if (ok) this.playChallenge(true);
+    else if (this.menu.visible) this.home();
   }
 
   private store(): void {
@@ -392,6 +452,8 @@ class Game {
       },
       watchAd: () => void this.shopAd(),
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
+      challenge: () => this.playChallenge(false),
+      challengeAd: () => void this.challengeAd(),
       play: () => {
         this.newBattle('again');
         this.beginTutorial();
@@ -472,6 +534,19 @@ class Game {
   private showEnd(b: Battle): void {
     const secs = Math.round(b.time);
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
+    const run = this.challenge;
+    if (run?.result) {
+      const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: b.dealt[kind] }] : []));
+      const reward = { crystals: run.result.crystals + run.streakBonus, firstClear: false, unlocked: [] };
+      this.overlay.showEnd(b.result === 'won', stats, reward, () => void this.again(), null, {
+        onDouble: null,
+        doubled: false,
+        dealt,
+        onTip: null,
+        challenge: { result: run.result, mods: run.ch.mods, trial: run.ch.trial, streak: this.save.challenge.streak, streakBonus: run.streakBonus },
+      });
+      return;
+    }
     const ads = !this.autoplay && this.platform.rewardedAvailable();
     const { revive: canRevive, double: canDouble } = endOffers(b.result === 'lost', this.revived, ads, this.purse);
     if (canRevive && !this.offered.revive) this.run?.onReviveOffer();

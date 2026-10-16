@@ -54,7 +54,8 @@ export function parseDaily(v: unknown): DailySave {
   return out;
 }
 
-function hash(s: string): number {
+/** A day string (or any string) as a seed. */
+export function hash(s: string): number {
   let h = 2166136261;
   for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
   return h >>> 0;

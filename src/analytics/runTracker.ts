@@ -18,7 +18,7 @@ export class RunTracker {
     private readonly battle: Battle,
     /** 1-based run number for this player, across sessions. */
     private readonly run: number,
-    cause: 'first' | 'again' | 'autoplay',
+    cause: 'first' | 'again' | 'autoplay' | 'challenge',
   ) {
     a.track('run_start', { run, cause, stage: battle.setup.stage });
   }

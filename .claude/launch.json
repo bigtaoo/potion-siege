@@ -1,7 +1,35 @@
 {
   "version": "0.0.1",
   "configurations": [
-    { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5180 },
-    { "name": "crazygames", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:crazygames"], "port": 5181 }
+    {
+      "name": "web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "crazygames",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev:crazygames"
+      ],
+      "port": 5181
+    },
+    {
+      "name": "challenge",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": [
+        "run",
+        "dev",
+        "--",
+        "--port",
+        "5182"
+      ],
+      "port": 5182
+    }
   ]
 }

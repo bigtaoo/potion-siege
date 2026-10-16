@@ -2,7 +2,9 @@
 // levels and workshop upgrades, and the stages, each one tougher than the last. Pure data and
 // rules; the shell loads and stores it and the battle only sees the resulting BattleSetup.
 
+import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newDaily, parseDaily, type DailySave } from './daily';
+import type { SkillId } from './skills';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
@@ -30,6 +32,7 @@ export interface MetaSave {
   shop: ShopSave;
   /** The first-battle tutorial was finished or skipped, and does not show again. */
   tutorial: boolean;
+  challenge: ChallengeSave;
 }
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
@@ -54,6 +57,24 @@ export interface BattleSetup {
   lineup: readonly HeroKind[];
   wallHp: number;
   startGold: number;
+  /** The daily challenge's twists on the rules; absent in every other battle. */
+  modifiers?: BattleModifiers;
+}
+
+/** What a daily challenge changes inside the battle (the wall, enemy hit points, start gold
+ *  and lineup it changes in the setup itself). */
+export interface BattleModifiers {
+  /** Multipliers on enemy speed, the summon price, the gold between waves and per kill. */
+  enemySpeed: number;
+  summonCost: number;
+  waveGold: number;
+  killGold: number;
+  /** Crit chance every shot has before skills. */
+  crit: number;
+  /** The waves a boss comes in. */
+  bossWaves: readonly number[];
+  /** Skills never offered. */
+  banned: readonly SkillId[];
 }
 
 export function newMeta(): MetaSave {
@@ -70,6 +91,7 @@ export function newMeta(): MetaSave {
     lineup: [...LINEUP],
     shop: { chestDay: '', adDay: '', ads: 0 },
     tutorial: false,
+    challenge: newChallenge(),
   };
 }
 
@@ -111,6 +133,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.shop.ads = int(shop.ads, 0, S.adsPerDay, 0);
   // a save from before the tutorial that has played already knows the game
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
+  out.challenge = parseChallenge(data.challenge);
   return out;
 }
 
