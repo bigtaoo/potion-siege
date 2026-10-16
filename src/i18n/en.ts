@@ -41,6 +41,7 @@ export const en = {
   },
   maxed: 'MAX',
   reward: '+{n}',
+  earned: 'Crystals earned',
   firstClear: 'Stage cleared! The next one is open',
   continue: 'Continue',
   shop: {

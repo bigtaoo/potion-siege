@@ -42,6 +42,7 @@ export const zh: Table = {
   },
   maxed: '已满',
   reward: '+{n}',
+  earned: '获得晶石',
   firstClear: '首次通关！下一关已开启',
   continue: '继续',
   shop: {

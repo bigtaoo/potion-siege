@@ -2,7 +2,7 @@
 // flow title -> battle (with skill picks) -> end -> home (upgrades) -> battle. The very first
 // battle starts from the title with one tap; the home screen comes after it.
 
-import { Application, Container } from 'pixi.js';
+import { Application, Container, Graphics } from 'pixi.js';
 import pkg from '../package.json';
 import { Analytics, type Sink } from './analytics/analytics';
 import { RunTracker } from './analytics/runTracker';
@@ -18,6 +18,7 @@ import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomePanel, type HomeTab } from './view/Home';
+import { workshopWall } from './view/kit';
 import { Overlay } from './view/Overlay';
 import { COLORS } from './view/ui';
 import { fitDesign, fitMenu, type MenuFit } from './view/viewport';
@@ -76,7 +77,11 @@ class Game {
   private readonly root = new Container();
   private readonly view = new BattleView();
   private readonly hud: Hud;
+  /** On the whole screen like the menus, over the battle. */
   private readonly overlay = new Overlay();
+  /** The workshop wall beside the board when the screen is wider than it. */
+  private readonly wall = new Container();
+  private wallSize = '';
   /** The home screen, laid out on the whole screen rather than the battle's board. */
   private readonly menu = new Container();
   private menuFit: MenuFit | null = null;
@@ -107,9 +112,9 @@ class Game {
       () => this.battle?.summon(),
       () => this.battle?.upgrade(),
     );
-    this.root.addChild(this.view, this.hud, this.overlay);
+    this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
-    app.stage.addChild(this.root, this.menu);
+    app.stage.addChild(this.wall, this.root, this.overlay, this.menu);
     app.ticker.add((ticker) => this.tick(Math.min(ticker.deltaMS / 1000, 0.1)));
   }
 
@@ -156,9 +161,12 @@ class Game {
     const fit = fitDesign(this.app.screen.width, this.app.screen.height);
     this.root.scale.set(fit.scale);
     this.root.position.set(fit.x, fit.y);
+    const m = fitMenu(this.app.screen.width, this.app.screen.height);
+    this.overlay.scale.set(m.scale);
+    this.overlay.layout(m.w, m.h);
+    this.sideWall(fit.x, m);
 
     if (this.menu.visible) {
-      const m = fitMenu(this.app.screen.width, this.app.screen.height);
       this.menu.scale.set(m.scale);
       const old = this.menuFit;
       // a new page size is a new layout
@@ -182,6 +190,21 @@ class Game {
     }
     this.view.update(dt);
     this.hud.update(dt);
+  }
+
+  /** Fills the bars beside the board with the workshop wall, the board casting a shadow on it. */
+  private sideWall(boardX: number, m: MenuFit): void {
+    this.wall.visible = this.root.visible && boardX > 1;
+    const size = `${Math.round(m.w)}x${Math.round(m.h)}`;
+    if (!this.wall.visible || size === this.wallSize) return;
+    this.wallSize = size;
+    this.wall.removeChildren().forEach((c) => c.destroy());
+    this.wall.scale.set(m.scale);
+    const x0 = boardX / m.scale;
+    const x1 = m.w - x0;
+    const shade = new Graphics();
+    for (let i = 1; i <= 6; i++) shade.rect(x0 - i * 14, 0, x1 - x0 + i * 28, m.h).fill({ color: 0x000000, alpha: 0.09 });
+    this.wall.addChild(workshopWall(m.w, m.h), shade);
   }
 
   private showSkills(b: Battle): void {

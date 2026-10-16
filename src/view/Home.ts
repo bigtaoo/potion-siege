@@ -31,6 +31,7 @@ import {
   scrollIcon,
   swordsIcon,
   tappable,
+  workshopWall,
   wallIcon,
   woodPanel,
 } from './kit';
@@ -70,7 +71,7 @@ const ENEMIES: readonly EnemyKind[] = ['grunt', 'runner', 'brute', 'boss'];
 export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: HomePanel, today: string, fit: MenuFit): Container {
   const root = new Container();
   const { w, h, wide } = fit;
-  root.addChild(backdrop(w, h));
+  root.addChild(workshopWall(w, h));
   const left = wide ? RAIL : 0;
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
@@ -84,17 +85,6 @@ export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: Ho
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
   return root;
-}
-
-/** The workshop wall behind everything: dark planks, lit warm in the middle. */
-function backdrop(w: number, h: number): Graphics {
-  const g = new Graphics().rect(0, 0, w, h).fill(0x2e1d10);
-  for (let x = 0, i = 0; x < w; x += 150, i++) {
-    g.rect(x, 0, 150, h).fill(i % 2 ? 0x34210f : 0x3a2513);
-    g.rect(x, 0, 5, h).fill(0x1c1108);
-  }
-  for (let i = 6; i > 0; i--) g.ellipse(w / 2, h * 0.45, w * 0.1 * i, h * 0.08 * i).fill({ color: 0xffb35a, alpha: 0.035 });
-  return g;
 }
 
 function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, left: number, w: number, wide: boolean): void {

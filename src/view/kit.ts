@@ -63,6 +63,18 @@ export function inkWrapped(text: string, size: number, width: number, style: Tex
   return out;
 }
 
+/** The workshop wall behind the menus (and beside the battle on a wide screen): dark planks,
+ *  lit warm in the middle. */
+export function workshopWall(w: number, h: number): Graphics {
+  const g = new Graphics().rect(0, 0, w, h).fill(0x2e1d10);
+  for (let x = 0, i = 0; x < w; x += 150, i++) {
+    g.rect(x, 0, 150, h).fill(i % 2 ? 0x34210f : 0x3a2513);
+    g.rect(x, 0, 5, h).fill(0x1c1108);
+  }
+  for (let i = 6; i > 0; i--) g.ellipse(w / 2, h * 0.45, w * 0.1 * i, h * 0.08 * i).fill({ color: 0xffb35a, alpha: 0.035 });
+  return g;
+}
+
 /** A walnut board in a brass frame with a rivet in each corner, centred on its position. */
 export function woodPanel(w: number, h: number): Graphics {
   const g = new Graphics();
@@ -97,8 +109,15 @@ export function paperCard(w: number, h: number, r = 26): Graphics {
     .stroke({ width: 5, color: P.line });
 }
 
-/** A brass name plate with ribbon tails, its text in cream. */
-export function plate(text: string, size = 56, minW = 360): Container {
+/** The plate colours: body, its darker edge and the highlight. */
+const PLATE = {
+  brass: [P.brass, P.brassDark, P.brassLight],
+  red: [0xc9463d, 0x7e2421, 0xf08a7a],
+} as const;
+
+/** A brass (or red) name plate with ribbon tails, its text in cream. */
+export function plate(text: string, size = 56, minW = 360, tone: keyof typeof PLATE = 'brass'): Container {
+  const [body, dark, light] = PLATE[tone];
   const c = new Container();
   const t = label(text, size, { fill: P.cream, stroke: { color: P.line, width: Math.max(5, size / 8) } });
   const w = Math.max(minW, t.width + 120);
@@ -107,13 +126,13 @@ export function plate(text: string, size = 56, minW = 360): Container {
   for (const s of [-1, 1]) {
     const x0 = (s * w) / 2;
     g.poly([x0 - s * 30, -h / 2 + 18, x0 + s * 44, -h / 2 + 18, x0 + s * 24, 8, x0 + s * 44, h / 2 + 10, x0 - s * 30, h / 2 + 10])
-      .fill(P.brassDark)
+      .fill(dark)
       .stroke({ width: 5, color: P.line, join: 'round' });
   }
   g.roundRect(-w / 2, -h / 2 + 6, w, h, 18).fill({ color: P.line, alpha: 0.5 });
-  g.roundRect(-w / 2, -h / 2, w, h, 18).fill(P.brassDark);
-  g.roundRect(-w / 2, -h / 2, w, h - 8, 18).fill(P.brass);
-  g.roundRect(-w / 2 + 16, -h / 2 + 8, w - 32, 8, 4).fill({ color: P.brassLight, alpha: 0.9 });
+  g.roundRect(-w / 2, -h / 2, w, h, 18).fill(dark);
+  g.roundRect(-w / 2, -h / 2, w, h - 8, 18).fill(body);
+  g.roundRect(-w / 2 + 16, -h / 2 + 8, w - 32, 8, 4).fill({ color: light, alpha: 0.9 });
   g.roundRect(-w / 2, -h / 2, w, h, 18).stroke({ width: 5, color: P.line });
   t.y = -3;
   c.addChild(g, t);

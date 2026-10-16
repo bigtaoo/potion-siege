@@ -1,46 +1,90 @@
-// Full-screen panels over the battle: the title, the home screen, the skill pick and the end
-// of a battle.
+// Full-screen panels over the battle: the title, the skill pick and the end of a battle.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
-import { coinsIcon, inkWrapped, medal, P, paperCard, PillButton, plate, stopwatchIcon, swordIcon, tappable, wallIcon } from './kit';
+import {
+  coinsIcon,
+  gearIcon,
+  ink,
+  inkWrapped,
+  medal,
+  P,
+  paperCard,
+  PillButton,
+  plate,
+  stopwatchIcon,
+  swordIcon,
+  swordsIcon,
+  tappable,
+  wallIcon,
+  woodPanel,
+  type ButtonKind,
+} from './kit';
 import { iconTexture, ultimateTexture } from './art';
-import { Button, COLORS, gem, HERO_COLORS, label } from './ui';
+import { COLORS, gem, HERO_COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
+/** Laid out on the whole screen (see fitMenu): `w` x `h` page units, at least 1080x1920 on a
+ *  phone and 1920x1080 on a wide screen, built again when the page size changes. */
 export class Overlay extends Container {
+  private w = DESIGN_W;
+  private h = DESIGN_H;
+  /** Builds the panel that is up again, for a new page size. */
+  private redo: (() => void) | null = null;
+
   constructor() {
     super();
     this.visible = false;
   }
 
+  /** A new page size: the panel that is up is laid out again. */
+  layout(w: number, h: number): void {
+    if (Math.abs(w - this.w) < 1 && Math.abs(h - this.h) < 1) return;
+    this.w = w;
+    this.h = h;
+    this.redo?.();
+  }
+
   hide(): void {
     this.visible = false;
+    this.redo = null;
     this.removeChildren().forEach((c) => c.destroy({ children: true }));
   }
 
-  private open(dim: number): void {
+  private open(dim: number, redo: () => void): void {
     this.hide();
     this.visible = true;
-    const shade = new Graphics().rect(-2000, -2000, DESIGN_W + 4000, DESIGN_H + 4000).fill({ color: COLORS.dim, alpha: dim });
+    this.redo = redo;
+    const shade = new Graphics().rect(0, 0, this.w, this.h).fill({ color: COLORS.dim, alpha: dim });
     shade.eventMode = 'static'; // swallow taps meant for the board
     this.addChild(shade);
   }
 
+  /** A box centred on the page for content `w` x `h` across (centred on the box's origin),
+   *  shrunk when the page is smaller than that. */
+  private box(w: number, h: number): Container {
+    const box = new Container();
+    box.position.set(this.w / 2, this.h / 2);
+    box.scale.set(Math.min(1, (this.w - 40) / w, (this.h - 40) / h));
+    this.addChild(box);
+    return box;
+  }
+
   showTitle(best: number, onStart: () => void): void {
-    this.open(0.55);
+    this.open(0.55, () => this.showTitle(best, onStart));
+    const box = this.box(1080, 1000);
     const title = label(t('title'), 140, { fill: COLORS.gold });
-    title.position.set(DESIGN_W / 2, 620);
+    title.y = -340;
     const tap = label(t('tapToStart'), 70);
-    tap.position.set(DESIGN_W / 2, 1000);
-    this.addChild(title, tap);
+    tap.y = 40;
+    box.addChild(title, tap);
     if (best > 0) {
       const b = label(t('bestWave', { n: best }), 50);
-      b.position.set(DESIGN_W / 2, 760);
-      this.addChild(b);
+      b.y = -200;
+      box.addChild(b);
     }
     const area = this.children[0];
     area.cursor = 'pointer';
@@ -50,58 +94,165 @@ export class Overlay extends Container {
   /** Three tall cards side by side, and under them the rewarded refresh when `onReroll` is
    *  given. `levels` says how far each skill has been taken. */
   showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null): void {
-    this.open(0.7);
+    this.open(0.7, () => this.showSkills(choices, levels, title, onPick, onReroll));
+    const box = this.box(1060, 1080);
     const head = plate(title, 54, 520);
-    head.position.set(DESIGN_W / 2, 560);
-    this.addChild(head);
+    head.y = -450;
+    box.addChild(head);
     const gap = 340;
     choices.forEach((id, i) => {
       const card = skillCard(id, levels[id]);
-      card.position.set(DESIGN_W / 2 + (i - (choices.length - 1) / 2) * gap, 1010);
+      card.x = (i - (choices.length - 1) / 2) * gap;
       tappable(card, () => onPick(id));
-      this.addChild(card);
+      box.addChild(card);
     });
     if (onReroll) {
-      const b = new PillButton(t('reroll'), 440, 130, 'purple', onReroll, 50);
-      // the ad sign in front of the caption
-      b.children[1].x = 34;
-      const ad = adSign();
-      ad.position.set(-b.children[1].width / 2 - 14, -4);
-      b.addChild(ad);
-      b.position.set(DESIGN_W / 2, 1470);
-      this.addChild(b);
+      const b = adButton(t('reroll'), 440, 130, 'purple', onReroll, 50);
+      b.y = 460;
+      box.addChild(b);
     }
   }
 
-  /** The result, the crystals it earned, and Continue (to the home screen); a revive offer
-   *  when the battle was lost. */
+  /** The result on a walnut board: a plate saying won or lost, the wave, kills and time on
+   *  parchment, the crystals it earned (and the first clear), the rewarded revive when the
+   *  battle was lost, and Continue (to the home screen). */
   showEnd(won: boolean, stats: string, reward: Reward, onContinue: () => void, onRevive: (() => void) | null): void {
-    this.open(0.65);
-    const head = label(won ? t('won') : t('lost'), 110, { fill: won ? COLORS.gold : 0xff8a8a });
-    head.position.set(DESIGN_W / 2, 600);
-    const info = label(stats, 48);
-    info.position.set(DESIGN_W / 2, 750);
+    this.open(0.72, () => this.showEnd(won, stats, reward, onContinue, onRevive));
+    const W = 900;
+    // the heights of the rows: plate, stat tiles, crystals, first clear, buttons
+    const rows = [200, 270, 170, reward.firstClear ? 120 : 0, onRevive ? 300 : 170];
+    const H = rows.reduce((a, b) => a + b, 0) + 80;
+    const box = this.box(W + 60, H + 220);
+    box.y += 40; // room for the crest over the board
+    box.addChild(woodPanel(W, H));
+    let y = -H / 2;
+
+    // the plate, with stars over a win and the wall knocked apart over a loss
+    const crest = won ? stars() : brokenWall();
+    crest.y = y - 30;
+    const head = plate(won ? t('won') : t('lost'), 72, 560, won ? 'brass' : 'red');
+    head.y = y + 80;
+    box.addChild(crest, head);
+    y += rows[0];
+
+    // wave, kills and time (the parts of `stats`), a parchment tile each
+    const icons = [swordsIcon, gearIcon, stopwatchIcon];
+    const parts = stats.split(/\s{2,}/).slice(0, 3);
+    const gap = 24;
+    const tw = (W - 120 - gap * (parts.length - 1)) / parts.length;
+    parts.forEach((part, i) => {
+      const tile = new Container();
+      tile.position.set((i - (parts.length - 1) / 2) * (tw + gap), y + rows[1] / 2);
+      tile.addChild(paperCard(tw, 220, 24));
+      const icon = icons[i]();
+      icon.scale.set(0.8);
+      icon.y = -38;
+      const text = ink(part, 44);
+      text.y = 60;
+      if (text.width > tw - 24) text.scale.set((tw - 24) / text.width);
+      tile.addChild(icon, text);
+      box.addChild(tile);
+    });
+    y += rows[1];
+
+    // the crystals: a dark inset with what they are on the left, the gem and count on the right
+    const iw = W - 120;
     const purse = new Container();
-    const count = label(t('reward', { n: reward.crystals }), 80, { fill: 0x9beaff });
-    count.anchor.set(0, 0.5);
-    count.x = 40;
-    purse.addChild(gem(new Graphics(), 0, 0, 40), count);
-    purse.position.set(DESIGN_W / 2 - (count.width + 40) / 2, 880);
-    this.addChild(head, info, purse);
+    purse.y = y + rows[2] / 2;
+    purse.addChild(new Graphics().roundRect(-iw / 2, -64, iw, 128, 30).fill(P.woodDark).stroke({ width: 4, color: P.line }));
+    const what = label(t('earned'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+    what.anchor.set(0, 0.5);
+    what.x = -iw / 2 + 40;
+    const count = label(t('reward', { n: reward.crystals }), 84, { fill: 0x9beaff, stroke: { color: P.line, width: 10 } });
+    count.anchor.set(1, 0.5);
+    count.x = iw / 2 - 40;
+    purse.addChild(what, count, gem(new Graphics(), count.x - count.width - 48, -2, 42));
+    box.addChild(purse);
+    y += rows[2];
+
     if (reward.firstClear) {
-      const first = label(t('firstClear'), 48, { fill: COLORS.gold });
-      first.position.set(DESIGN_W / 2, 980);
-      this.addChild(first);
+      const first = ribbon(t('firstClear'), W - 200);
+      first.y = y + rows[3] / 2;
+      box.addChild(first);
+      y += rows[3];
     }
-    const go = new Button(t('continue'), 620, 160, COLORS.button, onContinue, 60);
-    go.position.set(DESIGN_W / 2, 1120);
-    this.addChild(go);
+
+    // the revive (with the ad sign) on top when there is one, Continue under it
+    let by = y + 20;
     if (onRevive) {
-      const revive = new Button(`▶ ${t('revive')}`, 620, 160, 0xd98b1f, onRevive, 52);
-      revive.position.set(DESIGN_W / 2, 1320);
-      this.addChild(revive);
+      const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);
+      revive.y = by + 75;
+      box.addChild(revive);
+      by += 180;
     }
+    const big = !onRevive;
+    const go = new PillButton(t('continue'), big ? 620 : 460, big ? 150 : 120, 'green', onContinue, big ? 62 : 50);
+    go.y = by + (big ? 75 : 60);
+    box.addChild(go);
   }
+}
+
+/** A pill button with the ad sign in front of its caption. */
+function adButton(caption: string, w: number, h: number, kind: ButtonKind, onTap: () => void, size: number): PillButton {
+  const b = new PillButton(caption, w, h, kind, onTap, size);
+  const text = b.children[1];
+  text.x = 34;
+  const ad = adSign();
+  ad.position.set(-text.width / 2 - 14, -4);
+  b.addChild(ad);
+  return b;
+}
+
+/** Three gold stars, the middle one higher and bigger: a win. */
+function stars(): Graphics {
+  const g = new Graphics();
+  const star = (x: number, y: number, r: number) => {
+    const pts: number[] = [];
+    for (let i = 0; i < 10; i++) {
+      const a = -Math.PI / 2 + (i * Math.PI) / 5;
+      const rr = i % 2 ? r * 0.46 : r;
+      pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
+    }
+    g.poly(pts).fill(COLORS.gold).stroke({ width: 6, color: P.line, join: 'round' });
+    g.circle(x - r * 0.18, y - r * 0.22, r * 0.16).fill({ color: 0xffffff, alpha: 0.55 });
+  };
+  star(-130, 14, 54);
+  star(130, 14, 54);
+  star(0, -16, 76);
+  return g;
+}
+
+/** The wall stones knocked apart: a loss. */
+function brokenWall(): Container {
+  const c = new Container();
+  for (const [x, r] of [[-60, -0.22], [60, 0.26]]) {
+    const half = wallIcon();
+    half.position.set(x, 0);
+    half.rotation = r;
+    c.addChild(half);
+  }
+  c.scale.set(1.2);
+  return c;
+}
+
+/** A green ribbon with tails, its text in cream. */
+function ribbon(text: string, w: number): Container {
+  const c = new Container();
+  const h = 80;
+  const g = new Graphics();
+  for (const s of [-1, 1]) {
+    const x0 = (s * w) / 2;
+    g.poly([x0 - s * 20, -h / 2 + 14, x0 + s * 40, -h / 2 + 14, x0 + s * 22, 8, x0 + s * 40, h / 2 + 10, x0 - s * 20, h / 2 + 10])
+      .fill(0x2b7c36)
+      .stroke({ width: 5, color: P.line, join: 'round' });
+  }
+  g.roundRect(-w / 2, -h / 2, w, h, 14).fill(0x4cc35a).stroke({ width: 5, color: P.line });
+  g.roundRect(-w / 2 + 14, -h / 2 + 8, w - 28, 8, 4).fill({ color: 0xffffff, alpha: 0.35 });
+  const caption = label(text, 42, { stroke: { color: P.line, width: 7 } });
+  caption.y = -2;
+  if (caption.width > w - 40) caption.scale.set((w - 40) / caption.width);
+  c.addChild(g, caption);
+  return c;
 }
 
 const CARD_W = 320;
