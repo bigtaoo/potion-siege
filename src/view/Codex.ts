@@ -180,7 +180,9 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
   const c = board(t('codex.monsters'), w, h);
   const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
-  note.position.set(w / 2 - 34, -h / 2 + 52);
+  note.position.set(w / 2 - 34, -h / 2 + 58);
+  // between the title plate's ribbon and the board's edge
+  fit(note, w / 2 - 34 - (c.children[1] as Container).width / 2 - 6);
   const page = new Container();
   c.addChild(note, page);
   const inner = h - HEAD - FOOT;
@@ -224,9 +226,9 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
     const back = arrow(-1, monsterPage > 0);
     const count = ink(`${monsterPage + 1}/${PAGES.length}`, 26, { fill: P.inkSoft });
     const next = arrow(1, monsterPage < PAGES.length - 1);
-    back.position.set(-w / 2 + 54, -h / 2 + 52);
-    count.position.set(-w / 2 + 102, -h / 2 + 52);
-    next.position.set(-w / 2 + 150, -h / 2 + 52);
+    back.position.set(-w / 2 + 54, -h / 2 + 58);
+    count.position.set(-w / 2 + 114, -h / 2 + 58);
+    next.position.set(-w / 2 + 174, -h / 2 + 58);
     // a dot while the picked stage sends a kind from the next page
     if (monsterPage === 0 && PAGES[1].some((k) => stage >= FIRST_STAGE[k])) redDot(next, 22, -22);
     page.addChild(back, count, next);
@@ -341,9 +343,10 @@ function chips(kind: EnemyKind, cols: number): Container {
     chip.addChild(new Graphics().circle(-cw / 2 + 22, 0, 17).fill(HERO_COLORS[el]).stroke({ width: 3, color: P.line }));
     const b = bottle(el, 28);
     b.position.set(-cw / 2 + 22, 0);
-    const text = ink(resistLabel(v), 21, { fill: color });
+    const text = ink(resistLabel(v), 20, { fill: color });
     text.anchor.set(0, 0.5);
-    text.position.set(-cw / 2 + 42, 0);
+    text.position.set(-cw / 2 + 41, 0);
+    fit(text, cw - 41 - 14); // clear of the pill's round end
     chip.addChild(b, text);
     c.addChild(chip);
   });
