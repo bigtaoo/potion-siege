@@ -107,6 +107,9 @@ class Game {
    *  ended, what it booked. */
   private challenge: { ch: Challenge; streakBonus: number; result: ChallengeResult | null } | null = null;
   private revived = false;
+  /** The battle's end is booked: the battle stands still and is not booked again while the
+   *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
+  private ended = false;
   /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
   private offered = { revive: false, double: false };
   /** The day the login panel last opened by itself. */
@@ -169,11 +172,14 @@ class Game {
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
+    this.ended = false;
     this.offered = { revive: false, double: false };
     this.tutorial = null;
     this.hud.hint = true;
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
+    // today's tasks exist before the first battle counts toward them (a fresh save has none)
+    rollDay(this.save, dayOf(new Date()));
   }
 
   private tick(dt: number): void {
@@ -196,7 +202,7 @@ class Game {
 
     const b = this.battle;
     let events: BattleEvent[] = [];
-    if (b && !this.overlay.visible) {
+    if (b && !this.overlay.visible && !this.ended) {
       // the battle stands still while a tutorial step waits for its tap
       if (!this.tutorial?.holds(b)) {
         for (let i = 0; i < this.speed; i++) {
@@ -327,6 +333,7 @@ class Game {
   }
 
   private finish(b: Battle): void {
+    this.ended = true;
     if (this.challenge) {
       this.finishChallenge(b, this.challenge);
       return;
@@ -587,6 +594,7 @@ class Game {
     this.run?.onReviveResult(ok);
     if (ok) {
       this.revived = true;
+      this.ended = false;
       b.revive();
       this.platform.gameplayStart();
     } else {
