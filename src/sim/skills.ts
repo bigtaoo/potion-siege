@@ -36,6 +36,12 @@ export const SKILL_IDS = [
   'poisonSplash',
   'poisonMelt',
   'poisonLightning',
+  'windDamage',
+  'windPush',
+  'windHaste',
+  'windGust',
+  'windVortex',
+  'windFire',
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
@@ -79,6 +85,12 @@ const DEFS: Record<SkillId, SkillDef> = {
   poisonSplash: { max: 1, hero: 'poison' },
   poisonMelt: { max: 1, hero: 'poison' },
   poisonLightning: { max: 1, hero: 'poison', with: 'lightning' },
+  windDamage: { max: 3, hero: 'wind' },
+  windPush: { max: 3, hero: 'wind' },
+  windHaste: { max: 2, hero: 'wind' },
+  windGust: { max: 1, hero: 'wind' },
+  windVortex: { max: 1, hero: 'wind' },
+  windFire: { max: 1, hero: 'wind', with: 'fire' },
 };
 
 /** The hero a skill belongs to and, for a recipe, the second one it needs. */
@@ -92,7 +104,7 @@ export function skillMax(id: SkillId): number {
 }
 
 /** Passive boosts a milestone gives to a skill the hero already has. */
-export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus'] as const;
+export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus', 'windPushPlus'] as const;
 export type PerkId = (typeof PERK_IDS)[number];
 
 /** What levelling a hero opens up: a new card in the pool, or a perk. */
@@ -128,6 +140,12 @@ export const MILESTONES: Record<HeroKind, Milestone[]> = {
     { level: 10, perk: 'poisonRustPlus' },
     { level: 15, skill: 'poisonMelt' },
     { level: 20, skill: 'poisonLightning' },
+  ],
+  wind: [
+    { level: 5, skill: 'windGust' },
+    { level: 10, perk: 'windPushPlus' },
+    { level: 15, skill: 'windVortex' },
+    { level: 20, skill: 'windFire' },
   ],
 };
 
@@ -228,6 +246,18 @@ export interface Mods {
   melt: boolean;
   /** Lightning hits rust (the corrosion-and-lightning recipe). */
   electrolysis: boolean;
+  /** Multiplier on how far wind hits knock enemies back. */
+  push: number;
+  /** The perk: the boiler golem is knocked back as far as the rest. */
+  pushHeavy: boolean;
+  /** Multiplier on the wind potions' attack speed, on top of `speed`. */
+  windSpeed: number;
+  /** Every few shots a wind potion sends a gust across the field. */
+  gust: boolean;
+  /** Wind kills leave a whirlwind that pulls the enemies around it in. */
+  vortex: boolean;
+  /** Wind fans the fire on what it hits and blows it onto those around (the wind-and-fire recipe). */
+  windFire: boolean;
 }
 
 export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()): Mods {
@@ -238,6 +268,7 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     ice: 1 + s.classDamage * levels.iceDamage,
     lightning: 1 + s.classDamage * levels.lightningDamage,
     poison: 1 + s.classDamage * levels.poisonDamage,
+    wind: 1 + s.classDamage * levels.windDamage,
   };
   const p = BALANCE.heroes.poison;
   return {
@@ -267,5 +298,11 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     acidSplash: levels.poisonSplash > 0,
     melt: levels.poisonMelt > 0,
     electrolysis: levels.poisonLightning > 0,
+    push: (1 + s.windPush * levels.windPush) * (perks.has('windPushPlus') ? 1 + s.windPushPlus : 1),
+    pushHeavy: perks.has('windPushPlus'),
+    windSpeed: 1 + s.windHaste * levels.windHaste,
+    gust: levels.windGust > 0,
+    vortex: levels.windVortex > 0,
+    windFire: levels.windFire > 0,
   };
 }

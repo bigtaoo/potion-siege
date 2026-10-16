@@ -11,16 +11,18 @@ import { FIRST_STAGE, FIRST_WAVE, waveHp } from './waves';
 export const RESIST: Record<EnemyKind, Partial<Record<HeroKind, number>>> = {
   // tin conducts: lightning arcs right through it
   grunt: { lightning: 1.25 },
-  // a frozen spring stops the little gears
-  runner: { ice: 1.25 },
-  // a boiler is made to take heat and acid, but cold cracks the hot iron
-  brute: { fire: 0.5, ice: 1.25, poison: 0.5 },
-  // heavy brass plates ground the sparks and hold the heat; magic goes between them
-  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25 },
-  // canvas wings catch fire and the brass ball draws the sparks; frost just slides off the wings
-  flyer: { fire: 1.25, lightning: 1.25, ice: 0.75 },
-  // acid gums the mainspring and magic unwinds it; its own gears turn back the cold
-  winder: { poison: 1.5, arcane: 1.25, ice: 0.5 },
+  // a frozen spring stops the little gears, and the light mouse is blown about
+  runner: { ice: 1.25, wind: 1.25 },
+  // a boiler is made to take heat and acid, but cold cracks the hot iron; it is heavy to blow
+  brute: { fire: 0.5, ice: 1.25, poison: 0.5, wind: 0.75 },
+  // heavy brass plates ground the sparks, hold the heat and stand in the wind; magic goes between them
+  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25, wind: 0.75 },
+  // canvas wings catch fire and the brass ball draws the sparks; frost just slides off the wings,
+  // and a gale tears at them
+  flyer: { fire: 1.25, lightning: 1.25, ice: 0.75, wind: 1.5 },
+  // acid gums the mainspring and magic unwinds it; its own gears turn back the cold; wind
+  // catches the big key and spins it the wrong way
+  winder: { poison: 1.5, arcane: 1.25, ice: 0.5, wind: 1.5 },
 };
 
 export function resist(kind: EnemyKind, element: HeroKind): number {

@@ -23,6 +23,7 @@ export const HERO_COLORS = {
   ice: 0x6fd8ff,
   lightning: 0xffe14d,
   poison: 0x7ed957,
+  wind: 0x8fe3c8,
 } as const;
 
 export function label(text: string, size: number, style: TextStyleOptions = {}): Text {

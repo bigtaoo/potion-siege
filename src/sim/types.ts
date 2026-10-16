@@ -3,7 +3,7 @@ import balanceJson from './balance.json';
 export type Balance = typeof balanceJson;
 export const BALANCE: Balance = balanceJson;
 
-export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison'] as const;
+export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison', 'wind'] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
 
 /** The four heroes a new save brings into battle; the player can swap one for another unlocked
@@ -66,6 +66,8 @@ export interface Enemy {
   /** Static from lightning: extra damage the next hit of another potion sets off. */
   charge: number;
   chargeTime: number;
+  /** Seconds before a wind hit can knock it back again. */
+  pushTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
   /** A flyer weaves from side to side about this x, at this point of its swing. */
@@ -92,6 +94,16 @@ export interface Projectile {
   split?: boolean;
   /** A lightning shot that also calls down a sky strike where it lands. */
   strike?: boolean;
+  /** A wind shot that lands as a gust: a wall of wind across the whole field. */
+  gust?: boolean;
+}
+
+/** A whirlwind left where a wind shot killed (the vortex skill): it pulls the enemies around it
+ *  in until it dies down. */
+export interface Vortex {
+  x: number;
+  y: number;
+  time: number;
 }
 
 /** What the view needs to know happened this step, beyond the plain state. */
@@ -111,4 +123,8 @@ export type BattleEvent =
   | { type: 'wallHit' }
   /** A winder wound back the enemies within `radius`: healed, thawed and sped up again. */
   | { type: 'rewind'; x: number; y: number; radius: number }
+  /** A wind gust swept the field `depth` deep either side of y. */
+  | { type: 'gust'; x: number; y: number; depth: number }
+  /** A wind hit knocked an enemy back from (x, y). */
+  | { type: 'push'; x: number; y: number; id: number }
   | { type: 'end'; won: boolean };

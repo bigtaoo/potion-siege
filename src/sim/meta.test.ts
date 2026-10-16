@@ -253,6 +253,20 @@ describe('corrosion unlock and lineup', () => {
     expect(ok.lineup).toEqual(['poison', 'fire', 'ice', 'lightning']);
   });
 
+  it('opens the gale tonic on the first clear of its own, later stage', () => {
+    const wind = unlockStage('wind')!;
+    expect(wind).toBe(BALANCE.heroes.wind.unlockStage);
+    expect(wind).toBeGreaterThan(at);
+    const m = upTo(wind);
+    unlockHero(m, 'poison');
+    const r = runReward(m, clear(wind));
+    expect(r.unlocked).toEqual(['wind']);
+    applyRun(m, clear(wind), r);
+    expect(heroUnlocked(m, 'wind')).toBe(true);
+    expect(heroUnlocked(parseMeta(`{"cleared":${wind - 1},"stage":${wind}}`), 'wind')).toBe(false);
+    expect(heroUnlocked(parseMeta(`{"cleared":${wind},"stage":${wind + 1}}`), 'wind')).toBe(true);
+  });
+
   describe('shop', () => {
     it('opens the free chest once a day', () => {
       const m = newMeta();
@@ -289,6 +303,16 @@ describe('corrosion unlock and lineup', () => {
       expect(m.crystals).toBe(price);
       expect(buyUnlock(m, 'poison')).toBe(false);
       expect(m.crystals).toBe(price);
+    });
+
+    it('sells the gale tonic too, dearer than corrosion', () => {
+      expect(unlockPrice('wind')).toBeGreaterThan(unlockPrice('poison')!);
+      const m = newMeta();
+      m.crystals = unlockPrice('wind')!;
+      expect(buyUnlock(m, 'wind')).toBe(true);
+      expect(heroUnlocked(m, 'wind')).toBe(true);
+      expect(heroUnlocked(m, 'poison')).toBe(false);
+      expect(m.crystals).toBe(0);
     });
 
     it('does not sell the starting potions or one a first clear opened', () => {

@@ -17,7 +17,7 @@ export interface PotionLook {
   lid: number;
   limb: number;
   /** What rises from its neck: the element mark. */
-  mark: 'flame' | 'frost' | 'spark' | 'star' | 'acid';
+  mark: 'flame' | 'frost' | 'spark' | 'star' | 'acid' | 'wind';
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];
@@ -127,6 +127,7 @@ class PotionFigure extends Container {
       else if (look.mark === 'frost') this.drawFrost(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else if (look.mark === 'acid') this.drawAcid(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else if (look.mark === 'spark') this.drawSpark(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else if (look.mark === 'wind') this.drawWind(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else this.drawStars(f, look, pose, t, nx, ny, bw, bh, w, r, line);
     }
     this.drawArms(f, look, t, at, bh, w, r, line);
@@ -203,6 +204,46 @@ class PotionFigure extends Container {
         }
       }
     }
+  }
+
+  /** A little whirlwind spinning up out of the neck, wider at the top, with a leaf caught in it
+   *  going round; it spins faster and flares on a throw. */
+  private drawWind(f: Graphics, look: PotionLook, pose: PotionPose, t: number, nx: number, ny: number, bw: number, bh: number, w: number, r: number, line: number): void {
+    const spin = t * (3 + 4 * w + 3 * r) + pose.phase;
+    const lean = Math.sin(t * 1.9) * bw * 0.04 - this.rotation * bh * 0.3;
+    const flare = 1 + 0.35 * r + 0.15 * w;
+    // three rings, small at the neck and wide at the top, each a broken stroke so it reads as turning
+    for (let i = 0; i < 3; i++) {
+      const k = i / 2;
+      const cx = nx + lean * k;
+      const cy = ny - bh * (0.06 + 0.11 * i) * flare;
+      const rx = bw * (0.1 + 0.09 * i) * flare;
+      const ry = bh * (0.025 + 0.012 * i);
+      const a0 = spin * (1 + 0.2 * i) + i * 1.7;
+      const pts: number[] = [];
+      for (let j = 0; j <= 16; j++) {
+        const a = a0 + (j / 16) * Math.PI * 1.35;
+        pts.push(cx + Math.cos(a) * rx, cy + Math.sin(a) * ry);
+      }
+      f.poly(pts, false).stroke({ width: line * 2.4, color: INK, cap: 'round', join: 'round' });
+      f.poly(pts, false).stroke({ width: line * 1.1, color: i === 1 ? look.glow[2] : look.glow[1], cap: 'round', join: 'round' });
+    }
+    // the leaf riding round the top ring
+    const a = spin * 1.2;
+    const depth = Math.sin(a);
+    const lx = nx + lean + Math.cos(a) * bw * 0.26 * flare;
+    const ly = ny - bh * 0.25 * flare + depth * bh * 0.03;
+    const size = bh * 0.04 * (0.8 + 0.25 * depth);
+    const c = Math.cos(a * 1.5);
+    const sn = Math.sin(a * 1.5);
+    const pts: number[] = [];
+    for (let j = 0; j < 12; j++) {
+      const u = (j / 12) * Math.PI * 2;
+      const px = Math.cos(u) * size * 1.6;
+      const py = Math.sin(u) * size * 0.7;
+      pts.push(lx + px * c - py * sn, ly + px * sn + py * c);
+    }
+    f.poly(pts).fill(0x7fcf4a).stroke({ width: line * 0.7, color: INK, join: 'round' });
   }
 
   /** Three little stars circling over the neck, twinkling; they spin faster on a throw. */

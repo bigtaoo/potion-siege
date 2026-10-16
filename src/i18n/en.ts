@@ -57,6 +57,7 @@ export const en = {
     iceFreezePlus: 'All freezes last 50% longer',
     lightningStaticPlus: 'Static +50% damage',
     poisonRustPlus: 'Each rust stack +50% effect',
+    windPushPlus: 'Knockback +50%, the boiler golem flies as far as a tin soldier',
   },
   maxed: 'MAX',
   reward: '+{n}',
@@ -135,6 +136,7 @@ export const en = {
     ice: 'Frost Tonic',
     lightning: 'Storm Tonic',
     poison: 'Corrosion Tonic',
+    wind: 'Gale Tonic',
   },
   codex: {
     heroes: 'Potions',
@@ -191,6 +193,12 @@ export const en = {
     poisonSplash: { name: 'Acid Splash', desc: 'Corrosion hits splash poison and rust around' },
     poisonMelt: { name: 'Meltdown', desc: 'Rusted enemies that die pass their rust to those around' },
     poisonLightning: { name: 'Electrolysis', desc: 'Lightning hits add a rust stack' },
+    windDamage: { name: 'Sharp Gale', desc: 'Gale tonics +40% damage' },
+    windPush: { name: 'Strong Gust', desc: 'Gale knockback +35%' },
+    windHaste: { name: 'Tailwind', desc: 'Gale tonics attack 20% faster' },
+    windGust: { name: 'Gust Wall', desc: 'Every 4th gale shot sweeps a wall of wind across the field' },
+    windVortex: { name: 'Whirlwind', desc: 'Gale kills leave a whirlwind that pulls enemies in for 2s' },
+    windFire: { name: 'Fan the Flames', desc: 'Gale hits on burning enemies blow the fire onto those around' },
   },
 };
 

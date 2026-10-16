@@ -7,7 +7,7 @@ import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair } from '../sim/tutorial';
 import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
 import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
-import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell, rewindWave } from './effects';
+import { HIT_TIME, chainBolt, gearBurst, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { STONE, slab, wallTop, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
@@ -193,6 +193,16 @@ export class BattleView extends Container {
         case 'rewind':
           this.effect(0.7, (g, life) => rewindWave(g, ev.x, ev.y, ev.radius, 1 - life), true);
           break;
+        case 'gust':
+          this.effect(0.5, (g, life) => gustWave(g, F.left, F.right, ev.y, ev.depth, 1 - life), true);
+          break;
+        case 'push': {
+          // the lines trail the enemy as it flies back
+          const e = this.battle?.enemies.find((o) => o.id === ev.id);
+          const r = e?.radius ?? 36;
+          this.effect(0.35, (g, life) => pushLines(g, e?.x ?? ev.x, e ? e.y : ev.y, r, 1 - life));
+          break;
+        }
       }
     }
   }
@@ -284,6 +294,7 @@ export class BattleView extends Container {
     const fxGround = this.fxGround.clear();
     this.fxList = this.fxList.filter((e) => (e.ttl -= dt) > 0);
     for (const e of this.fxList) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
+    for (const v of b.vortices) vortexSwirl(fxGround, v.x, v.y, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / 0.4));
     for (const f of [...this.floaters.children]) {
       f.y -= 120 * dt;
       f.alpha -= dt * 1.2;

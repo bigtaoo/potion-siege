@@ -21,6 +21,15 @@ describe('enemy resistances', () => {
     for (const kind of ENEMY_KINDS) expect(resist(kind, 'poison')).toBe(kind === 'brute' ? 0.5 : kind === 'winder' ? 1.5 : 1);
   });
 
+  it('lets the gale tear at the ornithopter and the winder, and the heavy ones stand in it', () => {
+    expect(resist('flyer', 'wind')).toBeGreaterThan(1);
+    expect(resist('winder', 'wind')).toBeGreaterThan(1);
+    expect(resist('runner', 'wind')).toBe(1.25);
+    expect(resist('brute', 'wind')).toBe(0.75);
+    expect(resist('boss', 'wind')).toBe(0.75);
+    expect(resist('grunt', 'wind')).toBe(1);
+  });
+
   it('shows every resistance that is not 1', () => {
     for (const kind of ENEMY_KINDS) {
       const shown = resists(kind);

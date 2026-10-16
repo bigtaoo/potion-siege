@@ -6,7 +6,7 @@ import { resist } from './enemies';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { Rng } from './rng';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
-import { BALANCE, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile } from './types';
+import { BALANCE, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
 import { isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -48,16 +48,18 @@ export class Battle {
   readonly slots: (Hero | null)[] = new Array(SLOT_COUNT).fill(null);
   /** The damage of the shots each potion has fired this battle (the result screen's MVP). */
   /** The damage each potion has dealt, overkill left out (the commander's is not counted). */
-  readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0 };
+  readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
   readonly open: boolean[] = Array.from({ length: SLOT_COUNT }, (_, s) => Math.floor(s / B.grid.cols) === WALL_ROW);
   enemies: Enemy[] = [];
   projectiles: Projectile[] = [];
+  /** Whirlwinds of the wind vortex skill still turning. */
+  vortices: Vortex[] = [];
   skills: SkillLevels = emptySkills();
   /** Milestone perks of the heroes' levels. */
   readonly perks: ReadonlySet<PerkId>;
   private mods: Mods;
-  /** Shots per hero id, for the lightning sky strike. */
+  /** Shots per hero id, for the lightning sky strike and the wind gust. */
   private shotCount = new Map<number, number>();
   private pending: Spawn[] = [];
   private events: BattleEvent[] = [];
@@ -299,6 +301,7 @@ export class Battle {
       chillTime: 0,
       charge: 0,
       chargeTime: 0,
+      pushTime: 0,
       atWall: false,
     };
     if (s.kind === 'flyer') {
@@ -336,6 +339,8 @@ export class Battle {
   private stepEnemies(dt: number): void {
     let hitWall = false;
     const front = this.frontY();
+    for (const v of this.vortices) v.time -= dt;
+    this.vortices = this.vortices.filter((v) => v.time > 0);
     for (const e of this.enemies) {
       if (e.poisonTime > 0) {
         this.harm(e, e.poisonDps * Math.min(dt, e.poisonTime), 'poison');
@@ -356,6 +361,7 @@ export class Battle {
       e.chillTime = Math.max(0, e.chillTime - dt);
       if (e.chillTime <= 0) e.chill = 0;
       e.slowTime = Math.max(0, e.slowTime - dt);
+      e.pushTime = Math.max(0, e.pushTime - dt);
       if (e.freezeTime > 0) {
         e.freezeTime -= dt;
         continue;
@@ -365,6 +371,7 @@ export class Battle {
         const f = B.flyer;
         e.x = e.x0! + f.weave * Math.sin(e.phase! + this.time * f.weaveRate);
       }
+      if (e.kind !== 'boss') for (const v of this.vortices) this.pull(e, v, dt);
       if (e.kind === 'winder' && !e.atWall) {
         e.windTime! -= dt;
         if (e.windTime! <= 0) {
@@ -397,7 +404,7 @@ export class Battle {
     let targets: Enemy[] | null = null;
     for (const h of this.slots) {
       if (!h) continue;
-      h.cooldown -= dt * this.mods.speed;
+      h.cooldown -= dt * this.mods.speed * (h.kind === 'wind' ? this.mods.windSpeed : 1);
       if (h.cooldown > 0) continue;
       targets ??= this.targets();
       if (targets.length === 0) {
@@ -406,6 +413,11 @@ export class Battle {
         continue;
       }
       h.cooldown += B.heroes[h.kind].interval / B.starSpeed[h.star - 1];
+      if (h.kind === 'wind') {
+        // the wind goes for what it can catch: the flying ornithopter and the winder's big key
+        this.fire(h, targets.find((e) => e.kind === 'flyer' || e.kind === 'winder') ?? targets[0]);
+        continue;
+      }
       const shots = h.kind === 'arcane' ? 1 + this.mods.extraArrows : 1;
       // the extra bolts of the arcane multishot go to the enemies behind, weaker
       for (let i = 0; i < shots && i < targets.length; i++) this.fire(h, targets[i], i === 0 ? 1 : B.skills.multiBolt);
@@ -431,13 +443,15 @@ export class Battle {
     const from = slotCenter(h.slot);
     this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
     let strike = false;
-    if (h.kind === 'lightning' && this.mods.thunder) {
+    let gust = false;
+    if ((h.kind === 'lightning' && this.mods.thunder) || (h.kind === 'wind' && this.mods.gust)) {
       const n = (this.shotCount.get(h.id) ?? 0) + 1;
       this.shotCount.set(h.id, n);
-      strike = n % B.skills.thunderEvery === 0;
+      if (h.kind === 'lightning') strike = n % B.skills.thunderEvery === 0;
+      else gust = n % B.skills.gustEvery === 0;
     }
     const base = B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind] * scale;
-    this.shoot(h.kind, h.star, from.x, from.y - 40, target, base, strike ? { strike } : {});
+    this.shoot(h.kind, h.star, from.x, from.y - 40, target, base, strike ? { strike } : gust ? { gust } : {});
   }
 
   private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number, extra: Partial<Projectile> = {}): void {
@@ -520,6 +534,19 @@ export class Battle {
         }
         return;
       }
+      case 'wind': {
+        if (!p.gust) break;
+        // the gust: a wall of wind across the whole field, as deep as the target's front and back
+        const depth = B.skills.gustDepth;
+        for (const e of this.enemies) {
+          if (e.hp <= 0 || Math.abs(e.y - p.ty) > depth + e.radius) continue;
+          this.harm(e, p.damage * B.skills.gust, by);
+          this.discharge(e);
+          this.windHit(e, p, e.id === p.targetId);
+        }
+        this.events.push({ type: 'gust', x: p.tx, y: p.ty, depth });
+        return;
+      }
     }
     if (!target) return;
     this.harm(target, p.damage, by);
@@ -548,7 +575,68 @@ export class Battle {
         this.events.push({ type: 'hit', kind: 'poison', x: target.x, y: target.y, radius });
       }
     }
+    if (p.kind === 'wind') this.windHit(target, p, true);
     this.events.push({ type: 'hit', kind: p.kind, x: target.x, y: target.y, radius: 30 });
+  }
+
+  /** What a wind shot (or its gust) does to `e` after the damage: the knockback, and the wind
+   *  line's skills. `direct` is the one it was aimed at. */
+  private windHit(e: Enemy, p: Projectile, direct: boolean): void {
+    const S = B.skills;
+    if (!p.commander) this.push(e, p.star);
+    if (p.commander) return;
+    if (this.mods.vortex && direct && e.hp <= 0) this.vortices.push({ x: e.x, y: e.y, time: S.vortexTime });
+    if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
+      // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
+      // everything close by
+      const heat = Math.max(e.burnDps, e.scorch * S.windFire);
+      const radius = S.windFireRadius;
+      for (const o of this.enemies) {
+        if (o.hp <= 0 || Math.hypot(o.x - e.x, o.y - e.y) > radius + o.radius) continue;
+        if (heat >= o.burnDps) {
+          o.burnDps = heat;
+          o.burnBy = 'wind';
+        }
+        o.burnTime = S.burnTime;
+      }
+      this.events.push({ type: 'hit', kind: 'fire', x: e.x, y: e.y, radius });
+    }
+  }
+
+  /** Knocks `e` back up the field, off the wall if it was at it: lighter ones further, the boiler
+   *  golem half as far (all the way with the perk, or frozen stiff), the boss not at all (the
+   *  wind only slows it). Each one at most once every `pushTime`. A winder blown back also has
+   *  its key spun the wrong way: its rewind starts over. */
+  private push(e: Enemy, star: number): void {
+    const W = B.heroes.wind;
+    if (e.kind === 'boss') {
+      this.slow(e, W.bossSlow, W.bossSlowTime);
+      return;
+    }
+    if (e.pushTime > 0 || e.hp <= 0) return;
+    let weight = W.weight[e.kind];
+    if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = W.weight.grunt;
+    const d = W.push * W.pushStar[star - 1] * this.mods.push * weight;
+    const top = B.field.top - e.radius;
+    if (d <= 0) return;
+    e.pushTime = W.pushTime;
+    this.events.push({ type: 'push', x: e.x, y: e.y, id: e.id });
+    e.y = Math.max(top, e.y - d);
+    e.atWall = false;
+    if (e.kind === 'winder') e.windTime = B.winder.every;
+  }
+
+  /** A whirlwind draws `e` towards its eye while it is within reach. */
+  private pull(e: Enemy, v: Vortex, dt: number): void {
+    const S = B.skills;
+    const dx = v.x - e.x;
+    const dy = v.y - e.y;
+    const d = Math.hypot(dx, dy);
+    if (d < 1 || d > S.vortexRadius + e.radius) return;
+    const step = Math.min(d, S.vortexPull * dt);
+    if (e.kind === 'flyer') e.x0! += (dx / d) * step;
+    else e.x += (dx / d) * step;
+    e.y += (dy / d) * step;
   }
 
   /** What the arcane line adds to a hero's bolt that has just hit. */

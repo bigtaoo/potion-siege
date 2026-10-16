@@ -65,6 +65,17 @@
       "rustMax": 3,
       "rustTime": 4,
       "unlockStage": 5
+    },
+    "wind": {
+      "damage": 8.5,
+      "interval": 0.7,
+      "push": 45,
+      "pushStar": [1, 1.3, 1.6, 2],
+      "pushTime": 1.5,
+      "weight": { "grunt": 0.75, "runner": 1, "brute": 0.4, "boss": 0, "flyer": 1.5, "winder": 1 },
+      "bossSlow": 0.3,
+      "bossSlowTime": 0.5,
+      "unlockStage": 10
     }
   },
   "enemies": {
@@ -194,7 +205,18 @@
     "rustExtra": 2,
     "rustPlus": 0.5,
     "acidRadius": 90,
-    "meltRadius": 120
+    "meltRadius": 120,
+    "windPush": 0.35,
+    "windHaste": 0.2,
+    "windPushPlus": 0.5,
+    "gustEvery": 4,
+    "gust": 0.8,
+    "gustDepth": 160,
+    "vortexTime": 2,
+    "vortexRadius": 160,
+    "vortexPull": 90,
+    "windFire": 0.3,
+    "windFireRadius": 110
   },
   "meta": {
     "stageHpGrowth": 1.12,
@@ -252,6 +274,6 @@
     "chest": 60,
     "ad": 40,
     "adsPerDay": 3,
-    "unlock": { "poison": 800 }
+    "unlock": { "poison": 800, "wind": 1200 }
   }
 }
