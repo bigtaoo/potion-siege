@@ -57,9 +57,9 @@
       "chainFalloff": 0.8
     },
     "poison": {
-      "damage": 4,
+      "damage": 5.5,
       "interval": 0.9,
-      "poisonDps": 9,
+      "poisonDps": 12,
       "poisonTime": 3,
       "rustStep": 0.1,
       "rustMax": 3,
@@ -220,6 +220,7 @@
   },
   "meta": {
     "stageHpGrowth": 1.12,
+    "stageHpLate": { "from": 14, "growth": 1.06 },
     "stageCount": 20,
     "reward": { "perWave": 4, "perKills": 10, "winBonus": 40, "firstClear": 30, "stageStep": 0.25 },
     "heroMax": 20,
