@@ -9,22 +9,24 @@ import { RunTracker } from './analytics/runTracker';
 import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
-import { Battle } from './sim/battle';
+import { Battle, slotCenter } from './sim/battle';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
   adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
   type MetaSave,
 } from './sim/meta';
 import { botAct } from './sim/bot';
+import { mergeablePair, Tutorial } from './sim/tutorial';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomePanel, type HomeTab } from './view/Home';
 import { workshopWall } from './view/kit';
-import { Overlay } from './view/Overlay';
+import { Overlay, SKILL_BOX } from './view/Overlay';
+import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
-import { fitDesign, fitMenu, type MenuFit } from './view/viewport';
+import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
 
@@ -82,6 +84,9 @@ class Game {
   private readonly hud: Hud;
   /** On the whole screen like the menus, over the battle. */
   private readonly overlay = new Overlay();
+  /** The first battle's tutorial, over everything in the battle. */
+  private readonly lessons = new TutorialLayer(() => this.endTutorial(true));
+  private tutorial: Tutorial | null = null;
   /** The workshop wall beside the board when the screen is wider than it. */
   private readonly wall = new Container();
   private wallSize = '';
@@ -120,7 +125,7 @@ class Game {
     );
     this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
-    app.stage.addChild(this.wall, this.root, this.overlay, this.menu);
+    app.stage.addChild(this.wall, this.root, this.overlay, this.lessons, this.menu);
     app.ticker.add((ticker) => this.tick(Math.min(ticker.deltaMS / 1000, 0.1)));
   }
 
@@ -139,6 +144,7 @@ class Game {
       this.overlay.hide();
       this.analytics.first('first_tap_start', { t: this.analytics.sessionSeconds });
       this.run = new RunTracker(this.analytics, this.battle!, this.save.runs + 1, 'first');
+      this.beginTutorial();
       this.platform.gameplayStart();
     });
   }
@@ -159,6 +165,8 @@ class Game {
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
     this.offered = { revive: false, double: false };
+    this.tutorial = null;
+    this.hud.hint = true;
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
   }
@@ -173,6 +181,7 @@ class Game {
     this.sideWall(fit.x, m);
 
     if (this.menu.visible) {
+      this.lessons.visible = false;
       this.menu.scale.set(m.scale);
       const old = this.menuFit;
       // a new page size is a new layout
@@ -181,12 +190,16 @@ class Game {
     }
 
     const b = this.battle;
+    let events: BattleEvent[] = [];
     if (b && !this.overlay.visible) {
-      for (let i = 0; i < this.speed; i++) {
-        if (this.autoplay) botAct(b);
-        b.step(dt);
+      // the battle stands still while a tutorial step waits for its tap
+      if (!this.tutorial?.holds(b)) {
+        for (let i = 0; i < this.speed; i++) {
+          if (this.autoplay) botAct(b);
+          b.step(dt);
+        }
       }
-      const events = b.drain();
+      events = b.drain();
       this.run?.onEvents(events);
       if (this.run && !this.autoplay) this.countDaily(events);
       this.view.react(events);
@@ -194,8 +207,67 @@ class Game {
       if (b.choices) this.showSkills(b);
       else if (b.result) this.finish(b);
     }
+    this.lesson(b, events, m, dt);
     this.view.update(dt);
     this.hud.update(dt);
+  }
+
+  /** The tutorial starts with the first battle of stage 1 on a save that has not seen it. */
+  private beginTutorial(): void {
+    if (this.autoplay || this.save.tutorial || this.battle?.setup.stage !== 1) return;
+    this.tutorial = new Tutorial();
+    this.hud.hint = false;
+  }
+
+  /** Done or skipped: never again on this save. */
+  private endTutorial(skipped: boolean): void {
+    const tut = this.tutorial;
+    if (!tut) return;
+    this.analytics.track('tutorial_end', { step: skipped ? (tut.step ?? 'done') : 'done', skipped });
+    this.tutorial = null;
+    this.hud.hint = true;
+    this.save.tutorial = true;
+    this.store();
+  }
+
+  /** Moves the tutorial on and points at what its step needs, in page units. */
+  private lesson(b: Battle | null, events: BattleEvent[], m: MenuFit, dt: number): void {
+    const tut = this.tutorial;
+    if (tut && b) {
+      tut.update(b, events);
+      if (tut.done) this.endTutorial(false);
+    }
+    const step = this.tutorial && b && this.root.visible ? this.tutorial.showing(b) : null;
+    // the pick shows over the skill cards, every other step over the battle itself
+    const up = step === 'pick' ? this.overlay.visible : !this.overlay.visible;
+    this.lessons.scale.set(m.scale);
+    this.lessons.show(step && up && b ? this.lessonFor(step, b, m) : null, m.w, m.h, m.wide, dt);
+  }
+
+  private lessonFor(step: NonNullable<ReturnType<Tutorial['showing']>>, b: Battle, m: MenuFit): Lesson {
+    // the board's design units to page units
+    const k = this.root.scale.x / m.scale;
+    const ox = this.root.x / m.scale;
+    const oy = this.root.y / m.scale;
+    const page = (r: Rect): Rect => ({ x: ox + r.x * k, y: oy + r.y * k, w: r.w * k, h: r.h * k });
+    const board = page({ x: 0, y: 0, w: DESIGN_W, h: DESIGN_H });
+    const center = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
+    if (step === 'pick') {
+      const s = Math.min(1, (m.w - 40) / SKILL_BOX.w, (m.h - 40) / SKILL_BOX.h);
+      const box = { x: m.w / 2 - (SKILL_BOX.w * s) / 2, y: m.h / 2 - (SKILL_BOX.h * s) / 2, w: SKILL_BOX.w * s, h: SKILL_BOX.h * s };
+      return { step, holes: [], from: center(box), clear: box };
+    }
+    if (step === 'merge') {
+      const pair = mergeablePair(b)!;
+      const holes = pair.map((slot) => {
+        const c = slotCenter(slot);
+        const g = BALANCE.grid;
+        return page({ x: c.x - g.cellW / 2, y: c.y - g.cellH / 2, w: g.cellW, h: g.cellH });
+      });
+      return { step, holes, from: center(holes[0]), to: center(holes[1]), clear: board };
+    }
+    const r = page(this.hud.buttonRect(step));
+    return { step, holes: [r], from: { x: r.x + r.w / 2, y: r.y + 8 }, clear: board };
   }
 
   /** Fills the bars beside the board with the workshop wall, the board casting a shadow on it. */
@@ -251,6 +323,8 @@ class Game {
 
   private finish(b: Battle): void {
     this.platform.gameplayStop();
+    // the tutorial belongs to the first battle only, however far it got
+    if (this.tutorial) this.endTutorial(true);
     rollDay(this.save, dayOf(new Date()));
     if (!this.revived) {
       this.save.runs++; // a revived run ending again is still one run
@@ -320,6 +394,7 @@ class Game {
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
       play: () => {
         this.newBattle('again');
+        this.beginTutorial();
         this.menu.visible = false;
         this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
         this.root.visible = true;

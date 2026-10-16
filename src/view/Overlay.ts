@@ -31,6 +31,9 @@ import { iconTexture, ultimateTexture } from './art';
 import { COLORS, gem, HERO_COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
+/** The skill pick's box, centred on the page (shrunk to fit), which the tutorial keeps clear of. */
+export const SKILL_BOX = { w: 1060, h: 1080 };
+
 /** Laid out on the whole screen (see fitMenu): `w` x `h` page units, at least 1080x1920 on a
  *  phone and 1920x1080 on a wide screen, built again when the page size changes. */
 export class Overlay extends Container {
@@ -99,7 +102,7 @@ export class Overlay extends Container {
    *  given. `levels` says how far each skill has been taken. */
   showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null): void {
     this.open(0.7, () => this.showSkills(choices, levels, title, onPick, onReroll));
-    const box = this.box(1060, 1080);
+    const box = this.box(SKILL_BOX.w, SKILL_BOX.h);
     const head = plate(title, 54, 520);
     head.y = -450;
     box.addChild(head);
