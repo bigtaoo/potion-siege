@@ -1,5 +1,6 @@
 // The home screen between battles, in the alchemist's-workshop look: a top bar with the daily
-// login, the daily tasks and the crystals, five tabs (potions, workshop, battle, codex, shop)
+// login, the daily tasks and the crystals, five tabs (potions, workshop, battle, codex, shop;
+// the codex is built in Codex.ts)
 // and the daily login reward, the daily tasks and a hero's milestones as panels over it.
 // Laid out on the whole screen: a portrait page with the tabs along the bottom, or on a wide
 // (desktop) screen a landscape page with the tabs down the left side. Built afresh after every
@@ -13,6 +14,7 @@ import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { heroCost, heroDamage, LEVELLED_HEROES, maxStage, stageHp, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { commanderTexture, enemyTexture } from './art';
+import { buildCodex } from './Codex';
 import {
   bookIcon,
   bottle,
@@ -78,6 +80,7 @@ export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: Ho
   if (tab === 'battle') battleTab(root, m, act, area);
   else if (tab === 'potions') potionsTab(root, m, act, area);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
+  else if (tab === 'codex') root.addChild(buildCodex(m, area));
   else soonTab(root, tab, area);
   topBar(root, m, act, today, left, w, wide);
   nav(root, act, tab, fit);
