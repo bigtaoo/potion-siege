@@ -65,13 +65,26 @@ export function throwingHand(look: PotionLook, height: number): { x: number; y: 
   return { x: 0.37 * bw - 0.02 * height, y: -height * (0.1 + 0.38 + 0.36 + 0.14) };
 }
 
+/**
+ * An idle figure redraws its feet, arms and mark every other frame, half of the figures on each:
+ * its breathing, sway and hop ride on the transform, which moves every frame, and re-tessellating
+ * every figure's strokes each frame was most of a full field's frame. One winding up, recoiling,
+ * pouring, blinking or with a new look or size redraws at once.
+ */
 class PotionFigure extends Container {
   private readonly back = new Graphics();
   private readonly body = new Sprite();
   private readonly front = new Graphics();
+  /** Whether this frame is one it may skip redrawing. */
+  private beat: boolean;
+  private drawnLook: PotionLook | null = null;
+  private drawnHeight = 0;
+  private drawnDim = false;
+  private drawnBlink = false;
 
-  constructor() {
+  constructor(odd = false) {
     super();
+    this.beat = odd;
     this.body.anchor.set(0.5, 1);
     this.addChild(this.back, this.body, this.front);
   }
@@ -100,6 +113,15 @@ class PotionFigure extends Container {
     this.body.position.set(0, -lift);
     this.body.scale.set(bh / look.body.height);
 
+    const blink = !pose.dim && (t * 0.31 + pose.phase * 0.17) % 1 < 0.035;
+    this.beat = !this.beat;
+    const same = look === this.drawnLook && bh === this.drawnHeight && pose.dim === this.drawnDim && blink === this.drawnBlink;
+    if (same && this.beat && w === 0 && r === 0 && pose.tilt === undefined) return;
+    this.drawnLook = look;
+    this.drawnHeight = bh;
+    this.drawnDim = pose.dim;
+    this.drawnBlink = blink;
+
     const line = Math.max(2, bh * 0.028);
     const b = this.back.clear();
     // two stubby feet, paddling in turn
@@ -110,7 +132,7 @@ class PotionFigure extends Container {
 
     const f = this.front.clear();
     // blink every few seconds, out of step with the others
-    if (!pose.dim && (t * 0.31 + pose.phase * 0.17) % 1 < 0.035) {
+    if (blink) {
       for (const [ex, ey] of look.eyes) {
         const [cx, cy] = at(ex, ey);
         const rx = look.eyeSize[0] * bw * 1.15;
@@ -370,7 +392,7 @@ export class PotionLayer extends Container {
   put(look: PotionLook, pose: PotionPose): void {
     let p = this.children[this.used] as PotionFigure | undefined;
     if (!p) {
-      p = new PotionFigure();
+      p = new PotionFigure(this.children.length % 2 === 1);
       this.addChild(p);
     }
     this.used++;

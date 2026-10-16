@@ -132,10 +132,16 @@ const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: strin
   },
 };
 
+/** Each kind's look, made once its art has loaded: asked for by every hero and vial every frame. */
+const looks = new Map<HeroKind, PotionLook>();
+
 export function potionLook(kind: HeroKind): PotionLook | undefined {
   const p = POTIONS[kind];
   const body = p && textures.get(p.file);
-  return p && body ? { ...p, body } : undefined;
+  if (!p || !body) return undefined;
+  let look = looks.get(kind);
+  if (look?.body !== body) looks.set(kind, (look = { ...p, body }));
+  return look;
 }
 
 export function commanderTexture(): Texture | undefined {
