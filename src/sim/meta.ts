@@ -6,6 +6,7 @@ import { newDaily, parseDaily, type DailySave } from './daily';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
+const S = BALANCE.shop;
 
 export const WORKSHOP_IDS = ['wall', 'startGold', 'crystals'] as const;
 export type WorkshopId = (typeof WORKSHOP_IDS)[number];
@@ -26,6 +27,17 @@ export interface MetaSave {
   unlocked: HeroKind[];
   /** The four potions taken into battle, all unlocked. */
   lineup: HeroKind[];
+  shop: ShopSave;
+}
+
+/** The shop's daily freebies, by local calendar day as in `daily`. */
+export interface ShopSave {
+  /** The day the free chest was last opened. */
+  chestDay: string;
+  /** The day `ads` counts for. */
+  adDay: string;
+  /** Rewarded ads watched for crystals on `adDay`. */
+  ads: number;
 }
 
 /** What a battle is set up with, from the stage and the upgrades. */
@@ -54,6 +66,7 @@ export function newMeta(): MetaSave {
     daily: newDaily(),
     unlocked: [],
     lineup: [...LINEUP],
+    shop: { chestDay: '', adDay: '', ads: 0 },
   };
 }
 
@@ -89,6 +102,10 @@ export function parseMeta(raw: string | null): MetaSave {
   // a broken lineup falls back to the starting four
   const lineup = (Array.isArray(data.lineup) ? data.lineup : []).filter((k, i, a): k is HeroKind => HERO_KINDS.includes(k) && heroUnlocked(out, k) && a.indexOf(k) === i);
   if (lineup.length === LINEUP.length) out.lineup = lineup;
+  const shop = (data.shop ?? {}) as Record<string, unknown>;
+  if (typeof shop.chestDay === 'string') out.shop.chestDay = shop.chestDay;
+  if (typeof shop.adDay === 'string') out.shop.adDay = shop.adDay;
+  out.shop.ads = int(shop.ads, 0, S.adsPerDay, 0);
   return out;
 }
 
@@ -278,4 +295,54 @@ export function swapLineup(m: MetaSave, out: HeroKind, into: HeroKind): boolean 
 /** Unlocked potions left out of the lineup, in hero order. */
 export function benched(m: MetaSave): HeroKind[] {
   return HERO_KINDS.filter((k) => heroUnlocked(m, k) && !m.lineup.includes(k));
+}
+
+// ---- the shop ----
+
+/** Crystals in the free daily chest. */
+export const CHEST_CRYSTALS = S.chest;
+/** Crystals for one rewarded ad, and how many of those a day. */
+export const AD_CRYSTALS = S.ad;
+export const ADS_PER_DAY = S.adsPerDay;
+
+export function chestReady(m: MetaSave, today: string): boolean {
+  return m.shop.chestDay !== today;
+}
+
+/** Opens today's free chest; the crystals it paid, 0 when it was opened already today. */
+export function claimChest(m: MetaSave, today: string): number {
+  if (!chestReady(m, today)) return 0;
+  m.shop.chestDay = today;
+  m.crystals += S.chest;
+  return S.chest;
+}
+
+/** Rewarded ads for crystals still on offer today. */
+export function adsLeft(m: MetaSave, today: string): number {
+  return m.shop.adDay === today ? Math.max(0, S.adsPerDay - m.shop.ads) : S.adsPerDay;
+}
+
+/** Pays for a rewarded ad that was watched to the end; 0 once today's are used up. */
+export function claimAd(m: MetaSave, today: string): number {
+  if (adsLeft(m, today) <= 0) return 0;
+  if (m.shop.adDay !== today) {
+    m.shop.adDay = today;
+    m.shop.ads = 0;
+  }
+  m.shop.ads++;
+  m.crystals += S.ad;
+  return S.ad;
+}
+
+/** The crystal price of unlocking a potion early in the shop, or null when it is not sold. */
+export function unlockPrice(kind: HeroKind): number | null {
+  return (S.unlock as Partial<Record<HeroKind, number>>)[kind] ?? null;
+}
+
+/** Buys a locked potion early; false when it is open already, not sold or too dear. */
+export function buyUnlock(m: MetaSave, kind: HeroKind): boolean {
+  const price = unlockPrice(kind);
+  if (price === null || heroUnlocked(m, kind) || m.crystals < price) return false;
+  m.crystals -= price;
+  return unlockHero(m, kind);
 }

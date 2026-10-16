@@ -11,7 +11,10 @@ import { t } from '../i18n';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
-import { benched, heroCost, heroDamage, heroUnlocked, maxStage, stageHp, unlockStage, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
+import {
+  AD_CRYSTALS, adsLeft, ADS_PER_DAY, benched, CHEST_CRYSTALS, chestReady, heroCost, heroDamage, heroUnlocked, maxStage, stageHp, unlockPrice, unlockStage,
+  WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId,
+} from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { commanderTexture } from './art';
 import { buildCodex } from './Codex';
@@ -60,6 +63,11 @@ export interface HomeActions {
   /** A potion on the battle tab's lineup row was tapped. */
   lineup(kind: HeroKind): void;
   workshop(id: WorkshopId): void;
+  claimChest(): void;
+  /** The shop's rewarded ad for crystals. */
+  watchAd(): void;
+  /** Buys a locked potion early. */
+  unlock(kind: HeroKind): void;
   play(): void;
 }
 
@@ -77,8 +85,18 @@ const NAV = 210;
 const RAIL = 230;
 const TOP = 150;
 
-/** `picked`: a reserve potion tapped on the lineup row, waiting for the one it replaces. */
-export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: HomePanel, today: string, fit: MenuFit, picked: HeroKind | null = null): Container {
+/** `picked`: a reserve potion tapped on the lineup row, waiting for the one it replaces; `ads`:
+ *  a rewarded ad can be offered. */
+export function buildHome(
+  m: MetaSave,
+  act: HomeActions,
+  tab: HomeTab,
+  panel: HomePanel,
+  today: string,
+  fit: MenuFit,
+  picked: HeroKind | null = null,
+  ads = false,
+): Container {
   const root = new Container();
   const { w, h, wide } = fit;
   root.addChild(workshopWall(w, h));
@@ -89,9 +107,9 @@ export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: Ho
   else if (tab === 'potions') potionsTab(root, m, act, area);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area));
-  else soonTab(root, tab, area);
+  else shopTab(root, m, act, area, today, ads);
   topBar(root, m, act, today, left, w, wide);
-  nav(root, act, tab, fit);
+  nav(root, act, tab, fit, { shop: chestReady(m, today) });
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -129,7 +147,7 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
 
 /** The five tabs: along the bottom of a portrait page, down the left of a landscape one; the
  *  battle tab in the middle is a big raised medallion. */
-function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): void {
+function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots: Partial<Record<HomeTab, boolean>>): void {
   const { w, h, wide } = fit;
   const bar = new Graphics();
   if (wide) {
@@ -170,6 +188,7 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
     const cap = ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink });
     cap.y = big ? (wide ? 92 : 70) : 58;
     slot.addChild(icon, cap);
+    if (dots[id]) redDot(slot, 46, -62);
     if (!on) slot.alpha = big ? 1 : 0.85;
     root.addChild(slot);
   });
@@ -445,14 +464,177 @@ function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): v
   });
 }
 
-function soonTab(root: Container, tab: HomeTab, a: Area): void {
-  const c = titledPanel(root, t(`tabs.${tab}`), a.x + a.w / 2, a.y + a.h / 2, Math.min(800, a.w - 80), 480);
-  const icon = navIcon(tab);
-  icon.scale.set(1.6);
-  icon.y = -10;
-  const s = ink(t('soon'), 44, { fill: P.inkSoft });
-  s.y = 140;
-  c.addChild(icon, s);
+/** The shop: the free daily chest and the rewarded ad for crystals, then the potions, the
+ *  locked ones for sale. Stacked on a portrait page, side by side on a landscape one. */
+function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, ads: boolean): void {
+  const top = a.y + 60;
+  const bottom = a.y + a.h - 40;
+  if (a.wide) {
+    const gap = 40;
+    const dw = Math.min(780, (a.w - 3 * gap) * 0.46);
+    const uw = a.w - 3 * gap - dw;
+    const ph = bottom - top;
+    dailyPanel(root, m, act, today, ads, a.x + gap + dw / 2, top + ph / 2, dw, ph);
+    unlockPanel(root, m, act, a.x + 2 * gap + dw + uw / 2, top + ph / 2, uw, ph, 3);
+  } else {
+    const pw = Math.min(960, a.w - 80);
+    const gap = 60;
+    // the potion tiles are narrow here: the chest and the ad take the height they leave
+    const uh = Math.min(640, Math.round((bottom - top - gap) * 0.5));
+    const dh = bottom - top - gap - uh;
+    dailyPanel(root, m, act, today, ads, a.x + a.w / 2, top + dh / 2, pw, dh);
+    unlockPanel(root, m, act, a.x + a.w / 2, bottom - uh / 2, pw, uh, HERO_KINDS.length);
+  }
+}
+
+/** Today's free chest and the ad for crystals, as two cards side by side. */
+function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: string, ads: boolean, x: number, y: number, w: number, h: number): void {
+  const c = titledPanel(root, t('store.daily'), x, y, w, h);
+  const cw = (w - 110) / 2;
+  const ch = h - 130;
+  const bw = cw - 60;
+  const ready = chestReady(m, today);
+  const left = adsLeft(m, today);
+  const chest = offerCard(cw, ch, chestIcon(), t('store.chest.name'), t('store.chest.desc'), CHEST_CRYSTALS, !ready);
+  const open = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', act.claimChest, ready ? 46 : 32).setEnabled(ready);
+  open.y = ch / 2 - 74;
+  chest.addChild(open);
+  const can = ads && left > 0;
+  const ad = offerCard(cw, ch, adIcon(), t('store.ad.name'), t('store.ad.desc', { n: left, total: ADS_PER_DAY }), AD_CRYSTALS, left === 0);
+  const caption = !ads ? t('store.noAds') : left > 0 ? t('store.watch') : t('tomorrow');
+  const watch = new PillButton(caption, bw, 100, 'green', act.watchAd, can ? 46 : 32).setEnabled(can);
+  watch.y = ch / 2 - 74;
+  ad.addChild(watch);
+  chest.position.set(-(cw + 30) / 2, 30);
+  ad.position.set((cw + 30) / 2, 30);
+  c.addChild(chest, ad);
+}
+
+/** A green tick in a circle, for something done or owned. */
+function tick(r: number): Container {
+  const c = new Container();
+  c.addChild(new Graphics().circle(0, 0, r).fill(0x4cc35a).stroke({ width: 4, color: LIGHT.edge }), label('✓', r * 1.25, { stroke: { color: LIGHT.edge, width: 5 } }));
+  return c;
+}
+
+/** A card with an icon, a name, a line under it and the crystals it pays, for a button along
+ *  its bottom; `done` dims it and ticks it. */
+function offerCard(cw: number, ch: number, icon: Container, name: string, desc: string, crystals: number, done: boolean): Container {
+  const c = new Container();
+  const top = -ch / 2;
+  c.addChild(lightTile(cw, ch, 26));
+  // the icon takes what the text and the button leave
+  const room = Math.max(90, ch - 360);
+  const art = new Container();
+  icon.scale.set(1.3);
+  art.addChild(new Graphics().circle(0, 0, 84).fill({ color: P.brass, alpha: 0.18 }), icon);
+  art.scale.set(Math.min(1.2, room / 180));
+  art.y = top + 24 + room / 2;
+  const n = fitText(ink(name, 40), cw - 40);
+  n.y = top + 60 + room;
+  const d = fitText(ink(desc, 28, { fill: P.inkSoft }), cw - 40);
+  d.y = n.y + 50;
+  // the crystals, gem first, the pair centred
+  const pay = new Container();
+  const amount = ink(t('reward', { n: crystals }), 50, { fill: LIGHT.crystal });
+  amount.x = 24;
+  pay.addChild(gem(new Graphics(), 24 - amount.width / 2 - 32, 0, 26), amount);
+  pay.y = d.y + 72;
+  c.addChild(art, n, d, pay);
+  if (done) {
+    art.alpha = 0.5;
+    pay.alpha = 0.5;
+    const tk = tick(26);
+    tk.position.set(cw / 2 - 40, top + 40);
+    c.addChild(tk);
+  }
+  return c;
+}
+
+/** Every potion: the open ones marked owned, the locked ones with their crystal price and the
+ *  stage that would open them anyway. `cols` tiles to a row. */
+function unlockPanel(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, w: number, h: number, cols: number): void {
+  const c = titledPanel(root, t('store.unlocks'), x, y, w, h);
+  const n = HERO_KINDS.length;
+  const rows = Math.ceil(n / cols);
+  const gap = 20;
+  const step = Math.min(250, (w - 60) / cols);
+  const tw = step - gap;
+  // room for the title plate above the tiles and the hint under them
+  const hintH = 70;
+  const th = Math.min(440, (h - 140 - hintH - gap * (rows - 1)) / rows);
+  const y0 = -h / 2 + 90 + th / 2;
+  HERO_KINDS.forEach((kind, i) => {
+    const row = Math.floor(i / cols);
+    const inRow = Math.min(cols, n - row * cols);
+    const tile = unlockTile(m, act, kind, tw, th);
+    tile.position.set(((i % cols) - (inRow - 1) / 2) * step, y0 + row * (th + gap));
+    c.addChild(tile);
+  });
+  const hint = fitText(ink(t('store.unlockHint'), 30, { fill: P.inkSoft }), w - 80);
+  hint.y = y0 + (rows - 1) * (th + gap) + th / 2 + hintH / 2;
+  c.addChild(hint);
+}
+
+function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, th: number): Container {
+  const open = heroUnlocked(m, kind);
+  const price = unlockPrice(kind);
+  const c = new Container();
+  const top = -th / 2;
+  c.addChild(lightTile(tw, th, 22));
+  const name = fitText(ink(t(`hero.${kind}`), 30), tw - 20);
+  name.y = top + 34;
+  c.addChild(name);
+  // the bottle fills what the name and the price leave
+  const band = th - 60 - (open ? 90 : 150);
+  const size = Math.min(170, tw - 40, band - 10);
+  const by = top + 60 + band / 2;
+  if (open) {
+    c.addChild(new Graphics().circle(0, by, size * 0.46).fill({ color: HERO_COLORS[kind], alpha: 0.16 }));
+    const bt = bottle(kind, size);
+    bt.y = by;
+    const owned = new Container();
+    owned.y = th / 2 - 56;
+    const word = ink(t('store.owned'), 30, { fill: 0x2f7a3a });
+    word.x = 22;
+    const tk = tick(18);
+    tk.x = 22 - word.width / 2 - 30;
+    owned.addChild(tk, word);
+    c.addChild(bt, owned);
+    return c;
+  }
+  c.addChild(flask(new Graphics(), 0, by + size * 0.42, size * 0.84, 0x8a7d6a));
+  const l = lock(P.cream, 0x8a7d6a);
+  l.y = by + size * 0.1;
+  c.addChild(l);
+  const at = unlockStage(kind);
+  const note = fitText(ink(at ? t('unlockAt', { n: at }) : t('codex.locked'), 24, { fill: P.inkSoft }), tw - 20);
+  note.y = th / 2 - 122;
+  c.addChild(note);
+  if (price !== null) {
+    const b = new PillButton(String(price), tw - 30, 84, 'purple', () => act.unlock(kind), 38, true).setEnabled(m.crystals >= price);
+    b.y = th / 2 - 58;
+    c.addChild(b);
+  }
+  return c;
+}
+
+/** A little screen with a play sign: the rewarded ad. */
+function adIcon(): Graphics {
+  return new Graphics()
+    .rect(-14, 34, 28, 12)
+    .fill(P.brassDark)
+    .roundRect(-30, 42, 60, 12, 5)
+    .fill(P.brass)
+    .stroke({ width: 3, color: LIGHT.edge })
+    .roundRect(-52, -38, 104, 76, 14)
+    .fill(P.woodLight)
+    .stroke({ width: 5, color: LIGHT.edge })
+    .roundRect(-42, -28, 84, 56, 8)
+    .fill(0xbfe3f2)
+    .poly([-12, -16, 18, 0, -12, 16])
+    .fill(P.cream)
+    .stroke({ width: 4, color: LIGHT.edge, join: 'round' });
 }
 
 function shopIcon(id: WorkshopId): Container {
