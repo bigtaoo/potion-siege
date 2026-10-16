@@ -40,7 +40,7 @@ export const zh: Table = {
   heroDamage: '每级伤害 +{p}%，当前 +{n}%',
   baseCards: '初始技能卡',
   unlockSkill: '解锁「{name}」技能卡',
-  unlockRecipe: '解锁配方「{name}」（需要{with}同时在场）',
+  unlockRecipe: '解锁配方「{name}」（需{with}在场）',
   perk: {
     fireBurnPlus: '「燃烧」伤害 +60%',
     arcaneMarkPlus: '「奥术印记」效果 +50%',
