@@ -48,6 +48,8 @@ export const en = {
   soon: 'Coming soon',
   damageNow: 'Damage +{p}%',
   heroDamage: 'Damage +{p}% per level, now +{n}%',
+  heroNext: 'Lv {n}: damage +{p}%',
+  noCrystals: 'Not enough crystals',
   baseCards: 'Starting skill cards',
   unlockSkill: 'Unlocks the {name} card',
   unlockRecipe: 'Unlocks the {name} recipe (needs {with} fielded too)',
@@ -79,6 +81,9 @@ export const en = {
     wall: { name: 'Thick Walls', desc: 'Wall HP +{p}%' },
     startGold: { name: 'Pocket Money', desc: 'Start with +{n} gold' },
     crystals: { name: 'Crystal Sieve', desc: 'Crystals +{p}%' },
+    now: 'Now: {text}',
+    next: 'Next: {text}',
+    none: 'not upgraded',
   },
   store: {
     daily: 'Daily Freebies',
@@ -144,6 +149,7 @@ export const en = {
     locked: 'Locked',
     hp: 'HP {n}',
     hpWave: 'HP {n} (wave {w})',
+    hpStageWave: 'HP {n} (stage {s}, wave {w})',
     stage: 'Stage {n} stats',
     from: 'From stage {n}',
     trait: {

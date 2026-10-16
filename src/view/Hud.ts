@@ -4,9 +4,11 @@
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
+import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
-import { BALANCE, ENEMY_KINDS, type BattleEvent } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, type BattleEvent, type HeroKind } from '../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
+import { fit, ink, LIGHT, lightTile, modifierIcon } from './kit';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -22,6 +24,8 @@ export class Hud extends Container {
   private readonly banner = label('', 76, { fill: COLORS.gold });
   /** Under the wave banner, on the wave a kind first comes in: its name and what it fears. */
   private readonly newcomer = label('', 44, { wordWrap: true, wordWrapWidth: 960, align: 'center' });
+  /** In a daily challenge, its modifiers as chips under the stage. */
+  private readonly mods = new Container();
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
   private bannerTime = 0;
@@ -48,7 +52,7 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomer.position.set(DESIGN_W / 2, 370);
     this.newcomer.alpha = 0;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintText, this.banner, this.newcomer, this.upgradeButton, this.summonButton);
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintText, this.banner, this.newcomer, this.mods, this.upgradeButton, this.summonButton);
   }
 
   attach(battle: Battle): void {
@@ -58,6 +62,29 @@ export class Hud extends Container {
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
     this.stageText.text = t('stage', { n: battle.setup.stage });
+    this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
+  }
+
+  /** The challenge's modifiers, a chip each down the right under the stage; the hint line
+   *  makes way for them. */
+  showMods(ids: readonly ModifierId[], trial: HeroKind | null): void {
+    this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
+    ids.forEach((id, i) => {
+      const chip = new Container();
+      const name = fit(ink(t(`challenge.mod.${id}.name`), 28, { fontWeight: '900' }), 300);
+      name.anchor.set(1, 0.5);
+      const w = name.width + 92;
+      const icon = modifierIcon(id, trial);
+      icon.scale.set(0.42);
+      icon.position.set(-w + 38, -2);
+      name.position.set(-18, -1);
+      const tile = lightTile(w, 56, 28);
+      tile.x = -w / 2;
+      const rim = new Graphics().roundRect(-w, -28, w, 56, 28).stroke({ width: 3, color: LIGHT.edge });
+      chip.addChild(tile, rim, icon, name);
+      chip.position.set(DESIGN_W - 36, 128 + i * 70);
+      this.mods.addChild(chip);
+    });
   }
 
   react(events: BattleEvent[]): void {
@@ -83,7 +110,7 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
-    this.hintText.visible = this.hint && b.time < HINT_SECONDS;
+    this.hintText.visible = this.hint && b.time < HINT_SECONDS && this.mods.children.length === 0;
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);

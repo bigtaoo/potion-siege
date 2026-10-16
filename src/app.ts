@@ -297,7 +297,8 @@ class Game {
   }
 
   private showSkills(b: Battle): void {
-    const canReroll = b.canReroll() && !this.autoplay && this.platform.rewardedAvailable();
+    // no ad in the tutorial's first pick: it is there to teach the cards
+    const canReroll = b.canReroll() && !this.autoplay && !this.tutorial && this.platform.rewardedAvailable();
     if (canReroll) this.run?.onRerollOffer();
     const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick');
     this.overlay.showSkills(b.choices ?? [], b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null);
@@ -385,6 +386,7 @@ class Game {
     this.store();
     this.analytics.track('challenge_start', { day: today, stage: ch.stage, mods: ch.mods.join(','), ad, streak: this.save.challenge.streak });
     this.newBattle('challenge', ch);
+    this.hud.showMods(ch.mods, ch.trial);
     this.challenge = { ch, streakBonus: bonus, result: null };
     this.menu.visible = false;
     this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));

@@ -46,12 +46,14 @@ import {
   PillButton,
   plate,
   redDot,
+  refuse,
   scrollIcon,
   swordsIcon,
   tappable,
   workshopWall,
   wallIcon,
 } from './kit';
+import { canUpgradePotion, canUpgradeWorkshop, challengeOpen, challengeShown } from './nudges';
 import { gem, HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
 
@@ -118,7 +120,13 @@ export function buildHome(
   else if (tab === 'codex') root.addChild(buildCodex(m, area));
   else shopTab(root, m, act, area, today, ads);
   topBar(root, m, act, today, left, w, wide);
-  nav(root, act, tab, fit, { shop: chestReady(m, today), battle: challengeFresh(m, today) });
+  nav(root, act, tab, fit, {
+    potions: canUpgradePotion(m),
+    workshop: canUpgradeWorkshop(m),
+    shop: chestReady(m, today),
+    // the challenge calls only once it is open, not on the first battles
+    battle: challengeOpen(m) && challengeFresh(m, today),
+  });
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -245,6 +253,9 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     root.addChild(b);
   };
   const pw = Math.min(960, a.w - 80);
+  // the challenge waits until a few stages are won; without it the button moves down
+  const challenge = challengeShown(m);
+  const drop = challenge ? 0 : BANNER_H - 40;
   if (a.wide) {
     // panels down the right, the stage, commander and button centred in what is left
     const rw = Math.min(820, a.w * 0.5);
@@ -256,22 +267,22 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
       const s = new Sprite(tex);
       s.anchor.set(0.5, 1);
       s.scale.set(Math.min(400, a.h - 690) / tex.height);
-      s.position.set(lx, a.y + a.h - 450);
-      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 455, 150, 30).fill({ color: 0x000000, alpha: 0.2 }), s);
+      s.position.set(lx, a.y + a.h - 450 + drop);
+      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 455 + drop, 150, 30).fill({ color: 0x000000, alpha: 0.2 }), s);
     }
-    start(lx, a.y + a.h - 360, 140);
-    challengeBanner(root, m, act, today, ads, lx, a.y + a.h - 126, Math.min(960, a.w - rw - 70));
+    start(lx, a.y + a.h - 360 + drop, 140);
+    if (challenge) challengeBanner(root, m, act, today, ads, lx, a.y + a.h - 126, Math.min(960, a.w - rw - 70));
     enemiesPanel(root, m.stage, rx, a.y + 235, rw);
     lineupPanel(root, m, act, picked, rx, a.y + 700, rw);
   } else {
     stageAt(a.x + a.w / 2, a.y + 80);
     // the panels share the room between the stage and the button, the challenge under it
     const eh = 310;
-    const gap = Math.max(20, (a.h - 660 - eh - LINEUP_H) / 3);
+    const gap = Math.max(20, (a.h - 660 + drop - eh - LINEUP_H) / 3);
     enemiesPanel(root, m.stage, a.x + a.w / 2, a.y + 210 + gap + eh / 2, pw, eh);
     lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 210 + 2 * gap + eh + LINEUP_H / 2, pw);
-    start(a.x + a.w / 2, a.y + a.h - 383, 150);
-    challengeBanner(root, m, act, today, ads, a.x + a.w / 2, a.y + a.h - 34 - BANNER_H / 2, pw);
+    start(a.x + a.w / 2, a.y + a.h - 383 + drop, 150);
+    if (challenge) challengeBanner(root, m, act, today, ads, a.x + a.w / 2, a.y + a.h - 34 - BANNER_H / 2, pw);
   }
 }
 
@@ -550,43 +561,77 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
     max.y = ch / 2 - 64;
     c.addChild(max);
   } else {
-    const b = new PillButton(String(cost), cw - 90, 84, 'purple', () => act.hero(kind), 42, true).setEnabled(m.crystals >= cost);
+    const b = priced(new PillButton(String(cost), cw - 90, 84, 'purple', () => act.hero(kind), 42, true), m.crystals >= cost);
     b.y = ch / 2 - 54;
     c.addChild(b);
   }
   return c;
 }
 
+/** A crystal-price button, off while the crystals fall short; a tap on it then says so. */
+function priced(b: PillButton, affordable: boolean): PillButton {
+  return b.setEnabled(affordable).whenOff(() => refuse(b, t('noCrystals')));
+}
+
+/** A row per upgrade: its level as pips, what it gives now and what the next level adds, and
+ *  the button that buys it. The rows share the page's height. */
 function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
   const head = plate(t('workshop'), 52);
   head.position.set(a.x + a.w / 2, a.y + 60);
   root.addChild(head);
   const rw = Math.min(a.wide ? 1100 : 960, a.w - 80);
+  const gap = 30;
+  const rh = Math.max(230, Math.min(a.wide ? 260 : 330, (a.h - 170 - gap * 2) / 3));
+  const y0 = a.y + 140 + rh / 2 + Math.max(0, (a.h - 170 - 3 * rh - 2 * gap) / 4);
   WORKSHOP_IDS.forEach((id, i) => {
     const lv = m.workshop[id];
-    const v = workshopValue(id, lv);
+    const max = BALANCE.meta.workshop[id].max;
+    const cost = workshopCost(id, lv);
+    const effect = (level: number) => {
+      const v = workshopValue(id, level);
+      return t(`shop.${id}.desc`, { p: Math.round(v * 100), n: v });
+    };
     const r = new Container();
-    r.position.set(a.x + a.w / 2, a.y + 230 + i * 200);
-    r.addChild(paperCard(rw, 170));
+    r.position.set(a.x + a.w / 2, y0 + i * (rh + gap));
+    r.addChild(paperCard(rw, rh));
     const icon = new Container();
     icon.addChild(medal(62, P.paperDark), shopIcon(id));
     icon.x = -rw / 2 + 90;
+    icon.scale.set(rh >= 280 ? 1.15 : 1);
+    const x0 = -rw / 2 + 190;
+    const bx = rw / 2 - 150;
+    const room = bx - 125 - 24 - x0;
+    // the name and level, the level pips, then what it gives now and what the next level gives
+    const top = -104;
     const n = ink(t(`shop.${id}.name`), 46);
     n.anchor.set(0, 0.5);
-    n.position.set(-rw / 2 + 180, -26);
-    const d = ink(t(`shop.${id}.desc`, { p: Math.round(v * 100), n: v }), 32, { fill: P.inkSoft });
-    d.anchor.set(0, 0.5);
-    d.position.set(-rw / 2 + 180, 30);
-    r.addChild(icon, n, d);
-    const cost = workshopCost(id, lv);
+    n.position.set(x0, top + 20);
+    const lvTag = ink(`Lv ${lv}/${max}`, 32, { fill: P.inkSoft });
+    lvTag.anchor.set(0, 0.5);
+    lvTag.position.set(x0 + n.width + 18, top + 24);
+    const pips = new Graphics();
+    const pw = Math.min(36, (room + 8) / max - 8);
+    for (let k = 0; k < max; k++) {
+      pips.roundRect(x0 + k * (pw + 8), top + 62, pw, 22, 8).fill(k < lv ? P.brass : LIGHT.inset).stroke({ width: 3, color: k < lv ? LIGHT.edge : LIGHT.insetEdge });
+    }
+    // nothing bought yet reads as such, not as "+0"
+    const now = ink(t('shop.now', { text: lv > 0 ? effect(lv) : t('shop.none') }), 30, { fill: P.inkSoft });
+    now.anchor.set(0, 0.5);
+    now.position.set(x0, top + 124);
+    fitText(now, room);
+    r.addChild(icon, n, lvTag, pips, now);
     if (cost === null) {
-      const max = ink(t('maxed'), 46, { fill: P.brassDark });
-      max.x = rw / 2 - 150;
-      r.addChild(max);
+      const done = ink(t('maxed'), 46, { fill: P.brassDark });
+      done.x = bx;
+      r.addChild(done);
     } else {
-      const b = new PillButton(String(cost), 250, 100, 'purple', () => act.workshop(id), 44, true).setEnabled(m.crystals >= cost);
-      b.position.set(rw / 2 - 150, -4);
-      r.addChild(b);
+      const next = ink(t('shop.next', { text: effect(lv + 1) }), 30, { fill: 0x2b6a33, fontWeight: '900' });
+      next.anchor.set(0, 0.5);
+      next.position.set(x0, top + 170);
+      fitText(next, room);
+      const b = priced(new PillButton(String(cost), 250, 100, 'purple', () => act.workshop(id), 44, true), m.crystals >= cost);
+      b.position.set(bx, -4);
+      r.addChild(next, b);
     }
     root.addChild(r);
   });
@@ -770,7 +815,7 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
   art.y = k === 1 && by + box.y + box.height <= to ? by : (from + to) / 2 - (box.y + box.height / 2) * k;
   c.addChild(art, note);
   if (price !== null) {
-    const b = new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true).setEnabled(m.crystals >= price);
+    const b = priced(new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true), m.crystals >= price);
     b.y = th / 2 - 58;
     c.addChild(b);
   }
@@ -898,7 +943,7 @@ function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
 
 /** One hero: its level, the skill cards it starts with and what each milestone unlocks. */
 function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit): Container {
-  const h = 1300;
+  const h = 1440;
   const { panel, box } = frame(act, t(`hero.${kind}`), h, fit);
   const lv = m.heroes[kind];
   const top = -h / 2;
@@ -970,5 +1015,29 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     }
     box.addChild(r);
   });
+
+  // the next level and the button that buys it along the bottom; the panel stays open after
+  const foot = h / 2 - 100;
+  const cost = heroCost(lv);
+  if (cost === null) {
+    const max = ink(t('maxed'), 50, { fill: P.brassDark });
+    max.y = foot;
+    box.addChild(max);
+    return panel;
+  }
+  if (!heroUnlocked(m, kind)) return panel;
+  const next = ink(t('heroNext', { n: lv + 1, p: Math.round((heroDamage(lv + 1) - 1) * 100) }), 38, { fill: 0x2b6a33, fontWeight: '900' });
+  next.anchor.set(0, 0.5);
+  next.position.set(-410, foot);
+  fitText(next, 450);
+  const b = priced(
+    new PillButton(String(cost), 340, 110, 'purple', () => {
+      act.hero(kind);
+      act.panel(kind);
+    }, 48, true),
+    m.crystals >= cost,
+  );
+  b.position.set(250, foot - 4);
+  box.addChild(next, b);
   return panel;
 }
