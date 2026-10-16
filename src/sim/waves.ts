@@ -42,8 +42,9 @@ export function flyerShare(stage: number): number {
   return stage < f.stage ? 0 : Math.min(f.maxShare, f.share + f.shareStep * (stage - f.stage));
 }
 
-export function isBossWave(wave: number): boolean {
-  return BALANCE.waves.bossWaves.includes(wave);
+/** Whether a boss comes in `wave`; the daily challenge can bring more of them. */
+export function isBossWave(wave: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves): boolean {
+  return bossWaves.includes(wave);
 }
 
 /** Base hit points of a grunt in this 1-based wave. */
@@ -55,10 +56,10 @@ export function waveHp(wave: number): number {
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top. */
-export function planWave(wave: number, rng: Rng, stage = 1): Spawn[] {
+export function planWave(wave: number, rng: Rng, stage = 1, bossWaves: readonly number[] = BALANCE.waves.bossWaves): Spawn[] {
   const w = BALANCE.waves;
   const hp = waveHp(wave);
-  const boss = isBossWave(wave);
+  const boss = isBossWave(wave, bossWaves);
   const count = Math.round((w.baseCount + w.countStep * (wave - 1)) * (boss ? 0.5 : 1));
   const fly = wave >= FIRST_WAVE.flyer ? flyerShare(stage) : 0;
   const spawns: Spawn[] = [];

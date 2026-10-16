@@ -120,7 +120,8 @@ export class Battle {
   /** Rises a little faster with every summon, rounded to 5. */
   summonCost(): number {
     const n = this.summons;
-    return Math.round((B.summonCostBase + B.summonCostStep * n + B.summonCostSquare * n * n) / 5) * 5;
+    const cost = (B.summonCostBase + B.summonCostStep * n + B.summonCostSquare * n * n) * (this.setup.modifiers?.summonCost ?? 1);
+    return Math.round(cost / 5) * 5;
   }
 
   upgradeCost(): number {
@@ -253,9 +254,10 @@ export class Battle {
   private startWave(wave: number): void {
     this.wave = wave;
     this.waveTime = 0;
-    this.pending = planWave(wave, this.rng, this.setup.stage).map((s) => ({ ...s, hp: s.hp * this.setup.enemyHp }));
-    if (wave > 1) this.gold += B.waves.waveBonusGold;
-    this.events.push({ type: 'wave', wave, boss: isBossWave(wave) });
+    const bossWaves = this.setup.modifiers?.bossWaves;
+    this.pending = planWave(wave, this.rng, this.setup.stage, bossWaves).map((s) => ({ ...s, hp: s.hp * this.setup.enemyHp }));
+    if (wave > 1) this.gold += Math.round(B.waves.waveBonusGold * (this.setup.modifiers?.waveGold ?? 1));
+    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves) });
   }
 
   private stepWaves(dt: number): void {
@@ -279,7 +281,7 @@ export class Battle {
       y: f.top - def.radius,
       hp: s.hp,
       maxHp: s.hp,
-      speed: def.speed * this.rng.range(0.9, 1.1),
+      speed: def.speed * this.rng.range(0.9, 1.1) * (this.setup.modifiers?.enemySpeed ?? 1),
       radius: def.radius,
       slowFactor: 1,
       slowTime: 0,
@@ -439,7 +441,7 @@ export class Battle {
   }
 
   private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number, extra: Partial<Projectile> = {}): void {
-    const crit = this.rng.next() < this.mods.crit ? B.critMultiplier : 1;
+    const crit = this.rng.next() < this.mods.crit + (this.setup.modifiers?.crit ?? 0) ? B.critMultiplier : 1;
     const damage = base * crit;
     this.projectiles.push({
       ...extra,
@@ -695,7 +697,7 @@ export class Battle {
     this.enemies = this.enemies.filter((e) => e.hp > 0);
     for (const e of dead) {
       const def = B.enemies[e.kind];
-      const gold = def.gold + this.mods.goldPerKill;
+      const gold = Math.round((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1));
       this.gold += gold;
       this.kills++;
       this.events.push({ type: 'kill', x: e.x, y: e.y, gold, boss: e.kind === 'boss' });
@@ -739,6 +741,6 @@ export class Battle {
 
   private roll(focus?: HeroKind, exclude: readonly SkillId[] = []): SkillId[] {
     const fielded = new Set(this.slots.flatMap((h) => (h ? [h.kind] : [])));
-    return rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus, exclude);
+    return rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus, exclude, this.setup.modifiers?.banned);
   }
 }

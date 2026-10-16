@@ -2,6 +2,7 @@
 
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
+import { CHALLENGE_TIERS, type ChallengeResult, type ModifierId } from '../sim/challenge';
 import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
@@ -12,6 +13,7 @@ import {
   ink,
   inkWrapped,
   medal,
+  modifierIcon,
   P,
   paperCard,
   PillButton,
@@ -129,7 +131,11 @@ export class Overlay extends Container {
     this.open(0.72, () => this.showEnd(won, stats, reward, onContinue, onRevive, more));
     const W = 900;
     const cw = W - 120;
-    const left: Section[] = [header(won), statTiles(stats, cw), purse(reward, more, cw)];
+    const ch = more.challenge;
+    const left: Section[] = [header(won, ch), statTiles(stats, cw)];
+    if (ch) left.push(challengeTrack(ch, cw));
+    left.push(purse(reward, more, cw));
+    if (ch && ch.streakBonus > 0) left.push(section(ribbon(`${t('challenge.streakBonus', { n: ch.streak })} ${t('reward', { n: ch.streakBonus })}`, W - 200), 110));
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
     const right: Section[] = [];
@@ -165,6 +171,17 @@ export interface EndExtras {
   doubled: boolean;
   dealt: { kind: HeroKind; damage: number }[];
   onTip: ((tab: TipTab) => void) | null;
+  /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
+  challenge?: ChallengeEnd;
+}
+
+export interface ChallengeEnd {
+  result: ChallengeResult;
+  mods: readonly ModifierId[];
+  trial: HeroKind | null;
+  /** Days in a row, and the crystals that paid today (0 on most days). */
+  streak: number;
+  streakBonus: number;
 }
 
 /** The home tabs a tip leads to. */
@@ -185,11 +202,13 @@ function section(c: Container, h: number): Section {
 }
 
 /** The plate, with stars over a win and the wall knocked apart over a loss. */
-function header(won: boolean): Section {
+function header(won: boolean, ch?: ChallengeEnd): Section {
   const c = new Container();
-  const crest = won ? stars() : brokenWall();
+  // a challenge reads as won once it reached a tier
+  const good = ch ? ch.result.tier > 0 : won;
+  const crest = good ? stars(ch ? ch.result.tier : 3) : brokenWall();
   crest.y = -30;
-  const head = plate(won ? t('won') : t('lost'), 72, 560, won ? 'brass' : 'red');
+  const head = plate(ch ? t('challenge.result') : won ? t('won') : t('lost'), 72, 560, good ? 'brass' : 'red');
   head.y = 80;
   c.addChild(crest, head);
   return { c, h: 200 };
@@ -214,6 +233,52 @@ function statTiles(stats: string, cw: number): Section {
     if (text.width > tw - 24) text.scale.set((tw - 24) / text.width);
     tile.addChild(icon, text);
     c.addChild(tile);
+  });
+  return { c, h: 270 };
+}
+
+/** The challenge's reward tiers on a track filled up to the wave reached, each a medal with
+ *  its wave, lit once this attempt got there, and its crystals under it; the day's modifiers
+ *  on the left. */
+function challengeTrack(ch: ChallengeEnd, cw: number): Section {
+  const c = new Container();
+  const { result } = ch;
+  c.addChild(inset(cw, 230, 0, 30));
+  const mx = -cw / 2 + 80;
+  ch.mods.forEach((id, i) => {
+    const icon = modifierIcon(id, ch.trial);
+    icon.scale.set(0.62);
+    icon.position.set(mx, 64 + i * 100);
+    c.addChild(icon);
+  });
+  const x0 = -cw / 2 + 190;
+  const x1 = cw / 2 - 90;
+  const last = CHALLENGE_TIERS[CHALLENGE_TIERS.length - 1].wave;
+  const at = (wave: number) => x0 + ((x1 - x0) * wave) / last;
+  const cy = 112;
+  const track = new Graphics().roundRect(x0, cy - 12, x1 - x0, 24, 12).fill(LIGHT.tile).stroke({ width: 4, color: LIGHT.edge });
+  const fill = Math.min(result.wave, last);
+  if (fill > 0) track.roundRect(x0 + 4, cy - 8, at(fill) - x0 - 4, 16, 8).fill(0x4cc35a);
+  c.addChild(track);
+  const reached = ink(t('challenge.reached', { n: result.wave }), 34, { fontWeight: '900' });
+  reached.anchor.set(0, 0.5);
+  reached.position.set(x0, 46);
+  c.addChild(reached);
+  CHALLENGE_TIERS.forEach((tier, i) => {
+    const on = i < result.tier;
+    const x = at(tier.wave);
+    const md = new Graphics()
+      .circle(x, cy + 5, 44)
+      .fill({ color: P.line, alpha: 0.3 })
+      .circle(x, cy, 44)
+      .fill(on ? COLORS.gold : LIGHT.inset)
+      .stroke({ width: 5, color: on ? P.line : LIGHT.edge });
+    const n = label(String(tier.wave), 44, on ? { stroke: { color: P.line, width: 7 } } : { fill: P.inkSoft, stroke: { color: P.inkSoft, width: 0 } });
+    n.position.set(x, cy - 2);
+    const prize = ink(String(tier.reward), 32, { fill: on ? LIGHT.crystal : P.inkSoft, fontWeight: '900' });
+    prize.anchor.set(0, 0.5);
+    prize.position.set(x - (prize.width + 34) / 2 + 34, cy + 76);
+    c.addChild(md, n, gem(new Graphics(), prize.x - 20, cy + 75, 14), prize);
   });
   return { c, h: 270 };
 }
@@ -351,22 +416,23 @@ function adButton(caption: string, w: number, h: number, kind: ButtonKind, onTap
   return b;
 }
 
-/** Three gold stars, the middle one higher and bigger: a win. */
-function stars(): Graphics {
+/** Three stars, the middle one higher and bigger: a win. `lit` of them are gold, from the left
+ *  (a challenge lights one per tier reached). */
+function stars(lit = 3): Graphics {
   const g = new Graphics();
-  const star = (x: number, y: number, r: number) => {
+  const star = (x: number, y: number, r: number, on: boolean) => {
     const pts: number[] = [];
     for (let i = 0; i < 10; i++) {
       const a = -Math.PI / 2 + (i * Math.PI) / 5;
       const rr = i % 2 ? r * 0.46 : r;
       pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
-    g.poly(pts).fill(COLORS.gold).stroke({ width: 6, color: P.line, join: 'round' });
-    g.circle(x - r * 0.18, y - r * 0.22, r * 0.16).fill({ color: 0xffffff, alpha: 0.55 });
+    g.poly(pts).fill(on ? COLORS.gold : LIGHT.inset).stroke({ width: 6, color: P.line, join: 'round' });
+    if (on) g.circle(x - r * 0.18, y - r * 0.22, r * 0.16).fill({ color: 0xffffff, alpha: 0.55 });
   };
-  star(-130, 14, 54);
-  star(130, 14, 54);
-  star(0, -16, 76);
+  star(-130, 14, 54, lit >= 1);
+  star(130, 14, 54, lit >= 3);
+  star(0, -16, 76, lit >= 2);
   return g;
 }
 
