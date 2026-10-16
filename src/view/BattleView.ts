@@ -349,6 +349,7 @@ export class BattleView extends Container {
     this.idle = from !== null || b.paused ? 0 : this.idle + dt;
     const hint = this.idle > HINT_AFTER ? mergeablePair(b) : null;
     this.drawWall(b);
+    const foes = b.enemies.some((e) => e.hp > 0);
     for (let s = 0; s < SLOT_COUNT; s++) {
       const h = b.slots[s];
       const c = slotCenter(s);
@@ -379,7 +380,8 @@ export class BattleView extends Container {
       const n = h.star >= BALANCE.maxStar ? 1 : h.star;
       // the cooldown is in thousandths of a tick
       const left = h.cooldown / (TICK_RATE * 1000);
-      const wind = left > 0 && left < WIND_UP ? 1 - left / WIND_UP : 0;
+      // with nothing to shoot at the cooldown keeps resetting to a few hundredths: no wind-up then
+      const wind = foes && left > 0 && left < WIND_UP ? 1 - left / WIND_UP : 0;
       const anim = (i: number): FigureAnim => ({
         wind: i === cell.shots % n ? wind : 0,
         since: cell.shots > 0 && i === (cell.shots - 1) % n ? t - cell.lastShot : Infinity,
