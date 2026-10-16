@@ -3,13 +3,14 @@
 // weak to or resists. A portrait page stacks the two boards; a landscape one sets them side
 // by side.
 
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { enemyStats, resistLabel, resists } from '../sim/enemies';
 import { heroUnlocked, unlockStage, type MetaSave } from '../sim/meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types';
+import { BALANCE, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types';
+import { FIRST_STAGE } from '../sim/waves';
 import { potionLook } from './art';
-import { bossTag, bottle, enemySprite, fit, flask, ink, LIGHT, lightPanel, lightTile, lock, P, plate } from './kit';
+import { bossTag, bottle, enemySprite, fit, flask, ink, LIGHT, lightPanel, lightTile, lock, P, plate, redDot, tappable } from './kit';
 import { INK, star, stillPotion } from './potion';
 import { COLORS, HERO_COLORS, label } from './ui';
 
@@ -164,28 +165,73 @@ function flasks(r: Container, cx: number, feet: number, n: number, rh: number, c
 
 // ---- the clockwork army ----
 
-/** Four cards side by side on a portrait page; four rows on a landscape one. The numbers are
- *  for the stage picked on the battle tab. */
+/** The army in two pages: the four of the first stages, then the ones that join later. */
+const PAGES: EnemyKind[][] = [
+  ['grunt', 'runner', 'brute', 'boss'],
+  ['flyer', 'winder'],
+];
+/** The page shown, kept while the tab is rebuilt. */
+let monsterPage = 0;
+
+/** The first page as four cards side by side on a portrait page, four rows on a landscape one;
+ *  the later kinds as rows, with room for what each does. Arrows by the title turn the page.
+ *  The numbers are for the stage picked on the battle tab. */
 function monsterBoard(stage: number, w: number, h: number, rows: boolean): Container {
   const c = board(t('codex.monsters'), w, h);
   const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
   note.position.set(w / 2 - 34, -h / 2 + 52);
-  c.addChild(note);
+  const page = new Container();
+  c.addChild(note, page);
   const inner = h - HEAD - FOOT;
-  ENEMY_KINDS.forEach((kind, i) => {
-    let card: Container;
-    if (rows) {
-      const ch = (inner - GAP * 3) / 4;
-      card = monsterRow(kind, stage, w - 60, ch);
-      card.y = -h / 2 + HEAD + ch / 2 + i * (ch + GAP);
-    } else {
-      const cw = (w - 50 - GAP * 3) / 4;
-      card = monsterCard(kind, stage, cw, inner);
-      card.position.set(-w / 2 + 25 + cw / 2 + i * (cw + GAP), -h / 2 + HEAD + inner / 2);
-    }
-    c.addChild(card);
-  });
+  const arrow = (dir: number, on: boolean): Container => {
+    const a = new Container();
+    a.addChild(
+      new Graphics()
+        .circle(0, 0, 24)
+        .fill(on ? P.brass : P.paperDark)
+        .stroke({ width: 4, color: P.line })
+        .poly([dir * 10, 0, -dir * 7, -11, -dir * 7, 11])
+        .fill(on ? P.cream : P.inkSoft),
+    );
+    if (on)
+      tappable(a, () => {
+        monsterPage += dir;
+        // rebuilt after the tap, which is still running on the arrow about to go
+        queueMicrotask(show);
+      });
+    return a;
+  };
+  const show = (): void => {
+    page.removeChildren().forEach((p) => p.destroy({ children: true }));
+    PAGES[monsterPage].forEach((kind, i) => {
+      let card: Container;
+      if (monsterPage > 0) {
+        const ch = Math.min(rows ? 330 : 300, (inner - GAP) / 2);
+        card = monsterRow(kind, stage, w - 60, ch, true);
+        card.y = -h / 2 + HEAD + ch / 2 + i * (ch + GAP);
+      } else if (rows) {
+        const ch = (inner - GAP * 3) / 4;
+        card = monsterRow(kind, stage, w - 60, ch);
+        card.y = -h / 2 + HEAD + ch / 2 + i * (ch + GAP);
+      } else {
+        const cw = (w - 50 - GAP * 3) / 4;
+        card = monsterCard(kind, stage, cw, inner);
+        card.position.set(-w / 2 + 25 + cw / 2 + i * (cw + GAP), -h / 2 + HEAD + inner / 2);
+      }
+      page.addChild(card);
+    });
+    const back = arrow(-1, monsterPage > 0);
+    const count = ink(`${monsterPage + 1}/${PAGES.length}`, 26, { fill: P.inkSoft });
+    const next = arrow(1, monsterPage < PAGES.length - 1);
+    back.position.set(-w / 2 + 54, -h / 2 + 52);
+    count.position.set(-w / 2 + 102, -h / 2 + 52);
+    next.position.set(-w / 2 + 150, -h / 2 + 52);
+    // a dot while the picked stage sends a kind from the next page
+    if (monsterPage === 0 && PAGES[1].some((k) => stage >= FIRST_STAGE[k])) redDot(next, 22, -22);
+    page.addChild(back, count, next);
+  };
+  show();
   return c;
 }
 
@@ -195,7 +241,7 @@ function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Co
   c.addChild(lightTile(cw, ch, 22));
   const top = -ch / 2;
   const artH = ch - 412;
-  c.addChild(art(kind, cw - 30, artH, 0, top + 16 + artH / 2));
+  c.addChild(art(kind, stage, cw - 30, artH, 0, top + 16 + artH / 2));
   let y = top + artH + 46;
   const name = fit(ink(t(`enemy.${kind}`), 36), cw - 24);
   name.y = y;
@@ -216,12 +262,13 @@ function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Co
   return c;
 }
 
-/** A wide row: art, then name and numbers, then the resistances three by two. */
-function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number): Container {
+/** A wide row: art, then name and numbers, then the resistances three by two; with `trait`,
+ *  what the enemy does along the bottom. */
+function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number, trait = false): Container {
   const c = new Container();
   c.addChild(lightTile(rw, rh, 22));
   const artW = Math.min(170, rw * 0.24);
-  c.addChild(art(kind, artW, rh - 30, -rw / 2 + 14 + artW / 2, -4));
+  c.addChild(art(kind, stage, artW, rh - 30, -rw / 2 + 14 + artW / 2, -4));
   const tx = -rw / 2 + 26 + artW;
   const cx = rw / 2 - 14 - CHIP_W * 1.5;
   const room = cx - CHIP_W * 1.5 - 12 - tx;
@@ -238,19 +285,34 @@ function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number): Con
   const head = ink(t('codex.resist'), 24, { fill: P.inkSoft });
   head.position.set(cx, -rh / 2 + 32);
   const row = chips(kind, 3);
-  row.position.set(cx, 24);
+  row.position.set(cx, trait ? 0 : 24);
   c.addChild(head, row);
+  if (trait) {
+    const l = fit(ink(t(`codex.trait.${kind as 'flyer' | 'winder'}`), 26, { fill: P.ink }), rw / 2 - 14 - tx);
+    l.anchor.set(0, 0.5);
+    l.position.set(tx, rh / 2 - 34);
+    c.addChild(l);
+  }
   return c;
 }
 
-/** The enemy's art fitted into a box centred on (x, y), the boss tagged. */
-function art(kind: EnemyKind, bw: number, bh: number, x: number, y: number): Container {
+/** The enemy's art fitted into a box centred on (x, y), the boss tagged, a kind the picked
+ *  `stage` does not send yet darkened. */
+function art(kind: EnemyKind, stage: number, bw: number, bh: number, x: number, y: number): Container {
   const c = new Container();
   c.position.set(x, y);
-  c.addChild(new Graphics().ellipse(0, bh * 0.4, bw * 0.34, bh * 0.07).fill({ color: 0x000000, alpha: 0.2 }), enemySprite(kind, bw, bh));
+  const sprite = enemySprite(kind, bw, bh);
+  c.addChild(new Graphics().ellipse(0, bh * 0.4, bw * 0.34, bh * 0.07).fill({ color: 0x000000, alpha: 0.2 }), sprite);
   if (kind === 'boss') {
     const tag = bossTag(22);
     tag.position.set(bw / 2 - 46, -bh / 2 + 18);
+    c.addChild(tag);
+  }
+  if (stage < FIRST_STAGE[kind]) {
+    // not on the picked stage yet: a dark shape, and the stage it first comes on
+    for (const s of sprite.children) if (s instanceof Sprite) s.tint = 0x4a4038;
+    const tag = fit(label(t('codex.from', { n: FIRST_STAGE[kind] }), 24, { fill: P.cream, stroke: { color: INK, width: 6 } }), bw);
+    tag.y = bh * 0.3;
     c.addChild(tag);
   }
   return c;

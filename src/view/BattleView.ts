@@ -7,7 +7,7 @@ import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair } from '../sim/tutorial';
 import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
 import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
-import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell } from './effects';
+import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell, rewindWave } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { STONE, slab, wallTop, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
@@ -190,6 +190,9 @@ export class BattleView extends Container {
         case 'wallHit':
           this.shake = Math.max(this.shake, 0.08);
           break;
+        case 'rewind':
+          this.effect(0.7, (g, life) => rewindWave(g, ev.x, ev.y, ev.radius, 1 - life), true);
+          break;
       }
     }
   }
@@ -216,12 +219,28 @@ export class BattleView extends Container {
       drawEnemy(w, e, 'over');
       // waddle: hop and sway, out of step with each other, faster walkers taking quicker steps
       const step = t * 9 * Math.sqrt(BALANCE.enemies[e.kind].speed / BALANCE.enemies.grunt.speed) + e.id * 1.7;
-      // the tank rolls on tracks: no steps, only a rumble
-      const tracks = e.kind === 'boss';
-      const hop = tracks ? Math.abs(Math.sin(step * 3)) * 0.3 : Math.abs(Math.sin(step));
-      const s = this.enemyArt.put(tex, e.x, e.y + e.radius * ENEMY_ART.feet - hop * 8, e.radius * ENEMY_ART.height);
-      s.rotation = tracks ? 0 : Math.cos(step) * 0.07;
-      s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
+      const feet = e.y + e.radius * ENEMY_ART.feet;
+      let s: Sprite;
+      if (e.kind === 'flyer') {
+        // up in the air over its shadow: it bobs with the wingbeat and leans into its swing
+        const beat = Math.sin(t * 14 + e.id * 1.7);
+        s = this.enemyArt.put(tex, e.x, feet - e.radius * ENEMY_ART.lift - beat * 6, e.radius * ENEMY_ART.height);
+        s.scale.y *= 0.97 + beat * 0.03;
+        s.rotation = e.atWall ? 0 : Math.cos((e.phase ?? 0) + b.time * BALANCE.flyer.weaveRate) * 0.14;
+      } else if (e.kind === 'winder') {
+        // eight legs: a quick low scuttle, and a jolt each time it winds the others back
+        const jolt = Math.max(0, (e.windTime ?? 0) - (BALANCE.winder.every - 0.3)) / 0.3;
+        const hop = Math.abs(Math.sin(step * 2)) * 0.35;
+        s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height * (1 + jolt * 0.12));
+        s.rotation = Math.sin(step * 2) * 0.03;
+      } else {
+        // the tank rolls on tracks: no steps, only a rumble
+        const tracks = e.kind === 'boss';
+        const hop = tracks ? Math.abs(Math.sin(step * 3)) * 0.3 : Math.abs(Math.sin(step));
+        s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height);
+        s.rotation = tracks ? 0 : Math.cos(step) * 0.07;
+        s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
+      }
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }

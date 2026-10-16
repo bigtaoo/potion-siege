@@ -95,7 +95,42 @@
       "radius": 90,
       "wallDps": 150,
       "gold": 150
+    },
+    "flyer": {
+      "hp": 0.7,
+      "speed": 110,
+      "radius": 34,
+      "wallDps": 8,
+      "gold": 8
+    },
+    "winder": {
+      "hp": 2,
+      "speed": 60,
+      "radius": 42,
+      "wallDps": 10,
+      "gold": 12
     }
+  },
+  "flyer": {
+    "stage": 3,
+    "wave": 3,
+    "share": 0.1,
+    "shareStep": 0.015,
+    "maxShare": 0.2,
+    "weave": 110,
+    "weaveRate": 1.8,
+    "splash": 0.5
+  },
+  "winder": {
+    "stage": 7,
+    "wave": 2,
+    "at": [0.4, 0.75],
+    "bossAt": [2, 8],
+    "twoFrom": 13,
+    "gap": 150,
+    "every": 3,
+    "range": 200,
+    "heal": 0.08
   },
   "waves": {
     "count": 10,

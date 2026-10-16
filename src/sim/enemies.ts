@@ -1,9 +1,9 @@
-// What each clockwork enemy is weak to or shrugs off, and its numbers on a stage. Shown in the
-// codex; the battle does not apply the resistances yet.
+// What each clockwork enemy is weak to or shrugs off, and its numbers on a stage. The battle
+// multiplies every potion's damage by these; the codex shows them.
 
 import { stageHp } from './meta';
 import { BALANCE, HERO_KINDS, type EnemyKind, type HeroKind } from './types';
-import { FIRST_WAVE, waveHp } from './waves';
+import { FIRST_STAGE, FIRST_WAVE, waveHp } from './waves';
 
 /** Damage taken from each element as a multiplier; an element not listed deals 1×. Corrosion
  *  eats into tin, springs and brass alike; only the boiler, built to hold acid-hot water,
@@ -17,6 +17,10 @@ export const RESIST: Record<EnemyKind, Partial<Record<HeroKind, number>>> = {
   brute: { fire: 0.5, ice: 1.25, poison: 0.5 },
   // heavy brass plates ground the sparks and hold the heat; magic goes between them
   boss: { fire: 0.75, lightning: 0.75, arcane: 1.25 },
+  // canvas wings catch fire and the brass ball draws the sparks; frost just slides off the wings
+  flyer: { fire: 1.25, lightning: 1.25, ice: 0.75 },
+  // acid gums the mainspring and magic unwinds it; its own gears turn back the cold
+  winder: { poison: 1.5, arcane: 1.25, ice: 0.5 },
 };
 
 export function resist(kind: EnemyKind, element: HeroKind): number {
@@ -38,7 +42,10 @@ export function resistLabel(v: number): string {
 export interface EnemyStats {
   /** The first wave of a stage it turns up in. */
   wave: number;
-  /** Hit points on that wave of `stage`, scaled as the battle scales its spawns. */
+  /** The first stage it turns up on. */
+  stage: number;
+  /** Hit points on that wave of `stage` (of its first stage, before that), scaled as the
+   *  battle scales its spawns. */
   hp: number;
   speed: number;
   wallDps: number;
@@ -47,5 +54,6 @@ export interface EnemyStats {
 export function enemyStats(kind: EnemyKind, stage: number): EnemyStats {
   const e = BALANCE.enemies[kind];
   const wave = FIRST_WAVE[kind];
-  return { wave, hp: waveHp(wave) * e.hp * stageHp(stage), speed: e.speed, wallDps: e.wallDps };
+  const first = FIRST_STAGE[kind];
+  return { wave, stage: first, hp: waveHp(wave) * e.hp * stageHp(Math.max(stage, first)), speed: e.speed, wallDps: e.wallDps };
 }

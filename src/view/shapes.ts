@@ -42,18 +42,21 @@ export function heroShadow(g: Graphics, x: number, y: number, w: number, alpha =
   g.ellipse(x, y, w / 2, w * 0.16).fill({ color: 0x000000, alpha: 0.3 * alpha });
 }
 
-const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e } as const;
+const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e, flyer: 0xc9a24a, winder: 0x3f9a96 } as const;
 
-/** Height of an enemy's art, and where its feet go, relative to its hit circle. */
-export const ENEMY_ART = { height: 3.8, feet: 0.9 };
+/** Height of an enemy's art, where its feet go and how high a flyer hangs over its shadow,
+ *  relative to its hit circle. */
+export const ENEMY_ART = { height: 3.8, feet: 0.9, lift: 1.1 };
 
 /** `art`: the body is a sprite drawn elsewhere, so only the shadow (`under`) or the bars and rings go here. */
 export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = null): void {
   const { x, y, radius: r } = e;
-  if (art !== 'over') g.ellipse(x, y + r * 0.8, r * 0.9, r * 0.3).fill({ color: 0x000000, alpha: 0.3 });
+  const fly = e.kind === 'flyer';
+  // a flyer's shadow is smaller and fainter, cast from up in the air
+  if (art !== 'over') g.ellipse(x, y + r * 0.8, r * (fly ? 0.7 : 0.9), r * (fly ? 0.22 : 0.3)).fill({ color: 0x000000, alpha: fly ? 0.2 : 0.3 });
   if (art === 'under') return;
   if (art) {
-    enemyBars(g, e, y - r * (ENEMY_ART.height - ENEMY_ART.feet) - 18);
+    enemyBars(g, e, y - r * (ENEMY_ART.height - ENEMY_ART.feet + (fly ? ENEMY_ART.lift : 0)) - 18);
     return;
   }
   if (e.kind === 'runner') g.poly(polygon(x, y, r * 1.1, 3, Math.PI / 2));
