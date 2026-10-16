@@ -7,11 +7,11 @@ import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
 import {
+  balanced,
   bottle,
   coinsIcon,
   gearIcon,
   ink,
-  inkWrapped,
   medal,
   modifierIcon,
   P,
@@ -341,8 +341,10 @@ function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
     pct.position.set(cw / 2 - 24, y);
     c.addChild(g, b, pct);
     if (i === 0) {
-      const tag = plate(t('mvp'), 26, 80, 'brass');
-      tag.position.set(bx + 150, y - 2);
+      // the MVP's word on its own full bar, at the start, clear of the end it measures
+      const tag = label(t('mvp'), 26, { fill: P.cream, stroke: { color: P.line, width: 6 } });
+      tag.anchor.set(0, 0.5);
+      tag.position.set(bx + 18, y - 1);
       c.addChild(tag);
     }
   });
@@ -513,7 +515,7 @@ function skillCard(id: SkillId, level: number): Container {
     card.addChild(tag);
   }
 
-  const desc = inkWrapped(t(`skill.${id}.desc`), 31, w - 40, { align: 'center', lineHeight: 40 });
+  const desc = balanced(t(`skill.${id}.desc`), 31, w - 40, { align: 'center', lineHeight: 40 });
   desc.anchor.set(0.5, 0);
   desc.position.set(0, iy + (other ? 160 : 140));
   card.addChild(desc);
