@@ -2,7 +2,8 @@
 // Most skills belong to a hero and are only offered with it on the board; some are unlocked by
 // levelling that hero between battles, and the recipe cards also need a second hero fielded.
 
-import type { Rng } from './rng';
+import type { Prng } from './math/prng';
+import { sample } from './math/pick';
 import { BALANCE, HERO_KINDS, type HeroKind } from './types';
 
 export const SKILL_IDS = [
@@ -179,7 +180,7 @@ export function emptySkills(): SkillLevels {
  *  own skills come first. A reroll passes the cards it replaces as `exclude`; they come back
  *  only when there is not enough else. */
 export function rollChoices(
-  rng: Rng,
+  rng: Prng,
   levels: SkillLevels,
   fielded: ReadonlySet<HeroKind>,
   heroLevels: Record<HeroKind, number>,
@@ -195,9 +196,9 @@ export function rollChoices(
   });
   const fresh = open.filter((id) => !exclude.includes(id));
   const own = focus ? fresh.filter((id) => DEFS[id].hero === focus || DEFS[id].with === focus) : [];
-  const first = rng.sample(own, 3);
-  const rest = [...first, ...rng.sample(fresh.filter((id) => !first.includes(id)), 3 - first.length)];
-  return [...rest, ...rng.sample(open.filter((id) => !rest.includes(id)), 3 - rest.length)];
+  const first = sample(rng, own, 3);
+  const rest = [...first, ...sample(rng, fresh.filter((id) => !first.includes(id)), 3 - first.length)];
+  return [...rest, ...sample(rng, open.filter((id) => !rest.includes(id)), 3 - rest.length)];
 }
 
 /** Modifiers derived from the skill levels and perks, as the battle uses them. */

@@ -139,7 +139,7 @@ export class Hud extends Container {
       const h = btn.text.height / raw;
       btn.text.scale.set(Math.min(this.boost, (BUTTON.w - 36) / w, (BUTTON.h - 12) / h));
     }
-    this.hintText.visible = this.hint && b.time < HINT_SECONDS && this.mods.children.length === 0;
+    this.hintText.visible = this.hint && b.seconds < HINT_SECONDS && this.mods.children.length === 0;
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);

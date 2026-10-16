@@ -8,6 +8,7 @@
 // LINEUP_EXTRA=wind swaps in only the gale tonic.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
+import { TICK_RATE } from '../src/sim/math/fixed';
 import { botAct, playOut } from '../src/sim/bot';
 import { battleSetup, newMeta, type MetaSave } from '../src/sim/meta';
 import { SKILL_IDS, skillHeroes, type SkillId } from '../src/sim/skills';
@@ -78,7 +79,7 @@ function stageTable(cells: Cell[], kinds: readonly HeroKind[]): string[] {
     const win = c.runs.filter((b) => b.result === 'won').length / c.runs.length;
     const sh = shares(c.runs, kinds);
     out.push(
-      `| ${c.level} | ${c.stage} | ${pct(win)} | ${mean(waves).toFixed(1)} | ${quant(waves, 0.1)}–${quant(waves, 0.9)} | ${mean(c.runs.map((b) => b.time)).toFixed(0)}s | ${kinds.map((k) => pct(sh[k])).join(' | ')} |`,
+      `| ${c.level} | ${c.stage} | ${pct(win)} | ${mean(waves).toFixed(1)} | ${quant(waves, 0.1)}–${quant(waves, 0.9)} | ${mean(c.runs.map((b) => b.seconds)).toFixed(0)}s | ${kinds.map((k) => pct(sh[k])).join(' | ')} |`,
     );
   }
   return out;
@@ -118,7 +119,7 @@ function play(level: string, stage: number, seeds: number, lineup?: HeroKind[]):
   LEVELS[level](m);
   if (lineup) m.lineup = lineup;
   const setup = battleSetup(m, stage);
-  return { level, stage, runs: Array.from({ length: seeds }, (_, i) => playOut(1000 + i, 1 / 30, 1200, setup)) };
+  return { level, stage, runs: Array.from({ length: seeds }, (_, i) => playOut(1000 + i, 1200, setup)) };
 }
 
 /** Skill sets granted at the start of a battle, to judge a recipe or a line on its own: the bot
@@ -177,9 +178,9 @@ function playForced(seed: number, setup: ReturnType<typeof battleSetup>, skills:
     b.choices = [id];
     b.choose(id);
   }
-  for (let t = 0; t < 1200 && b.result === null; t += 1 / 30) {
+  for (let t = 0; t < 1200 * TICK_RATE && b.result === null; t++) {
     botAct(b);
-    b.step(1 / 30);
+    b.step();
     b.drain();
   }
   return b;

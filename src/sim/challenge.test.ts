@@ -7,7 +7,7 @@ import {
 import { battleSetup, newMeta, parseMeta } from './meta';
 import { BALANCE, HERO_KINDS } from './types';
 import { isBossWave, planWave } from './waves';
-import { Rng } from './rng';
+import { Prng } from './math/prng';
 
 const C = BALANCE.challenge;
 
@@ -107,7 +107,7 @@ describe('daily challenge', () => {
     for (const w of C.mods.twinBoss.waves) {
       expect(isBossWave(w, twin)).toBe(true);
       expect(isBossWave(w)).toBe(false);
-      expect(planWave(w, new Rng(1), 3, twin)[0].kind).toBe('boss');
+      expect(planWave(w, new Prng(1), 3, twin)[0].kind).toBe('boss');
     }
     // the iron wall never offers the repair
     const iron = new Battle(2, challengeSetup(m, { ...c, mods: ['ironWall'] }));
@@ -118,7 +118,8 @@ describe('daily challenge', () => {
       }
       iron.summon();
       iron.upgrade();
-      iron.step(1 / 15);
+      iron.step();
+      iron.step();
     }
   });
 

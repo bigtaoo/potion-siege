@@ -12,6 +12,7 @@
 // SKILLS=0 skips the card section, SKILL_STAGES=12,16,19 and SKILL_SEEDS set it up.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
+import { TICK_RATE } from '../src/sim/math/fixed';
 import { botAct } from '../src/sim/bot';
 import { battleSetup, buyHero, buyWorkshop, heroCost, newMeta, workshopCost, type BattleSetup, type MetaSave, type WorkshopId } from '../src/sim/meta';
 import { MILESTONES, SKILL_IDS, skillHeroes, type SkillId } from '../src/sim/skills';
@@ -95,11 +96,10 @@ function play(seed: number, setup: BattleSetup, skill?: SkillId): Run {
   const reached = zero(ENEMY_KINDS);
   const seen = new Set<number>();
   const atWall = new Set<number>();
-  const dt = 1 / 30;
-  for (let t = 0; t < 1200 && b.result === null; t += dt) {
+  for (let t = 0; t < 1200 * TICK_RATE && b.result === null; t++) {
     botAct(b);
     const before = b.wall;
-    b.step(dt);
+    b.step();
     b.drain();
     let weight = 0;
     for (const e of b.enemies) {

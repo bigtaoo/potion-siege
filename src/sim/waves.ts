@@ -1,13 +1,14 @@
 // The wave plan: which enemies arrive in each wave and how tough they are.
 
-import type { Rng } from './rng';
+import { FP, ticks } from './math/fixed';
+import type { Prng } from './math/prng';
 import { BALANCE, type EnemyKind } from './types';
 
 export interface Spawn {
-  /** Seconds after the wave starts. */
+  /** Ticks after the wave starts. */
   at: number;
   kind: EnemyKind;
-  /** Hit points, already scaled for the wave. */
+  /** Hit points in FP units, already scaled for the wave. */
   hp: number;
 }
 
@@ -47,39 +48,45 @@ export function isBossWave(wave: number, bossWaves: readonly number[] = BALANCE.
   return bossWaves.includes(wave);
 }
 
-/** Base hit points of a grunt in this 1-based wave. */
+/** Base hit points of a grunt in this 1-based wave (multiplied out, not a power: the same bits
+ *  on every engine). */
 export function waveHp(wave: number): number {
   const w = BALANCE.waves;
-  return w.baseHp * w.hpGrowth ** (wave - 1);
+  let hp = w.baseHp;
+  for (let i = 1; i < wave; i++) hp *= w.hpGrowth;
+  return hp;
 }
 
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top. */
-export function planWave(wave: number, rng: Rng, stage = 1, bossWaves: readonly number[] = BALANCE.waves.bossWaves): Spawn[] {
+export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly number[] = BALANCE.waves.bossWaves): Spawn[] {
   const w = BALANCE.waves;
   const hp = waveHp(wave);
+  const hpOf = (kind: EnemyKind) => Math.round(hp * BALANCE.enemies[kind].hp * FP);
   const boss = isBossWave(wave, bossWaves);
   const count = Math.round((w.baseCount + w.countStep * (wave - 1)) * (boss ? 0.5 : 1));
-  const fly = wave >= FIRST_WAVE.flyer ? flyerShare(stage) : 0;
+  // the rolls are in permille
+  const fly = wave >= FIRST_WAVE.flyer ? Math.round(flyerShare(stage) * 1000) : 0;
+  const span = ticks(w.spawnWindow);
   const spawns: Spawn[] = [];
   for (let i = 0; i < count; i++) {
-    let roll = rng.next();
+    let roll = rng.int(1000);
     let kind: EnemyKind;
     if (roll < fly) kind = 'flyer';
     else {
-      roll = (roll - fly) / (1 - fly);
-      kind = wave >= FIRST_WAVE.brute && roll < 0.15 ? 'brute' : wave >= FIRST_WAVE.runner && roll < 0.4 ? 'runner' : 'grunt';
+      roll = Math.trunc(((roll - fly) * 1000) / (1000 - fly));
+      kind = wave >= FIRST_WAVE.brute && roll < 150 ? 'brute' : wave >= FIRST_WAVE.runner && roll < 400 ? 'runner' : 'grunt';
     }
-    spawns.push({ at: (w.spawnWindow * i) / count, kind, hp: hp * BALANCE.enemies[kind].hp });
+    spawns.push({ at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) });
   }
-  if (boss) spawns.unshift({ at: 0, kind: 'boss', hp: hp * BALANCE.enemies.boss.hp });
+  if (boss) spawns.unshift({ at: 0, kind: 'boss', hp: hpOf('boss') });
   const wd = BALANCE.winder;
   if (onStage('winder', stage) && wave >= wd.wave) {
     const n = stage >= wd.twoFrom ? 2 : 1;
     for (let i = 0; i < n; i++) {
-      const at = boss ? wd.bossAt[i] : w.spawnWindow * wd.at[i];
-      spawns.push({ at, kind: 'winder', hp: hp * BALANCE.enemies.winder.hp });
+      const at = boss ? ticks(wd.bossAt[i]) : ticks(w.spawnWindow * wd.at[i]);
+      spawns.push({ at, kind: 'winder', hp: hpOf('winder') });
     }
     spawns.sort((a, b) => a.at - b.at);
   }

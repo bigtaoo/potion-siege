@@ -22,6 +22,7 @@ import {
 } from './sim/meta';
 import { botAct } from './sim/bot';
 import { mergeablePair, Tutorial } from './sim/tutorial';
+import { FP } from './sim/math/fixed';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
@@ -33,6 +34,9 @@ import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
 import { flyCrystals } from './view/fly';
 import { SideInfo } from './view/SideInfo';
+import { FixedStep } from './view/fixedStep';
+import { levelRange, QUALITY_MODES, type DeviceInfo, type QualityMode } from './view/quality';
+import { gpuName, QualityRuntime } from './view/qualityRuntime';
 import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
@@ -58,6 +62,9 @@ export async function boot(platform: Platform): Promise<void> {
 
   const analytics = createAnalytics(platform, params);
   const game = new Game(app, platform, params, analytics);
+  // our own frame loop from here on: a frame rate and resolution the device keeps up with
+  const mode = params.get('quality') as QualityMode;
+  new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm());
   if (import.meta.env.DEV) Object.assign(window, { __game: game });
   platform.loaded();
   analytics.track('session_start', {
@@ -78,6 +85,23 @@ export async function boot(platform: Platform): Promise<void> {
   });
   window.addEventListener('pagehide', () => game.leave());
   game.start();
+}
+
+/** What the quality level starts from; a touch screen with a phone's browser counts as a phone. */
+function device(app: Application): DeviceInfo {
+  const nav = navigator as Navigator & { deviceMemory?: number };
+  let gpu = '';
+  try {
+    gpu = gpuName(app.renderer);
+  } catch {
+    // no WebGL details: judged by the rest
+  }
+  return {
+    mobile: navigator.maxTouchPoints > 0 && /mobi|android|iphone|ipad/i.test(navigator.userAgent),
+    cores: nav.hardwareConcurrency || 0,
+    memoryGB: nav.deviceMemory || 0,
+    gpu,
+  };
 }
 
 function safeDevice(app: Application): ReturnType<typeof deviceProps> {
@@ -137,6 +161,9 @@ class Game {
   private loginShown = '';
   private readonly autoplay: boolean;
   private readonly speed: number;
+  /** Turns frame time into battle ticks, `speed` times over, and says how far into the next
+   *  tick the view is. */
+  private loop = new FixedStep();
   private readonly audio = new GameAudio();
   /** The `perf` and `anomaly` telemetry: battle frames only, see analytics/perfReport. */
   readonly perf: PerfReport;
@@ -211,6 +238,7 @@ class Game {
     this.offered = { revive: false, double: false };
     this.tutorial = null;
     this.hud.hint = true;
+    this.loop = new FixedStep();
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
     // today's tasks exist before the first battle counts toward them (a fresh save has none)
@@ -221,6 +249,11 @@ class Game {
   private measured(): boolean {
     const b = this.battle;
     return !!(this.run && b && !b.paused && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
+  }
+
+  /** Nothing fast on screen: the frame loop drops to its calm rate. */
+  calm(): boolean {
+    return !this.measured();
   }
 
   /** Where the player is, for an `anomaly`. */
@@ -258,10 +291,14 @@ class Game {
     let events: BattleEvent[] = [];
     if (b && !this.overlay.visible && !this.ended) {
       // the battle stands still while a tutorial step waits for its tap
-      if (!this.tutorial?.holds(b)) {
-        for (let i = 0; i < this.speed; i++) {
+      // (the bot picks its cards at once, so autoplay never stops for an offer)
+      if (this.autoplay && b.choices) botAct(b);
+      if (!this.tutorial?.holds(b) && !b.paused) {
+        const steps = this.loop.advance(dt * 1000, this.speed);
+        for (let i = 0; i < steps; i++) {
           if (this.autoplay) botAct(b);
-          b.step(dt);
+          if (b.paused) break;
+          b.step();
         }
       }
       events = b.drain();
@@ -274,7 +311,7 @@ class Game {
       else if (b.result) this.finish(b);
     }
     this.lesson(b, events, m, dt);
-    this.view.update(dt);
+    this.view.update(dt, this.loop.alpha);
     this.hud.update(dt);
   }
 
@@ -364,7 +401,7 @@ class Game {
     const ok = await this.watch();
     this.run?.onRerollResult(ok);
     if (ok) b.reroll();
-    else b.rerolled = true; // one offer of the ad per pick, even when it failed
+    else b.apply({ type: 'noReroll' }); // one offer of the ad per pick, even when it failed
     if (b.choices && this.overlay.visible) this.showSkills(b);
   }
 
@@ -624,11 +661,11 @@ class Game {
   }
 
   private showEnd(b: Battle): void {
-    const secs = Math.round(b.time);
+    const secs = Math.round(b.seconds);
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
     const run = this.challenge;
     if (run?.result) {
-      const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: b.dealt[kind] }] : []));
+      const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: Math.round(b.dealt[kind] / FP) }] : []));
       const reward = { crystals: run.result.crystals + run.streakBonus, firstClear: false, unlocked: [] };
       this.overlay.showEnd(b.result === 'won', stats, reward, () => void this.again(), null, {
         onDouble: null,
@@ -645,7 +682,7 @@ class Game {
     if (canDouble && !this.offered.double) this.run?.onDoubleOffer();
     this.offered.revive ||= canRevive;
     this.offered.double ||= canDouble;
-    const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: b.dealt[kind] }] : []));
+    const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: Math.round(b.dealt[kind] / FP) }] : []));
     this.overlay.showEnd(b.result === 'won', stats, this.purse.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null, {
       onDouble: canDouble ? () => void this.double(b) : null,
       doubled: this.purse.bonus > 0,

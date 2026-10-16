@@ -24,30 +24,40 @@ export interface Hero {
   star: number;
   /** Grid slot index (row * cols + col); the bottom row is the wall. */
   slot: number;
-  /** Seconds until the next shot. */
+  /** Thousandths of a tick until the next shot (attack speed takes off a fraction of a tick). */
   cooldown: number;
 }
+
+// The battle state is all integers (src/sim/math/fixed.ts): positions, radii and hit points in
+// FP units (1000 per world unit or hit point), speeds per tick, times in ticks at TICK_RATE,
+// multipliers and chances in permille. The view divides by FP to draw. Events carry world units.
+
 
 export interface Enemy {
   id: number;
   kind: EnemyKind;
   x: number;
   y: number;
+  /** Where it was before the last tick, for the view to draw in between. */
+  px: number;
+  py: number;
   hp: number;
   maxHp: number;
+  /** FP per tick. */
   speed: number;
   radius: number;
-  /** Multiplier on speed while slowTime > 0. */
+  /** Permille of its speed while slowTime > 0. */
   slowFactor: number;
   slowTime: number;
   freezeTime: number;
+  /** FP hit points a second. */
   poisonDps: number;
   poisonTime: number;
   /** Rust stacks from corrosion hits: each one makes it take more damage from everything. They
    *  all wear off after rustTime without a new corrosion hit. */
   rust: number;
   rustTime: number;
-  /** Burning from the fire skill, like poison. */
+  /** Burning from the fire skill, like poison (FP a second). */
   burnDps: number;
   burnTime: number;
   /** The potion whose fire set the burn going, credited with its damage. */
@@ -66,14 +76,14 @@ export interface Enemy {
   /** Static from lightning: extra damage the next hit of another potion sets off. */
   charge: number;
   chargeTime: number;
-  /** Seconds before a wind hit can knock it back again. */
+  /** Ticks before a wind hit can knock it back again. */
   pushTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
-  /** A flyer weaves from side to side about this x, at this point of its swing. */
+  /** A flyer weaves from side to side about this x, at this point of its swing (brads). */
   x0?: number;
   phase?: number;
-  /** A winder's seconds until it next winds back the enemies around it. */
+  /** A winder's ticks until it next winds back the enemies around it. */
   windTime?: number;
 }
 
@@ -83,6 +93,9 @@ export interface Projectile {
   star: number;
   x: number;
   y: number;
+  /** Where it was before the last tick, for the view. */
+  px: number;
+  py: number;
   targetId: number;
   /** Last known target position, so a shot still lands where its target died. */
   tx: number;
