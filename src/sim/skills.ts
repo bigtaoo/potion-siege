@@ -31,6 +31,11 @@ export const SKILL_IDS = [
   'lightningStatic',
   'lightningStrike',
   'lightningFire',
+  'poisonDamage',
+  'poisonRust',
+  'poisonSplash',
+  'poisonMelt',
+  'poisonLightning',
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
@@ -69,6 +74,11 @@ const DEFS: Record<SkillId, SkillDef> = {
   lightningStatic: { max: 2, hero: 'lightning' },
   lightningStrike: { max: 1, hero: 'lightning' },
   lightningFire: { max: 1, hero: 'lightning', with: 'fire' },
+  poisonDamage: { max: 3, hero: 'poison' },
+  poisonRust: { max: 2, hero: 'poison' },
+  poisonSplash: { max: 1, hero: 'poison' },
+  poisonMelt: { max: 1, hero: 'poison' },
+  poisonLightning: { max: 1, hero: 'poison', with: 'lightning' },
 };
 
 /** The hero a skill belongs to and, for a recipe, the second one it needs. */
@@ -82,7 +92,7 @@ export function skillMax(id: SkillId): number {
 }
 
 /** Passive boosts a milestone gives to a skill the hero already has. */
-export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus'] as const;
+export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus'] as const;
 export type PerkId = (typeof PERK_IDS)[number];
 
 /** What levelling a hero opens up: a new card in the pool, or a perk. */
@@ -113,7 +123,12 @@ export const MILESTONES: Record<HeroKind, Milestone[]> = {
     { level: 15, skill: 'lightningStrike' },
     { level: 20, skill: 'lightningFire' },
   ],
-  poison: [],
+  poison: [
+    { level: 5, skill: 'poisonSplash' },
+    { level: 10, perk: 'poisonRustPlus' },
+    { level: 15, skill: 'poisonMelt' },
+    { level: 20, skill: 'poisonLightning' },
+  ],
 };
 
 /** The hero level a skill needs, 1 when it is in the pool from the start. */
@@ -202,6 +217,16 @@ export interface Mods {
   thunder: boolean;
   /** Lightning sets enemies alight (the lightning-and-fire recipe). */
   plasma: boolean;
+  /** Most rust stacks an enemy can carry. */
+  rustMax: number;
+  /** Extra damage taken per rust stack, as a fraction. */
+  rustStep: number;
+  /** Corrosion hits splash poison and rust around their target. */
+  acidSplash: boolean;
+  /** Enemies that die rusted pass their rust on to those around them. */
+  melt: boolean;
+  /** Lightning hits rust (the corrosion-and-lightning recipe). */
+  electrolysis: boolean;
 }
 
 export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()): Mods {
@@ -211,7 +236,9 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     fire: 1 + s.classDamage * levels.fireDamage,
     ice: 1 + s.classDamage * levels.iceDamage,
     lightning: 1 + s.classDamage * levels.lightningDamage,
+    poison: 1 + s.classDamage * levels.poisonDamage,
   };
+  const p = BALANCE.heroes.poison;
   return {
     damage: (kind) => (1 + s.allDamage * levels.allDamage) * (own[kind] ?? 1),
     speed: 1 + s.allSpeed * levels.allSpeed,
@@ -234,5 +261,10 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     static: s.lightningStatic * levels.lightningStatic * (perks.has('lightningStaticPlus') ? 1 + s.lightningStaticPlus : 1),
     thunder: levels.lightningStrike > 0,
     plasma: levels.lightningFire > 0,
+    rustMax: p.rustMax + s.rustExtra * levels.poisonRust,
+    rustStep: p.rustStep * (perks.has('poisonRustPlus') ? 1 + s.rustPlus : 1),
+    acidSplash: levels.poisonSplash > 0,
+    melt: levels.poisonMelt > 0,
+    electrolysis: levels.poisonLightning > 0,
   };
 }

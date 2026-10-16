@@ -192,7 +192,7 @@ describe('arcane, ice and lightning lines', () => {
     expect(e.slowFactor).toBeCloseTo(1 - BALANCE.skills.frostBoltSlow);
   });
 
-  it('freezes after enough frostbite stacks, longer with the perk, never a boss', () => {
+  it('freezes after enough frostbite stacks, longer with the perk; a boss slows hard instead', () => {
     const frozenFor = (iceLevel: number) => {
       const b = withSkills(['iceFrostbite'], { ice: iceLevel });
       const e = enemy(b, 500, 600, 1e6);
@@ -209,6 +209,18 @@ describe('arcane, ice and lightning lines', () => {
     boss.kind = 'boss';
     for (let i = 0; i < 8; i++) hit(b, 'ice', boss, 1);
     expect(boss.freezeTime).toBe(0);
+    expect(boss.slowFactor).toBeCloseTo(1 - BALANCE.skills.bossFreezeSlow);
+    expect(boss.slowTime).toBeGreaterThan(0);
+  });
+
+  it('cracks a boss instead of freezing it, with shatter', () => {
+    const b = withSkills(['iceFrostbite', 'iceShatter']);
+    const boss = enemy(b, 500, 600, 1e6);
+    boss.kind = 'boss';
+    for (let i = 1; i < BALANCE.skills.frostbiteStacks; i++) hit(b, 'ice', boss, 10);
+    const before = boss.hp;
+    hit(b, 'ice', boss, 10);
+    expect(before - boss.hp).toBeCloseTo(10 * (1 + BALANCE.skills.bossShatter));
   });
 
   it('shatters enemies that die frozen', () => {
@@ -413,5 +425,60 @@ describe('arcane, ice and lightning lines', () => {
     expect(counts.has(77) && counts.has(78)).toBe(true);
     expect(b.move(s0, s1)).toBe(true);
     expect(counts.has(77) || counts.has(78)).toBe(false);
+  });
+});
+
+describe('the corrosion line', () => {
+  const P = BALANCE.heroes.poison;
+
+  it('offers its cards by level, and the recipe only with lightning fielded', () => {
+    expect(pool(['poison'], { poison: 1 })).toEqual(new Set([...pool([], {}), 'poisonDamage', 'poisonRust']));
+    const all = pool(['poison'], { poison: 20 });
+    expect(all.has('poisonSplash') && all.has('poisonMelt')).toBe(true);
+    expect(all.has('poisonLightning')).toBe(false);
+    expect(pool(['poison', 'lightning'], { poison: 20 }).has('poisonLightning')).toBe(true);
+    expect(pool(['poison', 'lightning'], { poison: 19 }).has('poisonLightning')).toBe(false);
+  });
+
+  it('holds more rust with deep rust, and each stack counts more with the perk', () => {
+    expect(mods(emptySkills()).rustMax).toBe(P.rustMax);
+    expect(mods({ ...emptySkills(), poisonRust: 2 }).rustMax).toBe(P.rustMax + 2 * BALANCE.skills.rustExtra);
+    expect(mods(emptySkills(), perksFor({ arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 10 })).rustStep).toBeCloseTo(P.rustStep * (1 + BALANCE.skills.rustPlus));
+    const b = withSkills(['poisonRust']);
+    const e = enemy(b, 500, 600, 1e6);
+    for (let i = 0; i < P.rustMax + BALANCE.skills.rustExtra + 2; i++) hit(b, 'poison', e, 1);
+    expect(e.rust).toBe(P.rustMax + BALANCE.skills.rustExtra);
+  });
+
+  it('splashes poison and rust onto enemies close to the target', () => {
+    const b = withSkills(['poisonSplash']);
+    const e = enemy(b, 500, 600, 1e6);
+    const near = enemy(b, 500 + BALANCE.skills.acidRadius / 2, 600, 1e6);
+    const far = enemy(b, 500 + BALANCE.skills.acidRadius * 4, 600, 1e6);
+    hit(b, 'poison', e, 1);
+    expect(near.rust).toBe(1);
+    expect(near.poisonTime).toBeGreaterThan(0);
+    expect(far.rust).toBe(0);
+  });
+
+  it('passes a rusted kill\'s rust on to those around it, with meltdown', () => {
+    const b = withSkills(['poisonMelt']);
+    const e = enemy(b, 500, 600, 5);
+    const near = enemy(b, 560, 600, 1e6);
+    hit(b, 'poison', e, 0);
+    hit(b, 'poison', e, 0);
+    hit(b, 'arcane', e, 100);
+    expect(near.rust).toBe(2);
+  });
+
+  it('rusts with lightning under the corrosion-and-lightning recipe', () => {
+    const b = withSkills(['poisonLightning']);
+    const e = enemy(b, 500, 600, 1e6);
+    hit(b, 'lightning', e, 1);
+    expect(e.rust).toBe(1);
+    const plain = withSkills([]);
+    const f = enemy(plain, 500, 600, 1e6);
+    hit(plain, 'lightning', f, 1);
+    expect(f.rust).toBe(0);
   });
 });
