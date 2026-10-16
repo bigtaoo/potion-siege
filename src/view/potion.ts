@@ -281,6 +281,13 @@ export function snowflake(g: Graphics, x: number, y: number, size: number, angle
   g.circle(x, y, size * 0.2).fill(glow[2]).stroke({ width: line * 0.8, color: INK });
 }
 
+/** One potion drawn once in a pose, for a page that does not animate it. */
+export function stillPotion(look: PotionLook, pose: PotionPose): Container {
+  const p = new PotionFigure();
+  p.draw(look, pose);
+  return p;
+}
+
 /** Potions reused frame to frame: begin(), put() each one, end(). */
 export class PotionLayer extends Container {
   private used = 0;

@@ -78,6 +78,8 @@ export const zh: Table = {
     monsters: '发条军团',
     locked: '未解锁',
     hp: '生命 {n}',
+    hpWave: '生命 {n}（第{w}波）',
+    stage: '第 {n} 关数值',
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
     resist: '受到伤害',

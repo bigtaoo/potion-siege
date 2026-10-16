@@ -11,7 +11,9 @@ export const LINEUP = BALANCE.lineup as readonly HeroKind[];
 
 export type OfferReason = 'upgrade' | 'ultimate';
 
-export type EnemyKind = 'grunt' | 'runner' | 'brute' | 'boss';
+/** The clockwork army, weakest first. */
+export const ENEMY_KINDS = ['grunt', 'runner', 'brute', 'boss'] as const;
+export type EnemyKind = (typeof ENEMY_KINDS)[number];
 
 export interface Hero {
   id: number;

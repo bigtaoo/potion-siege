@@ -9,18 +9,20 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
-import { BALANCE, type EnemyKind } from '../sim/types';
+import { BALANCE, ENEMY_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { heroCost, heroDamage, LEVELLED_HEROES, maxStage, stageHp, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
-import { commanderTexture, enemyTexture } from './art';
+import { commanderTexture } from './art';
 import { buildCodex } from './Codex';
 import {
   bookIcon,
+  bossTag,
   bottle,
   coinsIcon,
   calendarIcon,
   chestIcon,
+  enemySprite,
   gearIcon,
   ink,
   lock,
@@ -68,7 +70,6 @@ interface Area {
 const NAV = 210;
 const RAIL = 230;
 const TOP = 150;
-const ENEMIES: readonly EnemyKind[] = ['grunt', 'runner', 'brute', 'boss'];
 
 export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: HomePanel, today: string, fit: MenuFit): Container {
   const root = new Container();
@@ -247,23 +248,17 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
 /** The clockwork army this stage sends, the boss marked. */
 function enemiesPanel(root: Container, x: number, y: number, w: number): void {
   const c = titledPanel(root, t('enemies'), x, y, w, 380);
-  const step = Math.min(210, (w - 80) / ENEMIES.length);
-  ENEMIES.forEach((kind, i) => {
+  const step = Math.min(210, (w - 80) / ENEMY_KINDS.length);
+  ENEMY_KINDS.forEach((kind, i) => {
     const tile = new Container();
-    tile.position.set((i - (ENEMIES.length - 1) / 2) * step, 30);
+    tile.position.set((i - (ENEMY_KINDS.length - 1) / 2) * step, 30);
     tile.addChild(paperCard(step - 20, 220, 22));
-    const tex = enemyTexture(kind);
-    if (tex) {
-      const s = new Sprite(tex);
-      s.anchor.set(0.5);
-      s.scale.set(170 / Math.max(tex.width, tex.height));
-      s.y = -4;
-      tile.addChild(s);
-    }
+    const s = enemySprite(kind, 170);
+    s.y = -4;
+    tile.addChild(s);
     if (kind === 'boss') {
-      const tag = new Container();
-      tag.position.set(0, 96);
-      tag.addChild(new Graphics().roundRect(-56, -22, 112, 44, 14).fill(P.red).stroke({ width: 4, color: P.line }), label('BOSS', 28));
+      const tag = bossTag(28);
+      tag.y = 96;
       tile.addChild(tag);
     }
     c.addChild(tile);

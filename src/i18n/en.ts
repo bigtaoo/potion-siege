@@ -77,6 +77,8 @@ export const en = {
     monsters: 'Clockwork Army',
     locked: 'Locked',
     hp: 'HP {n}',
+    hpWave: 'HP {n} (wave {w})',
+    stage: 'Stage {n} numbers',
     speed: 'Speed {n}',
     wallDps: 'Siege {n}/s',
     resist: 'Damage taken',

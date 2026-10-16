@@ -3,10 +3,10 @@
 // the art. Every menu screen is built from these.
 
 import { CanvasTextMetrics, Container, Graphics, Sprite, type Text, type TextStyleOptions } from 'pixi.js';
-import { ultimateTexture } from './art';
+import { enemyTexture, ultimateTexture } from './art';
 import { COLORS, gem, label } from './ui';
 import { slab } from './stone';
-import type { HeroKind } from '../sim/types';
+import type { EnemyKind, HeroKind } from '../sim/types';
 
 export const P = {
   line: 0x24140a,
@@ -237,6 +237,34 @@ export function bottle(kind: HeroKind, h: number): Container {
     s.scale.set(h / Math.max(tex.width, tex.height));
     c.addChild(s);
   }
+  return c;
+}
+
+/** Shrinks a text to fit `w` across. */
+export function fit<T extends Text>(text: T, w: number): T {
+  if (text.width > w) text.scale.set(w / text.width);
+  return text;
+}
+
+/** An enemy's art fitted into `w` by `h`, centred; empty until the art has loaded. */
+export function enemySprite(kind: EnemyKind, w: number, h: number = w): Container {
+  const c = new Container();
+  const tex = enemyTexture(kind);
+  if (tex) {
+    const s = new Sprite(tex);
+    s.anchor.set(0.5);
+    s.scale.set(Math.min(w / tex.width, h / tex.height));
+    c.addChild(s);
+  }
+  return c;
+}
+
+/** The red BOSS tag, its text `size` high. */
+export function bossTag(size: number): Container {
+  const c = new Container();
+  const w = size * 4.1;
+  const h = size * 1.6;
+  c.addChild(new Graphics().roundRect(-w / 2, -h / 2, w, h, size * 0.5).fill(P.red).stroke({ width: 4, color: P.line }), label('BOSS', size));
   return c;
 }
 
