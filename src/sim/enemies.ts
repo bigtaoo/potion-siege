@@ -5,17 +5,18 @@ import { stageHp } from './meta';
 import { BALANCE, HERO_KINDS, type EnemyKind, type HeroKind } from './types';
 import { FIRST_WAVE, waveHp } from './waves';
 
-/** Damage taken from each element as a multiplier; an element not listed deals 1×. Machines
- *  do not sicken, so venom does half against all of them. */
+/** Damage taken from each element as a multiplier; an element not listed deals 1×. Corrosion
+ *  eats into tin, springs and brass alike; only the boiler, built to hold acid-hot water,
+ *  shrugs it off. */
 export const RESIST: Record<EnemyKind, Partial<Record<HeroKind, number>>> = {
   // tin conducts: lightning arcs right through it
-  grunt: { lightning: 1.25, poison: 0.5 },
+  grunt: { lightning: 1.25 },
   // a frozen spring stops the little gears
-  runner: { ice: 1.25, poison: 0.5 },
-  // a boiler is made to take heat, but cold cracks the hot iron
+  runner: { ice: 1.25 },
+  // a boiler is made to take heat and acid, but cold cracks the hot iron
   brute: { fire: 0.5, ice: 1.25, poison: 0.5 },
   // heavy brass plates ground the sparks and hold the heat; magic goes between them
-  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25, poison: 0.5 },
+  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25 },
 };
 
 export function resist(kind: EnemyKind, element: HeroKind): number {

@@ -5,7 +5,7 @@
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { Rng } from './rng';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
-import { BALANCE, LINEUP, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile } from './types';
+import { BALANCE, type BattleEvent, type Enemy, type Hero, type HeroKind, type OfferReason, type Projectile } from './types';
 import { isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -132,14 +132,14 @@ export class Battle {
     return !this.paused && this.gold >= this.summonCost() && this.freeSlots().length > 0;
   }
 
-  /** A level-1 hero from the lineup on a random free cell; every few summons the commander
+  /** A level-1 hero from the save's lineup on a random free cell; every few summons the commander
    *  builds a new cell onto the wall. */
   summon(): boolean {
     if (!this.canSummon()) return false;
     this.gold -= this.summonCost();
     const slot = this.rng.pick(this.freeSlots());
     this.summons++;
-    this.slots[slot] = { id: this.nextId++, kind: this.rng.pick(LINEUP), star: 1, slot, cooldown: 0.2 };
+    this.slots[slot] = { id: this.nextId++, kind: this.rng.pick(this.setup.lineup), star: 1, slot, cooldown: 0.2 };
     this.events.push({ type: 'summon', slot });
     if (this.summons % C.summonsPerCell === 0 && this.built < C.extraCells) {
       const cell = this.rng.pick(this.buildable());
@@ -186,7 +186,7 @@ export class Battle {
     this.shotCount.delete(a.id);
     this.shotCount.delete(this.slots[to]!.id);
     this.slots[from] = null;
-    const kind = this.rng.pick(LINEUP);
+    const kind = this.rng.pick(this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: 0.2 };
     this.events.push({ type: 'merge', slot: to, star });
     if (star === B.maxStar) this.offer('ultimate', kind);
@@ -284,6 +284,8 @@ export class Battle {
       freezeTime: 0,
       poisonDps: 0,
       poisonTime: 0,
+      rust: 0,
+      rustTime: 0,
       burnDps: 0,
       burnTime: 0,
       scorch: 0,
@@ -312,6 +314,8 @@ export class Battle {
       }
       e.scorchTime = Math.max(0, e.scorchTime - dt);
       e.markTime = Math.max(0, e.markTime - dt);
+      e.rustTime = Math.max(0, e.rustTime - dt);
+      if (e.rustTime <= 0) e.rust = 0;
       e.chargeTime = Math.max(0, e.chargeTime - dt);
       if (e.chargeTime <= 0) e.charge = 0;
       e.chillTime = Math.max(0, e.chillTime - dt);
@@ -487,6 +491,8 @@ export class Battle {
       const dps = h.poison.poisonDps * B.starDamage[p.star - 1] * this.mods.damage('poison') * this.setup.heroDamage.poison;
       target.poisonDps = Math.max(target.poisonDps, dps);
       target.poisonTime = h.poison.poisonTime;
+      target.rust = Math.min(h.poison.rustMax, target.rust + 1);
+      target.rustTime = h.poison.rustTime;
     }
     this.events.push({ type: 'hit', kind: p.kind, x: target.x, y: target.y, radius: 30 });
   }
@@ -518,10 +524,12 @@ export class Battle {
     }
   }
 
-  /** Every bit of damage goes through here, for the arcane mark and for crediting the potion it
-   *  came from (`by`) with what the enemy had left of it. */
+  /** Every bit of damage goes through here, for the arcane mark and the corrosion's rust (both
+   *  multiply, the mark first) and for crediting the potion it came from (`by`) with what the
+   *  enemy had left of it. */
   private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
-    const dealt = e.markTime > 0 ? damage * (1 + this.mods.mark) : damage;
+    let dealt = e.markTime > 0 ? damage * (1 + this.mods.mark) : damage;
+    dealt *= 1 + B.heroes.poison.rustStep * e.rust;
     if (by) this.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
     e.hp -= dealt;
   }

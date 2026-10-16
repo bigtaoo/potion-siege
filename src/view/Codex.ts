@@ -6,10 +6,10 @@
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../i18n';
 import { enemyStats, resistLabel, resists } from '../sim/enemies';
-import { heroUnlocked, type MetaSave } from '../sim/meta';
+import { heroUnlocked, unlockStage, type MetaSave } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types';
 import { potionLook } from './art';
-import { bossTag, bottle, enemySprite, fit, ink, lock, P, paperCard, plate, woodPanel } from './kit';
+import { bossTag, bottle, enemySprite, fit, flask, ink, LIGHT, lightPanel, lightTile, lock, P, plate } from './kit';
 import { INK, star, stillPotion } from './potion';
 import { COLORS, HERO_COLORS, label } from './ui';
 
@@ -26,8 +26,8 @@ export interface CodexArea {
 const HEAD = 76;
 const FOOT = 34;
 const GAP = 14;
-const WEAK = 0x2f8a3a;
-const STRONG = 0xc0392b;
+const WEAK = 0x26732f;
+const STRONG = 0xb3352a;
 const GREY = 0x8a7d6a;
 
 export function buildCodex(m: MetaSave, a: CodexArea): Container {
@@ -57,7 +57,7 @@ function board(title: string, w: number, h: number): Container {
   const c = new Container();
   const p = plate(title, 40, 300);
   p.y = -h / 2 + 4;
-  c.addChild(woodPanel(w, h), p);
+  c.addChild(lightPanel(w, h), p);
   return c;
 }
 
@@ -78,15 +78,16 @@ function heroBoard(m: MetaSave, w: number, h: number): Container {
 /** A potion's name and level, then its forms from one star to the ultimate. */
 function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container {
   const look = potionLook(kind);
-  const open = heroUnlocked(m, kind) && !!look;
+  const open = heroUnlocked(m, kind);
   const r = new Container();
-  r.addChild(paperCard(rw, rh, 22));
+  r.addChild(lightTile(rw, rh, 22));
   const sw = Math.min(240, rw * 0.27);
   const sx = -rw / 2 + 10 + sw / 2;
-  r.addChild(new Graphics().roundRect(-rw / 2 + 10, -rh / 2 + 10, sw, rh - 30, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: P.line }));
+  r.addChild(new Graphics().roundRect(-rw / 2 + 10, -rh / 2 + 10, sw, rh - 30, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: LIGHT.edge }));
   const name = fit(label(t(`hero.${kind}`), 36, { stroke: { color: P.line, width: 7 } }), sw - 24);
   name.position.set(sx, -rh / 2 + 10 + (rh - 30) * 0.34);
-  const sub = fit(label(open ? `Lv ${m.heroes[kind]}` : t('codex.locked'), 28, { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
+  const at = unlockStage(kind);
+  const sub = fit(label(open ? `Lv ${m.heroes[kind]}` : at ? t('unlockAt', { n: at }) : t('codex.locked'), 28, { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
   sub.position.set(sx, -rh / 2 + 10 + (rh - 30) * 0.72);
   r.addChild(name, sub);
 
@@ -99,8 +100,9 @@ function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container
     const cx = x0 + slotW * (s - 0.5);
     r.addChild(new Graphics().roundRect(cx - slotW / 2 + 6, -rh / 2 + 10, slotW - 12, rh - 30, 14).fill({ color: P.paperDark, alpha: 0.55 }));
     stars(r, cx, rh / 2 - 26, s, open);
-    if (!open) {
-      flasks(r, cx, feet, s, rh);
+    if (!open || (!look && s < BALANCE.maxStar)) {
+      // a potion still waiting for its art stands in coloured flasks
+      flasks(r, cx, feet, s, rh, open ? HERO_COLORS[kind] : undefined);
     } else if (look && s < BALANCE.maxStar) {
       const fh = rh * 0.46;
       const step = fh * 0.58;
@@ -138,11 +140,15 @@ function stars(r: Container, cx: number, y: number, n: number, on: boolean): voi
   r.addChild(g);
 }
 
-/** Grey flask silhouettes standing in for a potion not in the game yet: one to three small
- *  ones, then one big one. */
-function flasks(r: Container, cx: number, feet: number, n: number, rh: number): void {
+/** Grey flask silhouettes standing in for a locked potion: one to three small ones, then one
+ *  big one. With `color`, an unlocked potion without its art yet, filled and with faces. */
+function flasks(r: Container, cx: number, feet: number, n: number, rh: number, color?: number): void {
   const g = new Graphics();
   const one = (x: number, h: number) => {
+    if (color !== undefined) {
+      flask(g, x, feet, h, color, true);
+      return;
+    }
     const bw = h * 0.36;
     g.roundRect(x - bw * 0.3, feet - h, bw * 0.6, h * 0.34, 4).fill(GREY).stroke({ width: 3, color: INK });
     g.circle(x, feet - h * 0.36, bw).fill(GREY).stroke({ width: 3, color: INK });
@@ -150,6 +156,7 @@ function flasks(r: Container, cx: number, feet: number, n: number, rh: number): 
   if (n === BALANCE.maxStar) one(cx, rh * 0.62);
   else for (let i = 0; i < n; i++) one(cx + (i - (n - 1) / 2) * rh * 0.24, rh * 0.42);
   r.addChild(g);
+  if (color !== undefined) return;
   const q = label('?', rh * 0.2, { fill: P.cream, stroke: { color: INK, width: 4 } });
   q.position.set(cx, feet - (n === BALANCE.maxStar ? rh * 0.22 : rh * 0.15));
   r.addChild(q);
@@ -161,7 +168,7 @@ function flasks(r: Container, cx: number, feet: number, n: number, rh: number): 
  *  for the stage picked on the battle tab. */
 function monsterBoard(stage: number, w: number, h: number, rows: boolean): Container {
   const c = board(t('codex.monsters'), w, h);
-  const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.cream });
+  const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
   note.position.set(w / 2 - 34, -h / 2 + 52);
   c.addChild(note);
@@ -185,7 +192,7 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
 /** A tall card: art, name, the numbers, then the resistances two by two. */
 function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Container {
   const c = new Container();
-  c.addChild(paperCard(cw, ch, 22));
+  c.addChild(lightTile(cw, ch, 22));
   const top = -ch / 2;
   const artH = ch - 412;
   c.addChild(art(kind, cw - 30, artH, 0, top + 16 + artH / 2));
@@ -212,7 +219,7 @@ function monsterCard(kind: EnemyKind, stage: number, cw: number, ch: number): Co
 /** A wide row: art, then name and numbers, then the resistances three by two. */
 function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number): Container {
   const c = new Container();
-  c.addChild(paperCard(rw, rh, 22));
+  c.addChild(lightTile(rw, rh, 22));
   const artW = Math.min(170, rw * 0.24);
   c.addChild(art(kind, artW, rh - 30, -rw / 2 + 14 + artW / 2, -4));
   const tx = -rw / 2 + 26 + artW;

@@ -6,7 +6,8 @@ export const BALANCE: Balance = balanceJson;
 export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison'] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
 
-/** The four heroes brought into battle: every summon and every merge rolls one of them. */
+/** The four heroes a new save brings into battle; the player can swap one for another unlocked
+ *  potion (MetaSave.lineup), and every summon and merge rolls one of the four. */
 export const LINEUP = BALANCE.lineup as readonly HeroKind[];
 
 export type OfferReason = 'upgrade' | 'ultimate';
@@ -41,6 +42,10 @@ export interface Enemy {
   freezeTime: number;
   poisonDps: number;
   poisonTime: number;
+  /** Rust stacks from corrosion hits: each one makes it take more damage from everything. They
+   *  all wear off after rustTime without a new corrosion hit. */
+  rust: number;
+  rustTime: number;
   /** Burning from the fire skill, like poison. */
   burnDps: number;
   burnTime: number;

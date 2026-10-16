@@ -9,9 +9,9 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
-import { BALANCE, ENEMY_KINDS } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
-import { heroCost, heroDamage, LEVELLED_HEROES, maxStage, stageHp, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
+import { benched, heroCost, heroDamage, heroUnlocked, maxStage, stageHp, unlockStage, WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { commanderTexture } from './art';
 import { buildCodex } from './Codex';
@@ -20,11 +20,16 @@ import {
   bossTag,
   bottle,
   coinsIcon,
+  fit as fitText,
+  flask,
   calendarIcon,
   chestIcon,
   enemySprite,
   gearIcon,
   ink,
+  LIGHT,
+  lightPanel,
+  lightTile,
   lock,
   medal,
   P,
@@ -37,7 +42,6 @@ import {
   tappable,
   workshopWall,
   wallIcon,
-  woodPanel,
 } from './kit';
 import { gem, HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
@@ -53,6 +57,8 @@ export interface HomeActions {
   claimTask(index: number): void;
   stage(delta: number): void;
   hero(kind: HeroKind): void;
+  /** A potion on the battle tab's lineup row was tapped. */
+  lineup(kind: HeroKind): void;
   workshop(id: WorkshopId): void;
   play(): void;
 }
@@ -71,14 +77,15 @@ const NAV = 210;
 const RAIL = 230;
 const TOP = 150;
 
-export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: HomePanel, today: string, fit: MenuFit): Container {
+/** `picked`: a reserve potion tapped on the lineup row, waiting for the one it replaces. */
+export function buildHome(m: MetaSave, act: HomeActions, tab: HomeTab, panel: HomePanel, today: string, fit: MenuFit, picked: HeroKind | null = null): Container {
   const root = new Container();
   const { w, h, wide } = fit;
   root.addChild(workshopWall(w, h));
   const left = wide ? RAIL : 0;
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
-  if (tab === 'battle') battleTab(root, m, act, area);
+  if (tab === 'battle') battleTab(root, m, act, area, picked);
   else if (tab === 'potions') potionsTab(root, m, act, area);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area));
@@ -97,7 +104,7 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
     const c = tappable(new Container(), onTap);
     c.position.set(x, y);
     icon.scale.set(0.72);
-    const cap = label(text, 26, { fill: P.cream, stroke: { color: P.line, width: 6 } });
+    const cap = ink(text, 26);
     cap.y = 54;
     c.addChild(medal(56), icon, cap);
     if (dot) redDot(c, 42, -42);
@@ -107,12 +114,12 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
   button(left + 240, scrollIcon(), t('tasks'), tasksClaimable(m), () => act.panel('tasks'));
 
   // the crystals in a dark inset, top right
-  const count = label(String(m.crystals), 50, { fill: 0x9beaff });
+  const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });
   const pw = Math.max(240, count.width + 120);
   const purse = new Container();
   purse.position.set(w - 40 - pw / 2, y);
   purse.addChild(
-    new Graphics().roundRect(-pw / 2, -40, pw, 80, 40).fill(P.woodDark).stroke({ width: 5, color: P.line }),
+    new Graphics().roundRect(-pw / 2, -40, pw, 80, 40).fill(LIGHT.inset).stroke({ width: 4, color: LIGHT.edge }),
     gem(new Graphics(), -pw / 2 + 40, 0, 34),
   );
   count.x = 22;
@@ -126,11 +133,11 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
   const { w, h, wide } = fit;
   const bar = new Graphics();
   if (wide) {
-    bar.rect(0, 0, RAIL, h).fill(P.wood).rect(RAIL - 14, 0, 14, h).fill(P.brass).rect(RAIL - 14, 0, 4, h).fill(P.brassLight);
-    bar.rect(RAIL, 0, 5, h).fill(P.line);
+    bar.rect(0, 0, RAIL, h).fill(LIGHT.bar).rect(RAIL - 14, 0, 14, h).fill(P.brass).rect(RAIL - 14, 0, 4, h).fill(P.brassLight);
+    bar.rect(RAIL, 0, 4, h).fill(LIGHT.edge);
   } else {
-    bar.rect(0, h - NAV, w, NAV).fill(P.wood).rect(0, h - NAV, w, 14).fill(P.brass).rect(0, h - NAV + 2, w, 4).fill(P.brassLight);
-    bar.rect(0, h - NAV - 5, w, 5).fill(P.line);
+    bar.rect(0, h - NAV, w, NAV).fill(LIGHT.bar).rect(0, h - NAV, w, 14).fill(P.brass).rect(0, h - NAV + 2, w, 4).fill(P.brassLight);
+    bar.rect(0, h - NAV - 4, w, 4).fill(LIGHT.edge);
   }
   root.addChild(bar);
   HOME_TABS.forEach((id, i) => {
@@ -144,14 +151,14 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
       slot.addChild(
         new Graphics()
           .roundRect(-span / 2 + 14, -NAV / 2 + 18, span - 28, NAV - 40, 26)
-          .fill({ color: P.brass, alpha: 0.35 })
-          .stroke({ width: 4, color: P.brassLight, alpha: 0.8 }),
+          .fill({ color: P.brass, alpha: 0.25 })
+          .stroke({ width: 4, color: P.brass, alpha: 0.8 }),
       );
     }
     const icon = navIcon(id);
     if (big) {
       const lift = wide ? 0 : -34;
-      const md = medal(92, on ? 0x3c9a4a : P.woodDark);
+      const md = medal(92, on ? 0x3c9a4a : P.wood);
       md.y = lift - 14;
       icon.y = lift - 14;
       icon.scale.set(0.95);
@@ -160,10 +167,7 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit): voi
       icon.y = -22;
       icon.scale.set(on ? 0.95 : 0.8);
     }
-    const cap = label(t(`tabs.${id}`), 34, {
-      fill: on ? P.brassLight : P.soft,
-      stroke: { color: P.line, width: 6 },
-    });
+    const cap = ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink });
     cap.y = big ? (wide ? 92 : 70) : 58;
     slot.addChild(icon, cap);
     if (!on) slot.alpha = big ? 1 : 0.85;
@@ -182,7 +186,7 @@ function navIcon(id: HomeTab): Container {
 // ---- tabs ----
 
 /** The stage to fight, the enemies on it, the lineup and the button into battle. */
-function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
+function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, picked: HeroKind | null): void {
   const stageAt = (x: number, y: number, ax = 340) => {
     const p = plate(t('stage', { n: m.stage }), 64, 420);
     p.position.set(x, y);
@@ -197,7 +201,7 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area): voi
     root.addChild(p);
     arrow(-ax, '◀', m.stage > 1, -1);
     arrow(ax, '▶', m.stage < maxStage(m), 1);
-    const hp = label(t('stageHp', { n: stageHp(m.stage).toFixed(2) }), 38, { fill: P.soft, stroke: { color: P.line, width: 7 } });
+    const hp = ink(t('stageHp', { n: stageHp(m.stage).toFixed(2) }), 38);
     hp.position.set(x, y + 100);
     root.addChild(hp);
   };
@@ -219,18 +223,18 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area): voi
       s.anchor.set(0.5, 1);
       s.scale.set(400 / tex.height);
       s.position.set(lx, a.y + a.h - 260);
-      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.35 }), s);
+      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.2 }), s);
     }
     start(lx, a.y + a.h - 130);
     enemiesPanel(root, rx, a.y + 235, rw);
-    lineupPanel(root, m, act, rx, a.y + 680, rw);
+    lineupPanel(root, m, act, picked, rx, a.y + 700, rw);
   } else {
     stageAt(a.x + a.w / 2, a.y + 90);
     // the panels share the room between the stage and the button
     const free = a.h - 280 - 300;
-    const gap = Math.max(40, (free - 2 * 380) / 3);
+    const gap = Math.max(30, (free - 380 - LINEUP_H) / 3);
     enemiesPanel(root, a.x + a.w / 2, a.y + 280 + gap + 190, pw);
-    lineupPanel(root, m, act, a.x + a.w / 2, a.y + 280 + 2 * gap + 570, pw);
+    lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 280 + 2 * gap + 380 + LINEUP_H / 2, pw);
     start(a.x + a.w / 2, a.y + a.h - 150);
   }
 }
@@ -240,7 +244,7 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
   c.position.set(x, y);
   const p = plate(title, 40, 280);
   p.y = -h / 2 + 4;
-  c.addChild(woodPanel(w, h), p);
+  c.addChild(lightPanel(w, h), p);
   root.addChild(c);
   return c;
 }
@@ -252,7 +256,7 @@ function enemiesPanel(root: Container, x: number, y: number, w: number): void {
   ENEMY_KINDS.forEach((kind, i) => {
     const tile = new Container();
     tile.position.set((i - (ENEMY_KINDS.length - 1) / 2) * step, 30);
-    tile.addChild(paperCard(step - 20, 220, 22));
+    tile.addChild(lightTile(step - 20, 220, 22));
     const s = enemySprite(kind, 170);
     s.y = -4;
     tile.addChild(s);
@@ -265,21 +269,70 @@ function enemiesPanel(root: Container, x: number, y: number, w: number): void {
   });
 }
 
-/** The four potions that go into battle, with their levels; each opens its hero panel. */
-function lineupPanel(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, w: number): void {
-  const c = titledPanel(root, t('lineup'), x, y, w, 380);
-  const step = Math.min(210, (w - 80) / LEVELLED_HEROES.length);
-  LEVELLED_HEROES.forEach((kind, i) => {
-    const b = tappable(new Container(), () => act.panel(kind));
-    b.position.set((i - (LEVELLED_HEROES.length - 1) / 2) * step, 10);
-    b.addChild(new Graphics().ellipse(0, 86, 66, 16).fill({ color: 0x000000, alpha: 0.35 }));
-    const bt = bottle(kind, 190);
-    b.addChild(bt);
-    const lv = label(`Lv ${m.heroes[kind]}`, 34, { fill: P.cream, stroke: { color: P.line, width: 7 } });
-    lv.y = 126;
-    b.addChild(lv);
+const LINEUP_H = 430;
+
+/** Every potion in a row: the four going into battle ticked, the reserve dimmed, the locked
+ *  ones behind a padlock with the stage that opens them. Tapping one in the lineup swaps it
+ *  for the reserve (or for the reserve `picked` first, when there are several). */
+function lineupPanel(root: Container, m: MetaSave, act: HomeActions, picked: HeroKind | null, x: number, y: number, w: number): void {
+  const c = titledPanel(root, t('lineup'), x, y, w, LINEUP_H);
+  const step = Math.min(200, (w - 50) / HERO_KINDS.length);
+  const cw = step - 16;
+  const ch = 250;
+  const cy = -LINEUP_H / 2 + 70 + ch / 2;
+  HERO_KINDS.forEach((kind, i) => {
+    const open = heroUnlocked(m, kind);
+    const fielded = m.lineup.includes(kind);
+    const b = tappable(new Container(), () => act.lineup(kind));
+    b.position.set((i - (HERO_KINDS.length - 1) / 2) * step, cy);
+    b.addChild(lightTile(cw, ch, 20));
+    if (fielded) b.addChild(new Graphics().roundRect(-cw / 2 + 6, -ch / 2 + 6, cw - 12, ch - 12, 16).fill({ color: HERO_COLORS[kind], alpha: 0.25 }));
+    if (kind === picked) b.addChild(new Graphics().roundRect(-cw / 2 - 6, -ch / 2 - 6, cw + 12, ch + 12, 24).stroke({ width: 8, color: P.brass }));
+    const size = Math.min(150, cw - 24);
+    if (open) {
+      b.addChild(new Graphics().ellipse(0, -30 + size * 0.46, size * 0.34, size * 0.08).fill({ color: 0x000000, alpha: 0.18 }));
+      const bt = bottle(kind, size);
+      bt.y = -30;
+      b.addChild(bt);
+      const lv = ink(`Lv ${m.heroes[kind]}`, 32);
+      lv.y = ch / 2 - 40;
+      b.addChild(lv);
+    } else {
+      b.addChild(flask(new Graphics(), 0, -30 + size * 0.42, size * 0.84, 0x8a7d6a));
+      const l = lock(P.cream, 0x8a7d6a);
+      l.y = -30 + size * 0.1;
+      b.addChild(l);
+      const at = unlockStage(kind);
+      const note = fitText(ink(at ? t('stage', { n: at }) : t('codex.locked'), 28, { fill: P.inkSoft }), cw - 16);
+      note.y = ch / 2 - 40;
+      b.addChild(note);
+    }
+    if (fielded) {
+      const tick = new Container();
+      tick.position.set(cw / 2 - 24, -ch / 2 + 24);
+      tick.addChild(new Graphics().circle(0, 0, 24).fill(0x4cc35a).stroke({ width: 4, color: P.line }), label('✓', 30, { stroke: { color: P.line, width: 5 } }));
+      b.addChild(tick);
+    } else if (open) {
+      b.alpha = kind === picked ? 1 : 0.7;
+      // a chip in the corner the tick takes on a fielded potion, clear of the bottle
+      const tag = new Container();
+      tag.position.set(cw / 2 - 36, -ch / 2 + 24);
+      tag.addChild(new Graphics().roundRect(-32, -18, 64, 36, 18).fill(LIGHT.inset).stroke({ width: 3, color: LIGHT.edge }), fitText(ink(t('bench'), 22, { fill: P.inkSoft }), 56));
+      b.addChild(tag);
+    } else {
+      b.alpha = 0.8;
+    }
     c.addChild(b);
   });
+  // with no reserve yet, the hint says what opens the first locked potion
+  const locked = HERO_KINDS.find((k) => !heroUnlocked(m, k) && unlockStage(k) !== null);
+  const opens = locked ? `${t(`hero.${locked}`)}：${t('unlockAt', { n: unlockStage(locked) ?? 0 })}` : '';
+  const hint = benched(m).length === 0 ? opens : picked ? t('lineupPick') : t('lineupHint');
+  if (hint) {
+    const h = fitText(ink(hint, 30, { fill: P.inkSoft }), w - 60);
+    h.y = LINEUP_H / 2 - 72;
+    c.addChild(h);
+  }
 }
 
 /** A card per potion: portrait, level, the milestones reached and the level-up button. */
@@ -287,41 +340,60 @@ function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Area): vo
   const head = plate(t('potions'), 52);
   head.position.set(a.x + a.w / 2, a.y + 60);
   root.addChild(head);
-  const cols = a.wide ? 4 : 2;
-  const cw = a.wide ? Math.min(380, (a.w - 120) / 4 - 30) : 480;
+  // one row of five on a wide page; three over two on a portrait one
+  const n = HERO_KINDS.length;
+  const cols = a.wide ? n : 3;
+  const cw = Math.min(380, (a.w - 60) / cols - 30);
   const ch = a.wide ? 650 : 640;
-  LEVELLED_HEROES.forEach((kind, i) => {
+  HERO_KINDS.forEach((kind, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
+    const inRow = Math.min(cols, n - row * cols);
     const card = heroCard(m, act, kind, cw, ch);
-    card.position.set(a.x + a.w / 2 + (col - (cols - 1) / 2) * (cw + 30), a.y + 150 + ch / 2 + row * (ch + 40));
+    card.position.set(a.x + a.w / 2 + (col - (inRow - 1) / 2) * (cw + 30), a.y + 150 + ch / 2 + row * (ch + 40));
     root.addChild(card);
   });
 }
 
 function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch: number): Container {
   const lv = m.heroes[kind];
+  const open = heroUnlocked(m, kind);
   const c = tappable(new Container(), () => act.panel(kind));
   const top = -ch / 2;
   c.addChild(paperCard(cw, ch));
-  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(HERO_COLORS[kind]).stroke({ width: 4, color: P.line }));
-  const name = label(t(`hero.${kind}`), 42, { stroke: { color: P.line, width: 7 } });
+  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(open ? HERO_COLORS[kind] : 0x8a7d6a).stroke({ width: 4, color: LIGHT.edge }));
+  const name = fitText(label(t(`hero.${kind}`), 42, { stroke: { color: P.line, width: 7 } }), cw - 40);
   name.y = top + 50;
-  const glow = new Graphics().circle(0, top + 250, 120).fill({ color: HERO_COLORS[kind], alpha: 0.18 });
-  const bt = bottle(kind, 250);
+  const size = Math.min(250, cw - 40);
+  const glow = new Graphics().circle(0, top + 250, size * 0.48).fill({ color: HERO_COLORS[kind], alpha: open ? 0.18 : 0 });
+  const bt = open ? bottle(kind, size) : flask(new Graphics(), 0, size * 0.42, size * 0.84, 0x8a7d6a);
   bt.y = top + 250;
+  c.addChild(name, glow, bt);
+  if (!open) {
+    const l = lock(P.cream, 0x8a7d6a);
+    l.scale.set(1.4);
+    l.y = top + 270;
+    const at = unlockStage(kind);
+    const note = fitText(ink(at ? t('unlockAt', { n: at }) : t('codex.locked'), 36, { fill: P.inkSoft }), cw - 40);
+    note.y = top + 440;
+    c.addChild(l, note);
+    c.alpha = 0.85;
+    return c;
+  }
   const level = ink(`Lv ${lv}`, 50);
-  level.y = top + 420;
-  const dmg = ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 30, { fill: P.inkSoft });
-  dmg.y = top + 468;
-  c.addChild(name, glow, bt, level, dmg);
+  level.y = top + 404;
+  const dmg = fitText(ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 30, { fill: P.inkSoft }), cw - 30);
+  dmg.y = top + 450;
+  c.addChild(level, dmg);
   // the milestones as pips, lit once reached
   const ms = MILESTONES[kind];
+  const gap = Math.min(76, (cw - 30) / Math.max(1, ms.length));
+  const pw = Math.min(64, gap - 8);
   ms.forEach((s, i) => {
     const on = lv >= s.level;
     const pip = new Container();
-    pip.position.set((i - (ms.length - 1) / 2) * 76, top + 522);
-    pip.addChild(new Graphics().roundRect(-32, -20, 64, 40, 12).fill(on ? P.brass : P.paperDark).stroke({ width: 4, color: on ? P.line : P.inkSoft }));
+    pip.position.set((i - (ms.length - 1) / 2) * gap, top + 504);
+    pip.addChild(new Graphics().roundRect(-pw / 2, -20, pw, 40, 12).fill(on ? P.brass : P.paperDark).stroke({ width: 4, color: on ? P.line : P.inkSoft }));
     pip.addChild(ink(String(s.level), 26, { fill: on ? P.line : P.inkSoft }));
     c.addChild(pip);
   });
@@ -331,8 +403,8 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
     max.y = ch / 2 - 64;
     c.addChild(max);
   } else {
-    const b = new PillButton(String(cost), cw - 90, 100, 'purple', () => act.hero(kind), 44, true).setEnabled(m.crystals >= cost);
-    b.y = ch / 2 - 66;
+    const b = new PillButton(String(cost), cw - 90, 84, 'purple', () => act.hero(kind), 42, true).setEnabled(m.crystals >= cost);
+    b.y = ch / 2 - 54;
     c.addChild(b);
   }
   return c;
@@ -378,7 +450,7 @@ function soonTab(root: Container, tab: HomeTab, a: Area): void {
   const icon = navIcon(tab);
   icon.scale.set(1.6);
   icon.y = -10;
-  const s = label(t('soon'), 44, { fill: P.soft, stroke: { color: P.line, width: 7 } });
+  const s = ink(t('soon'), 44, { fill: P.inkSoft });
   s.y = 140;
   c.addChild(icon, s);
 }
@@ -395,13 +467,13 @@ function shopIcon(id: WorkshopId): Container {
  *  closes it. */
 function frame(act: HomeActions, title: string, h: number, fit: MenuFit): { panel: Container; box: Container } {
   const p = new Container();
-  const shade = new Graphics().rect(0, 0, fit.w, fit.h).fill({ color: 0x000000, alpha: 0.6 });
+  const shade = new Graphics().rect(0, 0, fit.w, fit.h).fill({ color: 0x3a2614, alpha: 0.45 });
   shade.eventMode = 'static';
   shade.on('pointertap', () => act.panel(null));
   const box = new Container();
   box.position.set(fit.w / 2, fit.h / 2 + 20);
   box.scale.set(Math.min(1, (fit.h - 80) / (h + 60)));
-  const bg = woodPanel(940, h);
+  const bg = lightPanel(940, h);
   bg.eventMode = 'static'; // taps on the panel itself do not close it
   const head = plate(title, 54, 420);
   head.y = -h / 2 + 6;
@@ -427,8 +499,8 @@ function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit):
     const tile = new Container();
     tile.position.set(last ? 210 : -315 + (i % 4) * 210, i < 4 ? -150 : 110);
     const lit = can && i === done;
-    tile.addChild(paperCard(w, 220, 24));
-    if (lit) tile.addChild(new Graphics().roundRect(-w / 2 - 6, -116, w + 12, 232, 28).stroke({ width: 8, color: P.brassLight }));
+    tile.addChild(lightTile(w, 220, 24));
+    if (lit) tile.addChild(new Graphics().roundRect(-w / 2 - 6, -116, w + 12, 232, 28).stroke({ width: 8, color: P.brass }));
     const day = ink(t('day', { n: i + 1 }), 34, { fill: lit ? P.brassDark : P.inkSoft });
     day.position.set(0, -76);
     const amount = ink(String(loginReward(i)), 40);
@@ -469,7 +541,7 @@ function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
       .stroke({ width: 4, color: P.line });
     const count = label(`${task.progress}/${goal}`, 28, { stroke: { color: P.line, width: 6 } });
     count.position.set(-190, 31);
-    r.addChild(paperCard(860, 160), desc, bar, count);
+    r.addChild(lightTile(860, 160), desc, bar, count);
     if (task.claimed) {
       const c = ink(t('claimed'), 40, { fill: P.inkSoft });
       c.position.set(270, 0);
@@ -493,17 +565,21 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
   const bt = bottle(kind, 220);
   bt.position.set(-300, top + 250);
   box.addChild(new Graphics().circle(-300, top + 250, 120).fill({ color: HERO_COLORS[kind], alpha: 0.2 }), bt);
-  const level = label(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56, { fill: P.brassLight, stroke: { color: P.line, width: 8 } });
+  const level = ink(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56);
   level.anchor.set(0, 0.5);
   level.position.set(-150, top + 210);
-  const dmg = label(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  const dmg = ink(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.inkSoft });
   dmg.anchor.set(0, 0.5);
   dmg.position.set(-150, top + 290);
   box.addChild(level, dmg);
 
-  const head = label(t('baseCards'), 38, { fill: P.brassLight, stroke: { color: P.line, width: 6 } });
+  const head = ink(t('baseCards'), 38, { fill: P.brassDark });
   head.position.set(0, top + 420);
-  const cards = label(baseSkills(kind).map((id) => t(`skill.${id}.name`)).join('  ·  '), 40, { stroke: { color: P.line, width: 6 } });
+  const base = baseSkills(kind).map((id) => t(`skill.${id}.name`)).join('  ·  ');
+  const P2 = BALANCE.heroes.poison;
+  const cards = base
+    ? ink(base, 40)
+    : fitText(ink(kind === 'poison' ? t('rust', { p: Math.round(P2.rustStep * 100), n: P2.rustMax }) : '', 34), 860);
   cards.position.set(0, top + 480);
   box.addChild(head, cards);
 
@@ -538,8 +614,8 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     const rh = Math.max(132, text.height + 32);
     r.position.set(0, y + rh / 2);
     y += rh + 18;
-    r.addChild(paperCard(860, rh, 22));
-    if (on) r.addChild(new Graphics().roundRect(-436, -rh / 2 - 6, 872, rh + 12, 26).stroke({ width: 7, color: P.brassLight }));
+    r.addChild(lightTile(860, rh, 22));
+    if (on) r.addChild(new Graphics().roundRect(-436, -rh / 2 - 6, 872, rh + 12, 26).stroke({ width: 7, color: P.brass }));
     text.position.set(-260, -text.height / 2);
     r.addChild(lvTag, text);
     if (on) {
