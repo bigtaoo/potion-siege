@@ -85,3 +85,15 @@ export function planWave(wave: number, rng: Rng, stage = 1, bossWaves: readonly 
   }
   return spawns;
 }
+
+/** The kinds that can come in `wave` of `stage`, in the order the codex lists them: what the
+ *  wide battle screen forecasts, without rolling the wave itself. */
+export function waveKinds(wave: number, stage: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves): EnemyKind[] {
+  const kinds: EnemyKind[] = ['grunt'];
+  if (wave >= FIRST_WAVE.runner) kinds.push('runner');
+  if (wave >= FIRST_WAVE.brute) kinds.push('brute');
+  if (wave >= FIRST_WAVE.flyer && flyerShare(stage) > 0) kinds.push('flyer');
+  if (onStage('winder', stage) && wave >= BALANCE.winder.wave) kinds.push('winder');
+  if (isBossWave(wave, bossWaves)) kinds.push('boss');
+  return kinds;
+}

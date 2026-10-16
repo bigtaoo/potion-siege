@@ -3,7 +3,7 @@ import { enemyStats, RESIST, resist, resistLabel, resists } from './enemies';
 import { heroUnlocked, newMeta, stageHp } from './meta';
 import { Rng } from './rng';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from './types';
-import { FIRST_STAGE, FIRST_WAVE, flyerShare, planWave } from './waves';
+import { FIRST_STAGE, FIRST_WAVE, flyerShare, planWave, waveKinds } from './waves';
 
 describe('enemy resistances', () => {
   it('defaults to full damage and keeps every listed value sensible', () => {
@@ -111,5 +111,19 @@ describe('hero unlocks', () => {
     expect(heroUnlocked(m, 'poison')).toBe(false);
     for (const kind of LINEUP) expect(heroUnlocked(m, kind)).toBe(true);
     expect(HERO_KINDS.filter((k) => heroUnlocked(m, k))).toEqual([...LINEUP]);
+  });
+});
+
+describe('wave forecast', () => {
+  it('names every kind a wave brings, and nothing the waves never bring', () => {
+    for (const stage of [1, 3, 6, 10, 15, 20]) {
+      for (let wave = 1; wave <= BALANCE.waves.count; wave++) {
+        const forecast = waveKinds(wave, stage);
+        const seen = new Set<string>();
+        for (let seed = 1; seed <= 40; seed++) planWave(wave, new Rng(seed), stage).forEach((s) => seen.add(s.kind));
+        for (const kind of seen) expect(forecast, `stage ${stage} wave ${wave}`).toContain(kind);
+        for (const kind of forecast) expect(seen.has(kind), `stage ${stage} wave ${wave} ${kind}`).toBe(true);
+      }
+    }
   });
 });

@@ -53,7 +53,8 @@ export const zh: Table = {
   noCrystals: '晶石不足',
   baseCards: '初始技能卡',
   unlockSkill: '解锁「{name}」技能卡',
-  unlockRecipe: '解锁配方「{name}」（需{with}在场）',
+  unlockRecipe: '解锁配方「{name}」',
+  recipeNeeds: '需{with}同时在场',
   perk: {
     fireBurnPlus: '「燃烧」伤害 +60%',
     arcaneMarkPlus: '「奥术印记」效果 +50%',
@@ -70,6 +71,18 @@ export const zh: Table = {
   double: '×2 晶石',
   doubled: '×2',
   damage: '伤害统计',
+  side: {
+    skills: '本局技能',
+    noSkills: '升级时挑选技能，会显示在这里',
+    waves: '波次预告',
+    wave: '第 {n} 波',
+    now: '进行中',
+    fresh: '新',
+    bossIn: 'BOSS 还有 {n} 波',
+    bossNow: '本波有 BOSS',
+    bossNext: '下一波有 BOSS',
+    last: '最后一波',
+  },
   mvp: 'MVP',
   tips: '变强攻略',
   tip: {

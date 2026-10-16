@@ -572,7 +572,7 @@ const DRAWN_ICONS: Partial<Record<SkillId, () => Container>> = {
 
 /** A card's picture: the bottle of the hero it belongs to (a recipe shows both), or the
  *  skill's own icon for the ones that serve every hero. */
-function cardIcon(id: SkillId, hero?: HeroKind, other?: HeroKind): Container | null {
+export function cardIcon(id: SkillId, hero?: HeroKind, other?: HeroKind): Container | null {
   const c = new Container();
   const bottle = (kind: HeroKind, h: number, x: number, y: number) => {
     const tex = ultimateTexture(kind);

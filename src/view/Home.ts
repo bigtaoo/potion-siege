@@ -1060,24 +1060,34 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     const lvTag = ink(`Lv.${ms.level}`, 38, { fill: on ? P.brassDark : P.inkSoft });
     lvTag.position.set(-350, 0);
     let what: string;
+    let needs = '';
     let detail = '';
     if ('perk' in ms) {
       what = t(`perk.${ms.perk}`);
     } else {
       const other = skillHeroes(ms.skill).with;
       const name = t(`skill.${ms.skill}.name`);
-      what = other ? t('unlockRecipe', { name, with: t(`hero.${other}`) }) : t('unlockSkill', { name });
+      what = other ? t('unlockRecipe', { name }) : t('unlockSkill', { name });
+      if (other) needs = t('recipeNeeds', { with: t(`hero.${other}`) });
       detail = t(`skill.${ms.skill}.desc`);
     }
-    // the line and its detail as one block, centred in the row however they wrap
+    // the line, what a recipe needs and the detail as one block with even gaps, centred in the row
     const text = new Container();
-    const a = inkWrapped(what, 34, 600, { align: 'left' });
+    const a = inkWrapped(what, 34, 600, { align: 'left', lineHeight: 42 });
     a.anchor.set(0, 0);
     text.addChild(a);
+    let ty = a.height + 6;
+    if (needs) {
+      const n = ink(needs, 26, { fill: P.brassDark });
+      n.anchor.set(0, 0);
+      n.y = ty;
+      text.addChild(n);
+      ty += n.height + 2;
+    }
     if (detail) {
-      const d = inkWrapped(detail, 26, 600, { fill: P.inkSoft, align: 'left' });
+      const d = inkWrapped(detail, 26, 600, { fill: P.inkSoft, align: 'left', lineHeight: 32 });
       d.anchor.set(0, 0);
-      d.y = a.height + 4;
+      d.y = ty;
       text.addChild(d);
     }
     // the row grows with a long recipe line
@@ -1086,7 +1096,8 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     y += rh + 18;
     r.addChild(lightTile(860, rh, 22));
     if (on) r.addChild(new Graphics().roundRect(-436, -rh / 2 - 6, 872, rh + 12, 26).stroke({ width: 7, color: P.brass }));
-    text.position.set(-260, -text.height / 2);
+    // a CJK opening bracket carries its blank half on the left; pull it back to the column edge
+    text.position.set(what.startsWith('「') ? -277 : -260, -text.height / 2);
     r.addChild(lvTag, text);
     if (on) {
       const tick = label('✓', 52, { fill: 0x5cc66a, stroke: { color: P.line, width: 8 } });

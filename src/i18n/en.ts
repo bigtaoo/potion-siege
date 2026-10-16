@@ -52,7 +52,8 @@ export const en = {
   noCrystals: 'Not enough crystals',
   baseCards: 'Starting skill cards',
   unlockSkill: 'Unlocks the {name} card',
-  unlockRecipe: 'Unlocks the {name} recipe (needs {with} fielded too)',
+  unlockRecipe: 'Unlocks the {name} recipe',
+  recipeNeeds: 'Needs {with} fielded too',
   perk: {
     fireBurnPlus: 'Burn +60% damage',
     arcaneMarkPlus: 'Arcane Mark +50% effect',
@@ -69,6 +70,18 @@ export const en = {
   double: '×2 crystals',
   doubled: '×2',
   damage: 'Damage dealt',
+  side: {
+    skills: 'Skills this run',
+    noSkills: 'Skills you pick on upgrades show up here',
+    waves: 'Coming up',
+    wave: 'Wave {n}',
+    now: 'Now',
+    fresh: 'NEW',
+    bossIn: 'Boss in {n} waves',
+    bossNow: 'Boss this wave',
+    bossNext: 'Boss next wave',
+    last: 'Final wave',
+  },
   mvp: 'MVP',
   tips: 'How to get stronger',
   tip: {

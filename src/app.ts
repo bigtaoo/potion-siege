@@ -28,6 +28,7 @@ import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
 import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
+import { SideInfo } from './view/SideInfo';
 import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
@@ -91,6 +92,8 @@ class Game {
   private tutorial: Tutorial | null = null;
   /** The workshop wall beside the board when the screen is wider than it. */
   private readonly wall = new Container();
+  /** On the wall: the skills and damage on the left, the coming waves on the right. */
+  private readonly side = new SideInfo();
   private wallSize = '';
   /** The home screen, laid out on the whole screen rather than the battle's board. */
   private readonly menu = new Container();
@@ -138,7 +141,7 @@ class Game {
     );
     this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
-    app.stage.addChild(this.wall, this.root, this.overlay, this.lessons, this.menu);
+    app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu);
     app.ticker.add((ticker) => this.tick(Math.min(ticker.deltaMS / 1000, 0.1)));
   }
 
@@ -196,6 +199,7 @@ class Game {
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);
     this.sideWall(fit.x, m);
+    this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt);
     // the workshop tune on the menus and the title, the battle loop while a battle runs
     this.audio.music(this.menu.visible || !this.run ? 'workshop' : this.ended ? null : 'battle');
 
