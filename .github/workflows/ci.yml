@@ -1,0 +1,116 @@
+name: ci
+
+# Every push and pull request runs `npm run check` (typecheck, tests, the CrazyGames build). A
+# push to main that passes then ships the telemetry collector to blightbloom (ps.gamestao.com,
+# server/) and, after it, publishes the web build to Cloudflare at p.gamestao.com
+# (wrangler/web.jsonc). Same shape as D:\standing's ci.yml. A push that leaves the collector
+# unchanged restarts nothing (server/ci-deploy.sh compares the files). The CrazyGames zip is
+# built too and kept as a run artifact, for uploading on the developer portal by hand.
+#
+# The deploys need, in Settings -> Secrets and variables -> Actions:
+#   Secrets    CLOUDFLARE_API_TOKEN   gamestao.com account, at least Workers Scripts:Edit
+#              CLOUDFLARE_ACCOUNT_ID
+#              SERVER_DEPLOY_KEY      ssh key that can only run ci-deploy.sh on the box
+#                                     (local copy D:\cloud\potion_siege_ci_ed25519; server/README.md)
+#   Variables  WEB_DEPLOY_ENABLED = true, SERVER_DEPLOY_ENABLED = true   (unset: that deploy
+#                                     is skipped, so CI stays green before the secrets are in)
+#              SERVER_SSH_KNOWN_HOSTS   the box's pinned host key line
+#
+# Both builds send telemetry to https://ps.gamestao.com/e (.env.production).
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch: {}
+
+# a newer push cancels an older run, except on main, where a deploy may be halfway through
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npm run check
+      - name: zip the CrazyGames build
+        run: cd dist-crazygames && zip -qr ../potion-siege-crazygames.zip .
+      - uses: actions/upload-artifact@v4
+        with:
+          name: potion-siege-crazygames
+          path: potion-siege-crazygames.zip
+          retention-days: 30
+
+  deploy-server:
+    needs: check
+    runs-on: ubuntu-latest
+    if: ${{ vars.SERVER_DEPLOY_ENABLED == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: server-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/checkout@v5
+      - name: deploy over ssh
+        env:
+          DEPLOY_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
+          SSH_KNOWN_HOSTS: ${{ vars.SERVER_SSH_KNOWN_HOSTS }}
+        run: |
+          set -eu
+          install -m 700 -d ~/.ssh
+          echo "$DEPLOY_KEY" > ~/.ssh/deploy_key
+          chmod 600 ~/.ssh/deploy_key
+          # pinned, never StrictHostKeyChecking=no: the key and payload go only to this box
+          echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
+          mkdir -p payload
+          cp scripts/collector.mjs server/Dockerfile server/docker-compose.yml payload/
+          # the forced command on the box reads this tar.gz from stdin (server/ci-deploy.sh)
+          tar czf - -C payload collector.mjs Dockerfile docker-compose.yml |
+            ssh -T -i ~/.ssh/deploy_key -o IdentitiesOnly=yes deploy@62.238.1.182
+      - name: verify from the outside
+        run: |
+          set -eu
+          for i in $(seq 1 10); do
+            if curl -fsS --max-time 10 https://ps.gamestao.com/health; then echo; exit 0; fi
+            sleep 3
+          done
+          echo "ps.gamestao.com/health did not answer" >&2
+          exit 1
+
+  deploy-web:
+    needs: [check, deploy-server]
+    runs-on: ubuntu-latest
+    # runs when the server deploy succeeded or was switched off, never after it failed
+    if: ${{ !cancelled() && needs.check.result == 'success' && contains(fromJSON('["success","skipped"]'), needs.deploy-server.result) && vars.WEB_DEPLOY_ENABLED == 'true' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main' }}
+    concurrency:
+      group: web-deploy
+      cancel-in-progress: true
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: build web
+        run: npm run build
+      - name: deploy to Cloudflare
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: npx -y wrangler@4.118.0 deploy -c wrangler/web.jsonc
+      - name: verify from the outside
+        run: |
+          set -eu
+          for i in $(seq 1 10); do
+            if curl -fsS --max-time 10 -o /dev/null https://p.gamestao.com/; then exit 0; fi
+            sleep 3
+          done
+          echo "p.gamestao.com did not answer" >&2
+          exit 1

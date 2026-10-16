@@ -1,0 +1,2 @@
+# ci-deploy.sh runs on the box; a CRLF copy dies with `$'\r': command not found`.
+*.sh text eol=lf

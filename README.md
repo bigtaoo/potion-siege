@@ -60,7 +60,7 @@ In dev, `window.__game` exposes the running game.
   - runs: `run_start`, `wave_start`, `skill_pick`, `run_end`, `run_quit`
   - ads: `ad_offer`, `ad_result`, `ad_midgame`
 - Every event carries `day` (calendar days since the first session) and `session` (1 is the first ever).
-- **Collect**: run `npm run collector` (port 8787; it writes `telemetry/events.ndjson`). Then build with `VITE_ANALYTICS_URL=https://your-host/e`, for example in `.env.production.local`. Without that variable nothing is sent.
+- **Collect**: production builds (web and CrazyGames) send to `https://ps.gamestao.com/e` (`.env.production`), the collector on the VPS (`server/README.md`). Locally, run `npm run collector` (port 8787; it writes `telemetry/events.ndjson`) and build with `VITE_ANALYTICS_URL=http://localhost:8787/e` in `.env.production.local`. Dev and `?autoplay` send nothing.
 - **Report**: `npm run report -- telemetry/events.ndjson` prints:
   - retention: D1, D2, D3, D7, D14 and D30
   - the first-session funnel and session length
@@ -90,9 +90,13 @@ In dev, `window.__game` exposes the running game.
 - `public/`: the game's images. `art/` holds their sources and prompts, and `tools/` the Python scripts that cut and flatten them.
 - `docs/`: the art plan, the retention teardown and the store listing (`store-listing.md`).
 
+## Deploying
+
+`.github/workflows/ci.yml` runs `npm run check` on every push and pull request. A green push to `main` then deploys the telemetry collector to the VPS (`server/README.md`) and the web build to https://p.gamestao.com (Cloudflare, `wrangler/web.jsonc`). Each deploy runs only when its repo Variable (`SERVER_DEPLOY_ENABLED`, `WEB_DEPLOY_ENABLED`) is `true`; the secrets it needs are listed at the top of `ci.yml`.
+
 ## Uploading to CrazyGames
 
-1. Run `npm run check`; it must be green.
+1. Run `npm run check`; it must be green. Or take the `potion-siege-crazygames` zip from a green CI run's artifacts and skip step 2.
 2. Zip the **contents** of `dist-crazygames/`, with `index.html` at the root of the zip.
 3. Upload the zip in the CrazyGames developer portal, with the texts and covers from `docs/store-listing.md`.
 4. Test it in the portal's QA tool:
