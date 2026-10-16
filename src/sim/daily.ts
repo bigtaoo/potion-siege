@@ -25,6 +25,8 @@ export interface DailySave {
   claims: number;
   /** The day of the last login claim. */
   lastClaim: string;
+  /** Today's bonus for claiming all three tasks was paid. */
+  bonus: boolean;
 }
 
 /** The local calendar date of `now`. */
@@ -34,7 +36,7 @@ export function dayOf(now: Date): string {
 }
 
 export function newDaily(): DailySave {
-  return { day: '', tasks: [], claims: 0, lastClaim: '' };
+  return { day: '', tasks: [], claims: 0, lastClaim: '', bonus: false };
 }
 
 /** Reads the stored daily part, dropping anything that does not fit. */
@@ -45,6 +47,7 @@ export function parseDaily(v: unknown): DailySave {
   if (typeof d.day === 'string') out.day = d.day;
   if (typeof d.lastClaim === 'string') out.lastClaim = d.lastClaim;
   out.claims = Math.max(0, Math.floor(Number(d.claims)) || 0);
+  out.bonus = d.bonus === true;
   if (Array.isArray(d.tasks)) {
     for (const t of d.tasks as Record<string, unknown>[]) {
       if (!t || !TASK_IDS.includes(t.id as TaskId)) continue;
@@ -65,6 +68,7 @@ export function hash(s: string): number {
 export function rollDay(m: MetaSave, today: string): void {
   if (m.daily.day === today) return;
   m.daily.day = today;
+  m.daily.bonus = false;
   m.daily.tasks = new Rng(hash(today)).sample(TASK_IDS, D.taskCount).map((id) => ({ id, progress: 0, claimed: false }));
 }
 
@@ -114,7 +118,22 @@ export function claimLogin(m: MetaSave, today: string): number {
   return reward;
 }
 
-/** Something on the daily screens waits to be claimed. */
+/** Crystals for claiming all of today's tasks. */
+export const ALL_DONE_BONUS = D.allDone;
+
+/** Every task of today is claimed and the bonus for it is not yet. */
+export function bonusReady(m: MetaSave): boolean {
+  return !m.daily.bonus && m.daily.tasks.length > 0 && m.daily.tasks.every((t) => t.claimed);
+}
+
+export function claimBonus(m: MetaSave): number {
+  if (!bonusReady(m)) return 0;
+  m.daily.bonus = true;
+  m.crystals += D.allDone;
+  return D.allDone;
+}
+
+/** Something on the tasks panel waits to be claimed. */
 export function tasksClaimable(m: MetaSave): boolean {
-  return m.daily.tasks.some((t) => !t.claimed && taskDone(t));
+  return m.daily.tasks.some((t) => !t.claimed && taskDone(t)) || bonusReady(m);
 }

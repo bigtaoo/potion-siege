@@ -110,11 +110,11 @@ export interface Vortex {
 export type BattleEvent =
   | { type: 'hit'; kind: HeroKind; x: number; y: number; radius: number }
   | { type: 'chain'; points: { x: number; y: number }[] }
-  | { type: 'kill'; x: number; y: number; gold: number; boss: boolean }
+  | { type: 'kill'; kind: EnemyKind; x: number; y: number; gold: number; boss: boolean }
   /** A hero in this slot just threw. */
   | { type: 'shot'; slot: number; projectile: number }
   | { type: 'summon'; slot: number }
-  | { type: 'merge'; slot: number; star: number }
+  | { type: 'merge'; slot: number; star: number; kind: HeroKind }
   /** Enough summons for the commander to build a new cell onto the wall. */
   | { type: 'cellOpen'; slot: number; last: boolean }
   | { type: 'wave'; wave: number; boss: boolean }

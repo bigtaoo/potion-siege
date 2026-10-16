@@ -234,6 +234,7 @@
   "daily": {
     "login": [50, 80, 120, 160, 200, 250, 500],
     "taskCount": 3,
+    "allDone": 50,
     "tasks": {
       "play": { "n": 3, "reward": 60 },
       "win": { "n": 1, "reward": 80 },

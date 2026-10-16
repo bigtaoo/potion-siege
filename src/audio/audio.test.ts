@@ -103,7 +103,7 @@ describe('cues', () => {
   it('maps battle events to sounds', () => {
     const ids = battleCues([
       { type: 'hit', kind: 'ice', x: 0, y: 0, radius: 10 },
-      { type: 'kill', x: 1080, y: 0, gold: 1, boss: false },
+      { type: 'kill', kind: 'grunt', x: 1080, y: 0, gold: 1, boss: false },
       { type: 'wave', wave: 5, boss: true },
       { type: 'end', won: true },
     ]).map((c) => c.id);

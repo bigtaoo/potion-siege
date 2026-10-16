@@ -11,7 +11,8 @@ import { t } from '../i18n';
 import {
   bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, challengeFresh, msToTomorrow, streak, tierOf, todaysChallenge,
 } from '../sim/challenge';
-import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
+import { achievementsClaimable, type TrackId } from '../sim/achievements';
+import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { onStage } from '../sim/waves';
@@ -64,14 +65,19 @@ export type HomePanel = 'login' | 'tasks' | 'settings' | HeroKind | null;
 export interface HomeActions {
   tab(tab: HomeTab): void;
   panel(p: HomePanel): void;
-  claimLogin(): void;
-  claimTask(index: number): void;
+  /** The claims pass the button tapped, where their crystals fly from. */
+  claimLogin(at: Container): void;
+  claimTask(index: number, at: Container): void;
+  /** The bonus for claiming all of today's tasks. */
+  claimBonus(at: Container): void;
+  /** The next tier of an achievement track. */
+  claimTier(id: TrackId, at: Container): void;
   stage(delta: number): void;
   hero(kind: HeroKind): void;
   /** A potion on the battle tab's lineup row was tapped. */
   lineup(kind: HeroKind): void;
   workshop(id: WorkshopId): void;
-  claimChest(): void;
+  claimChest(at: Container): void;
   /** The shop's rewarded ad for crystals. */
   watchAd(): void;
   /** Buys a locked potion early. */
@@ -119,13 +125,14 @@ export function buildHome(
   if (tab === 'battle') battleTab(root, m, act, area, picked, today, ads);
   else if (tab === 'potions') potionsTab(root, m, act, area);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
-  else if (tab === 'codex') root.addChild(buildCodex(m, area));
+  else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier));
   else shopTab(root, m, act, area, today, ads);
   topBar(root, m, act, today, left, w, wide);
   nav(root, act, tab, fit, {
     potions: canUpgradePotion(m),
     workshop: canUpgradeWorkshop(m),
     shop: chestReady(m, today),
+    codex: achievementsClaimable(m),
     // the challenge calls only once it is open, not on the first battles
     battle: challengeOpen(m) && challengeFresh(m, today),
   });
@@ -161,6 +168,9 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
   const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });
   const pw = Math.max(240, count.width + 120);
   const purse = new Container();
+  // found by the claim animation, which flies crystals into it
+  purse.label = 'purse';
+  count.label = 'purseCount';
   purse.position.set(w - 40 - pw / 2, y);
   purse.addChild(
     new Graphics().roundRect(-pw / 2, -40, pw, 80, 40).fill(LIGHT.inset).stroke({ width: 4, color: LIGHT.edge }),
@@ -673,7 +683,7 @@ function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: strin
   const ready = chestReady(m, today);
   const left = adsLeft(m, today);
   const chest = offerCard(cw, ch, chestIcon(), t('store.chest.name'), t('store.chest.desc'), CHEST_CRYSTALS, !ready);
-  const open = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', act.claimChest, ready ? 46 : 34).setEnabled(ready);
+  const open: PillButton = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', () => act.claimChest(open), ready ? 46 : 34).setEnabled(ready);
   open.y = ch / 2 - 74;
   chest.addChild(open);
   const can = ads && left > 0;
@@ -903,19 +913,20 @@ function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit):
     }
     box.addChild(tile);
   }
-  const claim = new PillButton(can ? t('claim') : t('tomorrow'), 520, 140, 'green', act.claimLogin, 52).setEnabled(can);
+  const claim: PillButton = new PillButton(can ? t('claim') : t('tomorrow'), 520, 140, 'green', () => act.claimLogin(claim), 52).setEnabled(can);
   claim.position.set(0, h / 2 - 110);
   box.addChild(claim);
   return panel;
 }
 
-/** Today's three tasks: what to do, how far along, and the claim button. */
+/** Today's three tasks: what to do, how far along, and the claim button; then the bonus for
+ *  claiming all three. */
 function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const h = 690;
+  const h = 870;
   const { panel, box } = frame(act, t('tasks'), h, fit);
   m.daily.tasks.forEach((task, i) => {
     const r = new Container();
-    r.position.set(0, -165 + i * 190);
+    r.position.set(0, -255 + i * 190);
     const goal = taskGoal(task.id);
     const desc = ink(t(`task.${task.id}`, { n: goal }), 40);
     desc.anchor.set(0, 0.5);
@@ -936,13 +947,41 @@ function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
       c.position.set(270, 0);
       r.addChild(c);
     } else {
-      const b = new PillButton(String(taskReward(task.id)), 250, 100, 'green', () => act.claimTask(i), 44, true).setEnabled(taskDone(task));
+      const b: PillButton = new PillButton(String(taskReward(task.id)), 250, 100, 'green', () => act.claimTask(i, b), 44, true).setEnabled(taskDone(task));
       b.position.set(270, -4);
       r.addChild(b);
     }
     box.addChild(r);
   });
+  box.addChild(bonusRow(m, act));
   return panel;
+}
+
+/** The chest for claiming all of today's tasks: how many are claimed, and its button. */
+function bonusRow(m: MetaSave, act: HomeActions): Container {
+  const r = new Container();
+  r.position.set(0, 330);
+  const icon = chestIcon();
+  icon.scale.set(0.8);
+  icon.position.set(-360, 0);
+  const n = m.daily.tasks.filter((task) => task.claimed).length;
+  const name = fitText(ink(t('allDone'), 40), 440);
+  name.anchor.set(0, 0.5);
+  name.position.set(-290, -22);
+  const sub = ink(t('allDoneCount', { n, total: m.daily.tasks.length }), 30, { fill: P.inkSoft });
+  sub.anchor.set(0, 0.5);
+  sub.position.set(-290, 28);
+  r.addChild(paperCard(860, 140), icon, name, sub);
+  if (m.daily.bonus) {
+    const c = ink(t('claimed'), 40, { fill: P.inkSoft });
+    c.position.set(270, 0);
+    r.addChild(c);
+  } else {
+    const b: PillButton = new PillButton(String(ALL_DONE_BONUS), 250, 100, 'green', () => act.claimBonus(b), 44, true).setEnabled(bonusReady(m));
+    b.position.set(270, -4);
+    r.addChild(b);
+  }
+  return r;
 }
 
 /** The settings: the music and sound effects toggles. */

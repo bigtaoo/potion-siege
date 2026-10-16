@@ -2,6 +2,7 @@
 // levels and workshop upgrades, and the stages, each one tougher than the last. Pure data and
 // rules; the shell loads and stores it and the battle only sees the resulting BattleSetup.
 
+import { newAchievements, parseAchievements, type AchievementSave } from './achievements';
 import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import type { SkillId } from './skills';
@@ -35,6 +36,7 @@ export interface MetaSave {
   challenge: ChallengeSave;
   /** The settings' music and sound effects toggles. */
   sound: { music: boolean; sfx: boolean };
+  achievements: AchievementSave;
 }
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
@@ -95,6 +97,7 @@ export function newMeta(): MetaSave {
     tutorial: false,
     challenge: newChallenge(),
     sound: { music: true, sfx: true },
+    achievements: newAchievements(),
   };
 }
 
@@ -139,6 +142,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.challenge = parseChallenge(data.challenge);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
   out.sound = { music: sound.music !== false, sfx: sound.sfx !== false };
+  out.achievements = parseAchievements(data.achievements, out.cleared);
   return out;
 }
 
