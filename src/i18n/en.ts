@@ -98,7 +98,7 @@ export const en = {
     iceShatter: { name: 'Shatter', desc: 'Frozen deaths shatter: 40% max HP around' },
     iceLightning: { name: 'Superconduct', desc: 'Lightning +50% damage to slowed or frozen' },
     lightningDamage: { name: 'Thunder', desc: 'Lightning tonics +40% damage' },
-    lightningStatic: { name: 'Static', desc: 'Lightning charges foes; another hit adds 40%' },
+    lightningStatic: { name: 'Static', desc: 'Lightning charges foes; a hit by another tonic adds 40%' },
     lightningStrike: { name: 'Thunderstrike', desc: 'Every 4th bolt calls a sky strike, 150% around' },
     lightningFire: { name: 'Plasma', desc: 'Lightning burns for 3s, 20% per second, as fire' },
   },

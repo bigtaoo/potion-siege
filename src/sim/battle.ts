@@ -179,6 +179,9 @@ export class Battle {
     }
     if (!this.canMerge(from, to)) return false;
     const star = a.star + 1;
+    // the merged hero is a new one: its sky-strike count starts over
+    this.shotCount.delete(a.id);
+    this.shotCount.delete(this.slots[to]!.id);
     this.slots[from] = null;
     const kind = this.rng.pick(LINEUP);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: 0.2 };
@@ -284,6 +287,7 @@ export class Battle {
       scorchTime: 0,
       markTime: 0,
       chill: 0,
+      chillTime: 0,
       charge: 0,
       chargeTime: 0,
       atWall: false,
@@ -307,6 +311,8 @@ export class Battle {
       e.markTime = Math.max(0, e.markTime - dt);
       e.chargeTime = Math.max(0, e.chargeTime - dt);
       if (e.chargeTime <= 0) e.charge = 0;
+      e.chillTime = Math.max(0, e.chillTime - dt);
+      if (e.chillTime <= 0) e.chill = 0;
       e.slowTime = Math.max(0, e.slowTime - dt);
       if (e.freezeTime > 0) {
         e.freezeTime -= dt;
@@ -465,9 +471,13 @@ export class Battle {
       this.slow(target, h.ice.slow, h.ice.slowTime);
       if (target.kind !== 'boss') {
         if (this.rng.next() < this.mods.freezeChance) this.freeze(target, S.iceFreezeTime);
-        if (this.mods.frostbite && ++target.chill >= S.frostbiteStacks) {
-          target.chill = 0;
-          this.freeze(target, S.frostbiteFreeze);
+        if (this.mods.frostbite && target.freezeTime <= 0) {
+          // no stacking while it is frozen anyway
+          target.chillTime = S.frostbiteTime;
+          if (++target.chill >= S.frostbiteStacks) {
+            target.chill = 0;
+            this.freeze(target, S.frostbiteFreeze);
+          }
         }
       }
     } else if (p.kind === 'poison') {
@@ -532,10 +542,19 @@ export class Battle {
     }
   }
 
-  /** Slows, keeping a stronger slow already on it. */
+  /** Slows. A weaker slow leaves a stronger one still running alone (it must not stretch it);
+   *  a stronger one replaces it with its own time; the same one refreshes it. */
   private slow(e: Enemy, amount: number, time: number): void {
-    e.slowFactor = e.slowTime > 0 ? Math.min(e.slowFactor, 1 - amount) : 1 - amount;
-    e.slowTime = Math.max(e.slowTime, time);
+    const factor = 1 - amount;
+    if (e.slowTime > 0) {
+      if (factor > e.slowFactor) return;
+      if (factor === e.slowFactor) {
+        e.slowTime = Math.max(e.slowTime, time);
+        return;
+      }
+    }
+    e.slowFactor = factor;
+    e.slowTime = time;
   }
 
   private freeze(e: Enemy, time: number): void {

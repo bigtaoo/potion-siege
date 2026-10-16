@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
 import { battleSetup, newMeta } from './meta';
 import { Rng } from './rng';
-import { emptySkills, perksFor, rollChoices, SKILL_IDS, type SkillId } from './skills';
+import { emptySkills, mods, perksFor, rollChoices, SKILL_IDS, type SkillId } from './skills';
 import { BALANCE, type Enemy, type HeroKind } from './types';
 
 /** Every skill any roll could offer with these heroes fielded at these levels. */
@@ -23,7 +23,7 @@ function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
   const e: Enemy = {
     id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
     slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, charge: 0, chargeTime: 0, atWall: false,
+      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
   };
   b.enemies.push(e);
   return e;
@@ -277,5 +277,141 @@ describe('arcane, ice and lightning lines', () => {
     hit(b, 'lightning', e, 100);
     expect(e.burnDps).toBeCloseTo(100 * BALANCE.skills.plasmaBurn);
     expect(e.scorchTime).toBeGreaterThan(0);
+  });
+
+  it('raises ice and lightning damage with their concentrate cards', () => {
+    const m = mods({ ...emptySkills(), iceDamage: 2, lightningDamage: 3 });
+    expect(m.damage('ice')).toBeCloseTo(1 + 2 * BALANCE.skills.classDamage);
+    expect(m.damage('lightning')).toBeCloseTo(1 + 3 * BALANCE.skills.classDamage);
+    expect(m.damage('fire')).toBe(1);
+  });
+
+  it('never stretches a strong slow with a weaker one', () => {
+    const b = withSkills(['arcaneIce']);
+    const e = enemy(b, 500, 600, 1e9);
+    hit(b, 'ice', e, 1);
+    const strong = 1 - BALANCE.heroes.ice.slow;
+    expect(e.slowFactor).toBeCloseTo(strong);
+    // frost bolts keep landing well past the ice slow's own time
+    for (let t = 0; t < BALANCE.heroes.ice.slowTime + 0.5; t += 1 / 60) hit(b, 'arcane', e, 1);
+    expect(e.slowFactor).toBeCloseTo(1 - BALANCE.skills.frostBoltSlow);
+    expect(e.slowTime).toBeLessThanOrEqual(BALANCE.skills.frostBoltTime);
+  });
+
+  it('lets the arcane mark wear off', () => {
+    const b = withSkills(['arcaneMark']);
+    const e = enemy(b, 500, 600, 1e6);
+    hit(b, 'arcane', e, 100);
+    for (let t = 0; t < BALANCE.skills.markTime + 0.1; t += 1 / 60) b.step(1 / 60);
+    const before = e.hp;
+    hit(b, 'ice', e, 100);
+    expect(before - e.hp).toBeCloseTo(100);
+  });
+
+  it('marks make poison and burn ticks hurt more too', () => {
+    const b = withSkills(['arcaneMark']);
+    const poisoned = enemy(b, 500, 600, 1e6);
+    const burning = enemy(b, 800, 600, 1e6);
+    for (const e of [poisoned, burning]) e.markTime = 10;
+    poisoned.poisonDps = 60;
+    poisoned.poisonTime = 10;
+    burning.burnDps = 60;
+    burning.burnTime = 10;
+    b.step(1 / 60);
+    expect(1e6 - poisoned.hp).toBeCloseTo(1 + BALANCE.skills.arcaneMark);
+    expect(1e6 - burning.hp).toBeCloseTo(1 + BALANCE.skills.arcaneMark);
+  });
+
+  it('lets static wear off, and fire splash sets it off', () => {
+    const b = withSkills(['lightningStatic']);
+    const old = enemy(b, 500, 600, 1e6);
+    hit(b, 'lightning', old, 100);
+    for (let t = 0; t < BALANCE.skills.staticTime + 0.1; t += 1 / 60) b.step(1 / 60);
+    expect(old.charge).toBe(0);
+    b.enemies = [];
+    const e = enemy(b, 500, 600, 1e6);
+    hit(b, 'lightning', e, 100);
+    const before = e.hp;
+    hit(b, 'fire', e, 10);
+    expect(before - e.hp).toBeCloseTo(10 + 100 * BALANCE.skills.lightningStatic);
+  });
+
+  it('splits only once, even when the split bolts kill', () => {
+    const b = withSkills(['arcaneSplit']);
+    const victim = enemy(b, 500, 600, 50);
+    const a = enemy(b, 600, 600, 10);
+    const c = enemy(b, 400, 600, 10);
+    const d = enemy(b, 700, 600, 1e6); // next to a: a second split would reach it
+    hit(b, 'arcane', victim, 100);
+    let splits = 0;
+    const seen = new Set<number>();
+    for (let i = 0; i < 60; i++) {
+      for (const p of b.projectiles) if (p.split && !seen.has(p.id)) (seen.add(p.id), splits++);
+      b.step(1 / 60);
+    }
+    expect(b.enemies).not.toContain(a);
+    expect(b.enemies).not.toContain(c);
+    expect(splits).toBe(BALANCE.skills.splitBolts);
+    expect(d.hp).toBe(1e6);
+  });
+
+  it('counts a frozen enemy as chilled for superconduct', () => {
+    const b = withSkills(['iceLightning']);
+    const e = enemy(b, 500, 600, 1e6);
+    e.freezeTime = 1;
+    hit(b, 'lightning', e, 100);
+    expect(e.hp).toBeCloseTo(1e6 - 100 * (1 + BALANCE.skills.superconduct));
+  });
+
+  it('stops frostbite stacking while frozen, and lets the stacks wear off', () => {
+    const b = withSkills(['iceFrostbite']);
+    const e = enemy(b, 500, 600, 1e6);
+    e.freezeTime = 1;
+    hit(b, 'ice', e, 1);
+    expect(e.chill).toBe(0);
+    e.freezeTime = 0;
+    hit(b, 'ice', e, 1);
+    expect(e.chill).toBe(1);
+    for (let t = 0; t < BALANCE.skills.frostbiteTime + 0.1; t += 1 / 60) b.step(1 / 60);
+    expect(e.chill).toBe(0);
+  });
+
+  it('lets a plasma kill set off the fire chain blast', () => {
+    const near = (skills: SkillId[]) => {
+      const b = withSkills(skills);
+      enemy(b, 500, 600, 50);
+      const n = enemy(b, 560, 600, 1e6);
+      hit(b, 'lightning', b.enemies[0], 100);
+      return 1e6 - n.hp;
+    };
+    expect(near(['lightningFire', 'fireChain']) - near(['lightningFire'])).toBeCloseTo(100 * BALANCE.skills.fireChain);
+  });
+
+  it('shatters on: a frozen enemy killed by shards shatters too', () => {
+    const b = withSkills(['iceShatter']);
+    const victim = enemy(b, 500, 600, 50);
+    const mid = enemy(b, 600, 600, 1);
+    mid.maxHp = 100;
+    const far = enemy(b, 740, 600, 1e6); // out of the first burst's reach
+    victim.freezeTime = 1;
+    mid.freezeTime = 1;
+    hit(b, 'arcane', victim, 100);
+    b.step(1 / 60);
+    expect(b.enemies).not.toContain(mid);
+    expect(far.hp).toBeCloseTo(1e6 - 100 * BALANCE.skills.shatter);
+  });
+
+  it('starts the sky-strike count over for a merged hero', () => {
+    const b = withSkills(['lightningStrike']);
+    const open = b.slots.map((_, i) => i).filter((i) => b.isOpen(i));
+    const [s0, s1] = open;
+    b.slots[s0] = { id: 77, kind: 'lightning', star: 1, slot: s0, cooldown: 0 };
+    b.slots[s1] = { id: 78, kind: 'lightning', star: 1, slot: s1, cooldown: 0 };
+    enemy(b, 500, 600, 1e9);
+    const counts = (b as unknown as { shotCount: Map<number, number> }).shotCount;
+    for (let i = 0; i < 60 * 3 && !(counts.has(77) && counts.has(78)); i++) b.step(1 / 60);
+    expect(counts.has(77) && counts.has(78)).toBe(true);
+    expect(b.move(s0, s1)).toBe(true);
+    expect(counts.has(77) || counts.has(78)).toBe(false);
   });
 });

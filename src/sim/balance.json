@@ -137,6 +137,7 @@
     "frostBoltTime": 1.5,
     "frostbiteStacks": 4,
     "frostbiteFreeze": 1.2,
+    "frostbiteTime": 3,
     "iceFreezePlus": 0.5,
     "shatter": 0.4,
     "shatterRadius": 120,

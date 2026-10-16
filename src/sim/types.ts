@@ -47,8 +47,10 @@ export interface Enemy {
   scorchTime: number;
   /** Arcane mark: takes more damage from every source while it lasts. */
   markTime: number;
-  /** Frostbite stacks from ice hits; enough of them freeze it. */
+  /** Frostbite stacks from ice hits; enough of them freeze it. They wear off after chillTime
+   *  without a new ice hit. */
   chill: number;
+  chillTime: number;
   /** Static from lightning: extra damage the next hit of another potion sets off. */
   charge: number;
   chargeTime: number;
