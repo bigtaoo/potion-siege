@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
-import { applyRun, battleSetup, buyHero, buyWorkshop, heroCost, maxStage, newMeta, parseMeta, runReward } from './meta';
+import { applyRun, battleSetup, buyHero, buyWorkshop, heroCost, maxStage, newMeta, parseMeta, Purse, runReward } from './meta';
 import { BALANCE } from './types';
 
 describe('meta', () => {
@@ -56,5 +56,42 @@ describe('meta', () => {
     expect(b.gold).toBeGreaterThan(BALANCE.startGold);
     expect(b.setup.heroDamage.fire).toBeGreaterThan(b.setup.heroDamage.ice);
     expect(b.setup.enemyHp).toBeGreaterThan(1);
+  });
+
+  it('pays the ×2 once: what the battle earned, again', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    const r = { stage: 1, won: false, wave: 6, kills: 40 };
+    const { crystals } = purse.settle(m, r);
+    expect(crystals).toBeGreaterThan(0);
+    expect(m.crystals).toBe(crystals);
+    expect(purse.double(m, true)).toBe(crystals);
+    expect(m.crystals).toBe(2 * crystals);
+    expect(purse.reward.crystals).toBe(2 * crystals);
+    expect(purse.double(m, true)).toBe(0);
+    expect(m.crystals).toBe(2 * crystals);
+  });
+
+  it('pays nothing for a failed ×2 ad and does not offer it again', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    const { crystals } = purse.settle(m, { stage: 1, won: false, wave: 6, kills: 40 });
+    expect(purse.double(m, false)).toBe(0);
+    expect(purse.doubled).toBe(true);
+    expect(purse.double(m, true)).toBe(0);
+    expect(m.crystals).toBe(crystals);
+  });
+
+  it('keeps the ×2 to what it doubled when a revived battle ends again', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    const first = purse.settle(m, { stage: 1, won: false, wave: 6, kills: 40 }).crystals;
+    purse.double(m, true);
+    // revived, it goes on to win: only the difference is paid, the bonus stays as it was
+    const gain = purse.settle(m, { stage: 1, won: true, wave: 10, kills: 120 }).crystals;
+    const full = runReward(newMeta(), { stage: 1, won: true, wave: 10, kills: 120 }).crystals;
+    expect(gain).toBe(full - first);
+    expect(m.crystals).toBe(full + first);
+    expect(purse.reward).toEqual({ crystals: full + first, firstClear: true });
   });
 });

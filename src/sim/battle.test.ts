@@ -177,4 +177,12 @@ describe('Battle', () => {
     const b = playOut(7);
     expect(b.wave).toBeGreaterThanOrEqual(6);
   });
+
+  it('counts the damage each potion fires, not the commander', () => {
+    const b = new Battle(3);
+    b.slots[W] = { id: 999, kind: 'ice', star: 1, slot: W, cooldown: 0 };
+    for (let i = 0; i < 600 && !b.paused; i++) b.step(1 / 30);
+    expect(b.dealt.ice).toBeGreaterThan(0);
+    expect(b.dealt.arcane).toBe(0);
+  });
 });

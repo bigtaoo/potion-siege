@@ -6,6 +6,7 @@ import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
 import {
+  bottle,
   coinsIcon,
   gearIcon,
   ink,
@@ -114,82 +115,222 @@ export class Overlay extends Container {
   }
 
   /** The result on a walnut board: a plate saying won or lost, the wave, kills and time on
-   *  parchment, the crystals it earned (and the first clear), the rewarded revive when the
-   *  battle was lost, and Continue (to the home screen). */
-  showEnd(won: boolean, stats: string, reward: Reward, onContinue: () => void, onRevive: (() => void) | null): void {
-    this.open(0.72, () => this.showEnd(won, stats, reward, onContinue, onRevive));
+   *  parchment, the crystals it earned (with the rewarded ×2) and the first clear, each
+   *  potion's share of the damage with the MVP, after a loss the tips for getting stronger,
+   *  then the rewarded revive when there is one and Continue (to the home screen). On a wide
+   *  screen the damage and the tips stand in a second column. */
+  showEnd(won: boolean, stats: string, reward: Reward, onContinue: () => void, onRevive: (() => void) | null, more: EndExtras): void {
+    this.open(0.72, () => this.showEnd(won, stats, reward, onContinue, onRevive, more));
     const W = 900;
-    // the heights of the rows: plate, stat tiles, crystals, first clear, buttons
-    const rows = [200, 270, 170, reward.firstClear ? 120 : 0, onRevive ? 300 : 170];
-    const H = rows.reduce((a, b) => a + b, 0) + 80;
-    const box = this.box(W + 60, H + 220);
+    const cw = W - 120;
+    const left: Section[] = [header(won), statTiles(stats, cw), purse(reward, more, cw)];
+    if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
+    const right: Section[] = [];
+    if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
+    if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));
+    const buttons = endButtons(onContinue, onRevive);
+    const wide = this.w > this.h && right.length > 0;
+    const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];
+    const heights = cols.map((col) => col.reduce((a, c) => a + c.h, 0));
+    const H = Math.max(...heights) + 80;
+    const BW = W * cols.length;
+    const box = this.box(BW + 60, H + 220);
     box.y += 40; // room for the crest over the board
-    box.addChild(woodPanel(W, H));
-    let y = -H / 2;
-
-    // the plate, with stars over a win and the wall knocked apart over a loss
-    const crest = won ? stars() : brokenWall();
-    crest.y = y - 30;
-    const head = plate(won ? t('won') : t('lost'), 72, 560, won ? 'brass' : 'red');
-    head.y = y + 80;
-    box.addChild(crest, head);
-    y += rows[0];
-
-    // wave, kills and time (the parts of `stats`), a parchment tile each
-    const icons = [swordsIcon, gearIcon, stopwatchIcon];
-    const parts = stats.split(/\s{2,}/).slice(0, 3);
-    const gap = 24;
-    const tw = (W - 120 - gap * (parts.length - 1)) / parts.length;
-    parts.forEach((part, i) => {
-      const tile = new Container();
-      tile.position.set((i - (parts.length - 1) / 2) * (tw + gap), y + rows[1] / 2);
-      tile.addChild(paperCard(tw, 220, 24));
-      const icon = icons[i]();
-      icon.scale.set(0.8);
-      icon.y = -38;
-      const text = ink(part, 44);
-      text.y = 60;
-      if (text.width > tw - 24) text.scale.set((tw - 24) / text.width);
-      tile.addChild(icon, text);
-      box.addChild(tile);
+    box.addChild(woodPanel(BW, H));
+    if (wide) box.addChild(new Graphics().rect(-3, -H / 2 + 40, 6, H - 80).fill({ color: P.line, alpha: 0.45 }));
+    cols.forEach((col, i) => {
+      const x = (i - (cols.length - 1) / 2) * W;
+      // the second column sits in the middle of the board's height
+      let y = -H / 2 + (i === 0 ? 0 : (H - heights[i]) / 2);
+      for (const sec of col) {
+        sec.c.position.set(x, y);
+        box.addChild(sec.c);
+        y += sec.h;
+      }
     });
-    y += rows[1];
-
-    // the crystals: a dark inset with what they are on the left, the gem and count on the right
-    const iw = W - 120;
-    const purse = new Container();
-    purse.y = y + rows[2] / 2;
-    purse.addChild(new Graphics().roundRect(-iw / 2, -64, iw, 128, 30).fill(P.woodDark).stroke({ width: 4, color: P.line }));
-    const what = label(t('earned'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
-    what.anchor.set(0, 0.5);
-    what.x = -iw / 2 + 40;
-    const count = label(t('reward', { n: reward.crystals }), 84, { fill: 0x9beaff, stroke: { color: P.line, width: 10 } });
-    count.anchor.set(1, 0.5);
-    count.x = iw / 2 - 40;
-    purse.addChild(what, count, gem(new Graphics(), count.x - count.width - 48, -2, 42));
-    box.addChild(purse);
-    y += rows[2];
-
-    if (reward.firstClear) {
-      const first = ribbon(t('firstClear'), W - 200);
-      first.y = y + rows[3] / 2;
-      box.addChild(first);
-      y += rows[3];
-    }
-
-    // the revive (with the ad sign) on top when there is one, Continue under it
-    let by = y + 20;
-    if (onRevive) {
-      const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);
-      revive.y = by + 75;
-      box.addChild(revive);
-      by += 180;
-    }
-    const big = !onRevive;
-    const go = new PillButton(t('continue'), big ? 620 : 460, big ? 150 : 120, 'green', onContinue, big ? 62 : 50);
-    go.y = by + (big ? 75 : 60);
-    box.addChild(go);
   }
+}
+
+/** What else the result screen shows: the rewarded ×2 (null when it is not on offer), whether
+ *  the crystals were doubled, each potion's damage, and the tips after a loss. */
+export interface EndExtras {
+  onDouble: (() => void) | null;
+  doubled: boolean;
+  dealt: { kind: HeroKind; damage: number }[];
+  onTip: ((tab: TipTab) => void) | null;
+}
+
+/** The home tabs a tip leads to. */
+export type TipTab = 'potions' | 'workshop' | 'battle';
+
+/** A row of the result board: its content (centred across, from y 0 down) and its height. */
+interface Section {
+  c: Container;
+  h: number;
+}
+
+/** `c` centred in a row `h` tall. */
+function section(c: Container, h: number): Section {
+  const row = new Container();
+  c.y = h / 2;
+  row.addChild(c);
+  return { c: row, h };
+}
+
+/** The plate, with stars over a win and the wall knocked apart over a loss. */
+function header(won: boolean): Section {
+  const c = new Container();
+  const crest = won ? stars() : brokenWall();
+  crest.y = -30;
+  const head = plate(won ? t('won') : t('lost'), 72, 560, won ? 'brass' : 'red');
+  head.y = 80;
+  c.addChild(crest, head);
+  return { c, h: 200 };
+}
+
+/** Wave, kills and time (the parts of `stats`), a parchment tile each. */
+function statTiles(stats: string, cw: number): Section {
+  const c = new Container();
+  const icons = [swordsIcon, gearIcon, stopwatchIcon];
+  const parts = stats.split(/\s{2,}/).slice(0, 3);
+  const gap = 24;
+  const tw = (cw - gap * (parts.length - 1)) / parts.length;
+  parts.forEach((part, i) => {
+    const tile = new Container();
+    tile.position.set((i - (parts.length - 1) / 2) * (tw + gap), 135);
+    tile.addChild(paperCard(tw, 220, 24));
+    const icon = icons[i]();
+    icon.scale.set(0.8);
+    icon.y = -38;
+    const text = ink(part, 44);
+    text.y = 60;
+    if (text.width > tw - 24) text.scale.set((tw - 24) / text.width);
+    tile.addChild(icon, text);
+    c.addChild(tile);
+  });
+  return { c, h: 270 };
+}
+
+/** The crystals: a dark inset with what they are on the left, the gem and count, and on the
+ *  right the rewarded ×2 (or a brass ×2 seal once it was paid). */
+function purse(reward: Reward, more: EndExtras, iw: number): Section {
+  const c = new Container();
+  c.addChild(new Graphics().roundRect(-iw / 2, -64, iw, 128, 30).fill(P.woodDark).stroke({ width: 4, color: P.line }));
+  const what = label(t('earned'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  what.anchor.set(0, 0.5);
+  what.x = -iw / 2 + 40;
+  c.addChild(what);
+  // with the ×2 on offer the gem and count follow the words; otherwise they sit on the right
+  const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: P.line, width: 10 } });
+  count.anchor.set(1, 0.5);
+  if (more.onDouble) {
+    const x0 = what.x + what.width + 100;
+    count.scale.set(Math.min(1, (iw / 2 - 290 - x0) / count.width));
+    count.x = x0 + count.width;
+  } else {
+    count.x = iw / 2 - 40 - (more.doubled ? 110 : 0);
+  }
+  c.addChild(count, gem(new Graphics(), count.x - count.width - 44, -2, 40));
+  if (more.onDouble) {
+    const b = adButton(t('double'), 250, 104, 'purple', more.onDouble, 38);
+    b.x = iw / 2 - 140;
+    c.addChild(b);
+  } else if (more.doubled) {
+    const seal = medal(44, P.brass);
+    const x2 = label(t('doubled'), 38, { stroke: { color: P.line, width: 6 } });
+    seal.x = x2.x = iw / 2 - 84;
+    c.addChild(seal, x2);
+  }
+  return section(c, 170);
+}
+
+/** Each potion's share of the damage as a bar in its colour, the biggest one the MVP. */
+function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
+  const c = new Container();
+  const title = label(t('damage'), 44, { fill: P.soft, stroke: { color: P.line, width: 6 } });
+  title.y = 34;
+  c.addChild(title);
+  const rows = [...dealt].sort((a, b) => b.damage - a.damage);
+  const total = rows.reduce((a, r) => a + r.damage, 0);
+  const rh = 76;
+  const top = 80;
+  const bx = -cw / 2 + 100;
+  const bw = cw - 100 - 130;
+  c.addChild(new Graphics().roundRect(-cw / 2, top - 8, cw, rows.length * rh + 16, 26).fill(P.woodDark).stroke({ width: 4, color: P.line }));
+  rows.forEach((r, i) => {
+    const y = top + i * rh + rh / 2;
+    if (i === 0) c.addChild(new Graphics().roundRect(-cw / 2 + 10, y - rh / 2 + 4, cw - 20, rh - 8, 20).fill({ color: P.brass, alpha: 0.28 }));
+    const b = bottle(r.kind, 84);
+    b.position.set(-cw / 2 + 52, y);
+    const g = new Graphics().roundRect(bx, y - 18, bw, 36, 18).fill({ color: 0x000000, alpha: 0.35 });
+    g.roundRect(bx, y - 18, Math.max(36, (bw * r.damage) / rows[0].damage), 36, 18).fill(HERO_COLORS[r.kind]).stroke({ width: 4, color: P.line });
+    const pct = label(`${Math.round((100 * r.damage) / total)}%`, 40, { stroke: { color: P.line, width: 6 } });
+    pct.anchor.set(1, 0.5);
+    pct.position.set(cw / 2 - 24, y);
+    c.addChild(g, b, pct);
+    if (i === 0) {
+      const tag = plate(t('mvp'), 26, 80, 'brass');
+      tag.position.set(bx + 150, y - 2);
+      c.addChild(tag);
+    }
+  });
+  return { c, h: top + rows.length * rh + 40 };
+}
+
+/** After a loss: where to get stronger, a parchment row each that opens that home tab. */
+function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: number): Section {
+  const c = new Container();
+  const title = plate(t('tips'), 40, 300, 'brass');
+  title.y = 40;
+  c.addChild(title);
+  const best = [...dealt].sort((a, b) => b.damage - a.damage)[0]?.kind ?? 'fire';
+  const items: [TipTab, 'potions' | 'workshop' | 'stage', () => Container][] = [
+    ['potions', 'potions', () => bottle(best, 76)],
+    ['workshop', 'workshop', () => gearIcon(34)],
+    ['battle', 'stage', swordsIcon],
+  ];
+  const rh = 108;
+  const gap = 14;
+  const top = 96;
+  items.forEach(([tab, key, icon], i) => {
+    const row = new Container();
+    row.y = top + i * (rh + gap) + rh / 2;
+    row.addChild(paperCard(cw, rh, 22));
+    const pic = icon();
+    pic.x = -cw / 2 + 64;
+    if (key === 'stage') pic.scale.set(0.7);
+    const name = ink(t(`tip.${key}.name`), 40);
+    name.anchor.set(0, 0.5);
+    name.position.set(-cw / 2 + 130, -18);
+    const desc = ink(t(`tip.${key}.desc`), 30, { fill: P.inkSoft });
+    desc.anchor.set(0, 0.5);
+    desc.position.set(-cw / 2 + 130, 24);
+    if (desc.width > cw - 220) desc.scale.set((cw - 220) / desc.width);
+    const go = new Graphics()
+      .poly([cw / 2 - 58, -22, cw / 2 - 34, 0, cw / 2 - 58, 22], false)
+      .stroke({ width: 8, color: P.inkSoft, cap: 'round', join: 'round' });
+    row.addChild(pic, name, desc, go);
+    tappable(row, () => onTip(tab));
+    c.addChild(row);
+  });
+  return { c, h: top + items.length * (rh + gap) + 20 };
+}
+
+/** The revive (with the ad sign) on top when there is one, Continue under it. */
+function endButtons(onContinue: () => void, onRevive: (() => void) | null): Section {
+  const c = new Container();
+  let by = 20;
+  if (onRevive) {
+    const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);
+    revive.y = by + 75;
+    c.addChild(revive);
+    by += 180;
+  }
+  const big = !onRevive;
+  const go = new PillButton(t('continue'), big ? 620 : 460, big ? 150 : 120, 'green', onContinue, big ? 62 : 50);
+  go.y = by + (big ? 75 : 60);
+  c.addChild(go);
+  return { c, h: onRevive ? 300 : 170 };
 }
 
 /** A pill button with the ad sign in front of its caption. */

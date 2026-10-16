@@ -45,6 +45,8 @@ export class Battle {
   rerolled = false;
   result: 'won' | 'lost' | null = null;
   readonly slots: (Hero | null)[] = new Array(SLOT_COUNT).fill(null);
+  /** The damage of the shots each potion has fired this battle (the result screen's MVP). */
+  readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0 };
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
   readonly open: boolean[] = Array.from({ length: SLOT_COUNT }, (_, s) => Math.floor(s / B.grid.cols) === WALL_ROW);
   enemies: Enemy[] = [];
@@ -358,10 +360,11 @@ export class Battle {
   private fire(h: Hero, target: Enemy): void {
     const from = slotCenter(h.slot);
     this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
-    this.shoot(h.kind, h.star, from.x, from.y - 40, target, B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind]);
+    this.dealt[h.kind] += this.shoot(h.kind, h.star, from.x, from.y - 40, target, B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind]);
   }
 
-  private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number): void {
+  /** Returns the damage of the shot. */
+  private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number): number {
     const crit = this.rng.next() < this.mods.crit ? B.critMultiplier : 1;
     const damage = base * crit;
     this.projectiles.push({
@@ -375,6 +378,7 @@ export class Battle {
       ty: target.y,
       damage,
     });
+    return damage;
   }
 
   private stepProjectiles(dt: number): void {

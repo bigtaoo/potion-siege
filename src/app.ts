@@ -11,9 +11,9 @@ import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
-import { applyRun, battleSetup, buyHero, buyWorkshop, maxStage, parseMeta, runReward, type MetaSave, type Reward } from './sim/meta';
+import { battleSetup, buyHero, buyWorkshop, maxStage, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { botAct } from './sim/bot';
-import { BALANCE, type BattleEvent } from './sim/types';
+import { BALANCE, HERO_KINDS, type BattleEvent } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
@@ -90,12 +90,11 @@ class Game {
   private battle: Battle | null = null;
   private run: RunTracker | null = null;
   private save: MetaSave;
-  /** Crystals already paid for the current battle (a revived battle pays the difference). */
-  private paid = 0;
+  /** Crystals paid for the current battle: what it earned and the ×2. */
+  private purse = new Purse();
   private revived = false;
   /** The day the login panel last opened by itself. */
   private loginShown = '';
-  private reward: Reward = { crystals: 0, firstClear: false };
   private readonly autoplay: boolean;
   private readonly speed: number;
 
@@ -149,10 +148,9 @@ class Game {
   private newBattle(cause: 'again' | 'autoplay' | null): void {
     this.run?.close('again');
     this.battle = new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
-    this.paid = 0;
+    this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
-    this.reward = { crystals: 0, firstClear: false };
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
   }
@@ -244,16 +242,12 @@ class Game {
     }
     if (b.result === 'won' && !this.autoplay) addProgress(this.save, 'win');
     const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
-    const reward = runReward(this.save, result);
     // a revived battle ending again pays only what it earned on top
-    const gain = Math.max(0, reward.crystals - this.paid);
-    this.paid += gain;
-    this.reward = { crystals: this.paid, firstClear: reward.firstClear || this.reward.firstClear };
-    applyRun(this.save, result, { crystals: gain, firstClear: reward.firstClear });
+    const { crystals: gain, firstClear } = this.purse.settle(this.save, result);
     this.store();
     if (b.result === 'won') this.platform.celebrate();
     this.run?.onEnd();
-    this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: reward.firstClear });
+    this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: firstClear });
     this.showEnd(b);
     if (this.autoplay) setTimeout(() => void this.again(), 1500);
   }
@@ -341,9 +335,33 @@ class Game {
   private showEnd(b: Battle): void {
     const secs = Math.round(b.time);
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
-    const canRevive = b.result === 'lost' && !this.revived && this.platform.rewardedAvailable();
+    const ads = !this.autoplay && this.platform.rewardedAvailable();
+    const canRevive = b.result === 'lost' && !this.revived && ads;
     if (canRevive) this.run?.onReviveOffer();
-    this.overlay.showEnd(b.result === 'won', stats, this.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null);
+    const canDouble = !this.purse.doubled && this.purse.paid > 0 && ads;
+    if (canDouble) this.run?.onDoubleOffer();
+    const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: b.dealt[kind] }] : []));
+    this.overlay.showEnd(b.result === 'won', stats, this.purse.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null, {
+      onDouble: canDouble ? () => void this.double(b) : null,
+      doubled: this.purse.bonus > 0,
+      dealt,
+      onTip: b.result === 'lost' ? (tab) => void this.again(tab) : null,
+    });
+  }
+
+  /** The rewarded ×2: what the battle earned, paid once more. */
+  private async double(b: Battle): Promise<void> {
+    this.overlay.interactiveChildren = false; // no second tap while the ad plays
+    const ok = await this.platform.rewarded(() => this.mute(true));
+    this.overlay.interactiveChildren = true;
+    this.mute(false);
+    this.run?.onDoubleResult(ok);
+    const bonus = this.purse.double(this.save, ok);
+    if (bonus > 0) {
+      this.store();
+      this.analytics.track('crystals', { gain: bonus, total: this.save.crystals, stage: b.setup.stage, double: true });
+    }
+    if (this.overlay.visible) this.showEnd(b);
   }
 
   private async revive(b: Battle): Promise<void> {
@@ -361,8 +379,10 @@ class Game {
     }
   }
 
-  private async again(): Promise<void> {
+  /** Back home (to `tab`, when a tip after a loss was tapped). */
+  private async again(tab?: HomeTab): Promise<void> {
     this.overlay.hide();
+    if (tab) this.tab = tab;
     // never an ad after the very first battle
     if (this.save.runs > 1) {
       await this.platform.midgame(() => this.mute(true));

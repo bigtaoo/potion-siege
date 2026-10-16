@@ -68,6 +68,14 @@ export class RunTracker {
     this.a.track('ad_result', { placement: 'reroll', ok, run: this.run, wave: this.battle.wave });
   }
 
+  onDoubleOffer(): void {
+    this.a.track('ad_offer', { placement: 'double', run: this.run, wave: this.battle.wave });
+  }
+
+  onDoubleResult(ok: boolean): void {
+    this.a.track('ad_result', { placement: 'double', ok, run: this.run, wave: this.battle.wave });
+  }
+
   /** Called on every result screen; a revived run reports again when it ends for good. */
   onEnd(): void {
     this.a.track('run_end', this.summary());

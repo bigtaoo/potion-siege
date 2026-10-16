@@ -174,5 +174,42 @@ export function applyRun(m: MetaSave, r: RunResult, reward: Reward): void {
   }
 }
 
-/** The lineup heroes, the ones that can be levelled. */
+/** What one battle has paid out. A revived battle ending again pays only what it earned on top,
+ *  and the rewarded ×2 pays what was earned so far once more, once per battle. */
+export class Purse {
+  /** Crystals the battle itself has earned. */
+  paid = 0;
+  /** Crystals the ×2 ad added. */
+  bonus = 0;
+  /** The ×2 has been offered and taken (or its ad failed): not offered again. */
+  doubled = false;
+  firstClear = false;
+
+  /** Books a result screen's reward; returns the crystals to pay now. */
+  settle(m: MetaSave, r: RunResult): Reward {
+    const reward = runReward(m, r);
+    const gain = Math.max(0, reward.crystals - this.paid);
+    this.paid += gain;
+    this.firstClear ||= reward.firstClear;
+    applyRun(m, r, { crystals: gain, firstClear: reward.firstClear });
+    return { crystals: gain, firstClear: reward.firstClear };
+  }
+
+  /** The ×2 ad has ended (`ok`: it was watched); returns the crystals it paid. */
+  double(m: MetaSave, ok: boolean): number {
+    if (this.doubled) return 0;
+    this.doubled = true;
+    if (!ok) return 0;
+    this.bonus = this.paid;
+    m.crystals += this.bonus;
+    return this.bonus;
+  }
+
+  /** What the result screen shows. */
+  get reward(): Reward {
+    return { crystals: this.paid + this.bonus, firstClear: this.firstClear };
+  }
+}
+
+
 export const LEVELLED_HEROES: readonly HeroKind[] = LINEUP;
