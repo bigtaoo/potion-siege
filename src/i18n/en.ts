@@ -84,6 +84,23 @@ export const en = {
     lightning: 'Storm Tonic',
     poison: 'Venom Tonic',
   },
+  codex: {
+    heroes: 'Potions',
+    monsters: 'Clockwork Army',
+    locked: 'Locked',
+    hp: 'HP {n}',
+    hpWave: 'HP {n} (wave {w})',
+    stage: 'Stage {n} numbers',
+    speed: 'Speed {n}',
+    wallDps: 'Siege {n}/s',
+    resist: 'Damage taken',
+  },
+  enemy: {
+    grunt: 'Tin Soldier',
+    runner: 'Clock Mouse',
+    brute: 'Boiler Golem',
+    boss: 'Steam Tank',
+  },
   skill: {
     allDamage: { name: 'Sharpened', desc: 'All heroes +15% damage' },
     allSpeed: { name: 'Battle Rhythm', desc: 'All heroes +12% attack speed' },

@@ -11,6 +11,14 @@ export interface Spawn {
   hp: number;
 }
 
+/** The first wave each kind can turn up in. */
+export const FIRST_WAVE: Record<EnemyKind, number> = {
+  grunt: 1,
+  runner: 2,
+  brute: 4,
+  boss: Math.min(...BALANCE.waves.bossWaves),
+};
+
 export function isBossWave(wave: number): boolean {
   return BALANCE.waves.bossWaves.includes(wave);
 }
@@ -30,7 +38,7 @@ export function planWave(wave: number, rng: Rng): Spawn[] {
   const spawns: Spawn[] = [];
   for (let i = 0; i < count; i++) {
     const roll = rng.next();
-    const kind: EnemyKind = wave >= 4 && roll < 0.15 ? 'brute' : wave >= 2 && roll < 0.4 ? 'runner' : 'grunt';
+    const kind: EnemyKind = wave >= FIRST_WAVE.brute && roll < 0.15 ? 'brute' : wave >= FIRST_WAVE.runner && roll < 0.4 ? 'runner' : 'grunt';
     spawns.push({ at: (w.spawnWindow * i) / count, kind, hp: hp * BALANCE.enemies[kind].hp });
   }
   if (boss) spawns.unshift({ at: 0, kind: 'boss', hp: hp * BALANCE.enemies.boss.hp });

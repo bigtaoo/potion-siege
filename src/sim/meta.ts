@@ -220,3 +220,9 @@ export function endOffers(lost: boolean, revived: boolean, ads: boolean, purse: 
 
 /** The lineup heroes, the ones that can be levelled. */
 export const LEVELLED_HEROES: readonly HeroKind[] = LINEUP;
+
+/** Whether a potion can be played and levelled. A save does not unlock heroes of its own yet,
+ *  so today that is the lineup; the save is passed for the day it does. */
+export function heroUnlocked(m: MetaSave, kind: HeroKind): boolean {
+  return LEVELLED_HEROES.includes(kind) && m.heroes[kind] >= 1;
+}

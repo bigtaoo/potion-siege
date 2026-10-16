@@ -85,6 +85,23 @@ export const zh: Table = {
     lightning: '雷电药剂',
     poison: '剧毒药剂',
   },
+  codex: {
+    heroes: '药剂',
+    monsters: '发条军团',
+    locked: '未解锁',
+    hp: '生命 {n}',
+    hpWave: '生命 {n}（第{w}波）',
+    stage: '第 {n} 关数值',
+    speed: '速度 {n}',
+    wallDps: '攻城 {n}/秒',
+    resist: '受到伤害',
+  },
+  enemy: {
+    grunt: '锡兵',
+    runner: '发条鼠',
+    brute: '锅炉魔像',
+    boss: '蒸汽坦克',
+  },
   skill: {
     allDamage: { name: '磨砺', desc: '所有英雄伤害 +15%' },
     allSpeed: { name: '战斗节奏', desc: '所有英雄攻速 +12%' },
