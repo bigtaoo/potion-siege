@@ -4,7 +4,7 @@
 
 import { CanvasTextMetrics, Container, Graphics, Sprite, type Text, type TextStyleOptions } from 'pixi.js';
 import { enemyTexture, ultimateTexture } from './art';
-import { COLORS, gem, label } from './ui';
+import { COLORS, gem, HERO_COLORS, label } from './ui';
 import { slab } from './stone';
 import type { EnemyKind, HeroKind } from '../sim/types';
 
@@ -236,8 +236,30 @@ export function bottle(kind: HeroKind, h: number): Container {
     s.anchor.set(0.5);
     s.scale.set(h / Math.max(tex.width, tex.height));
     c.addChild(s);
+  } else {
+    c.addChild(flask(new Graphics(), 0, h * 0.45, h * 0.9, HERO_COLORS[kind], true));
   }
   return c;
+}
+
+/** A round flask standing on `feet`, `h` tall, filled with `color`: the stand-in for a potion
+ *  whose art is not drawn yet. With `face` it gets the eyes of a living potion. */
+export function flask(g: Graphics, x: number, feet: number, h: number, color: number, face = false): Graphics {
+  const r = h * 0.36;
+  const cy = feet - r;
+  const nw = r * 0.62;
+  g.roundRect(x - nw / 2, feet - h, nw, h - 2 * r + r * 0.4, 4).fill(0xcfeef5).stroke({ width: Math.max(2, h * 0.03), color: P.line });
+  g.roundRect(x - nw * 0.65, feet - h - h * 0.02, nw * 1.3, h * 0.08, 4).fill(P.woodLight).stroke({ width: Math.max(2, h * 0.025), color: P.line });
+  g.circle(x, cy, r).fill(color).stroke({ width: Math.max(2, h * 0.035), color: P.line });
+  g.ellipse(x - r * 0.4, cy - r * 0.45, r * 0.22, r * 0.12).fill({ color: 0xffffff, alpha: 0.6 });
+  if (face) {
+    for (const s of [-1, 1]) {
+      g.circle(x + s * r * 0.32, cy + r * 0.05, r * 0.13).fill(P.line);
+      g.circle(x + s * r * 0.32 - r * 0.04, cy + r * 0.01, r * 0.045).fill(0xffffff);
+    }
+    g.moveTo(x - r * 0.14, cy + r * 0.32).quadraticCurveTo(x, cy + r * 0.44, x + r * 0.14, cy + r * 0.32).stroke({ width: Math.max(2, h * 0.025), color: P.line, cap: 'round' });
+  }
+  return g;
 }
 
 /** Shrinks a text to fit `w` across. */

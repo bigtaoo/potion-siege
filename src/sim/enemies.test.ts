@@ -17,6 +17,10 @@ describe('enemy resistances', () => {
     }
   });
 
+  it('lets only the boiler golem shrug off corrosion', () => {
+    for (const kind of ENEMY_KINDS) expect(resist(kind, 'poison')).toBe(kind === 'brute' ? 0.5 : 1);
+  });
+
   it('shows every resistance that is not 1', () => {
     for (const kind of ENEMY_KINDS) {
       const shown = resists(kind);

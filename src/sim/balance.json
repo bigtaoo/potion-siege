@@ -60,7 +60,11 @@
       "damage": 4,
       "interval": 0.9,
       "poisonDps": 9,
-      "poisonTime": 3
+      "poisonTime": 3,
+      "rustStep": 0.1,
+      "rustMax": 3,
+      "rustTime": 4,
+      "unlockStage": 5
     }
   },
   "enemies": {

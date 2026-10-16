@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, SLOT_COUNT, WALL_ROW } from './battle';
 import { playOut } from './bot';
+import { skillHeroes } from './skills';
 import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP } from './types';
 
 /** The first cell of the wall row, open from the start. */
@@ -66,7 +67,7 @@ describe('Battle', () => {
     const b = new Battle(6);
     b.enemies.push({
       id: 999, kind: 'grunt', x: 500, y: 600, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
       markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
     });
     for (let i = 0; i < 60; i++) b.step(1 / 30);
@@ -192,7 +193,7 @@ describe('damage dealt', () => {
   function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
     const e: Enemy = {
       id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
       markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
     };
     b.enemies.push(e);
@@ -253,5 +254,90 @@ describe('damage dealt', () => {
     }
     expect(credited()).toBeGreaterThan(0);
     expect(credited()).toBeLessThanOrEqual(lost + 1e-6);
+  });
+});
+
+describe('rust', () => {
+  const P = BALANCE.heroes.poison;
+
+  function rig(): { b: Battle; e: Enemy } {
+    const b = new Battle(5);
+    b.enemies = [];
+    b.commanderCooldown = 1e9;
+    const e: Enemy = {
+      id: 9000, kind: 'grunt', x: 500, y: 400, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
+    };
+    b.enemies.push(e);
+    return { b, e };
+  }
+
+  function shoot(b: Battle, kind: HeroKind, e: Enemy, damage: number): void {
+    b.projectiles.push({ id: 1, kind, star: 1, x: e.x, y: e.y, targetId: e.id, tx: e.x, ty: e.y, damage });
+    b.step(1 / 60);
+  }
+
+  it('stacks one rust per corrosion hit up to the cap', () => {
+    const { b, e } = rig();
+    for (let i = 1; i <= P.rustMax + 2; i++) {
+      shoot(b, 'poison', e, 1);
+      expect(e.rust).toBe(Math.min(i, P.rustMax));
+    }
+  });
+
+  it('wears off once the corrosion stops', () => {
+    const { b, e } = rig();
+    shoot(b, 'poison', e, 1);
+    for (let i = 0; i < (P.rustTime + 0.5) * 30; i++) b.step(1 / 30);
+    expect(e.rust).toBe(0);
+  });
+
+  it('makes every hit land harder, on top of the arcane mark', () => {
+    const { b, e } = rig();
+    e.rust = 3;
+    e.rustTime = 99;
+    let before = e.hp;
+    shoot(b, 'arcane', e, 100);
+    expect(before - e.hp).toBeCloseTo(100 * (1 + P.rustStep * 3));
+    // one Arcane Mark level, taken as an offered skill
+    b.choices = ['arcaneMark'];
+    b.choose('arcaneMark');
+    e.markTime = 99;
+    before = e.hp;
+    shoot(b, 'arcane', e, 100);
+    expect(before - e.hp).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark) * (1 + P.rustStep * 3));
+  });
+});
+
+describe('lineup', () => {
+  const lineup: HeroKind[] = ['poison', 'fire', 'ice', 'lightning'];
+  const setup = { ...new Battle(1).setup, lineup };
+
+  it('summons and merges only from the lineup it was given', () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const b = new Battle(seed, setup);
+      b.gold = 1e9;
+      while (b.summon()) {
+        /* fill the grid */
+      }
+      b.slots[W] = { id: 100, kind: 'fire', star: 2, slot: W, cooldown: 0 };
+      b.slots[W + 1] = { id: 101, kind: 'fire', star: 2, slot: W + 1, cooldown: 0 };
+      b.move(W, W + 1);
+      for (const h of b.slots) if (h) expect(lineup).toContain(h.kind);
+    }
+  });
+
+  it('offers skills only for potions on the field', () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const b = new Battle(seed, setup);
+      b.summon();
+      b.gold = 1e6;
+      b.upgrade();
+      for (const id of b.choices ?? []) {
+        const { hero, with: also } = skillHeroes(id);
+        expect(hero === 'arcane' || also === 'arcane').toBe(false);
+      }
+    }
   });
 });
