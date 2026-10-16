@@ -11,6 +11,7 @@ import { BALANCE, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types
 import { FIRST_STAGE } from '../sim/waves';
 import { potionLook } from './art';
 import { bossTag, bottle, enemySprite, fit, flask, ink, LIGHT, lightPanel, lightTile, lock, P, plate, redDot, tappable } from './kit';
+import { codexStage } from './nudges';
 import { INK, star, stillPotion } from './potion';
 import { COLORS, HERO_COLORS, label } from './ui';
 
@@ -320,10 +321,17 @@ function art(kind: EnemyKind, stage: number, bw: number, bh: number, x: number, 
   return c;
 }
 
-/** Hit points on the first wave it comes in on this stage, speed and how hard it hits the wall. */
+/** Hit points on the first wave it comes in on this stage, speed and how hard it hits the wall.
+ *  A kind the picked stage does not send yet is quoted at the stage it first comes on, and says so. */
 function statLines(kind: EnemyKind, stage: number): string[] {
-  const e = enemyStats(kind, stage);
-  return [t('codex.hpWave', { n: Math.round(e.hp), w: e.wave }), t('codex.speed', { n: e.speed }), t('codex.wallDps', { n: e.wallDps })];
+  const at = codexStage(kind, stage);
+  const e = enemyStats(kind, at);
+  const hp = Math.round(e.hp);
+  return [
+    at === stage ? t('codex.hpWave', { n: hp, w: e.wave }) : t('codex.hpStageWave', { n: hp, s: at, w: e.wave }),
+    t('codex.speed', { n: e.speed }),
+    t('codex.wallDps', { n: e.wallDps }),
+  ];
 }
 
 const CHIP_W = 106;

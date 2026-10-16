@@ -49,6 +49,8 @@ export const zh: Table = {
   soon: '即将开放',
   damageNow: '伤害 +{p}%',
   heroDamage: '每级伤害 +{p}%，当前 +{n}%',
+  heroNext: '升到 Lv {n}：伤害 +{p}%',
+  noCrystals: '晶石不足',
   baseCards: '初始技能卡',
   unlockSkill: '解锁「{name}」技能卡',
   unlockRecipe: '解锁配方「{name}」（需{with}在场）',
@@ -79,6 +81,9 @@ export const zh: Table = {
     wall: { name: '厚墙', desc: '城墙生命 +{p}%' },
     startGold: { name: '零花钱', desc: '开局金币 +{n}' },
     crystals: { name: '晶石筛', desc: '晶石收益 +{p}%' },
+    now: '当前：{text}',
+    next: '下一级：{text}',
+    none: '未强化',
   },
   store: {
     daily: '每日福利',
@@ -143,6 +148,7 @@ export const zh: Table = {
     locked: '未解锁',
     hp: '生命 {n}',
     hpWave: '生命 {n}（第{w}波）',
+    hpStageWave: '生命 {n}（第{s}关第{w}波）',
     stage: '第 {n} 关数值',
     from: '第 {n} 关登场',
     trait: {

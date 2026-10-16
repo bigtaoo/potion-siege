@@ -263,6 +263,7 @@ export function plate(text: string, size = 56, minW = 360, tone: keyof typeof PL
 export class PillButton extends Container {
   private readonly bg = new Graphics();
   private enabled = true;
+  private offTap: (() => void) | null = null;
 
   constructor(
     caption: string,
@@ -289,6 +290,7 @@ export class PillButton extends Container {
     this.on('pointertap', (e) => {
       e.stopPropagation();
       if (this.enabled) onTap();
+      else this.offTap?.();
     });
     this.draw();
   }
@@ -299,6 +301,12 @@ export class PillButton extends Container {
       this.cursor = on ? 'pointer' : 'default';
       this.draw();
     }
+    return this;
+  }
+
+  /** What a tap on the button does while it is off, such as saying why. */
+  whenOff(fn: () => void): this {
+    this.offTap = fn;
     return this;
   }
 
@@ -342,6 +350,46 @@ export function tappable<T extends Container>(c: T, onTap: () => void): T {
   c.cursor = 'pointer';
   c.on('pointertap', onTap);
   return c;
+}
+
+/** A tap that cannot go through: the button shakes and a short note rises over it. */
+export function refuse(b: Container, text: string): void {
+  const parent = b.parent;
+  if (!parent) return;
+  const x0 = (b as Container & { refuseX?: number }).refuseX ?? b.x;
+  (b as Container & { refuseX?: number }).refuseX = x0;
+  const start = performance.now();
+  b.onRender = () => {
+    const e = (performance.now() - start) / 420;
+    if (e >= 1) {
+      b.x = x0;
+      b.onRender = null;
+      return;
+    }
+    b.x = x0 + Math.sin(e * Math.PI * 6) * 14 * (1 - e);
+  };
+  const old = parent.children.find((c) => c.label === 'refuse');
+  old?.destroy({ children: true });
+  const note = new Container();
+  note.label = 'refuse';
+  const word = ink(text, 34, { fill: 0xa8322a, fontWeight: '900' });
+  const w = word.width + 44;
+  note.addChild(new Graphics().roundRect(-w / 2, -30, w, 60, 30).fill(LIGHT.face).stroke({ width: 4, color: LIGHT.edge }), word);
+  const y0 = b.y - b.height / 2 - 44;
+  note.position.set(x0, y0);
+  parent.addChild(note);
+  note.onRender = () => {
+    const e = (performance.now() - start) / 1400;
+    if (e >= 1) {
+      // gone after this frame, not in the middle of drawing it
+      note.onRender = null;
+      note.visible = false;
+      queueMicrotask(() => note.destroyed || note.destroy({ children: true }));
+      return;
+    }
+    note.y = y0 - 26 * Math.min(1, e * 4);
+    note.alpha = e < 0.7 ? 1 : 1 - (e - 0.7) / 0.3;
+  };
 }
 
 /** The red dot that says something is waiting. */
