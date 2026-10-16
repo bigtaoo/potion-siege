@@ -66,7 +66,8 @@ describe('Battle', () => {
     const b = new Battle(6);
     b.enemies.push({
       id: 999, kind: 'grunt', x: 500, y: 600, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0, atWall: false,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      markTime: 0, chill: 0, charge: 0, chargeTime: 0, atWall: false,
     });
     for (let i = 0; i < 60; i++) b.step(1 / 30);
     expect(b.enemies.find((e) => e.id === 999)!.hp).toBeLessThan(1e6);

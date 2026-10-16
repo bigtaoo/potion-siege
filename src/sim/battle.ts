@@ -53,6 +53,8 @@ export class Battle {
   /** Milestone perks of the heroes' levels. */
   readonly perks: ReadonlySet<PerkId>;
   private mods: Mods;
+  /** Shots per hero id, for the lightning sky strike. */
+  private shotCount = new Map<number, number>();
   private pending: Spawn[] = [];
   private events: BattleEvent[] = [];
   private nextId = 1;
@@ -280,6 +282,10 @@ export class Battle {
       burnTime: 0,
       scorch: 0,
       scorchTime: 0,
+      markTime: 0,
+      chill: 0,
+      charge: 0,
+      chargeTime: 0,
       atWall: false,
     });
   }
@@ -288,16 +294,19 @@ export class Battle {
     let hitWall = false;
     for (const e of this.enemies) {
       if (e.poisonTime > 0) {
-        e.hp -= e.poisonDps * Math.min(dt, e.poisonTime);
+        this.harm(e, e.poisonDps * Math.min(dt, e.poisonTime));
         e.poisonTime -= dt;
         if (e.poisonTime <= 0) e.poisonDps = 0;
       }
       if (e.burnTime > 0) {
-        e.hp -= e.burnDps * Math.min(dt, e.burnTime);
+        this.harm(e, e.burnDps * Math.min(dt, e.burnTime));
         e.burnTime -= dt;
         if (e.burnTime <= 0) e.burnDps = 0;
       }
       e.scorchTime = Math.max(0, e.scorchTime - dt);
+      e.markTime = Math.max(0, e.markTime - dt);
+      e.chargeTime = Math.max(0, e.chargeTime - dt);
+      if (e.chargeTime <= 0) e.charge = 0;
       e.slowTime = Math.max(0, e.slowTime - dt);
       if (e.freezeTime > 0) {
         e.freezeTime -= dt;
@@ -352,19 +361,27 @@ export class Battle {
     }
     this.commanderCooldown += C.interval;
     const damage = C.damage * (1 + C.damageStep * (this.commanderLevel - 1)) * (1 + B.skills.allDamage * this.skills.allDamage);
-    this.shoot('arcane', 1, C.x, C.y - 120, target, damage);
+    this.shoot('arcane', 1, C.x, C.y - 120, target, damage, { commander: true });
   }
 
   private fire(h: Hero, target: Enemy): void {
     const from = slotCenter(h.slot);
     this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
-    this.shoot(h.kind, h.star, from.x, from.y - 40, target, B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind]);
+    let strike = false;
+    if (h.kind === 'lightning' && this.mods.thunder) {
+      const n = (this.shotCount.get(h.id) ?? 0) + 1;
+      this.shotCount.set(h.id, n);
+      strike = n % B.skills.thunderEvery === 0;
+    }
+    const base = B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind];
+    this.shoot(h.kind, h.star, from.x, from.y - 40, target, base, strike ? { strike } : {});
   }
 
-  private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number): void {
+  private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number, extra: Partial<Projectile> = {}): void {
     const crit = this.rng.next() < this.mods.crit ? B.critMultiplier : 1;
     const damage = base * crit;
     this.projectiles.push({
+      ...extra,
       id: this.nextId++,
       kind,
       star,
@@ -402,10 +419,15 @@ export class Battle {
 
   private impact(p: Projectile, target: Enemy | null): void {
     const h = B.heroes;
+    const S = B.skills;
     switch (p.kind) {
       case 'fire': {
         const radius = h.fire.splash * this.mods.fireRadius;
-        for (const e of this.enemies) if (Math.hypot(e.x - p.tx, e.y - p.ty) <= radius + e.radius) this.scorch(e, p.damage);
+        for (const e of this.enemies) {
+          if (Math.hypot(e.x - p.tx, e.y - p.ty) > radius + e.radius) continue;
+          this.scorch(e, p.damage);
+          this.discharge(e);
+        }
         this.events.push({ type: 'hit', kind: 'fire', x: p.tx, y: p.ty, radius });
         return;
       }
@@ -416,30 +438,38 @@ export class Battle {
         let cur: Enemy | undefined = target;
         let damage = p.damage;
         for (let i = 0; cur && i <= h.lightning.chains + this.mods.extraChains; i++) {
-          cur.hp -= damage;
+          this.shock(cur, damage);
           hit.add(cur.id);
           points.push({ x: cur.x, y: cur.y });
           damage *= h.lightning.chainFalloff;
           cur = this.nearest(cur, h.lightning.chainRange, hit);
         }
         this.events.push({ type: 'chain', points });
+        if (p.strike) {
+          // the sky strike: a bolt from above onto the first target, hitting all around it
+          const radius = S.thunderRadius;
+          for (const e of this.enemies) {
+            if (e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.shock(e, p.damage * S.thunderstrike);
+          }
+          this.events.push({ type: 'chain', points: [{ x: target.x + 40, y: target.y - 700 }, { x: target.x - 20, y: target.y - 350 }, { x: target.x, y: target.y }] });
+          this.events.push({ type: 'hit', kind: 'lightning', x: target.x, y: target.y, radius });
+        }
         return;
       }
     }
     if (!target) return;
-    target.hp -= p.damage;
-    if (p.kind === 'arcane' && this.mods.burstBolts) {
-      // the fire-and-arcane recipe: the bolt bursts and singes what stands around its target
-      const radius = B.skills.burstBoltRadius;
-      for (const e of this.enemies) {
-        if (e !== target && e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.scorch(e, p.damage * B.skills.burstBolt);
-      }
-      this.events.push({ type: 'hit', kind: 'fire', x: target.x, y: target.y, radius });
-    }
+    this.harm(target, p.damage);
+    this.discharge(target);
+    if (p.kind === 'arcane' && !p.commander) this.arcaneHit(p, target);
     if (p.kind === 'ice') {
-      target.slowFactor = 1 - h.ice.slow;
-      target.slowTime = h.ice.slowTime;
-      if (target.kind !== 'boss' && this.rng.next() < this.mods.freezeChance) target.freezeTime = B.skills.iceFreezeTime;
+      this.slow(target, h.ice.slow, h.ice.slowTime);
+      if (target.kind !== 'boss') {
+        if (this.rng.next() < this.mods.freezeChance) this.freeze(target, S.iceFreezeTime);
+        if (this.mods.frostbite && ++target.chill >= S.frostbiteStacks) {
+          target.chill = 0;
+          this.freeze(target, S.frostbiteFreeze);
+        }
+      }
     } else if (p.kind === 'poison') {
       const dps = h.poison.poisonDps * B.starDamage[p.star - 1] * this.mods.damage('poison') * this.setup.heroDamage.poison;
       target.poisonDps = Math.max(target.poisonDps, dps);
@@ -448,14 +478,78 @@ export class Battle {
     this.events.push({ type: 'hit', kind: p.kind, x: target.x, y: target.y, radius: 30 });
   }
 
+  /** What the arcane line adds to a hero's bolt that has just hit. */
+  private arcaneHit(p: Projectile, target: Enemy): void {
+    const S = B.skills;
+    if (this.mods.mark > 0) target.markTime = S.markTime;
+    if (this.mods.frostBolts) this.slow(target, S.frostBoltSlow, S.frostBoltTime);
+    if (this.mods.burstBolts) {
+      // the fire-and-arcane recipe: the bolt bursts and singes what stands around its target
+      const radius = S.burstBoltRadius;
+      for (const e of this.enemies) {
+        if (e === target || e.hp <= 0 || Math.hypot(e.x - target.x, e.y - target.y) > radius + e.radius) continue;
+        this.scorch(e, p.damage * S.burstBolt);
+        this.discharge(e);
+      }
+      this.events.push({ type: 'hit', kind: 'fire', x: target.x, y: target.y, radius });
+    }
+    if (this.mods.splitBolts && !p.split && target.hp <= 0) {
+      // the bolt that killed splits towards the nearest enemies left
+      const skip = new Set([target.id]);
+      for (let i = 0; i < S.splitBolts; i++) {
+        const next = this.nearest(target, S.splitRange, skip);
+        if (!next) break;
+        skip.add(next.id);
+        this.projectiles.push({ id: this.nextId++, kind: 'arcane', star: p.star, x: target.x, y: target.y, targetId: next.id, tx: next.x, ty: next.y, damage: p.damage * S.splitBolt, split: true });
+      }
+    }
+  }
+
+  /** Every bit of damage goes through here, for the arcane mark. */
+  private harm(e: Enemy, damage: number): void {
+    e.hp -= e.markTime > 0 ? damage * (1 + this.mods.mark) : damage;
+  }
+
+  /** A hit by another potion sets off the static a lightning hit left. */
+  private discharge(e: Enemy): void {
+    if (e.charge <= 0) return;
+    const charge = e.charge;
+    e.charge = 0;
+    e.chargeTime = 0;
+    this.harm(e, charge);
+  }
+
+  /** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, and with
+   *  the fire recipe it counts as a fire hit that sets them alight. */
+  private shock(e: Enemy, damage: number): void {
+    const S = B.skills;
+    if (this.mods.superconduct && (e.slowTime > 0 || e.freezeTime > 0)) damage *= 1 + S.superconduct;
+    if (this.mods.plasma) this.scorch(e, damage, Math.max(this.mods.burn, S.plasmaBurn));
+    else this.harm(e, damage);
+    if (this.mods.static > 0) {
+      e.charge = Math.max(e.chargeTime > 0 ? e.charge : 0, damage * this.mods.static);
+      e.chargeTime = S.staticTime;
+    }
+  }
+
+  /** Slows, keeping a stronger slow already on it. */
+  private slow(e: Enemy, amount: number, time: number): void {
+    e.slowFactor = e.slowTime > 0 ? Math.min(e.slowFactor, 1 - amount) : 1 - amount;
+    e.slowTime = Math.max(e.slowTime, time);
+  }
+
+  private freeze(e: Enemy, time: number): void {
+    e.freezeTime = Math.max(e.freezeTime, time * this.mods.freezeTime);
+  }
+
   /** Fire damage: remembered for a while (a death soon after counts as burnt, for the chain
    *  explosion) and, with the burn skill, it keeps burning. */
-  private scorch(e: Enemy, damage: number): void {
-    e.hp -= damage;
+  private scorch(e: Enemy, damage: number, burn = this.mods.burn): void {
+    this.harm(e, damage);
     e.scorch = Math.max(e.scorchTime > 0 ? e.scorch : 0, damage);
     e.scorchTime = B.skills.burnTime;
-    if (this.mods.burn > 0) {
-      e.burnDps = Math.max(e.burnDps, damage * this.mods.burn);
+    if (burn > 0) {
+      e.burnDps = Math.max(e.burnDps, damage * burn);
       e.burnTime = B.skills.burnTime;
     }
   }
@@ -488,8 +582,18 @@ export class Battle {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)
         const radius = B.heroes.fire.splash * this.mods.fireRadius * B.skills.fireChainRadius;
-        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) o.hp -= e.scorch * B.skills.fireChain;
+        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.harm(o, e.scorch * B.skills.fireChain);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x, y: e.y, radius });
+      }
+      if (this.mods.shatter && e.freezeTime > 0) {
+        // died frozen: it shatters into shards that cut and chill what stands around it
+        const radius = B.skills.shatterRadius;
+        for (const o of this.enemies) {
+          if (Math.hypot(o.x - e.x, o.y - e.y) > radius + o.radius) continue;
+          this.harm(o, e.maxHp * B.skills.shatter);
+          this.slow(o, B.heroes.ice.slow, B.heroes.ice.slowTime);
+        }
+        this.events.push({ type: 'hit', kind: 'ice', x: e.x, y: e.y, radius });
       }
     }
   }
