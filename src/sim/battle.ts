@@ -354,7 +354,8 @@ export class Battle {
       }
       h.cooldown += B.heroes[h.kind].interval / B.starSpeed[h.star - 1];
       const shots = h.kind === 'arcane' ? 1 + this.mods.extraArrows : 1;
-      for (let i = 0; i < shots && i < targets.length; i++) this.fire(h, targets[i]);
+      // the extra bolts of the arcane multishot go to the enemies behind, weaker
+      for (let i = 0; i < shots && i < targets.length; i++) this.fire(h, targets[i], i === 0 ? 1 : B.skills.multiBolt);
     }
   }
 
@@ -373,7 +374,7 @@ export class Battle {
     this.shoot('arcane', 1, C.x, C.y - 120, target, damage, { commander: true });
   }
 
-  private fire(h: Hero, target: Enemy): void {
+  private fire(h: Hero, target: Enemy, scale = 1): void {
     const from = slotCenter(h.slot);
     this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
     let strike = false;
@@ -382,7 +383,7 @@ export class Battle {
       this.shotCount.set(h.id, n);
       strike = n % B.skills.thunderEvery === 0;
     }
-    const base = B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind];
+    const base = B.heroes[h.kind].damage * B.starDamage[h.star - 1] * this.mods.damage(h.kind) * this.setup.heroDamage[h.kind] * scale;
     this.shoot(h.kind, h.star, from.x, from.y - 40, target, base, strike ? { strike } : {});
   }
 
@@ -473,15 +474,13 @@ export class Battle {
     if (p.kind === 'arcane' && !p.commander) this.arcaneHit(p, target);
     if (p.kind === 'ice') {
       this.slow(target, h.ice.slow, h.ice.slowTime);
-      if (target.kind !== 'boss') {
-        if (this.rng.next() < this.mods.freezeChance) this.freeze(target, S.iceFreezeTime);
-        if (this.mods.frostbite && target.freezeTime <= 0) {
-          // no stacking while it is frozen anyway
-          target.chillTime = S.frostbiteTime;
-          if (++target.chill >= S.frostbiteStacks) {
-            target.chill = 0;
-            this.freeze(target, S.frostbiteFreeze);
-          }
+      if (this.rng.next() < this.mods.freezeChance) this.freeze(target, S.iceFreezeTime, p.damage);
+      if (this.mods.frostbite && target.freezeTime <= 0) {
+        // no stacking while it is frozen anyway
+        target.chillTime = S.frostbiteTime;
+        if (++target.chill >= S.frostbiteStacks) {
+          target.chill = 0;
+          this.freeze(target, S.frostbiteFreeze, p.damage);
         }
       }
     } else if (p.kind === 'poison') {
@@ -564,8 +563,19 @@ export class Battle {
     e.slowTime = time;
   }
 
-  private freeze(e: Enemy, time: number): void {
-    e.freezeTime = Math.max(e.freezeTime, time * this.mods.freezeTime);
+  /** Freezes, for `hit`, the damage of the ice hit that froze it. A boss is too big to freeze:
+   *  the frost slows it hard instead and, with shatter, chips shards off it. */
+  private freeze(e: Enemy, time: number, hit: number): void {
+    const S = B.skills;
+    if (e.kind !== 'boss') {
+      e.freezeTime = Math.max(e.freezeTime, time * this.mods.freezeTime);
+      return;
+    }
+    this.slow(e, S.bossFreezeSlow, time * this.mods.freezeTime);
+    if (this.mods.shatter) {
+      this.harm(e, hit * S.bossShatter, 'ice');
+      this.events.push({ type: 'hit', kind: 'ice', x: e.x, y: e.y, radius: e.radius });
+    }
   }
 
   /** Fire damage: remembered for a while (a death soon after counts as burnt, for the chain

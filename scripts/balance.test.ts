@@ -2,7 +2,8 @@
 // win rate, waves reached, time, each potion's share of the damage and the skills taken in won
 // and lost runs, for tuning balance.json. Also written to D:\fang\ref\balance\<OUT or report.md>.
 // BAL='{"waves":{"hpGrowth":1.16}}' npm run balance tries overrides without editing the file;
-// SEEDS=20 STAGES=1-8 LEVELS=fresh,mid narrow the run.
+// SEEDS=20 STAGES=1-8 LEVELS=fresh,mid narrow the run, FORCED_SETS the forced rows,
+// FORCED_SEEDS=300 steadies them (±7pp at the default 100).
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { botAct, playOut } from '../src/sim/bot';
@@ -147,6 +148,9 @@ const FORCED: SkillId[][] = [
   // the suspected combo
   ['lightningFire', 'fireChain'],
   ['fireBurn', 'fireChain'],
+  // the ice line together, as a player who goes all in on it would have it
+  ['iceFrostbite', 'iceShatter'],
+  ['iceFreeze', 'iceFrostbite', 'iceShatter'],
 ];
 
 function playForced(seed: number, setup: ReturnType<typeof battleSetup>, skills: SkillId[]): Battle {
@@ -195,8 +199,10 @@ it('balance report', () => {
     LEVELS.max(m);
     const setup = battleSetup(m, stage);
     lines.push(`## Forced skills (max save, stage ${stage}, granted at the start)`, '', `| skills | win | wave μ | ${LINEUP.map((k) => k.slice(0, 5)).join(' | ')} |`, `|---|---|---|${LINEUP.map(() => '---').join('|')}|`);
-    for (const set of FORCED) {
-      const runs = Array.from({ length: Math.min(seeds, 100) }, (_, i) => playForced(5000 + i, setup, set));
+    // FORCED_SETS=iceFreeze,iceShatter limits the rows (a row is its skills joined by +, none = '')
+    const only = env.FORCED_SETS?.split(',');
+    for (const set of FORCED.filter((f) => !only || only.includes(f.join('+')))) {
+      const runs = Array.from({ length: Number(env.FORCED_SEEDS ?? Math.min(seeds, 100)) }, (_, i) => playForced(5000 + i, setup, set));
       const sh = shares(runs, LINEUP);
       const win = runs.filter((b) => b.result === 'won').length / runs.length;
       lines.push(`| ${set.join('+') || '(none)'} | ${pct(win)} | ${mean(runs.map((b) => b.wave)).toFixed(1)} | ${LINEUP.map((k) => pct(sh[k])).join(' | ')} |`);

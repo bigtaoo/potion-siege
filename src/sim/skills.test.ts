@@ -192,7 +192,7 @@ describe('arcane, ice and lightning lines', () => {
     expect(e.slowFactor).toBeCloseTo(1 - BALANCE.skills.frostBoltSlow);
   });
 
-  it('freezes after enough frostbite stacks, longer with the perk, never a boss', () => {
+  it('freezes after enough frostbite stacks, longer with the perk; a boss slows hard instead', () => {
     const frozenFor = (iceLevel: number) => {
       const b = withSkills(['iceFrostbite'], { ice: iceLevel });
       const e = enemy(b, 500, 600, 1e6);
@@ -209,6 +209,18 @@ describe('arcane, ice and lightning lines', () => {
     boss.kind = 'boss';
     for (let i = 0; i < 8; i++) hit(b, 'ice', boss, 1);
     expect(boss.freezeTime).toBe(0);
+    expect(boss.slowFactor).toBeCloseTo(1 - BALANCE.skills.bossFreezeSlow);
+    expect(boss.slowTime).toBeGreaterThan(0);
+  });
+
+  it('cracks a boss instead of freezing it, with shatter', () => {
+    const b = withSkills(['iceFrostbite', 'iceShatter']);
+    const boss = enemy(b, 500, 600, 1e6);
+    boss.kind = 'boss';
+    for (let i = 1; i < BALANCE.skills.frostbiteStacks; i++) hit(b, 'ice', boss, 10);
+    const before = boss.hp;
+    hit(b, 'ice', boss, 10);
+    expect(before - boss.hp).toBeCloseTo(10 * (1 + BALANCE.skills.bossShatter));
   });
 
   it('shatters enemies that die frozen', () => {
