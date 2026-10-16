@@ -31,7 +31,7 @@ import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
 import { flyCrystals } from './view/fly';
 import { SideInfo } from './view/SideInfo';
-import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, type MenuFit } from './view/viewport';
+import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
 
@@ -197,6 +197,9 @@ class Game {
     const fit = fitDesign(this.app.screen.width, this.app.screen.height);
     this.root.scale.set(fit.scale);
     this.root.position.set(fit.x, fit.y);
+    const boost = textBoost(fit.scale);
+    this.hud.legible(boost);
+    this.view.legible(boost);
     const m = fitMenu(this.app.screen.width, this.app.screen.height);
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);

@@ -296,8 +296,12 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
   const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
   count.anchor.set(1, 0.5);
   if (more.onDouble) {
+    // the words give way first (the English ones fill the row), so the count stays readable
+    const end = iw / 2 - 290;
+    const room = end - what.x - 100;
+    if (what.width + count.width > room) what.scale.set(Math.max(0.8, (room - count.width) / what.width));
     const x0 = what.x + what.width + 100;
-    count.scale.set(Math.min(1, (iw / 2 - 290 - x0) / count.width));
+    count.scale.set(Math.min(1, (end - x0) / count.width));
     count.x = x0 + count.width;
   } else {
     count.x = iw / 2 - 40 - (more.doubled ? 110 : 0);

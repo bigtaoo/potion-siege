@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { DESIGN_H, DESIGN_W, fitDesign, fitMenu } from './viewport';
+import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, textBoost } from './viewport';
 
 describe('fitDesign', () => {
   it('fills a 9:16 phone exactly', () => {
@@ -32,5 +32,16 @@ describe('fitMenu', () => {
     const f = fitMenu(1920, 1080);
     expect(f).toMatchObject({ wide: true, scale: 1, w: 1920, h: 1080 });
     expect(fitMenu(2560, 1080).w).toBeCloseTo(2560);
+  });
+});
+
+describe('textBoost', () => {
+  it('leaves big boards alone and grows the words on an 800x450 embed, within bounds', () => {
+    expect(textBoost(fitDesign(1280, 720).scale)).toBe(1);
+    expect(textBoost(fitDesign(390, 844).scale)).toBe(1);
+    expect(textBoost(fitDesign(1920, 1080).scale)).toBe(1);
+    const small = textBoost(fitDesign(800, 450).scale);
+    expect(small).toBeGreaterThan(1.4);
+    expect(small).toBeLessThanOrEqual(1.5);
   });
 });
