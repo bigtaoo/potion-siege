@@ -10,6 +10,8 @@ export interface Spawn {
   kind: EnemyKind;
   /** Hit points in FP units, already scaled for the wave. */
   hp: number;
+  /** Permille of the usual kill gold: one of a bigger, weaker early crowd is worth less. */
+  gold?: number;
 }
 
 /** The first stage each kind can turn up on. */
@@ -65,7 +67,10 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
   const hp = waveHp(wave);
   const hpOf = (kind: EnemyKind) => Math.round(hp * BALANCE.enemies[kind].hp * FP);
   const boss = isBossWave(wave, bossWaves);
-  const count = Math.round((w.baseCount + w.countStep * (wave - 1)) * (boss ? 0.5 : 1));
+  // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
+  // but more of them on the road (permille)
+  const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  const count = Math.round(((w.baseCount + w.countStep * (wave - 1)) * (boss ? 0.5 : 1) * crowd) / 1000);
   // the rolls are in permille
   const fly = wave >= FIRST_WAVE.flyer ? Math.round(flyerShare(stage) * 1000) : 0;
   const span = ticks(w.spawnWindow);
@@ -78,7 +83,12 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
       roll = Math.trunc(((roll - fly) * 1000) / (1000 - fly));
       kind = wave >= FIRST_WAVE.brute && roll < 150 ? 'brute' : wave >= FIRST_WAVE.runner && roll < 400 ? 'runner' : 'grunt';
     }
-    spawns.push({ at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) });
+    const spawn: Spawn = { at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) };
+    if (crowd !== 1000) {
+      spawn.hp = Math.round((spawn.hp * 1000) / crowd);
+      spawn.gold = Math.round(1_000_000 / crowd);
+    }
+    spawns.push(spawn);
   }
   if (boss) spawns.unshift({ at: 0, kind: 'boss', hp: hpOf('boss') });
   const wd = BALANCE.winder;

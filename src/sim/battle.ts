@@ -499,6 +499,7 @@ export class Battle {
       chargeTime: 0,
       pushTime: 0,
       atWall: false,
+      gold: s.gold ?? 1000,
     };
     if (s.kind === 'flyer') {
       // its swing starts at a point set by its id, so the dice stay as they were before flyers
@@ -997,7 +998,7 @@ export class Battle {
     all.length = n;
     for (const e of dead) {
       const def = B.enemies[e.kind];
-      const gold = Math.round((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1));
+      const gold = Math.round(((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold) / 1000);
       this.gold += gold;
       this.kills++;
       this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: e.kind === 'boss' });

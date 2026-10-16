@@ -80,6 +80,8 @@ export interface Enemy {
   pushTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
+  /** Permille of the usual kill gold (see Spawn.gold). */
+  gold: number;
   /** A flyer weaves from side to side about this x, at this point of its swing (brads). */
   x0?: number;
   phase?: number;
