@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
 import {
-  applyRun, battleSetup, benched, buyHero, buyWorkshop, endOffers, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward,
-  swapLineup, unlockHero, unlockStage,
+  AD_CRYSTALS, adsLeft, ADS_PER_DAY, applyRun, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, CHEST_CRYSTALS, chestReady, claimAd, claimChest,
+  endOffers, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward, swapLineup, unlockHero, unlockPrice, unlockStage,
 } from './meta';
 import { BALANCE, LINEUP } from './types';
 
@@ -230,5 +230,64 @@ describe('corrosion unlock and lineup', () => {
     }
     const ok = parseMeta(JSON.stringify({ unlocked: ['poison'], lineup: ['poison', 'fire', 'ice', 'lightning'] }));
     expect(ok.lineup).toEqual(['poison', 'fire', 'ice', 'lightning']);
+  });
+
+  describe('shop', () => {
+    it('opens the free chest once a day', () => {
+      const m = newMeta();
+      expect(chestReady(m, '2026-10-16')).toBe(true);
+      expect(claimChest(m, '2026-10-16')).toBe(CHEST_CRYSTALS);
+      expect(claimChest(m, '2026-10-16')).toBe(0);
+      expect(chestReady(m, '2026-10-16')).toBe(false);
+      expect(m.crystals).toBe(CHEST_CRYSTALS);
+      expect(claimChest(m, '2026-10-17')).toBe(CHEST_CRYSTALS);
+      expect(m.crystals).toBe(2 * CHEST_CRYSTALS);
+    });
+
+    it('pays for a few ads a day, then no more until tomorrow', () => {
+      const m = newMeta();
+      for (let i = 0; i < ADS_PER_DAY; i++) expect(claimAd(m, '2026-10-16')).toBe(AD_CRYSTALS);
+      expect(adsLeft(m, '2026-10-16')).toBe(0);
+      expect(claimAd(m, '2026-10-16')).toBe(0);
+      expect(m.crystals).toBe(ADS_PER_DAY * AD_CRYSTALS);
+      expect(adsLeft(m, '2026-10-17')).toBe(ADS_PER_DAY);
+      expect(claimAd(m, '2026-10-17')).toBe(AD_CRYSTALS);
+      expect(adsLeft(m, '2026-10-17')).toBe(ADS_PER_DAY - 1);
+    });
+
+    it('sells a locked potion for crystals, only with enough of them and only once', () => {
+      const price = unlockPrice('poison');
+      expect(price).toBeGreaterThan(0);
+      const m = newMeta();
+      m.crystals = price! - 1;
+      expect(buyUnlock(m, 'poison')).toBe(false);
+      expect(heroUnlocked(m, 'poison')).toBe(false);
+      m.crystals = price! * 2;
+      expect(buyUnlock(m, 'poison')).toBe(true);
+      expect(heroUnlocked(m, 'poison')).toBe(true);
+      expect(m.crystals).toBe(price);
+      expect(buyUnlock(m, 'poison')).toBe(false);
+      expect(m.crystals).toBe(price);
+    });
+
+    it('does not sell the starting potions or one a first clear opened', () => {
+      const m = newMeta();
+      m.crystals = 1e6;
+      expect(unlockPrice('fire')).toBeNull();
+      expect(buyUnlock(m, 'fire')).toBe(false);
+      unlockHero(m, 'poison');
+      expect(buyUnlock(m, 'poison')).toBe(false);
+      expect(m.crystals).toBe(1e6);
+    });
+
+    it('keeps the shop days in the save', () => {
+      const m = newMeta();
+      claimChest(m, '2026-10-16');
+      claimAd(m, '2026-10-16');
+      const back = parseMeta(JSON.stringify(m));
+      expect(chestReady(back, '2026-10-16')).toBe(false);
+      expect(adsLeft(back, '2026-10-16')).toBe(ADS_PER_DAY - 1);
+      expect(parseMeta('{"shop":{"ads":99,"adDay":5}}').shop).toEqual({ chestDay: '', adDay: '', ads: ADS_PER_DAY });
+    });
   });
 });

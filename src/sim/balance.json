@@ -187,5 +187,11 @@
       "skill": { "n": 6, "reward": 50 },
       "boss": { "n": 2, "reward": 80 }
     }
+  },
+  "shop": {
+    "chest": 60,
+    "ad": 40,
+    "adsPerDay": 3,
+    "unlock": { "poison": 800 }
   }
 }

@@ -11,7 +11,10 @@ import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
-import { battleSetup, benched, buyHero, buyWorkshop, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup, type MetaSave } from './sim/meta';
+import {
+  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
+  type MetaSave,
+} from './sim/meta';
 import { botAct } from './sim/bot';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
@@ -309,6 +312,12 @@ class Game {
       hero: (kind) => this.buy(buyHero(this.save, kind), `hero_${kind}`),
       lineup: (kind) => this.lineup(kind),
       workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
+      claimChest: () => {
+        const n = claimChest(this.save, today);
+        if (n > 0) this.claimed('shop_chest', n, panel);
+      },
+      watchAd: () => void this.shopAd(),
+      unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
       play: () => {
         this.newBattle('again');
         this.menu.visible = false;
@@ -316,7 +325,27 @@ class Game {
         this.root.visible = true;
         this.platform.gameplayStart();
       },
-    }, this.tab, panel, today, fit, this.picked));
+    }, this.tab, panel, today, fit, this.picked, !this.autoplay && this.platform.rewardedAvailable()));
+  }
+
+  /** The shop's rewarded ad: crystals when it was watched, a few times a day. The menu takes no
+   *  taps while it plays, and an ad that broke counts as not watched. */
+  private async shopAd(): Promise<void> {
+    if (adsLeft(this.save, dayOf(new Date())) <= 0) return;
+    this.menu.interactiveChildren = false;
+    let ok = false;
+    try {
+      ok = await this.platform.rewarded(() => this.mute(true));
+    } catch {
+      // not watched: nothing paid
+    } finally {
+      this.menu.interactiveChildren = true;
+      this.mute(false);
+    }
+    this.analytics.track('ad_shop', { ok });
+    const n = ok ? claimAd(this.save, dayOf(new Date())) : 0;
+    if (n > 0) this.claimed('shop_ad', n, null);
+    else if (this.menu.visible) this.home();
   }
 
   /** A tap on the lineup row: a potion in the lineup swaps out for the reserve (the one picked,
