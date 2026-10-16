@@ -63,6 +63,10 @@ export class Battle {
   private shotCount = new Map<number, number>();
   private pending: Spawn[] = [];
   private events: BattleEvent[] = [];
+  /** The array drain() handed out last time, refilled after the next drain. */
+  private drained: BattleEvent[] = [];
+  /** The enemies reapDead() takes out, reused every step. */
+  private readonly dead: Enemy[] = [];
   private nextId = 1;
   private offerFocus: HeroKind | undefined;
 
@@ -220,10 +224,13 @@ export class Battle {
     this.choices = null;
   }
 
-  /** Events since the last drain, oldest first. */
+  /** Events since the last drain, oldest first. The array is reused: it is valid until the
+   *  next drain, so a caller that keeps it longer copies it. */
   drain(): BattleEvent[] {
     const out = this.events;
-    this.events = [];
+    this.events = this.drained;
+    this.events.length = 0;
+    this.drained = out;
     return out;
   }
 
@@ -781,8 +788,15 @@ export class Battle {
 
   private reapDead(): void {
     if (!this.enemies.some((e) => e.hp <= 0)) return;
-    const dead = this.enemies.filter((e) => e.hp <= 0);
-    this.enemies = this.enemies.filter((e) => e.hp > 0);
+    // the living move up in place, in order; the dead go to a reused list
+    const all = this.enemies;
+    const dead = this.dead;
+    let n = 0;
+    for (const e of all) {
+      if (e.hp > 0) all[n++] = e;
+      else if (e.hp <= 0) dead.push(e);
+    }
+    all.length = n;
     for (const e of dead) {
       const def = B.enemies[e.kind];
       const gold = Math.round((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1));
@@ -813,6 +827,7 @@ export class Battle {
         this.events.push({ type: 'hit', kind: 'ice', x: e.x, y: e.y, radius });
       }
     }
+    dead.length = 0;
   }
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */
