@@ -17,7 +17,7 @@ export interface PotionLook {
   lid: number;
   limb: number;
   /** What rises from its neck: the element mark. */
-  mark: 'flame' | 'frost' | 'spark' | 'star';
+  mark: 'flame' | 'frost' | 'spark' | 'star' | 'acid';
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];
@@ -125,6 +125,7 @@ class PotionFigure extends Container {
     if (pose.tilt === undefined) {
       if (look.mark === 'flame') this.drawFlame(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else if (look.mark === 'frost') this.drawFrost(f, look, pose, t, nx, ny, bw, bh, w, r, line);
+      else if (look.mark === 'acid') this.drawAcid(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else if (look.mark === 'spark') this.drawSpark(f, look, pose, t, nx, ny, bw, bh, w, r, line);
       else this.drawStars(f, look, pose, t, nx, ny, bw, bh, w, r, line);
     }
@@ -172,6 +173,35 @@ class PotionFigure extends Container {
       const sy = cy + (rand(i + 5) - 0.5) * size * 0.6;
       const step = size * 0.12;
       f.moveTo(sx, sy).lineTo(sx + side * step, sy - step).lineTo(sx + side * step, sy + step * 0.3).lineTo(sx + side * step * 2, sy - step * 0.7).stroke({ width: line * 1.6, color: look.glow[0], cap: 'round', join: 'round' });
+    }
+  }
+
+  /** Acid bubbling up out of the neck and popping, with a drip running down the shoulder. */
+  private drawAcid(f: Graphics, look: PotionLook, pose: PotionPose, t: number, nx: number, ny: number, bw: number, bh: number, w: number, r: number, line: number): void {
+    // a fat drip creeping down from the rim, then falling off and starting over
+    const d = (t * 0.35 + pose.phase * 0.41) % 1;
+    const dx = nx + bw * 0.24;
+    const dy = ny + bh * 0.04 + d * bh * 0.16;
+    const dr = bh * 0.03 * (0.6 + d * 0.6);
+    f.moveTo(dx - dr, dy).quadraticCurveTo(dx, dy - dr * 3, dx + dr, dy).arc(dx, dy, dr, 0, Math.PI).closePath().fill(look.glow[1]).stroke({ width: line * 0.7, color: INK });
+    // bubbles rising out of the neck, wobbling, swelling, popping; faster on a throw
+    const speed = 0.7 + 0.8 * w + 0.6 * r;
+    for (let i = 0; i < 3; i++) {
+      const p = (t * speed * 0.5 + i / 3 + pose.phase * 0.23) % 1;
+      const bx = nx + Math.sin(p * 6 + i * 2.4 + pose.phase) * bw * 0.1 + (i - 1) * bw * 0.08;
+      const by = ny - bh * 0.04 - p * bh * 0.34;
+      const size = bh * (0.035 + 0.045 * p) * (i === 1 ? 1.25 : 1);
+      if (p < 0.88) {
+        f.circle(bx, by, size).fill(look.glow[1]).stroke({ width: line * 0.8, color: INK });
+        f.circle(bx - size * 0.35, by - size * 0.35, size * 0.3).fill(look.glow[2]);
+      } else {
+        // pop: a ring of four specks
+        const k = (p - 0.88) / 0.12;
+        for (let s = 0; s < 4; s++) {
+          const a = s * (Math.PI / 2) + 0.6;
+          f.circle(bx + Math.cos(a) * size * (1 + k), by + Math.sin(a) * size * (1 + k), size * 0.25 * (1 - k)).fill(look.glow[0]);
+        }
+      }
     }
   }
 

@@ -20,6 +20,12 @@ const FILES = [
   'potion_lightning_body',
   'potion_ice_ult',
   'potion_lightning_ult',
+  'potion_poison_body',
+  'potion_poison_ult',
+  'icon_allDamage',
+  'icon_allSpeed',
+  'icon_gold',
+  'icon_wallRepair',
   'bg_field.jpg',
   'bg_base',
 ] as const;
@@ -43,7 +49,7 @@ export async function loadArt(): Promise<void> {
 /** The small figure a cell shows one to three of, for levels 1-3. */
 const FIGURE: Partial<Record<HeroKind, string>> = {};
 /** The single big hero of the top level. */
-const ULTIMATE: Partial<Record<HeroKind, string>> = { arcane: 'potion_arcane_ult', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult' };
+const ULTIMATE: Partial<Record<HeroKind, string>> = { arcane: 'potion_arcane_ult', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult', poison: 'potion_poison_ult' };
 
 export function figureTexture(kind: HeroKind): Texture | undefined {
   const f = FIGURE[kind];
@@ -98,6 +104,16 @@ const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: strin
     glow: [0xf5b800, 0xffe94a, 0xffffff],
     neck: [0.49, 0.03],
     size: 0.82,
+  },
+  poison: {
+    file: 'potion_poison_body',
+    eyes: [[0.288, 0.454], [0.682, 0.454]],
+    eyeSize: [0.07, 0.056],
+    lid: 0xdffd21,
+    limb: 0xc0662c,
+    mark: 'acid',
+    glow: [0x4fb81c, 0x9cf03a, 0xeaffa0],
+    neck: [0.48, 0.03],
   },
 };
 
