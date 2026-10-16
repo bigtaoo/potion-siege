@@ -5,6 +5,8 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import pkg from '../package.json';
 import { Analytics, type Sink } from './analytics/analytics';
+import { memProbe } from './analytics/memProbe';
+import { deviceProps, PerfReport } from './analytics/perfReport';
 import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
 import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
@@ -64,13 +66,26 @@ export async function boot(platform: Platform): Promise<void> {
     w: window.innerWidth,
     h: window.innerHeight,
     touch: navigator.maxTouchPoints > 0,
+    ...safeDevice(app),
   });
+  game.perf.anomalies.listen(window, app.canvas);
   // mobile browsers often skip pagehide, so also flush whenever the tab is hidden
   document.addEventListener('visibilitychange', () => {
-    if (document.visibilityState === 'hidden') analytics.flush();
+    if (document.visibilityState === 'hidden') {
+      game.perf.hidden();
+      analytics.flush();
+    }
   });
   window.addEventListener('pagehide', () => game.leave());
   game.start();
+}
+
+function safeDevice(app: Application): ReturnType<typeof deviceProps> {
+  try {
+    return deviceProps(app.renderer);
+  } catch {
+    return {};
+  }
 }
 
 /** Console with `?track`, an in-memory log in dev, and the collector when VITE_ANALYTICS_URL is set. */
@@ -123,6 +138,8 @@ class Game {
   private readonly autoplay: boolean;
   private readonly speed: number;
   private readonly audio = new GameAudio();
+  /** The `perf` and `anomaly` telemetry: battle frames only, see analytics/perfReport. */
+  readonly perf: PerfReport;
 
   constructor(
     private readonly app: Application,
@@ -133,6 +150,7 @@ class Game {
     this.save = parseMeta(platform.storage.getItem(SAVE_KEY));
     this.autoplay = params.has('autoplay');
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
+    this.perf = new PerfReport(analytics, memProbe(app), () => this.place(), this.speed);
     this.audio.attach();
     this.audio.prefs(this.save.sound);
     platform.onHostMute((muted) => this.audio.host(muted));
@@ -144,7 +162,10 @@ class Game {
     this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
     app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu);
-    app.ticker.add((ticker) => this.tick(Math.min(ticker.deltaMS / 1000, 0.1)));
+    app.ticker.add((ticker) => {
+      this.tick(Math.min(ticker.deltaMS / 1000, 0.1));
+      this.perf.tick(ticker.deltaMS, this.measured(), this.battle?.enemies.length ?? 0);
+    });
   }
 
   start(): void {
@@ -162,6 +183,7 @@ class Game {
       this.overlay.hide();
       this.analytics.first('first_tap_start', { t: this.analytics.sessionSeconds });
       this.run = new RunTracker(this.analytics, this.battle!, this.save.runs + 1, 'first');
+      this.perf.start();
       this.beginTutorial();
       this.platform.gameplayStart();
     });
@@ -170,6 +192,7 @@ class Game {
   /** The page is going away: report the run in progress and the session length. */
   leave(): void {
     this.store(); // task progress made in the battle so far
+    if (this.run && this.battle && !this.battle.result) this.perf.quit();
     this.run?.close('pagehide');
     this.analytics.track('session_end', { secs: this.analytics.sessionSeconds, runs: this.save.runs, best: this.save.bestWave });
     this.analytics.flush();
@@ -182,6 +205,7 @@ class Game {
     this.challenge = null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
+    if (this.run) this.perf.start();
     this.revived = false;
     this.ended = false;
     this.offered = { revive: false, double: false };
@@ -191,6 +215,19 @@ class Game {
     this.hud.attach(this.battle);
     // today's tasks exist before the first battle counts toward them (a fresh save has none)
     rollDay(this.save, dayOf(new Date()));
+  }
+
+  /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */
+  private measured(): boolean {
+    const b = this.battle;
+    return !!(this.run && b && !b.paused && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
+  }
+
+  /** Where the player is, for an `anomaly`. */
+  private place(): { place: string; wave?: number } {
+    if (this.menu.visible) return { place: 'home' };
+    if (!this.run || !this.battle) return { place: 'title' };
+    return { place: this.ended ? 'results' : 'run', wave: this.battle.wave };
   }
 
   private tick(dt: number): void {
@@ -373,6 +410,7 @@ class Game {
     this.store();
     if (b.result === 'won') this.platform.celebrate();
     this.run?.onEnd();
+    this.perf.end();
     this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: firstClear });
     this.showEnd(b);
     if (this.autoplay) setTimeout(() => void this.again(), 1500);
@@ -393,6 +431,7 @@ class Game {
     this.store();
     if (run.result.tier > 0) this.platform.celebrate();
     this.run?.onEnd();
+    this.perf.end();
     this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
     this.showEnd(b);
   }
