@@ -167,10 +167,11 @@ export function rollChoices(
   heroLevels: Record<HeroKind, number>,
   focus?: HeroKind,
   exclude: readonly SkillId[] = [],
+  banned: readonly SkillId[] = [],
 ): SkillId[] {
   const open = SKILL_IDS.filter((id) => {
     const d = DEFS[id];
-    if (levels[id] >= d.max) return false;
+    if (levels[id] >= d.max || banned.includes(id)) return false;
     if (d.hero === undefined) return true;
     return fielded.has(d.hero) && heroLevels[d.hero] >= unlockLevel(id) && (d.with === undefined || fielded.has(d.with));
   });

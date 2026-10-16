@@ -8,6 +8,9 @@
 
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
+import {
+  bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, challengeFresh, msToTomorrow, streak, tierOf, todaysChallenge,
+} from '../sim/challenge';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
@@ -36,6 +39,7 @@ import {
   lightTile,
   lock,
   medal,
+  modifierIcon,
   P,
   paperCard,
   PillButton,
@@ -70,6 +74,9 @@ export interface HomeActions {
   /** Buys a locked potion early. */
   unlock(kind: HeroKind): void;
   play(): void;
+  /** Today's challenge: the free attempt, and the one a rewarded ad buys. */
+  challenge(): void;
+  challengeAd(): void;
 }
 
 /** The part of the page a tab fills. */
@@ -104,13 +111,13 @@ export function buildHome(
   const left = wide ? RAIL : 0;
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
-  if (tab === 'battle') battleTab(root, m, act, area, picked);
+  if (tab === 'battle') battleTab(root, m, act, area, picked, today, ads);
   else if (tab === 'potions') potionsTab(root, m, act, area);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area));
   else shopTab(root, m, act, area, today, ads);
   topBar(root, m, act, today, left, w, wide);
-  nav(root, act, tab, fit, { shop: chestReady(m, today) });
+  nav(root, act, tab, fit, { shop: chestReady(m, today), battle: challengeFresh(m, today) });
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -189,7 +196,7 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots
     const cap = ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink });
     cap.y = big ? (wide ? 92 : 70) : 58;
     slot.addChild(icon, cap);
-    if (dots[id]) redDot(slot, 46, -62);
+    if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -84 : -118) : -62);
     if (!on) slot.alpha = big ? 1 : 0.85;
     root.addChild(slot);
   });
@@ -206,7 +213,7 @@ function navIcon(id: HomeTab): Container {
 // ---- tabs ----
 
 /** The stage to fight, the enemies on it, the lineup and the button into battle. */
-function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, picked: HeroKind | null): void {
+function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, picked: HeroKind | null, today: string, ads: boolean): void {
   const stageAt = (x: number, y: number, ax = 340) => {
     const p = plate(t('stage', { n: m.stage }), 64, 420);
     p.position.set(x, y);
@@ -225,8 +232,8 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     hp.position.set(x, y + 100);
     root.addChild(hp);
   };
-  const start = (x: number, y: number) => {
-    const b = new PillButton(t('start'), 620, 180, 'green', act.play, 76);
+  const start = (x: number, y: number, h: number) => {
+    const b = new PillButton(t('start'), 620, h, 'green', act.play, 72);
     b.position.set(x, y);
     root.addChild(b);
   };
@@ -241,21 +248,23 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     if (tex) {
       const s = new Sprite(tex);
       s.anchor.set(0.5, 1);
-      s.scale.set(400 / tex.height);
-      s.position.set(lx, a.y + a.h - 260);
-      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.2 }), s);
+      s.scale.set(Math.min(400, a.h - 690) / tex.height);
+      s.position.set(lx, a.y + a.h - 450);
+      root.addChild(new Graphics().ellipse(lx, a.y + a.h - 455, 150, 30).fill({ color: 0x000000, alpha: 0.2 }), s);
     }
-    start(lx, a.y + a.h - 130);
+    start(lx, a.y + a.h - 360, 140);
+    challengeBanner(root, m, act, today, ads, lx, a.y + a.h - 126, Math.min(960, a.w - rw - 70));
     enemiesPanel(root, m.stage, rx, a.y + 235, rw);
     lineupPanel(root, m, act, picked, rx, a.y + 700, rw);
   } else {
-    stageAt(a.x + a.w / 2, a.y + 90);
-    // the panels share the room between the stage and the button
-    const free = a.h - 280 - 300;
-    const gap = Math.max(30, (free - 380 - LINEUP_H) / 3);
-    enemiesPanel(root, m.stage, a.x + a.w / 2, a.y + 280 + gap + 190, pw);
-    lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 280 + 2 * gap + 380 + LINEUP_H / 2, pw);
-    start(a.x + a.w / 2, a.y + a.h - 150);
+    stageAt(a.x + a.w / 2, a.y + 80);
+    // the panels share the room between the stage and the button, the challenge under it
+    const eh = 310;
+    const gap = Math.max(20, (a.h - 660 - eh - LINEUP_H) / 3);
+    enemiesPanel(root, m.stage, a.x + a.w / 2, a.y + 210 + gap + eh / 2, pw, eh);
+    lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 210 + 2 * gap + eh + LINEUP_H / 2, pw);
+    start(a.x + a.w / 2, a.y + a.h - 365, 150);
+    challengeBanner(root, m, act, today, ads, a.x + a.w / 2, a.y + a.h - 16 - BANNER_H / 2, pw);
   }
 }
 
@@ -270,20 +279,21 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
 }
 
 /** The clockwork army this stage sends, the boss marked. */
-function enemiesPanel(root: Container, stage: number, x: number, y: number, w: number): void {
-  const c = titledPanel(root, t('enemies'), x, y, w, 380);
+function enemiesPanel(root: Container, stage: number, x: number, y: number, w: number, h = 380): void {
+  const c = titledPanel(root, t('enemies'), x, y, w, h);
   const kinds = ENEMY_KINDS.filter((k) => onStage(k, stage));
   const step = Math.min(210, (w - 80) / kinds.length);
+  const th = h - 160;
   kinds.forEach((kind, i) => {
     const tile = new Container();
     tile.position.set((i - (kinds.length - 1) / 2) * step, 30);
-    tile.addChild(lightTile(step - 20, 220, 22));
-    const s = enemySprite(kind, Math.min(170, step - 30));
+    tile.addChild(lightTile(step - 20, th, 22));
+    const s = enemySprite(kind, Math.min(170, step - 30, th - 50));
     s.y = -4;
     tile.addChild(s);
     if (kind === 'boss') {
       const tag = bossTag(28);
-      tag.y = 96;
+      tag.y = th / 2 - 14;
       tile.addChild(tag);
     }
     c.addChild(tile);
@@ -291,6 +301,108 @@ function enemiesPanel(root: Container, stage: number, x: number, y: number, w: n
 }
 
 const LINEUP_H = 430;
+const BANNER_H = 220;
+
+/** Today's challenge under the start button: its stage, the two modifiers, the reward tiers
+ *  (those reached today ticked) and the way in: the free attempt, then the rewarded retry, then
+ *  the best wave and the time until the next one. */
+function challengeBanner(root: Container, m: MetaSave, act: HomeActions, today: string, ads: boolean, x: number, y: number, w: number): void {
+  const ch = todaysChallenge(m, today);
+  const free = canPlayFree(m, today);
+  const c = free ? tappable(new Container(), act.challenge) : new Container();
+  c.position.set(x, y);
+  root.addChild(c);
+  c.addChild(lightPanel(w, BANNER_H));
+  const head = plate(`${t('challenge.title')} · ${t('stage', { n: ch.stage })}`, 34, 300);
+  head.y = -BANNER_H / 2 + 2;
+  c.addChild(head);
+  const cy = 12;
+  const pad = 42;
+  const aw = w < 900 ? 190 : 210;
+  const tw = 200;
+  const mw = w - 2 * pad - aw - tw - 36;
+  // the modifiers, a chip each
+  ch.mods.forEach((id, i) => {
+    const chip = new Container();
+    chip.position.set(-w / 2 + pad + mw / 2, cy - 38 + i * 78);
+    chip.addChild(lightTile(mw, 70, 18));
+    const icon = modifierIcon(id, ch.trial);
+    icon.scale.set(0.5);
+    icon.position.set(-mw / 2 + 40, -3);
+    const name = ink(t(`challenge.mod.${id}.name`), 30, { fontWeight: '900' });
+    name.anchor.set(0, 0.5);
+    name.position.set(-mw / 2 + 76, -4);
+    const desc = ink(t(`challenge.mod.${id}.desc`, { hero: ch.trial ? t(`hero.${ch.trial}`) : '' }), 24, { fill: P.inkSoft });
+    desc.anchor.set(0, 0.5);
+    desc.position.set(name.x + name.width + 12, -2);
+    fitText(desc, mw / 2 - 14 - desc.x);
+    chip.addChild(icon, name, desc);
+    c.addChild(chip);
+  });
+  // the reward tiers
+  const best = bestToday(m, today);
+  const reached = tierOf(best);
+  CHALLENGE_TIERS.forEach((tier, i) => {
+    const row = new Container();
+    row.position.set(w / 2 - pad - aw - 18 - tw / 2, cy - 50 + i * 50);
+    const on = i < reached;
+    row.addChild(new Graphics().roundRect(-tw / 2, -21, tw, 42, 21).fill(on ? 0xd4eec0 : LIGHT.inset).stroke({ width: 3, color: on ? 0x3c9a4a : LIGHT.insetEdge }));
+    const wave = ink(t('challenge.wave', { n: tier.wave }), 24, { fill: on ? 0x2b6a33 : P.ink });
+    wave.anchor.set(0, 0.5);
+    wave.position.set(-tw / 2 + 14, -1);
+    const n = ink(String(tier.reward), 26, { fill: LIGHT.crystal, fontWeight: '900' });
+    n.anchor.set(1, 0.5);
+    n.position.set(tw / 2 - 14, -1);
+    row.addChild(wave, n, gem(new Graphics(), n.x - n.width - 16, -2, 11));
+    c.addChild(row);
+  });
+  // the way in, or how it went
+  const ax = w / 2 - pad - aw / 2;
+  const days = streak(m, today);
+  if (free) {
+    const go = new PillButton(t('challenge.go'), aw, 92, 'green', act.challenge, 44);
+    go.position.set(ax, cy - 24);
+    c.addChild(go);
+    if (days > 0) {
+      const s = ink(t('challenge.streak', { n: days }), 24, { fill: P.inkSoft });
+      s.position.set(ax, cy + 48);
+      c.addChild(fitText(s, aw));
+    }
+    redDot(c, ax + aw / 2 - 8, cy - 66);
+    return;
+  }
+  const top = ink(t('challenge.best', { n: best }), 30, { fontWeight: '900' });
+  top.position.set(ax, cy - 50);
+  c.addChild(fitText(top, aw + 10));
+  if (ads && canPlayAd(m, today)) {
+    const again = new PillButton(t('challenge.retry'), aw, 84, 'purple', act.challengeAd, 30);
+    const cap = again.children[1];
+    cap.x = 24;
+    const tv = adIcon();
+    tv.scale.set(0.34);
+    tv.position.set(-cap.width / 2 - 4, -6);
+    again.addChild(tv);
+    again.position.set(ax, cy + 26);
+    c.addChild(again);
+    return;
+  }
+  const left = ink('', 26, { fill: P.inkSoft });
+  left.position.set(ax, cy + 6);
+  let shown = '';
+  left.onRender = () => {
+    const secs = Math.ceil(msToTomorrow(new Date()) / 1000);
+    const p = (v: number) => String(v).padStart(2, '0');
+    const text = t('challenge.next', { time: `${p(Math.floor(secs / 3600))}:${p(Math.floor(secs / 60) % 60)}:${p(secs % 60)}` });
+    if (text !== shown) {
+      left.text = shown = text;
+      left.scale.set(1);
+      fitText(left, aw + 10);
+    }
+  };
+  const s = ink(t('challenge.streak', { n: days }), 24, { fill: P.inkSoft });
+  s.position.set(ax, cy + 50);
+  c.addChild(left, fitText(s, aw));
+}
 
 /** Every potion in a row: the four going into battle ticked, the reserve dimmed, the locked
  *  ones behind a padlock with the stage that opens them. Tapping one in the lineup swaps it
