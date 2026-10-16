@@ -175,3 +175,34 @@ export function iceShell(g: Graphics, x: number, feet: number, w: number, h: num
   g.moveTo(x - w * 0.3, top + h * 0.18).lineTo(x - w * 0.3, top + h * 0.45).stroke({ width: 5, color: 0xffffff, alpha: 0.85, cap: 'round' });
   g.moveTo(x - w * 0.18, top + h * 0.14).lineTo(x - w * 0.1, top + h * 0.22).stroke({ width: 5, color: 0xffffff, alpha: 0.85, cap: 'round' });
 }
+
+/** A winder winding back the enemies round it: a clock face spreading over the ground out to
+ *  `radius`, its ticks and a hand sweeping backwards. */
+export function rewindWave(g: Graphics, x: number, y: number, radius: number, p: number): void {
+  const a = fade(p);
+  const r = radius * (0.35 + 0.65 * easeOut(Math.min(1, p * 2)));
+  // seen from above at a slant, like the field: squashed into an ellipse
+  const sy = 0.55;
+  g.ellipse(x, y, r, r * sy).fill({ color: 0x3f9a96, alpha: 0.18 * a }).stroke({ width: 6, color: 0xc9a24a, alpha: a });
+  g.ellipse(x, y, r, r * sy).stroke({ width: 2, color: INK, alpha: 0.6 * a });
+  for (let i = 0; i < 12; i++) {
+    const ang = (i * Math.PI) / 6;
+    const c = Math.cos(ang);
+    const s = Math.sin(ang) * sy;
+    const inner = i % 3 === 0 ? 0.8 : 0.88;
+    g.moveTo(x + c * r * inner, y + s * r * inner).lineTo(x + c * r, y + s * r).stroke({ width: i % 3 === 0 ? 6 : 4, color: 0xc9a24a, alpha: a, cap: 'round' });
+  }
+  // the hand turns back from twelve o'clock, and a short arc behind it shows which way
+  const back = -Math.PI / 2 - p * Math.PI * 1.5;
+  const hx = x + Math.cos(back) * r * 0.75;
+  const hy = y + Math.sin(back) * r * 0.75 * sy;
+  g.moveTo(x, y).lineTo(hx, hy).stroke({ width: 10, color: INK, alpha: a, cap: 'round' });
+  g.moveTo(x, y).lineTo(hx, hy).stroke({ width: 5, color: 0xe8d9a8, alpha: a, cap: 'round' });
+  const arc: number[] = [];
+  for (let j = 0; j <= 10; j++) {
+    const ang = back + (j / 10) * 0.9;
+    arc.push(x + Math.cos(ang) * r * 0.6, y + Math.sin(ang) * r * 0.6 * sy);
+  }
+  g.poly(arc, false).stroke({ width: 5, color: 0x3f9a96, alpha: a, cap: 'round' });
+  g.circle(x, y, 9).fill({ color: 0xc9a24a, alpha: a }).stroke({ width: 3, color: INK, alpha: a });
+}

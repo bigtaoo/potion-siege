@@ -12,6 +12,8 @@ const FILES = [
   'enemy_runner',
   'enemy_brute',
   'enemy_boss',
+  'enemy_flyer',
+  'enemy_winder',
   'icon_crit',
   'commander',
   'potion_fire_body',

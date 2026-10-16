@@ -12,8 +12,9 @@ export const LINEUP = BALANCE.lineup as readonly HeroKind[];
 
 export type OfferReason = 'upgrade' | 'ultimate';
 
-/** The clockwork army, weakest first. */
-export const ENEMY_KINDS = ['grunt', 'runner', 'brute', 'boss'] as const;
+/** The clockwork army: the first four from stage 1, weakest first, then the two that join on
+ *  later stages. */
+export const ENEMY_KINDS = ['grunt', 'runner', 'brute', 'boss', 'flyer', 'winder'] as const;
 export type EnemyKind = (typeof ENEMY_KINDS)[number];
 
 export interface Hero {
@@ -67,6 +68,11 @@ export interface Enemy {
   chargeTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
+  /** A flyer weaves from side to side about this x, at this point of its swing. */
+  x0?: number;
+  phase?: number;
+  /** A winder's seconds until it next winds back the enemies around it. */
+  windTime?: number;
 }
 
 export interface Projectile {
@@ -103,4 +109,6 @@ export type BattleEvent =
   /** A skill offer opened: bought with gold, or the bonus for making an ultimate hero. */
   | { type: 'offer'; reason: OfferReason }
   | { type: 'wallHit' }
+  /** A winder wound back the enemies within `radius`: healed, thawed and sped up again. */
+  | { type: 'rewind'; x: number; y: number; radius: number }
   | { type: 'end'; won: boolean };

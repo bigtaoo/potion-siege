@@ -2,6 +2,7 @@
 // the view reads the state and the events each frame and only calls the player commands
 // (summon, move, upgrade, choose).
 
+import { resist } from './enemies';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { Rng } from './rng';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
@@ -252,7 +253,7 @@ export class Battle {
   private startWave(wave: number): void {
     this.wave = wave;
     this.waveTime = 0;
-    this.pending = planWave(wave, this.rng).map((s) => ({ ...s, hp: s.hp * this.setup.enemyHp }));
+    this.pending = planWave(wave, this.rng, this.setup.stage).map((s) => ({ ...s, hp: s.hp * this.setup.enemyHp }));
     if (wave > 1) this.gold += B.waves.waveBonusGold;
     this.events.push({ type: 'wave', wave, boss: isBossWave(wave) });
   }
@@ -270,7 +271,8 @@ export class Battle {
   private spawn(s: Spawn): void {
     const def = B.enemies[s.kind];
     const f = B.field;
-    this.enemies.push({
+    const id = this.nextId;
+    const e: Enemy = {
       id: this.nextId++,
       kind: s.kind,
       x: this.rng.range(f.left + def.radius, f.right - def.radius),
@@ -296,11 +298,42 @@ export class Battle {
       charge: 0,
       chargeTime: 0,
       atWall: false,
-    });
+    };
+    if (s.kind === 'flyer') {
+      // its swing starts at a point set by its id, so the dice stay as they were before flyers
+      const a = B.flyer.weave;
+      e.x0 = Math.min(f.right - def.radius - a, Math.max(f.left + def.radius + a, e.x));
+      e.phase = id * 2.399;
+    }
+    if (s.kind === 'winder') e.windTime = B.winder.every;
+    this.enemies.push(e);
+  }
+
+  /** The y of the frontmost enemy that is not a winder, or -Infinity with none on the field. */
+  private frontY(): number {
+    let y = -Infinity;
+    for (const e of this.enemies) if (e.kind !== 'winder' && e.hp > 0) y = Math.max(y, e.y);
+    return y;
+  }
+
+  /** A winder winds back the enemies around it: a share of their hit points back, and no more
+   *  frost or slow on them (rust stays). The boss is too big for it. */
+  private rewind(w: Enemy): void {
+    const R = B.winder;
+    for (const o of this.enemies) {
+      if (o === w || o.hp <= 0 || o.kind === 'boss' || Math.hypot(o.x - w.x, o.y - w.y) > R.range + o.radius) continue;
+      o.hp = Math.min(o.maxHp, o.hp + o.maxHp * R.heal);
+      o.freezeTime = 0;
+      o.slowTime = 0;
+      o.chill = 0;
+      o.chillTime = 0;
+    }
+    this.events.push({ type: 'rewind', x: w.x, y: w.y, radius: R.range });
   }
 
   private stepEnemies(dt: number): void {
     let hitWall = false;
+    const front = this.frontY();
     for (const e of this.enemies) {
       if (e.poisonTime > 0) {
         this.harm(e, e.poisonDps * Math.min(dt, e.poisonTime), 'poison');
@@ -325,12 +358,26 @@ export class Battle {
         e.freezeTime -= dt;
         continue;
       }
-      const stop = this.wallFront(e.x) - e.radius;
+      if (e.kind === 'flyer' && !e.atWall) {
+        // weaves from side to side on the way down; at the wall it hovers where it stopped
+        const f = B.flyer;
+        e.x = e.x0! + f.weave * Math.sin(e.phase! + this.time * f.weaveRate);
+      }
+      if (e.kind === 'winder' && !e.atWall) {
+        e.windTime! -= dt;
+        if (e.windTime! <= 0) {
+          e.windTime = B.winder.every;
+          this.rewind(e);
+        }
+      }
+      const wall = this.wallFront(e.x) - e.radius;
+      // a winder keeps behind the crowd it winds, and waits for it
+      const stop = e.kind === 'winder' && front > -Infinity ? Math.min(wall, Math.max(e.y, front - B.winder.gap)) : wall;
       if (e.y < stop) {
         e.y = Math.min(stop, e.y + e.speed * (e.slowTime > 0 ? e.slowFactor : 1) * dt);
-      } else {
+      } else if (e.y >= wall) {
         // a cell just built under it pushes it back to the new front
-        e.y = stop;
+        e.y = wall;
         e.atWall = true;
         this.wall -= B.enemies[e.kind].wallDps * dt;
         hitWall = true;
@@ -440,7 +487,7 @@ export class Battle {
         const radius = h.fire.splash * this.mods.fireRadius;
         for (const e of this.enemies) {
           if (Math.hypot(e.x - p.tx, e.y - p.ty) > radius + e.radius) continue;
-          this.scorch(e, p.damage, by);
+          this.scorch(e, p.damage * (e.id === p.targetId ? 1 : this.splash(e)), by);
           this.discharge(e);
         }
         this.events.push({ type: 'hit', kind: 'fire', x: p.tx, y: p.ty, radius });
@@ -494,7 +541,7 @@ export class Battle {
         // the acid splashes: poison and rust on everything close to the target
         const radius = S.acidRadius;
         for (const e of this.enemies) {
-          if (e !== target && e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.corrode(e, dps);
+          if (e !== target && e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.corrode(e, dps * this.splash(e));
         }
         this.events.push({ type: 'hit', kind: 'poison', x: target.x, y: target.y, radius });
       }
@@ -512,7 +559,7 @@ export class Battle {
       const radius = S.burstBoltRadius;
       for (const e of this.enemies) {
         if (e === target || e.hp <= 0 || Math.hypot(e.x - target.x, e.y - target.y) > radius + e.radius) continue;
-        this.scorch(e, p.damage * S.burstBolt, 'arcane');
+        this.scorch(e, p.damage * S.burstBolt * this.splash(e), 'arcane');
         this.discharge(e);
       }
       this.events.push({ type: 'hit', kind: 'fire', x: target.x, y: target.y, radius });
@@ -529,11 +576,17 @@ export class Battle {
     }
   }
 
-  /** Every bit of damage goes through here, for the arcane mark and the corrosion's rust (both
-   *  multiply, the mark first) and for crediting the potion it came from (`by`) with what the
-   *  enemy had left of it. */
+  /** What a blast aimed at something else does to `e`: a flyer is up in the air, above most of it. */
+  private splash(e: Enemy): number {
+    return e.kind === 'flyer' ? B.flyer.splash : 1;
+  }
+
+  /** Every bit of damage goes through here, for the enemy's resistance to the potion it came
+   *  from (`by`; the commander's shots have none), the arcane mark and the corrosion's rust (all
+   *  multiply), and for crediting that potion with what the enemy had left of it. */
   private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
-    let dealt = e.markTime > 0 ? damage * (1 + this.mods.mark) : damage;
+    let dealt = by ? damage * resist(e.kind, by) : damage;
+    if (e.markTime > 0) dealt *= 1 + this.mods.mark;
     dealt *= 1 + this.mods.rustStep * e.rust;
     if (by) this.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
     e.hp -= dealt;
@@ -589,15 +642,16 @@ export class Battle {
   }
 
   /** Freezes, for `hit`, the damage of the ice hit that froze it. A boss is too big to freeze:
-   *  the frost slows it hard instead and, with shatter, chips shards off it. */
+   *  the frost slows it hard instead and, with shatter, chips shards off it. A flyer cannot
+   *  freeze either, its wings keep beating: it only slows. */
   private freeze(e: Enemy, time: number, hit: number): void {
     const S = B.skills;
-    if (e.kind !== 'boss') {
+    if (e.kind !== 'boss' && e.kind !== 'flyer') {
       e.freezeTime = Math.max(e.freezeTime, time * this.mods.freezeTime);
       return;
     }
     this.slow(e, S.bossFreezeSlow, time * this.mods.freezeTime);
-    if (this.mods.shatter) {
+    if (this.mods.shatter && e.kind === 'boss') {
       this.harm(e, hit * S.bossShatter, 'ice');
       this.events.push({ type: 'hit', kind: 'ice', x: e.x, y: e.y, radius: e.radius });
     }
@@ -649,13 +703,13 @@ export class Battle {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)
         const radius = B.heroes.fire.splash * this.mods.fireRadius * B.skills.fireChainRadius;
-        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.harm(o, e.scorch * B.skills.fireChain, e.scorchBy);
+        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.harm(o, e.scorch * B.skills.fireChain * this.splash(o), e.scorchBy);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x, y: e.y, radius });
       }
       if (this.mods.melt && e.rust > 0) {
         // died rusted: it falls apart and its rust eats into what stands around it
         const radius = B.skills.meltRadius;
-        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.corrode(o, 0, e.rust);
+        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.corrode(o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);
         this.events.push({ type: 'hit', kind: 'poison', x: e.x, y: e.y, radius });
       }
       if (this.mods.shatter && e.freezeTime > 0) {
@@ -663,7 +717,7 @@ export class Battle {
         const radius = B.skills.shatterRadius;
         for (const o of this.enemies) {
           if (Math.hypot(o.x - e.x, o.y - e.y) > radius + o.radius) continue;
-          this.harm(o, e.maxHp * B.skills.shatter, 'ice');
+          this.harm(o, e.maxHp * B.skills.shatter * this.splash(o), 'ice');
           this.slow(o, B.heroes.ice.slow, B.heroes.ice.slowTime);
         }
         this.events.push({ type: 'hit', kind: 'ice', x: e.x, y: e.y, radius });

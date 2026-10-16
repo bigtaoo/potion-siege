@@ -11,6 +11,7 @@ import { t } from '../i18n';
 import { canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
+import { onStage } from '../sim/waves';
 import {
   AD_CRYSTALS, adsLeft, ADS_PER_DAY, benched, CHEST_CRYSTALS, chestReady, heroCost, heroDamage, heroUnlocked, maxStage, stageHp, unlockPrice, unlockStage,
   WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId,
@@ -245,14 +246,14 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
       root.addChild(new Graphics().ellipse(lx, a.y + a.h - 265, 170, 34).fill({ color: 0x000000, alpha: 0.2 }), s);
     }
     start(lx, a.y + a.h - 130);
-    enemiesPanel(root, rx, a.y + 235, rw);
+    enemiesPanel(root, m.stage, rx, a.y + 235, rw);
     lineupPanel(root, m, act, picked, rx, a.y + 700, rw);
   } else {
     stageAt(a.x + a.w / 2, a.y + 90);
     // the panels share the room between the stage and the button
     const free = a.h - 280 - 300;
     const gap = Math.max(30, (free - 380 - LINEUP_H) / 3);
-    enemiesPanel(root, a.x + a.w / 2, a.y + 280 + gap + 190, pw);
+    enemiesPanel(root, m.stage, a.x + a.w / 2, a.y + 280 + gap + 190, pw);
     lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 280 + 2 * gap + 380 + LINEUP_H / 2, pw);
     start(a.x + a.w / 2, a.y + a.h - 150);
   }
@@ -269,14 +270,15 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
 }
 
 /** The clockwork army this stage sends, the boss marked. */
-function enemiesPanel(root: Container, x: number, y: number, w: number): void {
+function enemiesPanel(root: Container, stage: number, x: number, y: number, w: number): void {
   const c = titledPanel(root, t('enemies'), x, y, w, 380);
-  const step = Math.min(210, (w - 80) / ENEMY_KINDS.length);
-  ENEMY_KINDS.forEach((kind, i) => {
+  const kinds = ENEMY_KINDS.filter((k) => onStage(k, stage));
+  const step = Math.min(210, (w - 80) / kinds.length);
+  kinds.forEach((kind, i) => {
     const tile = new Container();
-    tile.position.set((i - (ENEMY_KINDS.length - 1) / 2) * step, 30);
+    tile.position.set((i - (kinds.length - 1) / 2) * step, 30);
     tile.addChild(lightTile(step - 20, 220, 22));
-    const s = enemySprite(kind, 170);
+    const s = enemySprite(kind, Math.min(170, step - 30));
     s.y = -4;
     tile.addChild(s);
     if (kind === 'boss') {

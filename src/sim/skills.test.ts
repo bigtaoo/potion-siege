@@ -1,9 +1,20 @@
-import { describe, expect, it } from 'vitest';
+import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Battle } from './battle';
+import { RESIST } from './enemies';
 import { battleSetup, newMeta } from './meta';
 import { Rng } from './rng';
 import { emptySkills, mods, perksFor, rollChoices, SKILL_IDS, type SkillId } from './skills';
 import { BALANCE, type Enemy, type HeroKind } from './types';
+
+// The skill lines' numbers are checked on a grunt that takes every potion in full; the
+// resistances have tests of their own.
+const gruntResist = RESIST.grunt;
+beforeAll(() => {
+  RESIST.grunt = {};
+});
+afterAll(() => {
+  RESIST.grunt = gruntResist;
+});
 
 /** Every skill any roll could offer with these heroes fielded at these levels. */
 function pool(fielded: HeroKind[], levels: Partial<Record<HeroKind, number>>): Set<SkillId> {
@@ -480,5 +491,111 @@ describe('the corrosion line', () => {
     const f = enemy(plain, 500, 600, 1e6);
     hit(plain, 'lightning', f, 1);
     expect(f.rust).toBe(0);
+  });
+});
+
+describe('the new kinds in battle', () => {
+  /** Like withSkills, but no wave comes either. */
+  function still(skills: SkillId[] = []): Battle {
+    const b = withSkills(skills);
+    b['pending'] = [];
+    return b;
+  }
+
+  it('takes each potion by its resistance, the commander in full', () => {
+    const b = still();
+    const brute = enemy(b, 500, 400, 1e6);
+    brute.kind = 'brute';
+    hit(b, 'ice', brute, 100);
+    expect(1e6 - brute.hp).toBeCloseTo(125);
+    const before = brute.hp;
+    b.projectiles.push({ id: 2, kind: 'fire', star: 1, x: 500, y: 400, targetId: brute.id, tx: 500, ty: 400, damage: 100, commander: true });
+    b.step(1 / 60);
+    expect(before - brute.hp).toBeCloseTo(100);
+    b.projectiles.push({ id: 3, kind: 'fire', star: 1, x: 500, y: 400, targetId: brute.id, tx: 500, ty: 400, damage: 100 });
+    const mid = brute.hp;
+    b.step(1 / 60);
+    expect(mid - brute.hp).toBeCloseTo(50);
+  });
+
+  it('keeps a flyer from freezing: frost only slows it', () => {
+    const b = still(['iceFrostbite']);
+    const f = enemy(b, 500, 600, 1e6);
+    f.kind = 'flyer';
+    f.x0 = 500;
+    f.phase = 0;
+    for (let i = 0; i < BALANCE.skills.frostbiteStacks * 2; i++) hit(b, 'ice', f, 1);
+    expect(f.freezeTime).toBe(0);
+    expect(f.slowFactor).toBeCloseTo(1 - BALANCE.skills.bossFreezeSlow);
+  });
+
+  it('lets a flyer take half of a fire splash aimed at another, all of one aimed at it', () => {
+    const b = still();
+    const g = enemy(b, 500, 400, 1e6);
+    const f = enemy(b, 540, 400, 1e6);
+    f.kind = 'flyer';
+    f.x0 = 540;
+    f.phase = 0;
+    hit(b, 'fire', g, 100);
+    const fire = RESIST.flyer.fire!;
+    expect(1e6 - f.hp).toBeCloseTo(100 * BALANCE.flyer.splash * fire);
+    const before = f.hp;
+    hit(b, 'fire', f, 100);
+    expect(before - f.hp).toBeCloseTo(100 * fire);
+  });
+
+  it('weaves a flyer from side to side about where it came in', () => {
+    const b = still();
+    const f = enemy(b, 500, 200, 1e6);
+    f.kind = 'flyer';
+    f.x0 = 500;
+    f.phase = 0;
+    const xs: number[] = [];
+    for (let i = 0; i < 120; i++) {
+      b.step(1 / 30);
+      xs.push(f.x);
+    }
+    expect(Math.max(...xs) - Math.min(...xs)).toBeGreaterThan(BALANCE.flyer.weave);
+    for (const x of xs) expect(Math.abs(x - 500)).toBeLessThanOrEqual(BALANCE.flyer.weave + 1e-6);
+  });
+
+  it('winds back the enemies around a winder: hit points back, frost and slow gone, rust kept', () => {
+    const b = still();
+    const w = enemy(b, 500, 300, 1e6);
+    w.kind = 'winder';
+    w.windTime = 0.01;
+    const g = enemy(b, 560, 300, 100);
+    g.hp = 50;
+    g.freezeTime = 2;
+    g.slowTime = 2;
+    g.rust = 3;
+    g.rustTime = 5;
+    const boss = enemy(b, 440, 300, 1000);
+    boss.kind = 'boss';
+    boss.hp = 500;
+    const far = enemy(b, 500, 300 + BALANCE.winder.range + 200, 100);
+    far.hp = 50;
+    b.drain();
+    b.step(1 / 60);
+    expect(g.hp).toBeCloseTo(50 + 100 * BALANCE.winder.heal);
+    expect(g.freezeTime).toBe(0);
+    expect(g.slowTime).toBe(0);
+    expect(g.rust).toBe(3);
+    expect(boss.hp).toBe(500);
+    expect(far.hp).toBe(50);
+    expect(b.drain().some((e) => e.type === 'rewind')).toBe(true);
+    expect(w.windTime).toBeCloseTo(BALANCE.winder.every);
+  });
+
+  it('keeps a winder behind the crowd it winds', () => {
+    const b = still();
+    const w = enemy(b, 500, 100, 1e6);
+    w.kind = 'winder';
+    w.speed = 100;
+    w.windTime = 99;
+    enemy(b, 700, 550, 1e6);
+    for (let i = 0; i < 300; i++) b.step(1 / 30);
+    expect(w.y).toBeCloseTo(550 - BALANCE.winder.gap);
+    expect(w.atWall).toBe(false);
   });
 });
