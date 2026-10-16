@@ -70,7 +70,9 @@ function wrapTokens(text: string): string[] {
       continue;
     }
     const last = out[out.length - 1];
-    if (last !== undefined && LATIN.test(tok) && LATIN.test(last)) out[out.length - 1] = last + tok;
+    // a number keeps its unit (3 秒) and a word its one-character suffix (魔法弹)
+    const glue = last !== undefined && ((/^[秒次颗层倍波关级瓶个]$/.test(tok) && /\d\s?$/.test(last)) || (/^[弹剂]$/.test(tok) && /\p{Script=Han}$/u.test(last)));
+    if (last !== undefined && ((LATIN.test(tok) && LATIN.test(last)) || glue)) out[out.length - 1] = last + tok;
     else out.push(tok);
   }
   if (group !== null) out.push(group);
