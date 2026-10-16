@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, loginDay, loginReward, rollDay, taskGoal, tasksClaimable } from './daily';
+import { addProgress, ALL_DONE_BONUS, bonusReady, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, loginDay, loginReward, rollDay, taskGoal, tasksClaimable } from './daily';
 import { newMeta, parseMeta } from './meta';
 import { BALANCE } from './types';
 
@@ -45,6 +45,28 @@ describe('daily', () => {
     expect(claimTask(m, 1)).toBeGreaterThan(0);
     expect(claimTask(m, 1)).toBe(0);
     expect(tasksClaimable(m)).toBe(false);
+  });
+
+  it('pays the bonus once all three tasks are claimed, once a day', () => {
+    const m = newMeta();
+    rollDay(m, '2026-10-15');
+    expect(bonusReady(m)).toBe(false);
+    m.daily.tasks.forEach((t, i) => {
+      addProgress(m, t.id, 10_000);
+      expect(claimBonus(m)).toBe(0);
+      claimTask(m, i);
+    });
+    expect(bonusReady(m)).toBe(true);
+    expect(tasksClaimable(m)).toBe(true);
+    const before = m.crystals;
+    expect(claimBonus(m)).toBe(ALL_DONE_BONUS);
+    expect(m.crystals).toBe(before + ALL_DONE_BONUS);
+    expect(claimBonus(m)).toBe(0);
+    expect(tasksClaimable(m)).toBe(false);
+    expect(parseMeta(JSON.stringify(m)).daily.bonus).toBe(true);
+    rollDay(m, '2026-10-16');
+    expect(m.daily.bonus).toBe(false);
+    expect(bonusReady(m)).toBe(false);
   });
 
   it('keeps the daily state through a save', () => {

@@ -192,7 +192,7 @@ export class Battle {
     this.slots[from] = null;
     const kind = this.rng.pick(this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: 0.2 };
-    this.events.push({ type: 'merge', slot: to, star });
+    this.events.push({ type: 'merge', slot: to, star, kind });
     if (star === B.maxStar) this.offer('ultimate', kind);
     return true;
   }
@@ -788,7 +788,7 @@ export class Battle {
       const gold = Math.round((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1));
       this.gold += gold;
       this.kills++;
-      this.events.push({ type: 'kill', x: e.x, y: e.y, gold, boss: e.kind === 'boss' });
+      this.events.push({ type: 'kill', kind: e.kind, x: e.x, y: e.y, gold, boss: e.kind === 'boss' });
       if (this.mods.fireChain && e.scorchTime > 0) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)

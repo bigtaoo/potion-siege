@@ -2,7 +2,7 @@
 // flow title -> battle (with skill picks) -> end -> home (upgrades) -> battle. The very first
 // battle starts from the title with one tap; the home screen comes after it.
 
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics, Text } from 'pixi.js';
 import pkg from '../package.json';
 import { Analytics, type Sink } from './analytics/analytics';
 import { RunTracker } from './analytics/runTracker';
@@ -12,7 +12,8 @@ import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challenge, type ChallengeResult } from './sim/challenge';
-import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
+import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
+import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
   adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
   type MetaSave,
@@ -28,6 +29,7 @@ import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
 import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
+import { flyCrystals } from './view/fly';
 import { SideInfo } from './view/SideInfo';
 import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, type MenuFit } from './view/viewport';
 
@@ -383,6 +385,7 @@ class Game {
     addProgress(this.save, 'challenge');
     if (b.result === 'won') addProgress(this.save, 'win');
     run.result = bookAttempt(this.save, b.wave);
+    recordChallenge(this.save, run.result.tier);
     this.save.bestWave = Math.max(this.save.bestWave, b.wave);
     this.store();
     if (run.result.tier > 0) this.platform.celebrate();
@@ -452,14 +455,22 @@ class Game {
         this.home();
       },
       panel: (p) => this.home(p),
-      claimLogin: () => {
+      claimLogin: (at) => {
         const n = claimLogin(this.save, today);
-        if (n > 0) this.claimed('login', n, panel);
+        if (n > 0) this.claimed('login', n, panel, at);
       },
-      claimTask: (i) => {
+      claimTask: (i, at) => {
         const id = this.save.daily.tasks[i]?.id;
         const n = claimTask(this.save, i);
-        if (n > 0) this.claimed(`task_${id}`, n, panel);
+        if (n > 0) this.claimed(`task_${id}`, n, panel, at);
+      },
+      claimBonus: (at) => {
+        const n = claimBonus(this.save);
+        if (n > 0) this.claimed('task_all', n, panel, at);
+      },
+      claimTier: (id, at) => {
+        const n = claimTier(this.save, id);
+        if (n > 0) this.claimed(`ach_${id}`, n, panel, at);
       },
       stage: (d) => {
         this.save.stage = Math.min(maxStage(this.save), Math.max(1, this.save.stage + d));
@@ -469,9 +480,9 @@ class Game {
       hero: (kind) => this.buy(buyHero(this.save, kind), `hero_${kind}`),
       lineup: (kind) => this.lineup(kind),
       workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
-      claimChest: () => {
+      claimChest: (at) => {
         const n = claimChest(this.save, today);
-        if (n > 0) this.claimed('shop_chest', n, panel);
+        if (n > 0) this.claimed('shop_chest', n, panel, at);
       },
       watchAd: () => void this.shopAd(),
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
@@ -532,16 +543,24 @@ class Game {
     this.home();
   }
 
-  private claimed(item: string, crystals: number, panel: HomePanel): void {
+  /** Crystals paid for `item`: saved, then the page rebuilt and the crystals flown from the
+   *  button tapped (`at`, or the middle of the page) into the purse. */
+  private claimed(item: string, crystals: number, panel: HomePanel, at?: Container): void {
     this.audio.play(item === 'shop_chest' ? 'chest' : 'crystal');
     this.store();
     this.analytics.track('daily_claim', { item, crystals, total: this.save.crystals });
+    const fit = this.menuFit;
+    const from = at && !at.destroyed ? this.menu.toLocal(at.getGlobalPosition()) : { x: (fit?.w ?? 0) / 2, y: (fit?.h ?? 0) / 2 };
     this.home(panel);
+    const purse = this.menu.getChildByLabel('purse', true);
+    const count = this.menu.getChildByLabel('purseCount', true);
+    if (purse && count instanceof Text) flyCrystals(this.menu, from, purse, count, this.save.crystals - crystals, this.save.crystals);
   }
 
-  /** Counts this battle's events toward today's tasks. */
+  /** Counts this battle's events toward today's tasks and the achievements. */
   private countDaily(events: BattleEvent[]): void {
     const m = this.save;
+    recordEvents(m, events);
     for (const ev of events) {
       if (ev.type === 'summon') addProgress(m, 'summon');
       else if (ev.type === 'merge') {
