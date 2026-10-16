@@ -130,9 +130,14 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
     const c = tappable(new Container(), onTap);
     c.position.set(x, y);
     icon.scale.set(0.72);
-    const cap = ink(text, 26);
-    cap.y = 54;
-    c.addChild(medal(56), icon, cap);
+    // the caption sits on its own cream plate below the medal, clear of the brass rim
+    const cap = fitText(ink(text, 24), 112);
+    const plate = new Graphics()
+      .roundRect(-cap.width / 2 - 12, -17, cap.width + 24, 34, 17)
+      .fill(LIGHT.face)
+      .stroke({ width: 3, color: LIGHT.edge });
+    plate.y = cap.y = 74;
+    c.addChild(medal(56), icon, plate, cap);
     if (dot) redDot(c, 42, -42);
     root.addChild(c);
   };
