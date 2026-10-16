@@ -57,7 +57,7 @@ import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'tasks' | HeroKind | null;
+export type HomePanel = 'login' | 'tasks' | 'settings' | HeroKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -78,6 +78,8 @@ export interface HomeActions {
   /** Today's challenge: the free attempt, and the one a rewarded ad buys. */
   challenge(): void;
   challengeAd(): void;
+  /** Flips the music or the sound effects toggle. */
+  sound(which: 'music' | 'sfx'): void;
 }
 
 /** The part of the page a tab fills. */
@@ -121,6 +123,7 @@ export function buildHome(
   nav(root, act, tab, fit, { shop: chestReady(m, today), battle: challengeFresh(m, today) });
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
   return root;
 }
@@ -144,6 +147,7 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
   };
   button(left + 90, calendarIcon(), t('login'), canClaimLogin(m, today), () => act.panel('login'));
   button(left + 240, scrollIcon(), t('tasks'), tasksClaimable(m), () => act.panel('tasks'));
+  button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
 
   // the crystals in a dark inset, top right
   const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });
@@ -886,6 +890,87 @@ function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
     box.addChild(r);
   });
   return panel;
+}
+
+/** The settings: the music and sound effects toggles. */
+function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
+  const h = 560;
+  const { panel, box } = frame(act, t('sound.settings'), h, fit);
+  (['music', 'sfx'] as const).forEach((which, i) => {
+    const on = m.sound[which];
+    const r = tappable(new Container(), () => act.sound(which));
+    r.position.set(0, -80 + i * 190);
+    const icon = new Container();
+    icon.position.set(-330, 0);
+    icon.addChild(medal(56, on ? 0x3c9a4a : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));
+    const name = ink(t(`sound.${which}`), 50);
+    name.anchor.set(0, 0.5);
+    name.position.set(-245, -4);
+    fitText(name, 300);
+    const sw = toggle(on);
+    sw.position.set(255, -4);
+    r.addChild(lightTile(860, 160), icon, name, sw);
+    box.addChild(r);
+  });
+  return panel;
+}
+
+/** An on/off switch: a green track with the knob on the right, or a grey one with it on the left. */
+function toggle(on: boolean): Container {
+  const c = new Container();
+  const w = 220;
+  const h = 96;
+  const track = new Graphics()
+    .roundRect(-w / 2, -h / 2 + 6, w, h, h / 2)
+    .fill({ color: P.line, alpha: 0.3 })
+    .roundRect(-w / 2, -h / 2, w, h, h / 2)
+    .fill(on ? 0x3c9a4a : LIGHT.inset)
+    .stroke({ width: 5, color: on ? P.line : LIGHT.edge });
+  const kx = on ? w / 2 - h / 2 : -w / 2 + h / 2;
+  const knob = new Graphics()
+    .circle(kx, 4, h / 2 - 8)
+    .fill({ color: P.line, alpha: 0.3 })
+    .circle(kx, 0, h / 2 - 8)
+    .fill(on ? P.brassLight : LIGHT.face)
+    .stroke({ width: 5, color: P.line });
+  const word = label(t(on ? 'sound.on' : 'sound.off'), 34, { stroke: { color: P.line, width: 6 } });
+  word.position.set(on ? -h / 2 + 18 : h / 2 - 18, -3);
+  fitText(word, w - h - 16);
+  c.addChild(track, knob, word);
+  return c;
+}
+
+/** Two beamed eighth notes. */
+function noteIcon(): Graphics {
+  return new Graphics()
+    .poly([-16, -26, 22, -36, 22, -24, -16, -14])
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line, join: 'round' })
+    .rect(-18, -20, 7, 44)
+    .fill(P.cream)
+    .rect(16, -30, 7, 44)
+    .fill(P.cream)
+    .ellipse(-22, 24, 12, 9)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line })
+    .ellipse(12, 14, 12, 9)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line });
+}
+
+/** A speaker with sound waves, or with a cross when off. */
+function speakerIcon(on: boolean): Graphics {
+  const g = new Graphics()
+    .poly([-30, -10, -16, -10, 2, -26, 2, 26, -16, 10, -30, 10])
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line, join: 'round' });
+  if (on) {
+    g.arc(4, 0, 14, -0.9, 0.9).stroke({ width: 6, color: P.cream, cap: 'round' });
+    g.arc(4, 0, 26, -0.9, 0.9).stroke({ width: 6, color: P.cream, cap: 'round' });
+  } else {
+    g.moveTo(12, -12).lineTo(32, 12).moveTo(32, -12).lineTo(12, 12).stroke({ width: 7, color: P.cream, cap: 'round' });
+  }
+  return g;
 }
 
 /** One hero: its level, the skill cards it starts with and what each milestone unlocks. */

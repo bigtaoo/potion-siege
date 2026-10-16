@@ -33,6 +33,8 @@ export interface MetaSave {
   /** The first-battle tutorial was finished or skipped, and does not show again. */
   tutorial: boolean;
   challenge: ChallengeSave;
+  /** The settings' music and sound effects toggles. */
+  sound: { music: boolean; sfx: boolean };
 }
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
@@ -92,6 +94,7 @@ export function newMeta(): MetaSave {
     shop: { chestDay: '', adDay: '', ads: 0 },
     tutorial: false,
     challenge: newChallenge(),
+    sound: { music: true, sfx: true },
   };
 }
 
@@ -134,6 +137,8 @@ export function parseMeta(raw: string | null): MetaSave {
   // a save from before the tutorial that has played already knows the game
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
   out.challenge = parseChallenge(data.challenge);
+  const sound = (data.sound ?? {}) as Record<string, unknown>;
+  out.sound = { music: sound.music !== false, sfx: sound.sfx !== false };
   return out;
 }
 

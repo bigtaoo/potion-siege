@@ -6,6 +6,7 @@ import { Application, Container, Graphics } from 'pixi.js';
 import pkg from '../package.json';
 import { Analytics, type Sink } from './analytics/analytics';
 import { RunTracker } from './analytics/runTracker';
+import { GameAudio } from './audio/engine';
 import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
@@ -23,7 +24,7 @@ import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomePanel, type HomeTab } from './view/Home';
-import { workshopWall } from './view/kit';
+import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
 import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
 import { COLORS } from './view/ui';
@@ -116,6 +117,7 @@ class Game {
   private loginShown = '';
   private readonly autoplay: boolean;
   private readonly speed: number;
+  private readonly audio = new GameAudio();
 
   constructor(
     private readonly app: Application,
@@ -126,6 +128,10 @@ class Game {
     this.save = parseMeta(platform.storage.getItem(SAVE_KEY));
     this.autoplay = params.has('autoplay');
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
+    this.audio.attach();
+    this.audio.prefs(this.save.sound);
+    platform.onHostMute((muted) => this.audio.host(muted));
+    uiSound.tap = () => this.audio.play('tap');
     this.hud = new Hud(
       () => this.battle?.summon(),
       () => this.battle?.upgrade(),
@@ -190,6 +196,8 @@ class Game {
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);
     this.sideWall(fit.x, m);
+    // the workshop tune on the menus and the title, the battle loop while a battle runs
+    this.audio.music(this.menu.visible || !this.run ? 'workshop' : this.ended ? null : 'battle');
 
     if (this.menu.visible) {
       this.lessons.visible = false;
@@ -214,6 +222,7 @@ class Game {
       this.run?.onEvents(events);
       if (this.run && !this.autoplay) this.countDaily(events);
       this.view.react(events);
+      this.audio.battle(events);
       this.hud.react(events);
       if (b.choices) this.showSkills(b);
       else if (b.result) this.finish(b);
@@ -327,6 +336,7 @@ class Game {
     if (this.battle?.choices) {
       this.run?.onSkillPick(id, this.battle.choices);
       if (!this.autoplay) addProgress(this.save, 'skill');
+      this.audio.play('levelup');
     }
     this.battle?.choose(id);
     this.overlay.hide();
@@ -461,6 +471,12 @@ class Game {
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
       challenge: () => this.playChallenge(false),
       challengeAd: () => void this.challengeAd(),
+      sound: (which) => {
+        this.save.sound[which] = !this.save.sound[which];
+        this.audio.prefs(this.save.sound);
+        this.store();
+        this.home('settings');
+      },
       play: () => {
         this.newBattle('again');
         this.beginTutorial();
@@ -511,6 +527,7 @@ class Game {
   }
 
   private claimed(item: string, crystals: number, panel: HomePanel): void {
+    this.audio.play(item === 'shop_chest' ? 'chest' : 'crystal');
     this.store();
     this.analytics.track('daily_claim', { item, crystals, total: this.save.crystals });
     this.home(panel);
@@ -533,6 +550,7 @@ class Game {
 
   private buy(ok: boolean, item: string): void {
     if (!ok) return;
+    this.audio.play('levelup');
     this.store();
     this.analytics.track('meta_buy', { item, crystals: this.save.crystals });
     this.home();
@@ -621,6 +639,8 @@ class Game {
     this.platform.gameplayStart();
   }
 
-  /** No sound yet; this is where ads will silence it. */
-  private mute(_on: boolean): void {}
+  /** Ads silence the game while they play. */
+  private mute(on: boolean): void {
+    this.audio.ad(on);
+  }
 }

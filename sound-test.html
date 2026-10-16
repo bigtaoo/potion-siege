@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="zh">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Potion Siege — Sound Test</title>
+    <style>
+      :root { --bg: #f3e8d2; --card: #fbf5e8; --ink: #3a2614; --soft: #7a5a3c; --edge: #c9b48c; --accent: #3c9a4a; --brass: #d8a73f; }
+      body { margin: 0; font: 16px/1.4 system-ui, 'Microsoft YaHei', sans-serif; background: var(--bg); color: var(--ink); }
+      main { max-width: 860px; margin: 0 auto; padding: 24px 16px 60px; }
+      h1 { margin: 0 0 4px; font-size: 26px; }
+      h2 { margin: 28px 0 10px; font-size: 18px; border-bottom: 2px solid var(--edge); padding-bottom: 4px; }
+      p.note { color: var(--soft); margin: 0 0 12px; }
+      .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(190px, 1fr)); gap: 10px; }
+      button { font: inherit; border: 2px solid var(--ink); border-radius: 12px; background: var(--card); color: var(--ink); padding: 10px 12px; cursor: pointer; text-align: left; box-shadow: 0 3px 0 var(--edge); }
+      button:active { transform: translateY(2px); box-shadow: 0 1px 0 var(--edge); }
+      button b { display: block; }
+      button small { color: var(--soft); }
+      button.on { background: var(--accent); color: #fff; }
+      button.on small { color: #e7ffe9; }
+      .row { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+      #status { font-family: ui-monospace, monospace; font-size: 13px; color: var(--soft); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Potion Siege · 音效试听</h1>
+      <p class="note">全部声音都是代码实时合成（Web Audio，零音频文件）。点任意按钮开始。<span id="status"></span></p>
+
+      <h2>音乐 Music（30–60 秒无缝循环，切换时交叉淡入淡出）</h2>
+      <div class="row" id="music"></div>
+
+      <h2>界面 UI</h2>
+      <div class="grid" data-group="ui"></div>
+
+      <h2>药剂命中 Hits（轻、随机变调；“连发”测试限流）</h2>
+      <div class="grid" data-group="hit"></div>
+
+      <h2>战斗 Battle</h2>
+      <div class="grid" data-group="battle"></div>
+
+      <h2>开关 Toggles</h2>
+      <div class="row" id="toggles"></div>
+    </main>
+    <script type="module" src="/src/audio/audition.ts"></script>
+  </body>
+</html>

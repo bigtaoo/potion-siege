@@ -97,6 +97,7 @@ export const zh: Table = {
   claimed: '已领取',
   tomorrow: '明天再来',
   tasks: '每日任务',
+  sound: { settings: '设置', music: '音乐', sfx: '音效', on: '开', off: '关' },
   task: {
     play: '完成 {n} 局战斗',
     win: '赢得 {n} 场战斗',
