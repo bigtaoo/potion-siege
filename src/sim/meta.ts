@@ -211,5 +211,12 @@ export class Purse {
   }
 }
 
+/** Which rewarded ads a result screen offers: the revive after a loss, once per battle, and the
+ *  ×2 once per battle when there is something to double and no revive is on offer. */
+export function endOffers(lost: boolean, revived: boolean, ads: boolean, purse: Purse): { revive: boolean; double: boolean } {
+  const revive = ads && lost && !revived;
+  return { revive, double: ads && !revive && !purse.doubled && purse.paid > 0 };
+}
 
+/** The lineup heroes, the ones that can be levelled. */
 export const LEVELLED_HEROES: readonly HeroKind[] = LINEUP;

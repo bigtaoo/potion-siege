@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
-import { applyRun, battleSetup, buyHero, buyWorkshop, heroCost, maxStage, newMeta, parseMeta, Purse, runReward } from './meta';
+import { applyRun, battleSetup, buyHero, buyWorkshop, endOffers, heroCost, maxStage, newMeta, parseMeta, Purse, runReward } from './meta';
 import { BALANCE } from './types';
 
 describe('meta', () => {
@@ -93,5 +93,56 @@ describe('meta', () => {
     expect(gain).toBe(full - first);
     expect(m.crystals).toBe(full + first);
     expect(purse.reward).toEqual({ crystals: full + first, firstClear: true });
+  });
+
+  it('doubles a first clear with its bonus', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    const r = { stage: 1, won: true, wave: 10, kills: 120 };
+    const full = runReward(newMeta(), r);
+    expect(full.firstClear).toBe(true);
+    expect(purse.settle(m, r).crystals).toBe(full.crystals);
+    expect(purse.double(m, true)).toBe(full.crystals);
+    expect(m.crystals).toBe(2 * full.crystals);
+    expect(purse.reward).toEqual({ crystals: 2 * full.crystals, firstClear: true });
+  });
+
+  it('pays nothing for a ×2 before anything was earned', () => {
+    const m = newMeta();
+    m.crystals = 30;
+    const purse = new Purse();
+    expect(purse.double(m, true)).toBe(0);
+    expect(m.crystals).toBe(30);
+  });
+
+  it('doubles the full reward after a revived battle ends again', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    purse.settle(m, { stage: 1, won: false, wave: 6, kills: 40 });
+    const end = { stage: 1, won: false, wave: 9, kills: 90 };
+    purse.settle(m, end);
+    const full = runReward(newMeta(), end).crystals;
+    expect(purse.double(m, true)).toBe(full);
+    expect(m.crystals).toBe(2 * full);
+  });
+
+  it('shows what was paid after a failed ×2, first clear kept', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    const { crystals } = purse.settle(m, { stage: 1, won: true, wave: 10, kills: 120 });
+    purse.double(m, false);
+    expect(purse.reward).toEqual({ crystals, firstClear: true });
+  });
+
+  it('offers the ×2 only when no revive is on offer, once per battle', () => {
+    const purse = new Purse();
+    purse.settle(newMeta(), { stage: 1, won: false, wave: 6, kills: 40 });
+    expect(endOffers(true, false, true, purse)).toEqual({ revive: true, double: false });
+    expect(endOffers(true, true, true, purse)).toEqual({ revive: false, double: true });
+    expect(endOffers(false, false, true, purse)).toEqual({ revive: false, double: true });
+    expect(endOffers(true, true, false, purse)).toEqual({ revive: false, double: false });
+    purse.double(newMeta(), false);
+    expect(endOffers(true, true, true, purse).double).toBe(false);
+    expect(endOffers(false, false, true, new Purse()).double).toBe(false);
   });
 });

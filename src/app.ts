@@ -11,7 +11,7 @@ import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
-import { battleSetup, buyHero, buyWorkshop, maxStage, parseMeta, Purse, type MetaSave } from './sim/meta';
+import { battleSetup, buyHero, buyWorkshop, endOffers, maxStage, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { botAct } from './sim/bot';
 import { BALANCE, HERO_KINDS, type BattleEvent } from './sim/types';
 import { loadArt } from './view/art';
@@ -93,6 +93,8 @@ class Game {
   /** Crystals paid for the current battle: what it earned and the ×2. */
   private purse = new Purse();
   private revived = false;
+  /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
+  private offered = { revive: false, double: false };
   /** The day the login panel last opened by itself. */
   private loginShown = '';
   private readonly autoplay: boolean;
@@ -151,6 +153,7 @@ class Game {
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     this.revived = false;
+    this.offered = { revive: false, double: false };
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
   }
@@ -214,14 +217,22 @@ class Game {
 
   /** The rewarded refresh: a new set of cards for the waiting offer. */
   private async reroll(b: Battle): Promise<void> {
-    this.overlay.interactiveChildren = false; // no second tap while the ad plays
-    const ok = await this.platform.rewarded(() => this.mute(true));
-    this.overlay.interactiveChildren = true;
-    this.mute(false);
+    const ok = await this.watch();
     this.run?.onRerollResult(ok);
     if (ok) b.reroll();
     else b.rerolled = true; // one offer of the ad per pick, even when it failed
     if (b.choices && this.overlay.visible) this.showSkills(b);
+  }
+
+  /** Plays a rewarded ad over the overlay that is up, which takes no taps until it is over. */
+  private async watch(): Promise<boolean> {
+    this.overlay.interactiveChildren = false; // no second tap while the ad plays
+    try {
+      return await this.platform.rewarded(() => this.mute(true));
+    } finally {
+      this.overlay.interactiveChildren = true;
+      this.mute(false);
+    }
   }
 
   private pick(id: Parameters<Battle['choose']>[0]): void {
@@ -336,10 +347,11 @@ class Game {
     const secs = Math.round(b.time);
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
     const ads = !this.autoplay && this.platform.rewardedAvailable();
-    const canRevive = b.result === 'lost' && !this.revived && ads;
-    if (canRevive) this.run?.onReviveOffer();
-    const canDouble = !this.purse.doubled && this.purse.paid > 0 && ads;
-    if (canDouble) this.run?.onDoubleOffer();
+    const { revive: canRevive, double: canDouble } = endOffers(b.result === 'lost', this.revived, ads, this.purse);
+    if (canRevive && !this.offered.revive) this.run?.onReviveOffer();
+    if (canDouble && !this.offered.double) this.run?.onDoubleOffer();
+    this.offered.revive ||= canRevive;
+    this.offered.double ||= canDouble;
     const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: b.dealt[kind] }] : []));
     this.overlay.showEnd(b.result === 'won', stats, this.purse.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null, {
       onDouble: canDouble ? () => void this.double(b) : null,
@@ -351,10 +363,7 @@ class Game {
 
   /** The rewarded ×2: what the battle earned, paid once more. */
   private async double(b: Battle): Promise<void> {
-    this.overlay.interactiveChildren = false; // no second tap while the ad plays
-    const ok = await this.platform.rewarded(() => this.mute(true));
-    this.overlay.interactiveChildren = true;
-    this.mute(false);
+    const ok = await this.watch();
     this.run?.onDoubleResult(ok);
     const bonus = this.purse.double(this.save, ok);
     if (bonus > 0) {
