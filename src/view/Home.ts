@@ -751,16 +751,24 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
     c.addChild(bt, owned);
     return c;
   }
-  c.addChild(flask(new Graphics(), 0, by + size * 0.42, size * 0.84, 0x8a7d6a));
+  const art = new Container();
+  art.addChild(flask(new Graphics(), 0, size * 0.42, size * 0.84, 0x8a7d6a));
   const l = lock(P.cream, 0x8a7d6a);
-  l.y = by + size * 0.1;
-  c.addChild(l);
+  l.y = size * 0.1;
+  art.addChild(l);
   const at = unlockStage(kind);
   // the stage that opens it anyway, over two lines rather than shrunk on a narrow tile
-  const note = fitText(inkWrapped(at ? t('unlockAt', { n: at }) : t('codex.locked'), 26, tw - 24, { fill: P.inkSoft, lineHeight: 30 }), tw - 16);
+  const note = fitText(inkWrapped(at ? t('unlockAt', { n: at }) : t('codex.locked'), tw < 160 ? 23 : 26, tw - 24, { fill: P.inkSoft, lineHeight: tw < 160 ? 27 : 30 }), tw - 16);
   note.anchor.set(0.5, 1);
   note.y = th / 2 - 106;
-  c.addChild(note);
+  // the locked flask keeps to the room the name and a long note leave, e.g. four English lines on six tiles
+  const from = top + head + 4;
+  const to = note.y - note.height - 8;
+  const box = art.getLocalBounds();
+  const k = Math.min(1, (to - from) / box.height);
+  art.scale.set(k);
+  art.y = k === 1 && by + box.y + box.height <= to ? by : (from + to) / 2 - (box.y + box.height / 2) * k;
+  c.addChild(art, note);
   if (price !== null) {
     const b = new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true).setEnabled(m.crystals >= price);
     b.y = th / 2 - 58;

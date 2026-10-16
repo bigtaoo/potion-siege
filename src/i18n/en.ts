@@ -57,7 +57,7 @@ export const en = {
     iceFreezePlus: 'All freezes last 50% longer',
     lightningStaticPlus: 'Static +50% damage',
     poisonRustPlus: 'Each rust stack +50% effect',
-    windPushPlus: 'Knockback +50%, the boiler golem flies as far as the rest',
+    windPushPlus: 'Knockback +50%, the boiler golem flies as far as a tin soldier',
   },
   maxed: 'MAX',
   reward: '+{n}',

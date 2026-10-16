@@ -523,17 +523,17 @@ describe('the gale line', () => {
     const e = enemy(b, 500, 900, 1e6);
     e.atWall = true;
     gale(b, e);
-    expect(e.y).toBeCloseTo(900 - W.push);
+    expect(e.y).toBeCloseTo(900 - W.push * W.weight.grunt);
     expect(e.atWall).toBe(false);
     const y = e.y;
     gale(b, e);
     expect(e.y).toBeCloseTo(y);
     e.pushTime = 0;
     gale(b, e, 1, 4);
-    expect(e.y).toBeCloseTo(y - W.push * W.pushStar[3]);
+    expect(e.y).toBeCloseTo(y - W.push * W.pushStar[3] * W.weight.grunt);
   });
 
-  it('blows the light ones further and the boiler golem half as far, unless the perk or frost', () => {
+  it('blows the light ones further and the boiler golem about half as far, unless the perk or frost brings it up to a clockwork soldier', () => {
     const at = (kind: Enemy['kind'], skills: SkillId[] = [], levels: Partial<Record<HeroKind, number>> = {}, frozen = false) => {
       const b = withSkills(skills, levels);
       const e = enemy(b, 500, 900, 1e6);
@@ -549,9 +549,9 @@ describe('the gale line', () => {
     expect(at('runner')).toBeCloseTo(W.push * W.weight.runner);
     expect(at('flyer')).toBeCloseTo(W.push * W.weight.flyer);
     expect(at('brute')).toBeCloseTo(W.push * W.weight.brute);
-    expect(at('brute', [], {}, true)).toBeCloseTo(W.push);
-    expect(at('brute', [], { wind: 10 })).toBeCloseTo(W.push * (1 + S.windPushPlus));
-    expect(at('grunt', ['windPush'])).toBeCloseTo(W.push * (1 + S.windPush));
+    expect(at('brute', [], {}, true)).toBeCloseTo(W.push * W.weight.grunt);
+    expect(at('brute', [], { wind: 10 })).toBeCloseTo(W.push * W.weight.grunt * (1 + S.windPushPlus));
+    expect(at('grunt', ['windPush'])).toBeCloseTo(W.push * W.weight.grunt * (1 + S.windPush));
   });
 
   it('only slows the boss', () => {

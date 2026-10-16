@@ -58,7 +58,7 @@ export const zh: Table = {
     iceFreezePlus: '所有冻结时间 +50%',
     lightningStaticPlus: '「静电」伤害 +50%',
     poisonRustPlus: '每层锈蚀效果 +50%',
-    windPushPlus: '击退 +50%，锅炉魔像也能被吹满距离',
+    windPushPlus: '击退 +50%，锅炉魔像也能被吹得和锡兵一样远',
   },
   maxed: '已满',
   reward: '+{n}',

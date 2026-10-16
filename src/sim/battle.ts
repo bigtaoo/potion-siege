@@ -615,7 +615,7 @@ export class Battle {
     }
     if (e.pushTime > 0 || e.hp <= 0) return;
     let weight = W.weight[e.kind];
-    if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = 1;
+    if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = W.weight.grunt;
     const d = W.push * W.pushStar[star - 1] * this.mods.push * weight;
     const top = B.field.top - e.radius;
     if (d <= 0) return;

@@ -4,7 +4,8 @@
 // BAL='{"waves":{"hpGrowth":1.16}}' npm run balance tries overrides without editing the file;
 // SEEDS=20 STAGES=1-8 LEVELS=fresh,mid narrow the run, FORCED_SETS the forced rows,
 // FORCED_SEEDS=300 steadies them (±7pp at the default 100), FORCED_LINEUP=arcane,fire,lightning,poison
-// fields corrosion for them (or ...,wind the gale tonic), LINEUPS=0 skips the swapped-in lineups.
+// fields corrosion for them (or ...,wind the gale tonic), LINEUPS=0 skips the swapped-in lineups,
+// LINEUP_EXTRA=wind swaps in only the gale tonic.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { botAct, playOut } from '../src/sim/bot';
@@ -233,7 +234,7 @@ it('balance report', () => {
     // corrosion and the gale tonic open with the first clear of their unlock stages: from then on
     // a player picks 4 of the potions. Each one swapped in for each starting potion, on each
     // level's contested stages past its unlock.
-    for (const extra of HERO_KINDS.filter((k) => !LINEUP.includes(k))) {
+    for (const extra of HERO_KINDS.filter((k) => !LINEUP.includes(k) && (!env.LINEUP_EXTRA || env.LINEUP_EXTRA.split(',').includes(k)))) {
       const from = (BALANCE.heroes[extra] as { unlockStage?: number }).unlockStage ?? 5;
       const lineups: HeroKind[][] = [[...LINEUP], ...LINEUP.map((out) => LINEUP.map((k) => (k === out ? extra : k)))];
       const rows = [`| lvl | st | lineup | win | wave μ | ${HERO_KINDS.map((k) => k.slice(0, 5)).join(' | ')} |`, `|---|---|---|---|---|${HERO_KINDS.map(() => '---').join('|')}|`];

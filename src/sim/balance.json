@@ -67,12 +67,12 @@
       "unlockStage": 5
     },
     "wind": {
-      "damage": 10,
+      "damage": 8.5,
       "interval": 0.7,
       "push": 45,
       "pushStar": [1, 1.3, 1.6, 2],
       "pushTime": 1.5,
-      "weight": { "grunt": 1, "runner": 1.25, "brute": 0.5, "boss": 0, "flyer": 1.5, "winder": 1 },
+      "weight": { "grunt": 0.75, "runner": 1, "brute": 0.4, "boss": 0, "flyer": 1.5, "winder": 1 },
       "bossSlow": 0.3,
       "bossSlowTime": 0.5,
       "unlockStage": 10
