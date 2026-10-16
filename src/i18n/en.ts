@@ -102,6 +102,7 @@ export const en = {
   claimed: 'Claimed',
   tomorrow: 'Back tomorrow',
   tasks: 'Daily Tasks',
+  sound: { settings: 'Settings', music: 'Music', sfx: 'Sound', on: 'ON', off: 'OFF' },
   task: {
     play: 'Finish {n} battles',
     win: 'Win {n} battle',

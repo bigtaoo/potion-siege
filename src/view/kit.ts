@@ -289,8 +289,12 @@ export class PillButton extends Container {
     this.cursor = 'pointer';
     this.on('pointertap', (e) => {
       e.stopPropagation();
-      if (this.enabled) onTap();
-      else this.offTap?.();
+      if (!this.enabled) {
+        this.offTap?.();
+        return;
+      }
+      uiSound.tap();
+      onTap();
     });
     this.draw();
   }
@@ -344,11 +348,17 @@ export function medal(r: number, face: number = P.wood): Graphics {
     .stroke({ width: 4, color: P.line });
 }
 
+/** The click every button makes; the game's audio sets it. */
+export const uiSound = { tap: (): void => {} };
+
 /** Makes a container tappable. */
 export function tappable<T extends Container>(c: T, onTap: () => void): T {
   c.eventMode = 'static';
   c.cursor = 'pointer';
-  c.on('pointertap', onTap);
+  c.on('pointertap', () => {
+    uiSound.tap();
+    onTap();
+  });
   return c;
 }
 
