@@ -42,9 +42,22 @@ export interface Enemy {
   /** Burning from the fire skill, like poison. */
   burnDps: number;
   burnTime: number;
+  /** The potion whose fire set the burn going, credited with its damage. */
+  burnBy?: HeroKind;
   /** The last fire hit and how long it still counts: a death meanwhile is a death by fire. */
   scorch: number;
   scorchTime: number;
+  /** The potion of that fire hit, credited with the chain blast. */
+  scorchBy?: HeroKind;
+  /** Arcane mark: takes more damage from every source while it lasts. */
+  markTime: number;
+  /** Frostbite stacks from ice hits; enough of them freeze it. They wear off after chillTime
+   *  without a new ice hit. */
+  chill: number;
+  chillTime: number;
+  /** Static from lightning: extra damage the next hit of another potion sets off. */
+  charge: number;
+  chargeTime: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
 }
@@ -60,6 +73,12 @@ export interface Projectile {
   tx: number;
   ty: number;
   damage: number;
+  /** Shot by the commander: the hero skill lines leave it alone. */
+  commander?: boolean;
+  /** A bolt split off a kill; it does not split again. */
+  split?: boolean;
+  /** A lightning shot that also calls down a sky strike where it lands. */
+  strike?: boolean;
 }
 
 /** What the view needs to know happened this step, beyond the plain state. */

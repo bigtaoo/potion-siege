@@ -13,13 +13,24 @@ export const SKILL_IDS = [
   'wallRepair',
   'arcanePower',
   'arcaneMulti',
+  'arcaneMark',
+  'arcaneSplit',
+  'arcaneIce',
   'fireRadius',
   'fireDamage',
   'fireBurn',
   'fireChain',
   'fireArcane',
   'iceFreeze',
+  'iceDamage',
+  'iceFrostbite',
+  'iceShatter',
+  'iceLightning',
   'lightningChain',
+  'lightningDamage',
+  'lightningStatic',
+  'lightningStrike',
+  'lightningFire',
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
@@ -40,13 +51,24 @@ const DEFS: Record<SkillId, SkillDef> = {
   wallRepair: { max: 99 },
   arcanePower: { max: 3, hero: 'arcane' },
   arcaneMulti: { max: 2, hero: 'arcane' },
+  arcaneMark: { max: 2, hero: 'arcane' },
+  arcaneSplit: { max: 1, hero: 'arcane' },
+  arcaneIce: { max: 1, hero: 'arcane', with: 'ice' },
   fireRadius: { max: 3, hero: 'fire' },
   fireDamage: { max: 3, hero: 'fire' },
   fireBurn: { max: 2, hero: 'fire' },
   fireChain: { max: 1, hero: 'fire' },
   fireArcane: { max: 1, hero: 'fire', with: 'arcane' },
   iceFreeze: { max: 3, hero: 'ice' },
+  iceDamage: { max: 3, hero: 'ice' },
+  iceFrostbite: { max: 1, hero: 'ice' },
+  iceShatter: { max: 1, hero: 'ice' },
+  iceLightning: { max: 1, hero: 'ice', with: 'lightning' },
   lightningChain: { max: 3, hero: 'lightning' },
+  lightningDamage: { max: 3, hero: 'lightning' },
+  lightningStatic: { max: 2, hero: 'lightning' },
+  lightningStrike: { max: 1, hero: 'lightning' },
+  lightningFire: { max: 1, hero: 'lightning', with: 'fire' },
 };
 
 /** The hero a skill belongs to and, for a recipe, the second one it needs. */
@@ -60,22 +82,37 @@ export function skillMax(id: SkillId): number {
 }
 
 /** Passive boosts a milestone gives to a skill the hero already has. */
-export const PERK_IDS = ['fireBurnPlus'] as const;
+export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus'] as const;
 export type PerkId = (typeof PERK_IDS)[number];
 
 /** What levelling a hero opens up: a new card in the pool, or a perk. */
 export type Milestone = { level: number } & ({ skill: SkillId } | { perk: PerkId });
 
 export const MILESTONES: Record<HeroKind, Milestone[]> = {
-  arcane: [],
+  arcane: [
+    { level: 5, skill: 'arcaneMark' },
+    { level: 10, perk: 'arcaneMarkPlus' },
+    { level: 15, skill: 'arcaneSplit' },
+    { level: 20, skill: 'arcaneIce' },
+  ],
   fire: [
     { level: 5, skill: 'fireBurn' },
     { level: 10, perk: 'fireBurnPlus' },
     { level: 15, skill: 'fireChain' },
     { level: 20, skill: 'fireArcane' },
   ],
-  ice: [],
-  lightning: [],
+  ice: [
+    { level: 5, skill: 'iceFrostbite' },
+    { level: 10, perk: 'iceFreezePlus' },
+    { level: 15, skill: 'iceShatter' },
+    { level: 20, skill: 'iceLightning' },
+  ],
+  lightning: [
+    { level: 5, skill: 'lightningStatic' },
+    { level: 10, perk: 'lightningStaticPlus' },
+    { level: 15, skill: 'lightningStrike' },
+    { level: 20, skill: 'lightningFire' },
+  ],
   poison: [],
 };
 
@@ -143,8 +180,28 @@ export interface Mods {
   fireChain: boolean;
   /** Arcane bolts explode on impact. */
   burstBolts: boolean;
+  /** Extra damage marked enemies take, as a fraction; 0 without the skill. */
+  mark: number;
+  /** Arcane bolts that kill split towards the nearest enemies. */
+  splitBolts: boolean;
+  /** Arcane bolts slow (the arcane-and-ice recipe). */
+  frostBolts: boolean;
   freezeChance: number;
+  /** Multiplier on every freeze. */
+  freezeTime: number;
+  /** Ice hits stack frostbite until the enemy freezes. */
+  frostbite: boolean;
+  /** Enemies that die frozen shatter. */
+  shatter: boolean;
+  /** Lightning hits slowed or frozen enemies harder (the ice-and-lightning recipe). */
+  superconduct: boolean;
   extraChains: number;
+  /** Static a lightning hit leaves, as a fraction of it; 0 without the skill. */
+  static: number;
+  /** Every few shots a lightning potion calls down a sky strike. */
+  thunder: boolean;
+  /** Lightning sets enemies alight (the lightning-and-fire recipe). */
+  plasma: boolean;
 }
 
 export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()): Mods {
@@ -152,6 +209,8 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
   const own: Partial<Record<HeroKind, number>> = {
     arcane: 1 + s.classDamage * levels.arcanePower,
     fire: 1 + s.classDamage * levels.fireDamage,
+    ice: 1 + s.classDamage * levels.iceDamage,
+    lightning: 1 + s.classDamage * levels.lightningDamage,
   };
   return {
     damage: (kind) => (1 + s.allDamage * levels.allDamage) * (own[kind] ?? 1),
@@ -163,7 +222,17 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     burn: s.fireBurn * levels.fireBurn * (perks.has('fireBurnPlus') ? 1 + s.fireBurnPlus : 1),
     fireChain: levels.fireChain > 0,
     burstBolts: levels.fireArcane > 0,
+    mark: s.arcaneMark * levels.arcaneMark * (perks.has('arcaneMarkPlus') ? 1 + s.arcaneMarkPlus : 1),
+    splitBolts: levels.arcaneSplit > 0,
+    frostBolts: levels.arcaneIce > 0,
     freezeChance: s.iceFreezeChance * levels.iceFreeze,
+    freezeTime: perks.has('iceFreezePlus') ? 1 + s.iceFreezePlus : 1,
+    frostbite: levels.iceFrostbite > 0,
+    shatter: levels.iceShatter > 0,
+    superconduct: levels.iceLightning > 0,
     extraChains: s.lightningChains * levels.lightningChain,
+    static: s.lightningStatic * levels.lightningStatic * (perks.has('lightningStaticPlus') ? 1 + s.lightningStaticPlus : 1),
+    thunder: levels.lightningStrike > 0,
+    plasma: levels.lightningFire > 0,
   };
 }

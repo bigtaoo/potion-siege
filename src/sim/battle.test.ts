@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, SLOT_COUNT, WALL_ROW } from './battle';
 import { playOut } from './bot';
-import { BALANCE, HERO_KINDS, LINEUP } from './types';
+import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP } from './types';
 
 /** The first cell of the wall row, open from the start. */
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -66,7 +66,8 @@ describe('Battle', () => {
     const b = new Battle(6);
     b.enemies.push({
       id: 999, kind: 'grunt', x: 500, y: 600, hp: 1e6, maxHp: 1e6, speed: 0, radius: 30,
-      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0, atWall: false,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
     });
     for (let i = 0; i < 60; i++) b.step(1 / 30);
     expect(b.enemies.find((e) => e.id === 999)!.hp).toBeLessThan(1e6);
@@ -177,12 +178,80 @@ describe('Battle', () => {
     const b = playOut(7);
     expect(b.wave).toBeGreaterThanOrEqual(6);
   });
+});
 
-  it('counts the damage each potion fires, not the commander', () => {
-    const b = new Battle(3);
-    b.slots[W] = { id: 999, kind: 'ice', star: 1, slot: W, cooldown: 0 };
-    for (let i = 0; i < 600 && !b.paused; i++) b.step(1 / 30);
-    expect(b.dealt.ice).toBeGreaterThan(0);
-    expect(b.dealt.arcane).toBe(0);
+describe('damage dealt', () => {
+  /** No waves and the commander holds fire, so only the test's own shots land. */
+  function quiet(): Battle {
+    const b = new Battle(5);
+    b.enemies = [];
+    b.commanderCooldown = 1e9;
+    return b;
+  }
+
+  function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
+    const e: Enemy = {
+      id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
+      slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
+    };
+    b.enemies.push(e);
+    return e;
+  }
+
+  /** A projectile of `kind` already on `target`, landing on the next step. */
+  function hit(b: Battle, kind: HeroKind, target: Enemy, damage: number): void {
+    b.projectiles.push({ id: 1, kind, star: 1, x: target.x, y: target.y, targetId: target.id, tx: target.x, ty: target.y, damage });
+    b.step(1 / 60);
+  }
+
+  it('credits the fire splash on every enemy it reaches', () => {
+    const b = quiet();
+    const a = enemy(b, 500, 400, 1000);
+    enemy(b, 540, 400, 1000);
+    hit(b, 'fire', a, 100);
+    expect(b.dealt.fire).toBeCloseTo(200);
+  });
+
+  it('credits poison with its ticks', () => {
+    const b = quiet();
+    const e = enemy(b, 500, 400, 1e6);
+    hit(b, 'poison', e, 10);
+    for (let i = 0; i < 60; i++) b.step(1 / 60);
+    expect(b.dealt.poison).toBeGreaterThan(10 + BALANCE.heroes.poison.poisonDps * 0.9);
+  });
+
+  it('credits lightning with its chain jumps', () => {
+    const b = quiet();
+    const a = enemy(b, 500, 400, 1e6);
+    enemy(b, 560, 400, 1e6);
+    enemy(b, 620, 400, 1e6);
+    hit(b, 'lightning', a, 100);
+    expect(b.dealt.lightning).toBeGreaterThan(100 + 100 * BALANCE.heroes.lightning.chainFalloff * 0.99);
+  });
+
+  it('leaves out overkill and the commander', () => {
+    const b = quiet();
+    hit(b, 'arcane', enemy(b, 500, 400, 10), 1000);
+    expect(b.dealt.arcane).toBeCloseTo(10);
+    b.commanderCooldown = 0;
+    enemy(b, 500, 400, 1e6);
+    for (let i = 0; i < 60; i++) b.step(1 / 30);
+    expect(b.dealt.arcane).toBeCloseTo(10);
+  });
+
+  it('never credits more than the enemies lost', () => {
+    const b = new Battle(11);
+    LINEUP.forEach((kind, i) => (b.slots[W + i] = { id: 500 + i, kind, star: 3, slot: W + i, cooldown: 0 }));
+    const credited = () => HERO_KINDS.reduce((a, k) => a + b.dealt[k], 0);
+    let lost = 0;
+    for (let i = 0; i < 900 && !b.paused && !b.result; i++) {
+      const before = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
+      b.step(1 / 30);
+      const after = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
+      for (const [id, hp] of before) lost += hp - (after.get(id) ?? 0);
+    }
+    expect(credited()).toBeGreaterThan(0);
+    expect(credited()).toBeLessThanOrEqual(lost + 1e-6);
   });
 });
