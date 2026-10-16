@@ -82,6 +82,7 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
 function enemyBars(g: Graphics, e: Enemy, top: number): void {
   const { x, radius: r } = e;
   const w = Math.max(60, r * 1.6);
+  top = Math.max(104, top); // never over the wave title in the top bar
   g.rect(x - w / 2, top, w, 10).fill(COLORS.hpBack);
   g.rect(x - w / 2, top, (w * Math.max(0, e.hp)) / e.maxHp, 10).fill(COLORS.hp);
 }

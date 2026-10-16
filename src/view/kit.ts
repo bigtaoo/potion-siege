@@ -43,11 +43,48 @@ export function ink(text: string, size: number, style: TextStyleOptions = {}): T
 /** Closing punctuation stays at the end of a line instead of starting the next one. */
 const NO_START = /^[，。、；：！？）」』%,.;:!?)]/;
 
-/** Ink text wrapped to `width`: Latin words and numbers stay whole, and Chinese breaks
- *  between characters but never before closing punctuation (Pixi's own wrap does both). */
+/** The browser's word breaker where there is one (not in the ES2020 typings). */
+type WordSegmenter = { segment(text: string): Iterable<{ segment: string }> };
+const Segmenter = (Intl as unknown as { Segmenter?: new (locale: string, o: { granularity: 'word' }) => WordSegmenter }).Segmenter;
+const zhWords: WordSegmenter | null = Segmenter ? new Segmenter('zh', { granularity: 'word' }) : null;
+const LATIN = /^[A-Za-z0-9+%.×-]+$/;
+
+/** The pieces a line may break between: Latin words and numbers whole (+12% too), Chinese
+ *  words whole where the browser can tell them (双倍, 攻速), and a short bracketed part such
+ *  as （需冰霜药剂在场） or 「奥术印记」 as one piece. */
+function wrapTokens(text: string): string[] {
+  const raw = zhWords ? [...zhWords.segment(text)].map((s) => s.segment) : (text.match(/[A-Za-z0-9+%.×-]+|\s+|./gu) ?? []);
+  const out: string[] = [];
+  let group: string | null = null;
+  for (const tok of raw) {
+    if (group !== null) {
+      group += tok;
+      if (/[）」]/.test(tok) || group.length > 12) {
+        out.push(group);
+        group = null;
+      }
+      continue;
+    }
+    if (/^[（「]/.test(tok) && !/[）」]/.test(tok)) {
+      group = tok;
+      continue;
+    }
+    const last = out[out.length - 1];
+    // a number keeps its unit (3 秒) and a word its one-character suffix (魔法弹)
+    const glue = last !== undefined && ((/^[秒次颗层倍波关级瓶个]$/.test(tok) && /\d\s?$/.test(last)) || (/^[弹剂]$/.test(tok) && /\p{Script=Han}$/u.test(last)));
+    if (last !== undefined && ((LATIN.test(tok) && LATIN.test(last)) || glue)) out[out.length - 1] = last + tok;
+    else out.push(tok);
+  }
+  if (group !== null) out.push(group);
+  return out;
+}
+
+/** Ink text wrapped to `width`: Latin words and numbers stay whole, Chinese breaks between
+ *  words (or characters, without a word breaker) but never before closing punctuation, which
+ *  Pixi's own wrap does. */
 export function inkWrapped(text: string, size: number, width: number, style: TextStyleOptions = {}): Text {
   const out = ink(text, size, style);
-  const tokens = text.match(/[A-Za-z0-9+%.×-]+|\s+|./gu) ?? [];
+  const tokens = wrapTokens(text);
   const lines: string[] = [];
   let line = '';
   for (const tok of tokens) {
@@ -62,6 +99,30 @@ export function inkWrapped(text: string, size: number, width: number, style: Tex
   lines.push(line);
   out.text = lines.join('\n');
   return out;
+}
+
+/** Wrapped text whose lines come out even: the narrowest width that still needs no more lines,
+ *  so no single character is left alone on the last line. */
+export function balanced(text: string, size: number, width: number, style: TextStyleOptions): Text {
+  const lines = (w: number) => inkWrapped(text, size, w, style);
+  let best = lines(width);
+  const count = best.text.split('\n').length;
+  if (count < 2) return best;
+  let lo = width / 2;
+  let hi = width;
+  while (hi - lo > 8) {
+    const mid = (lo + hi) / 2;
+    const tryText = lines(mid);
+    if (tryText.text.split('\n').length <= count) {
+      best.destroy();
+      best = tryText;
+      hi = mid;
+    } else {
+      tryText.destroy();
+      lo = mid;
+    }
+  }
+  return best;
 }
 
 /** The workshop wall behind the menus (and beside the battle on a wide screen): pale planks,
@@ -215,6 +276,8 @@ export class PillButton extends Container {
     super();
     const text = label(caption, size, { stroke: { color: P.line, width: Math.max(4, size / 8) } });
     text.y = -4;
+    // a long caption (a translation, say) shrinks to stay inside the rounded ends
+    fit(text, price ? w - 60 : w - h * 0.6); // a price sits beside its gem
     this.addChild(this.bg, text);
     if (price) {
       // the crystal to the left of the number, the pair centred

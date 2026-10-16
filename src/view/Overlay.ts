@@ -7,11 +7,11 @@ import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
 import {
+  balanced,
   bottle,
   coinsIcon,
   gearIcon,
   ink,
-  inkWrapped,
   medal,
   modifierIcon,
   P,
@@ -341,8 +341,10 @@ function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
     pct.position.set(cw / 2 - 24, y);
     c.addChild(g, b, pct);
     if (i === 0) {
-      const tag = plate(t('mvp'), 26, 80, 'brass');
-      tag.position.set(bx + 150, y - 2);
+      // the MVP's word on its own full bar, at the start, clear of the end it measures
+      const tag = label(t('mvp'), 26, { fill: P.cream, stroke: { color: P.line, width: 6 } });
+      tag.anchor.set(0, 0.5);
+      tag.position.set(bx + 18, y - 1);
       c.addChild(tag);
     }
   });
@@ -491,7 +493,16 @@ function skillCard(id: SkillId, level: number): Container {
   g.rect(x + 18, top + 18, w - 36, 10).fill({ color: 0xffffff, alpha: 0.35 });
   g.roundRect(x, top + 10, w, band, 22).stroke({ width: 4, color: LIGHT.edge });
   card.addChild(g);
-  const name = label(t(`skill.${id}.name`), 50, { wordWrap: true, breakWords: true, wordWrapWidth: w - 30, stroke: { color: P.line, width: 6 } });
+  // wrapped only at spaces, and small enough that the longest word fits the band whole
+  const title = t(`skill.${id}.name`);
+  const longest = Math.max(...title.split(' ').map((word) => {
+    const probe = label(word, 50, { stroke: { color: P.line, width: 6 } });
+    const pw = probe.width;
+    probe.destroy();
+    return pw;
+  }));
+  const size = Math.min(50, Math.floor((50 * (w - 30)) / longest));
+  const name = label(title, size, { wordWrap: true, breakWords: false, wordWrapWidth: w - 30, stroke: { color: P.line, width: 6 } });
   name.position.set(0, top + 10 + band / 2);
   if (name.height > band - 16) name.scale.set((band - 16) / name.height);
   card.addChild(name);
@@ -513,9 +524,18 @@ function skillCard(id: SkillId, level: number): Container {
     card.addChild(tag);
   }
 
-  const desc = inkWrapped(t(`skill.${id}.desc`), 31, w - 40, { align: 'center', lineHeight: 40 });
+  // the description keeps clear of the pips: a smaller size when it runs long
+  const dy = iy + (other ? 160 : 140);
+  const room = CARD_H / 2 - 62 - 14 - dy;
+  let desc = balanced(t(`skill.${id}.desc`), 31, w - 40, { align: 'center', lineHeight: 40 });
+  for (const ds of [28, 25]) {
+    if (desc.height <= room) break;
+    desc.destroy();
+    desc = balanced(t(`skill.${id}.desc`), ds, w - 36, { align: 'center', lineHeight: Math.round(ds * 1.28) });
+  }
+  if (desc.height > room) desc.scale.set(room / desc.height);
   desc.anchor.set(0.5, 0);
-  desc.position.set(0, iy + (other ? 160 : 140));
+  desc.position.set(0, dy);
   card.addChild(desc);
 
   // pips: brass for the levels already taken, green for the one this card adds

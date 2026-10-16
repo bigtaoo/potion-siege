@@ -3,10 +3,10 @@
 // merge), and a cream speech card in the light workshop style with a skip button. Taps inside
 // the cut-out reach the battle below; everything else on the dim is swallowed.
 
-import { Container, Graphics, type Text, type TextStyleOptions } from 'pixi.js';
+import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../i18n';
 import { TUTORIAL_STEPS, type TutorialStep } from '../sim/tutorial';
-import { fit, inkWrapped, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
+import { balanced, fit, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
 
 export interface Rect {
   x: number;
@@ -97,7 +97,7 @@ export class TutorialLayer extends Container {
     }
 
     const n = TUTORIAL_STEPS.indexOf(lesson.step) + 1;
-    const head = ink(t('tutorial.step', { n: Math.min(n, 3), total: 3 }), 32, { fill: P.inkSoft });
+    const head = ink(t('tutorial.step', { n, total: TUTORIAL_STEPS.length }), 32, { fill: P.inkSoft });
     const body = balanced(t(`tutorial.${lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
     const skip = skipButton(() => this.onSkip());
     // the step and the skip button share the top row on a roomy card; a narrow one has skip below
@@ -182,30 +182,6 @@ function handShape(): Graphics {
 }
 
 /** The card's pointer toward the target, on the side facing it, behind the panel. */
-/** Wrapped text whose lines come out even: the narrowest width that still needs no more lines,
- *  so no single character is left alone on the last line. */
-function balanced(text: string, size: number, width: number, style: TextStyleOptions): Text {
-  const lines = (w: number) => inkWrapped(text, size, w, style);
-  let best = lines(width);
-  const count = best.text.split('\n').length;
-  if (count < 2) return best;
-  let lo = width / 2;
-  let hi = width;
-  while (hi - lo > 8) {
-    const mid = (lo + hi) / 2;
-    const tryText = lines(mid);
-    if (tryText.text.split('\n').length <= count) {
-      best.destroy();
-      best = tryText;
-      hi = mid;
-    } else {
-      tryText.destroy();
-      lo = mid;
-    }
-  }
-  return best;
-}
-
 function tail(cw: number, ch: number, dx: number, dy: number, side: 'left' | 'right' | 'above' | 'below'): Graphics {
   const g = new Graphics();
   const edge = { width: 5, color: P.line, join: 'round' as const };

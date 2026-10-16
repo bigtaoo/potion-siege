@@ -34,6 +34,7 @@ import {
   enemySprite,
   gearIcon,
   ink,
+  inkWrapped,
   LIGHT,
   lightPanel,
   lightTile,
@@ -188,7 +189,8 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots
     }
     const icon = navIcon(id);
     if (big) {
-      const lift = wide ? 0 : -34;
+      // clear of its caption below, and in portrait of the challenge card above
+      const lift = wide ? -12 : -26;
       const md = medal(92, on ? 0x3c9a4a : P.wood);
       md.y = lift - 14;
       icon.y = lift - 14;
@@ -199,9 +201,9 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots
       icon.scale.set(on ? 0.95 : 0.8);
     }
     const cap = ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink });
-    cap.y = big ? (wide ? 92 : 70) : 58;
+    cap.y = big ? (wide ? 108 : 74) : 58;
     slot.addChild(icon, cap);
-    if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -84 : -118) : -62);
+    if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -96 : -110) : -62);
     if (!on) slot.alpha = big ? 1 : 0.85;
     root.addChild(slot);
   });
@@ -268,8 +270,8 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     const gap = Math.max(20, (a.h - 660 - eh - LINEUP_H) / 3);
     enemiesPanel(root, m.stage, a.x + a.w / 2, a.y + 210 + gap + eh / 2, pw, eh);
     lineupPanel(root, m, act, picked, a.x + a.w / 2, a.y + 210 + 2 * gap + eh + LINEUP_H / 2, pw);
-    start(a.x + a.w / 2, a.y + a.h - 365, 150);
-    challengeBanner(root, m, act, today, ads, a.x + a.w / 2, a.y + a.h - 16 - BANNER_H / 2, pw);
+    start(a.x + a.w / 2, a.y + a.h - 383, 150);
+    challengeBanner(root, m, act, today, ads, a.x + a.w / 2, a.y + a.h - 34 - BANNER_H / 2, pw);
   }
 }
 
@@ -329,18 +331,20 @@ function challengeBanner(root: Container, m: MetaSave, act: HomeActions, today: 
   // the modifiers, a chip each
   ch.mods.forEach((id, i) => {
     const chip = new Container();
-    chip.position.set(-w / 2 + pad + mw / 2, cy - 38 + i * 78);
-    chip.addChild(lightTile(mw, 70, 18));
+    chip.position.set(-w / 2 + pad + mw / 2, cy - 39 + i * 80);
+    chip.addChild(lightTile(mw, 74, 18));
     const icon = modifierIcon(id, ch.trial);
     icon.scale.set(0.5);
     icon.position.set(-mw / 2 + 40, -3);
-    const name = ink(t(`challenge.mod.${id}.name`), 30, { fontWeight: '900' });
+    // the name, and under it what it does: a line each, so neither has to shrink to fit
+    const name = ink(t(`challenge.mod.${id}.name`), 28, { fontWeight: '900' });
     name.anchor.set(0, 0.5);
-    name.position.set(-mw / 2 + 76, -4);
-    const desc = ink(t(`challenge.mod.${id}.desc`, { hero: ch.trial ? t(`hero.${ch.trial}`) : '' }), 24, { fill: P.inkSoft });
+    name.position.set(-mw / 2 + 76, -17);
+    fitText(name, mw - 90);
+    const desc = ink(t(`challenge.mod.${id}.desc`, { hero: ch.trial ? t(`hero.${ch.trial}`) : '' }), 22, { fill: P.inkSoft });
     desc.anchor.set(0, 0.5);
-    desc.position.set(name.x + name.width + 12, -2);
-    fitText(desc, mw / 2 - 14 - desc.x);
+    desc.position.set(-mw / 2 + 76, 16);
+    fitText(desc, mw - 90);
     chip.addChild(icon, name, desc);
     c.addChild(chip);
   });
@@ -358,7 +362,10 @@ function challengeBanner(root: Container, m: MetaSave, act: HomeActions, today: 
     const n = ink(String(tier.reward), 26, { fill: LIGHT.crystal, fontWeight: '900' });
     n.anchor.set(1, 0.5);
     n.position.set(tw / 2 - 14, -1);
-    row.addChild(wave, n, gem(new Graphics(), n.x - n.width - 16, -2, 11));
+    // the wave label keeps clear of the gem before the reward
+    const gx = n.x - n.width - 16;
+    fitText(wave, gx - 11 - 10 - wave.x);
+    row.addChild(wave, n, gem(new Graphics(), gx, -2, 11));
     c.addChild(row);
   });
   // the way in, or how it went
@@ -454,8 +461,10 @@ function lineupPanel(root: Container, m: MetaSave, act: HomeActions, picked: Her
       b.alpha = kind === picked ? 1 : 0.7;
       // a chip in the corner the tick takes on a fielded potion, clear of the bottle
       const tag = new Container();
-      tag.position.set(cw / 2 - 36, -ch / 2 + 24);
-      tag.addChild(new Graphics().roundRect(-32, -18, 64, 36, 18).fill(LIGHT.inset).stroke({ width: 3, color: LIGHT.edge }), fitText(ink(t('bench'), 22, { fill: P.inkSoft }), 56));
+      const word = fitText(ink(t('bench'), 25, { fill: P.inkSoft }), cw - 40);
+      const tw = word.width + 26;
+      tag.position.set(cw / 2 - 8 - tw / 2, -ch / 2 + 26);
+      tag.addChild(new Graphics().roundRect(-tw / 2, -20, tw, 40, 20).fill(LIGHT.inset).stroke({ width: 3, color: LIGHT.edge }), word);
       b.addChild(tag);
     } else {
       b.alpha = 0.8;
@@ -464,7 +473,7 @@ function lineupPanel(root: Container, m: MetaSave, act: HomeActions, picked: Her
   });
   // with no reserve yet, the hint says what opens the first locked potion
   const locked = HERO_KINDS.find((k) => !heroUnlocked(m, k) && unlockStage(k) !== null);
-  const opens = locked ? `${t(`hero.${locked}`)}：${t('unlockAt', { n: unlockStage(locked) ?? 0 })}` : '';
+  const opens = locked ? t('lineupOpens', { name: t(`hero.${locked}`), n: unlockStage(locked) ?? 0 }) : '';
   const hint = benched(m).length === 0 ? opens : picked ? t('lineupPick') : t('lineupHint');
   if (hint) {
     const h = fitText(ink(hint, 30, { fill: P.inkSoft }), w - 60);
@@ -615,13 +624,13 @@ function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: strin
   const ready = chestReady(m, today);
   const left = adsLeft(m, today);
   const chest = offerCard(cw, ch, chestIcon(), t('store.chest.name'), t('store.chest.desc'), CHEST_CRYSTALS, !ready);
-  const open = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', act.claimChest, ready ? 46 : 32).setEnabled(ready);
+  const open = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', act.claimChest, ready ? 46 : 34).setEnabled(ready);
   open.y = ch / 2 - 74;
   chest.addChild(open);
   const can = ads && left > 0;
   const ad = offerCard(cw, ch, adIcon(), t('store.ad.name'), t('store.ad.desc', { n: left, total: ADS_PER_DAY }), AD_CRYSTALS, left === 0);
   const caption = !ads ? t('store.noAds') : left > 0 ? t('store.watch') : t('tomorrow');
-  const watch = new PillButton(caption, bw, 100, 'green', act.watchAd, can ? 46 : 32).setEnabled(can);
+  const watch = new PillButton(caption, bw, 100, 'green', act.watchAd, can ? 46 : 34).setEnabled(can);
   watch.y = ch / 2 - 74;
   ad.addChild(watch);
   chest.position.set(-(cw + 30) / 2, 30);
@@ -683,10 +692,21 @@ function unlockPanel(root: Container, m: MetaSave, act: HomeActions, x: number, 
   const hintH = 70;
   const th = Math.min(440, (h - 140 - hintH - gap * (rows - 1)) / rows);
   const y0 = -h / 2 + 90 + th / 2;
+  // every name at one size: the one the longest needs to fit its tile
+  // and when one is too long for its tile, every name on two lines, word under word
+  const twoLines = HERO_KINDS.some((k) => {
+    const x = ink(t(`hero.${k}`), 30);
+    const over = x.width > tw - 20;
+    x.destroy();
+    return over;
+  });
+  const names = HERO_KINDS.map((k) => ink(unlockName(k, twoLines), 30, { lineHeight: 32 }));
+  const nameScale = Math.min(1, ...names.map((x) => (tw - 20) / x.width));
+  names.forEach((x) => x.destroy());
   HERO_KINDS.forEach((kind, i) => {
     const row = Math.floor(i / cols);
     const inRow = Math.min(cols, n - row * cols);
-    const tile = unlockTile(m, act, kind, tw, th);
+    const tile = unlockTile(m, act, kind, tw, th, nameScale, twoLines);
     tile.position.set(((i % cols) - (inRow - 1) / 2) * step, y0 + row * (th + gap));
     c.addChild(tile);
   });
@@ -695,19 +715,26 @@ function unlockPanel(root: Container, m: MetaSave, act: HomeActions, x: number, 
   c.addChild(hint);
 }
 
-function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, th: number): Container {
+function unlockName(kind: HeroKind, twoLines: boolean): string {
+  const name = t(`hero.${kind}`);
+  return twoLines ? name.replace(' ', '\n') : name;
+}
+
+function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, th: number, nameScale: number, twoLines: boolean): Container {
   const open = heroUnlocked(m, kind);
   const price = unlockPrice(kind);
   const c = new Container();
   const top = -th / 2;
   c.addChild(lightTile(tw, th, 22));
-  const name = fitText(ink(t(`hero.${kind}`), 30), tw - 20);
-  name.y = top + 34;
+  const name = ink(unlockName(kind, twoLines), 30, { lineHeight: 32 });
+  name.scale.set(nameScale);
+  const head = twoLines ? 92 : 60;
+  name.y = top + head / 2 + 4;
   c.addChild(name);
   // the bottle fills what the name and the price leave
-  const band = th - 60 - (open ? 90 : 150);
+  const band = th - head - (open ? 90 : 170);
   const size = Math.min(170, tw - 40, band - 10);
-  const by = top + 60 + band / 2;
+  const by = top + head + band / 2;
   if (open) {
     c.addChild(new Graphics().circle(0, by, size * 0.46).fill({ color: HERO_COLORS[kind], alpha: 0.16 }));
     const bt = bottle(kind, size);
@@ -719,8 +746,8 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
     const tk = tick(18);
     tk.x = 22 - word.width / 2 - 30;
     owned.addChild(tk, word);
-    // six tiles to a row in portrait leave little width
-    owned.scale.set(Math.min(1, (tw - 16) / owned.width));
+    // the tick and the word together stay inside a narrow tile
+    owned.scale.set(Math.min(1, (tw - 16) / (word.width + 60)));
     c.addChild(bt, owned);
     return c;
   }
@@ -729,8 +756,10 @@ function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, t
   l.y = by + size * 0.1;
   c.addChild(l);
   const at = unlockStage(kind);
-  const note = fitText(ink(at ? t('unlockAt', { n: at }) : t('codex.locked'), 24, { fill: P.inkSoft }), tw - 20);
-  note.y = th / 2 - 122;
+  // the stage that opens it anyway, over two lines rather than shrunk on a narrow tile
+  const note = fitText(inkWrapped(at ? t('unlockAt', { n: at }) : t('codex.locked'), 26, tw - 24, { fill: P.inkSoft, lineHeight: 30 }), tw - 16);
+  note.anchor.set(0.5, 1);
+  note.y = th / 2 - 106;
   c.addChild(note);
   if (price !== null) {
     const b = new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true).setEnabled(m.crystals >= price);
@@ -790,7 +819,7 @@ function frame(act: HomeActions, title: string, h: number, fit: MenuFit): { pane
 
 /** The seven days of the login track: claimed ones ticked, today's lit up. */
 function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit): Container {
-  const h = 900;
+  const h = 820;
   const { panel, box } = frame(act, t('login'), h, fit);
   const can = canClaimLogin(m, today);
   let done = loginDay(m);
@@ -800,7 +829,7 @@ function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit):
     const last = i === 6;
     const w = last ? 400 : 190;
     const tile = new Container();
-    tile.position.set(last ? 210 : -315 + (i % 4) * 210, i < 4 ? -150 : 110);
+    tile.position.set(last ? 210 : -315 + (i % 4) * 210, i < 4 ? -190 : 70);
     const lit = can && i === done;
     tile.addChild(lightTile(w, 220, 24));
     if (lit) tile.addChild(new Graphics().roundRect(-w / 2 - 6, -116, w + 12, 232, 28).stroke({ width: 8, color: P.brass }));
@@ -818,18 +847,18 @@ function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: MenuFit):
     box.addChild(tile);
   }
   const claim = new PillButton(can ? t('claim') : t('tomorrow'), 520, 140, 'green', act.claimLogin, 52).setEnabled(can);
-  claim.position.set(0, h / 2 - 120);
+  claim.position.set(0, h / 2 - 110);
   box.addChild(claim);
   return panel;
 }
 
 /** Today's three tasks: what to do, how far along, and the claim button. */
 function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const h = 760;
+  const h = 690;
   const { panel, box } = frame(act, t('tasks'), h, fit);
   m.daily.tasks.forEach((task, i) => {
     const r = new Container();
-    r.position.set(0, -150 + i * 190);
+    r.position.set(0, -165 + i * 190);
     const goal = taskGoal(task.id);
     const desc = ink(t(`task.${task.id}`, { n: goal }), 40);
     desc.anchor.set(0, 0.5);
@@ -904,11 +933,11 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
     }
     // the line and its detail as one block, centred in the row however they wrap
     const text = new Container();
-    const a = ink(what, 34, { wordWrap: true, breakWords: true, wordWrapWidth: 600, align: 'left' });
+    const a = inkWrapped(what, 34, 600, { align: 'left' });
     a.anchor.set(0, 0);
     text.addChild(a);
     if (detail) {
-      const d = ink(detail, 26, { fill: P.inkSoft, wordWrap: true, breakWords: true, wordWrapWidth: 600, align: 'left' });
+      const d = inkWrapped(detail, 26, 600, { fill: P.inkSoft, align: 'left' });
       d.anchor.set(0, 0);
       d.y = a.height + 4;
       text.addChild(d);
