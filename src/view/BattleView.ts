@@ -4,6 +4,7 @@
 import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, type Text, type Texture } from 'pixi.js';
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
+import { mergeablePair } from '../sim/tutorial';
 import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
 import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, hitEffect, iceShell } from './effects';
@@ -563,10 +564,4 @@ export class BattleView extends Container {
     }
     this.dragFrom = null;
   }
-}
-
-/** The first two slots that could merge, or null. */
-function mergeablePair(b: Battle): [number, number] | null {
-  for (let i = 0; i < SLOT_COUNT; i++) for (let j = i + 1; j < SLOT_COUNT; j++) if (b.canMerge(i, j)) return [i, j];
-  return null;
 }

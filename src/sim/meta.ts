@@ -28,6 +28,8 @@ export interface MetaSave {
   /** The four potions taken into battle, all unlocked. */
   lineup: HeroKind[];
   shop: ShopSave;
+  /** The first-battle tutorial was finished or skipped, and does not show again. */
+  tutorial: boolean;
 }
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
@@ -67,6 +69,7 @@ export function newMeta(): MetaSave {
     unlocked: [],
     lineup: [...LINEUP],
     shop: { chestDay: '', adDay: '', ads: 0 },
+    tutorial: false,
   };
 }
 
@@ -106,6 +109,8 @@ export function parseMeta(raw: string | null): MetaSave {
   if (typeof shop.chestDay === 'string') out.shop.chestDay = shop.chestDay;
   if (typeof shop.adDay === 'string') out.shop.adDay = shop.adDay;
   out.shop.ads = int(shop.ads, 0, S.adsPerDay, 0);
+  // a save from before the tutorial that has played already knows the game
+  out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
   return out;
 }
 

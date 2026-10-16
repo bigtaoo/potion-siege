@@ -25,6 +25,15 @@ describe('meta', () => {
     expect(m.stage).toBe(4);
   });
 
+  it('keeps the tutorial done, and counts it done for old saves that have played', () => {
+    expect(newMeta().tutorial).toBe(false);
+    expect(parseMeta(JSON.stringify({ ...newMeta(), tutorial: true })).tutorial).toBe(true);
+    expect(parseMeta(JSON.stringify({ ...newMeta(), runs: 3, tutorial: false })).tutorial).toBe(false);
+    expect(parseMeta('{"runs":3}').tutorial).toBe(true);
+    expect(parseMeta('{"runs":0}').tutorial).toBe(false);
+    expect(parseMeta('{"tutorial":"yes"}').tutorial).toBe(false);
+  });
+
   it('buys levels with crystals, never below zero and never past the top', () => {
     const m = newMeta();
     expect(buyHero(m, 'fire')).toBe(false);

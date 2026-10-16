@@ -22,6 +22,8 @@ export class Hud extends Container {
   private readonly upgradeButton: Button;
   private bannerTime = 0;
   private battle: Battle | null = null;
+  /** Off while the tutorial does the explaining. */
+  hint = true;
 
   constructor(onSummon: () => void, onUpgrade: () => void) {
     super();
@@ -64,11 +66,17 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
-    this.hintText.visible = b.time < HINT_SECONDS;
+    this.hintText.visible = this.hint && b.time < HINT_SECONDS;
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);
     this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.7) * 0.6);
+  }
+
+  /** Where a button is on the board, for the tutorial to point at. */
+  buttonRect(which: 'summon' | 'upgrade'): { x: number; y: number; w: number; h: number } {
+    const b = which === 'summon' ? this.summonButton : this.upgradeButton;
+    return { x: b.x - BUTTON.w / 2, y: b.y - BUTTON.h / 2, w: BUTTON.w, h: BUTTON.h };
   }
 
   private show(text: string): void {
