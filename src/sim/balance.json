@@ -44,7 +44,7 @@
       "splash": 110
     },
     "ice": {
-      "damage": 8,
+      "damage": 14,
       "interval": 1.0,
       "slow": 0.4,
       "slowTime": 1.5
@@ -100,7 +100,7 @@
     "baseCount": 14,
     "countStep": 3,
     "baseHp": 40,
-    "hpGrowth": 1.205,
+    "hpGrowth": 1.185,
     "waveBonusGold": 30,
     "bossWaves": [5, 10]
   },
@@ -125,7 +125,7 @@
     "burnTime": 3,
     "fireChain": 0.5,
     "fireChainRadius": 0.8,
-    "burstBolt": 0.4,
+    "burstBolt": 1.2,
     "burstBoltRadius": 80,
     "arcaneMark": 0.15,
     "arcaneMarkPlus": 0.5,
@@ -141,14 +141,14 @@
     "iceFreezePlus": 0.5,
     "shatter": 0.4,
     "shatterRadius": 120,
-    "superconduct": 0.5,
+    "superconduct": 1.5,
     "lightningStatic": 0.4,
     "lightningStaticPlus": 0.5,
     "staticTime": 3,
     "thunderEvery": 4,
     "thunderstrike": 1.5,
     "thunderRadius": 120,
-    "plasmaBurn": 0.2
+    "plasmaBurn": 0.5
   },
   "meta": {
     "stageHpGrowth": 1.12,

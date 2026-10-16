@@ -2,6 +2,7 @@
 // gold piles up, otherwise summons, merges the highest pair it finds and takes the first skill.
 
 import { Battle, SLOT_COUNT } from './battle';
+import type { BattleSetup } from './meta';
 
 export function botAct(b: Battle): void {
   if (b.choices) {
@@ -26,8 +27,8 @@ export function botAct(b: Battle): void {
 }
 
 /** Plays a whole battle headless at a fixed step; returns the battle at its end. */
-export function playOut(seed: number, dt = 1 / 30, maxSeconds = 1200): Battle {
-  const b = new Battle(seed);
+export function playOut(seed: number, dt = 1 / 30, maxSeconds = 1200, setup?: BattleSetup): Battle {
+  const b = new Battle(seed, setup);
   for (let t = 0; t < maxSeconds && b.result === null; t += dt) {
     botAct(b);
     b.step(dt);
