@@ -375,8 +375,14 @@ class Game {
 
   private async revive(b: Battle): Promise<void> {
     this.overlay.hide();
-    const ok = await this.platform.rewarded(() => this.mute(true));
-    this.mute(false);
+    let ok = false;
+    try {
+      ok = await this.platform.rewarded(() => this.mute(true));
+    } catch {
+      // an ad that broke counts as not watched: the result comes back up without the revive
+    } finally {
+      this.mute(false);
+    }
     this.run?.onReviveResult(ok);
     if (ok) {
       this.revived = true;
