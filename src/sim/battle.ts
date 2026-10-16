@@ -489,10 +489,15 @@ export class Battle {
       }
     } else if (p.kind === 'poison') {
       const dps = h.poison.poisonDps * B.starDamage[p.star - 1] * this.mods.damage('poison') * this.setup.heroDamage.poison;
-      target.poisonDps = Math.max(target.poisonDps, dps);
-      target.poisonTime = h.poison.poisonTime;
-      target.rust = Math.min(h.poison.rustMax, target.rust + 1);
-      target.rustTime = h.poison.rustTime;
+      this.corrode(target, dps);
+      if (this.mods.acidSplash) {
+        // the acid splashes: poison and rust on everything close to the target
+        const radius = S.acidRadius;
+        for (const e of this.enemies) {
+          if (e !== target && e.hp > 0 && Math.hypot(e.x - target.x, e.y - target.y) <= radius + e.radius) this.corrode(e, dps);
+        }
+        this.events.push({ type: 'hit', kind: 'poison', x: target.x, y: target.y, radius });
+      }
     }
     this.events.push({ type: 'hit', kind: p.kind, x: target.x, y: target.y, radius: 30 });
   }
@@ -529,7 +534,7 @@ export class Battle {
    *  enemy had left of it. */
   private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
     let dealt = e.markTime > 0 ? damage * (1 + this.mods.mark) : damage;
-    dealt *= 1 + B.heroes.poison.rustStep * e.rust;
+    dealt *= 1 + this.mods.rustStep * e.rust;
     if (by) this.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
     e.hp -= dealt;
   }
@@ -550,10 +555,22 @@ export class Battle {
     if (this.mods.superconduct && (e.slowTime > 0 || e.freezeTime > 0)) damage *= 1 + S.superconduct;
     if (this.mods.plasma) this.scorch(e, damage, 'lightning', Math.max(this.mods.burn, S.plasmaBurn));
     else this.harm(e, damage, 'lightning');
+    if (this.mods.electrolysis) this.corrode(e);
     if (this.mods.static > 0) {
       e.charge = Math.max(e.chargeTime > 0 ? e.charge : 0, damage * this.mods.static);
       e.chargeTime = S.staticTime;
     }
+  }
+
+  /** Rusts by `stacks` and, with `dps`, poisons: what a corrosion hit does to an enemy. */
+  private corrode(e: Enemy, dps = 0, stacks = 1): void {
+    const P = B.heroes.poison;
+    if (dps > 0) {
+      e.poisonDps = Math.max(e.poisonDps, dps);
+      e.poisonTime = P.poisonTime;
+    }
+    e.rust = Math.min(this.mods.rustMax, e.rust + stacks);
+    e.rustTime = P.rustTime;
   }
 
   /** Slows. A weaker slow leaves a stronger one still running alone (it must not stretch it);
@@ -634,6 +651,12 @@ export class Battle {
         const radius = B.heroes.fire.splash * this.mods.fireRadius * B.skills.fireChainRadius;
         for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.harm(o, e.scorch * B.skills.fireChain, e.scorchBy);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x, y: e.y, radius });
+      }
+      if (this.mods.melt && e.rust > 0) {
+        // died rusted: it falls apart and its rust eats into what stands around it
+        const radius = B.skills.meltRadius;
+        for (const o of this.enemies) if (Math.hypot(o.x - e.x, o.y - e.y) <= radius + o.radius) this.corrode(o, 0, e.rust);
+        this.events.push({ type: 'hit', kind: 'poison', x: e.x, y: e.y, radius });
       }
       if (this.mods.shatter && e.freezeTime > 0) {
         // died frozen: it shatters into shards that cut and chill what stands around it

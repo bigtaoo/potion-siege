@@ -155,7 +155,11 @@
     "thunderEvery": 4,
     "thunderstrike": 1.5,
     "thunderRadius": 120,
-    "plasmaBurn": 0.5
+    "plasmaBurn": 0.5,
+    "rustExtra": 2,
+    "rustPlus": 0.5,
+    "acidRadius": 90,
+    "meltRadius": 120
   },
   "meta": {
     "stageHpGrowth": 1.12,

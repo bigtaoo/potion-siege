@@ -46,6 +46,7 @@ export const zh: Table = {
     arcaneMarkPlus: '「奥术印记」效果 +50%',
     iceFreezePlus: '所有冻结时间 +50%',
     lightningStaticPlus: '「静电」伤害 +50%',
+    poisonRustPlus: '每层锈蚀效果 +50%',
   },
   maxed: '已满',
   reward: '+{n}',
@@ -134,5 +135,10 @@ export const zh: Table = {
     lightningStatic: { name: '静电', desc: '闪电使敌人带电，被其他药剂击中时追加 40%' },
     lightningStrike: { name: '落雷', desc: '每4次闪电召唤落雷，对周围造成 150% 伤害' },
     lightningFire: { name: '等离子', desc: '闪电点燃敌人3秒，每秒造成 50% 火焰伤害' },
+    poisonDamage: { name: '强酸浓缩', desc: '腐蚀药剂伤害 +40%' },
+    poisonRust: { name: '深度锈蚀', desc: '敌人锈蚀层数上限 +2' },
+    poisonSplash: { name: '酸液飞溅', desc: '腐蚀命中时向周围飞溅毒素与锈蚀' },
+    poisonMelt: { name: '熔蚀', desc: '带锈蚀的敌人死亡时，把锈蚀传给周围敌人' },
+    poisonLightning: { name: '电解', desc: '闪电命中叠加一层锈蚀' },
   },
 };

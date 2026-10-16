@@ -45,6 +45,7 @@ export const en = {
     arcaneMarkPlus: 'Arcane Mark +50% effect',
     iceFreezePlus: 'All freezes last 50% longer',
     lightningStaticPlus: 'Static +50% damage',
+    poisonRustPlus: 'Each rust stack +50% effect',
   },
   maxed: 'MAX',
   reward: '+{n}',
@@ -133,6 +134,11 @@ export const en = {
     lightningStatic: { name: 'Static', desc: 'Lightning charges foes; a hit by another tonic adds 40%' },
     lightningStrike: { name: 'Thunderstrike', desc: 'Every 4th bolt calls a sky strike, 150% around' },
     lightningFire: { name: 'Plasma', desc: 'Lightning burns for 3s, 50% per second, as fire' },
+    poisonDamage: { name: 'Strong Acid', desc: 'Corrosion tonics +40% damage' },
+    poisonRust: { name: 'Deep Rust', desc: 'Enemies hold 2 more rust stacks' },
+    poisonSplash: { name: 'Acid Splash', desc: 'Corrosion hits splash poison and rust around' },
+    poisonMelt: { name: 'Meltdown', desc: 'Rusted enemies that die pass their rust to those around' },
+    poisonLightning: { name: 'Electrolysis', desc: 'Lightning hits add a rust stack' },
   },
 };
 
