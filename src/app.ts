@@ -11,9 +11,9 @@ import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { addProgress, canClaimLogin, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
-import { battleSetup, buyHero, buyWorkshop, endOffers, maxStage, parseMeta, Purse, type MetaSave } from './sim/meta';
+import { battleSetup, benched, buyHero, buyWorkshop, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup, type MetaSave } from './sim/meta';
 import { botAct } from './sim/bot';
-import { BALANCE, HERO_KINDS, type BattleEvent } from './sim/types';
+import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
@@ -92,6 +92,8 @@ class Game {
   private save: MetaSave;
   /** Crystals paid for the current battle: what it earned and the ×2. */
   private purse = new Purse();
+  /** A reserve potion tapped on the lineup row, waiting for the one it replaces. */
+  private picked: HeroKind | null = null;
   private revived = false;
   /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
   private offered = { revive: false, double: false };
@@ -286,6 +288,7 @@ class Game {
     this.menu.addChild(buildHome(this.save, {
       tab: (tab) => {
         this.tab = tab;
+        this.picked = null;
         this.home();
       },
       panel: (p) => this.home(p),
@@ -304,6 +307,7 @@ class Game {
         this.home();
       },
       hero: (kind) => this.buy(buyHero(this.save, kind), `hero_${kind}`),
+      lineup: (kind) => this.lineup(kind),
       workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
       play: () => {
         this.newBattle('again');
@@ -312,7 +316,25 @@ class Game {
         this.root.visible = true;
         this.platform.gameplayStart();
       },
-    }, this.tab, panel, today, fit));
+    }, this.tab, panel, today, fit, this.picked));
+  }
+
+  /** A tap on the lineup row: a potion in the lineup swaps out for the reserve (the one picked,
+   *  or the only one); a reserve potion is picked, or unpicked. */
+  private lineup(kind: HeroKind): void {
+    const m = this.save;
+    if (!heroUnlocked(m, kind)) return;
+    if (m.lineup.includes(kind)) {
+      const bench = benched(m);
+      const into = this.picked ?? (bench.length === 1 ? bench[0] : null);
+      if (!into || !swapLineup(m, kind, into)) return;
+      this.picked = null;
+      this.store();
+      this.analytics.track('lineup', { out: kind, in: into });
+    } else {
+      this.picked = this.picked === kind ? null : kind;
+    }
+    this.home();
   }
 
   private claimed(item: string, crystals: number, panel: HomePanel): void {

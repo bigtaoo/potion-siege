@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
-import { applyRun, battleSetup, buyHero, buyWorkshop, endOffers, heroCost, maxStage, newMeta, parseMeta, Purse, runReward } from './meta';
-import { BALANCE } from './types';
+import {
+  applyRun, battleSetup, benched, buyHero, buyWorkshop, endOffers, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward,
+  swapLineup, unlockHero, unlockStage,
+} from './meta';
+import { BALANCE, LINEUP } from './types';
 
 describe('meta', () => {
   it('turns the old save into a fresh one that keeps best wave and runs', () => {
@@ -92,7 +95,7 @@ describe('meta', () => {
     const full = runReward(newMeta(), { stage: 1, won: true, wave: 10, kills: 120 }).crystals;
     expect(gain).toBe(full - first);
     expect(m.crystals).toBe(full + first);
-    expect(purse.reward).toEqual({ crystals: full + first, firstClear: true });
+    expect(purse.reward).toEqual({ crystals: full + first, firstClear: true, unlocked: [] });
   });
 
   it('doubles a first clear with its bonus', () => {
@@ -104,7 +107,7 @@ describe('meta', () => {
     expect(purse.settle(m, r).crystals).toBe(full.crystals);
     expect(purse.double(m, true)).toBe(full.crystals);
     expect(m.crystals).toBe(2 * full.crystals);
-    expect(purse.reward).toEqual({ crystals: 2 * full.crystals, firstClear: true });
+    expect(purse.reward).toEqual({ crystals: 2 * full.crystals, firstClear: true, unlocked: [] });
   });
 
   it('pays nothing for a ×2 before anything was earned', () => {
@@ -131,7 +134,7 @@ describe('meta', () => {
     const purse = new Purse();
     const { crystals } = purse.settle(m, { stage: 1, won: true, wave: 10, kills: 120 });
     purse.double(m, false);
-    expect(purse.reward).toEqual({ crystals, firstClear: true });
+    expect(purse.reward).toEqual({ crystals, firstClear: true, unlocked: [] });
   });
 
   it('offers the ×2 only when no revive is on offer, once per battle', () => {
@@ -144,5 +147,88 @@ describe('meta', () => {
     purse.double(newMeta(), false);
     expect(endOffers(true, true, true, purse).double).toBe(false);
     expect(endOffers(false, false, true, new Purse()).double).toBe(false);
+  });
+});
+
+describe('corrosion unlock and lineup', () => {
+  const at = unlockStage('poison')!;
+  const clear = (stage: number) => ({ stage, won: true, wave: 10, kills: 150 });
+
+  /** A save that has cleared every stage before `stage`. */
+  function upTo(stage: number) {
+    const m = newMeta();
+    m.cleared = stage - 1;
+    m.stage = stage;
+    return m;
+  }
+
+  it('unlocks on the first clear of its stage and not before', () => {
+    expect(at).toBe(BALANCE.heroes.poison.unlockStage);
+    const m = upTo(at - 1);
+    const early = runReward(m, clear(at - 1));
+    expect(early.unlocked).toEqual([]);
+    applyRun(m, clear(at - 1), early);
+    expect(heroUnlocked(m, 'poison')).toBe(false);
+    const r = runReward(m, clear(at));
+    expect(r.unlocked).toEqual(['poison']);
+    applyRun(m, clear(at), r);
+    expect(heroUnlocked(m, 'poison')).toBe(true);
+    // a replay of the stage unlocks nothing more
+    expect(runReward(m, clear(at)).unlocked).toEqual([]);
+  });
+
+  it('tells the result screen about the unlock through the purse', () => {
+    const m = upTo(at);
+    const purse = new Purse();
+    purse.settle(m, { stage: at, won: false, wave: 6, kills: 40 });
+    expect(purse.reward.unlocked).toEqual([]);
+    purse.settle(m, clear(at));
+    expect(purse.reward.unlocked).toEqual(['poison']);
+    expect(heroUnlocked(m, 'poison')).toBe(true);
+  });
+
+  it('unlocks once through unlockHero, and only then levels up', () => {
+    const m = newMeta();
+    m.crystals = 1e6;
+    expect(buyHero(m, 'poison')).toBe(false);
+    expect(unlockHero(m, 'poison')).toBe(true);
+    expect(unlockHero(m, 'poison')).toBe(false);
+    expect(unlockHero(m, 'fire')).toBe(false);
+    expect(m.unlocked).toEqual(['poison']);
+    expect(buyHero(m, 'poison')).toBe(true);
+  });
+
+  it('swaps the lineup keeping four unlocked potions', () => {
+    const m = newMeta();
+    expect(swapLineup(m, 'fire', 'poison')).toBe(false);
+    unlockHero(m, 'poison');
+    expect(benched(m)).toEqual(['poison']);
+    expect(swapLineup(m, 'poison', 'fire')).toBe(false);
+    expect(swapLineup(m, 'fire', 'ice')).toBe(false);
+    expect(swapLineup(m, 'fire', 'poison')).toBe(true);
+    expect(m.lineup).toHaveLength(4);
+    expect(new Set(m.lineup).size).toBe(4);
+    expect(m.lineup).toContain('poison');
+    expect(benched(m)).toEqual(['fire']);
+    expect(battleSetup(m, 1).lineup).toEqual(m.lineup);
+    // and the swap survives a reload
+    expect(parseMeta(JSON.stringify(m)).lineup).toEqual(m.lineup);
+  });
+
+  it('migrates old saves: default lineup, corrosion open if its stage was already cleared', () => {
+    const old = parseMeta('{"crystals":50,"cleared":2,"stage":3}');
+    expect(old.lineup).toEqual([...LINEUP]);
+    expect(heroUnlocked(old, 'poison')).toBe(false);
+    const far = parseMeta(`{"cleared":${at},"stage":${at + 1}}`);
+    expect(heroUnlocked(far, 'poison')).toBe(true);
+    expect(far.lineup).toEqual([...LINEUP]);
+  });
+
+  it('falls back to the default lineup when the saved one is broken', () => {
+    for (const lineup of [['poison', 'fire', 'ice', 'lightning'], ['fire', 'fire', 'ice', 'arcane'], ['fire', 'ice'], 'x', ['nope', 'fire', 'ice', 'arcane']]) {
+      expect(parseMeta(JSON.stringify({ lineup })).lineup).toEqual([...LINEUP]);
+    }
+    const ok = parseMeta(JSON.stringify({ unlocked: ['poison'], lineup: ['poison', 'fire', 'ice', 'lightning'] }));
+    expect(ok.lineup).toEqual(['poison', 'fire', 'ice', 'lightning']);
   });
 });

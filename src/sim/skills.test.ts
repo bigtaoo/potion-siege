@@ -22,7 +22,7 @@ function quiet(b: Battle): void {
 function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
   const e: Enemy = {
     id: 9000 + b.enemies.length, kind: 'grunt', x, y, hp, maxHp: hp, speed: 0, radius: 30,
-    slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
+    slowFactor: 1, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
       markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, atWall: false,
   };
   b.enemies.push(e);

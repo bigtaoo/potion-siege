@@ -128,6 +128,7 @@ export class Overlay extends Container {
     const cw = W - 120;
     const left: Section[] = [header(won), statTiles(stats, cw), purse(reward, more, cw)];
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
+    for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));

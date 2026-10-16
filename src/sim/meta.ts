@@ -3,7 +3,7 @@
 // rules; the shell loads and stores it and the battle only sees the resulting BattleSetup.
 
 import { newDaily, parseDaily, type DailySave } from './daily';
-import { BALANCE, LINEUP, type HeroKind } from './types';
+import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
 
@@ -22,6 +22,10 @@ export interface MetaSave {
   bestWave: number;
   runs: number;
   daily: DailySave;
+  /** Potions unlocked beyond the starting four, by a stage cleared or bought. */
+  unlocked: HeroKind[];
+  /** The four potions taken into battle, all unlocked. */
+  lineup: HeroKind[];
 }
 
 /** What a battle is set up with, from the stage and the upgrades. */
@@ -32,6 +36,8 @@ export interface BattleSetup {
   heroDamage: Record<HeroKind, number>;
   /** Hero levels, for the skills and perks their milestones unlock. */
   heroLevels: Record<HeroKind, number>;
+  /** The four potions summons and merges roll from. */
+  lineup: readonly HeroKind[];
   wallHp: number;
   startGold: number;
 }
@@ -46,6 +52,8 @@ export function newMeta(): MetaSave {
     bestWave: 0,
     runs: 0,
     daily: newDaily(),
+    unlocked: [],
+    lineup: [...LINEUP],
   };
 }
 
@@ -75,6 +83,12 @@ export function parseMeta(raw: string | null): MetaSave {
   out.bestWave = int(data.bestWave, 0, 999, 0);
   out.runs = int(data.runs, 0, Number.MAX_SAFE_INTEGER, 0);
   out.daily = parseDaily(data.daily);
+  // a save from before a potion could be unlocked gets what its cleared stages have earned
+  const unlocked = Array.isArray(data.unlocked) ? data.unlocked : [];
+  for (const k of HERO_KINDS) if (!LINEUP.includes(k) && (unlocked.includes(k) || stageUnlocks(out.cleared).includes(k))) out.unlocked.push(k);
+  // a broken lineup falls back to the starting four
+  const lineup = (Array.isArray(data.lineup) ? data.lineup : []).filter((k, i, a): k is HeroKind => HERO_KINDS.includes(k) && heroUnlocked(out, k) && a.indexOf(k) === i);
+  if (lineup.length === LINEUP.length) out.lineup = lineup;
   return out;
 }
 
@@ -110,7 +124,7 @@ export function workshopValue(id: WorkshopId, level: number): number {
 
 export function buyHero(m: MetaSave, kind: HeroKind): boolean {
   const cost = heroCost(m.heroes[kind]);
-  if (cost === null || m.crystals < cost) return false;
+  if (!heroUnlocked(m, kind) || cost === null || m.crystals < cost) return false;
   m.crystals -= cost;
   m.heroes[kind]++;
   return true;
@@ -132,6 +146,7 @@ export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
     enemyHp: stageHp(stage),
     heroDamage: heroes,
     heroLevels: { ...m.heroes },
+    lineup: [...m.lineup],
     wallHp: BALANCE.wallHp * (1 + workshopValue('wall', m.workshop.wall)),
     startGold: BALANCE.startGold + workshopValue('startGold', m.workshop.startGold),
   };
@@ -151,6 +166,8 @@ export interface Reward {
   crystals: number;
   /** True when this battle cleared its stage for the first time. */
   firstClear: boolean;
+  /** Potions that first clear unlocked. */
+  unlocked: HeroKind[];
 }
 
 /** Crystals for a battle, won or lost: waves reached and kills, more on later stages, a bonus
@@ -161,7 +178,8 @@ export function runReward(m: MetaSave, r: RunResult): Reward {
   let base = R.perWave * r.wave + Math.floor(r.kills / R.perKills) + (r.won ? R.winBonus : 0);
   base *= 1 + R.stageStep * (r.stage - 1);
   if (firstClear) base += R.firstClear * r.stage;
-  return { crystals: Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals))), firstClear };
+  const unlocked = firstClear ? stageUnlocks(r.stage).filter((k) => !heroUnlocked(m, k)) : [];
+  return { crystals: Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals))), firstClear, unlocked };
 }
 
 /** Books a finished battle into the save; a first clear opens the next stage and moves to it. */
@@ -172,6 +190,7 @@ export function applyRun(m: MetaSave, r: RunResult, reward: Reward): void {
     m.cleared = r.stage;
     m.stage = maxStage(m);
   }
+  for (const k of reward.unlocked) unlockHero(m, k);
 }
 
 /** What one battle has paid out. A revived battle ending again pays only what it earned on top,
@@ -184,6 +203,7 @@ export class Purse {
   /** The ×2 has been offered and taken (or its ad failed): not offered again. */
   doubled = false;
   firstClear = false;
+  unlocked: HeroKind[] = [];
 
   /** Books a result screen's reward; returns the crystals to pay now. */
   settle(m: MetaSave, r: RunResult): Reward {
@@ -191,8 +211,9 @@ export class Purse {
     const gain = Math.max(0, reward.crystals - this.paid);
     this.paid += gain;
     this.firstClear ||= reward.firstClear;
-    applyRun(m, r, { crystals: gain, firstClear: reward.firstClear });
-    return { crystals: gain, firstClear: reward.firstClear };
+    this.unlocked.push(...reward.unlocked);
+    applyRun(m, r, { ...reward, crystals: gain });
+    return { ...reward, crystals: gain };
   }
 
   /** The ×2 ad has ended (`ok`: it was watched); returns the crystals it paid. */
@@ -207,7 +228,7 @@ export class Purse {
 
   /** What the result screen shows. */
   get reward(): Reward {
-    return { crystals: this.paid + this.bonus, firstClear: this.firstClear };
+    return { crystals: this.paid + this.bonus, firstClear: this.firstClear, unlocked: this.unlocked };
   }
 }
 
@@ -218,11 +239,43 @@ export function endOffers(lost: boolean, revived: boolean, ads: boolean, purse: 
   return { revive, double: ads && !revive && !purse.doubled && purse.paid > 0 };
 }
 
-/** The lineup heroes, the ones that can be levelled. */
-export const LEVELLED_HEROES: readonly HeroKind[] = LINEUP;
+/** The stage whose first clear unlocks a potion outside the starting lineup, or null. */
+export function unlockStage(kind: HeroKind): number | null {
+  const h = BALANCE.heroes[kind] as { unlockStage?: number };
+  return LINEUP.includes(kind) ? null : (h.unlockStage ?? null);
+}
 
-/** Whether a potion can be played and levelled. A save does not unlock heroes of its own yet,
- *  so today that is the lineup; the save is passed for the day it does. */
+/** The potions unlocked by first clears up to `stage`. */
+function stageUnlocks(stage: number): HeroKind[] {
+  return HERO_KINDS.filter((k) => {
+    const s = unlockStage(k);
+    return s !== null && s <= stage;
+  });
+}
+
+/** Whether a potion can be played and levelled: the starting four, and those unlocked since. */
 export function heroUnlocked(m: MetaSave, kind: HeroKind): boolean {
-  return LEVELLED_HEROES.includes(kind) && m.heroes[kind] >= 1;
+  return LINEUP.includes(kind) || m.unlocked.includes(kind);
+}
+
+/** The one place a potion gets unlocked: a stage's first clear, or the shop. False when it was
+ *  open already. */
+export function unlockHero(m: MetaSave, kind: HeroKind): boolean {
+  if (heroUnlocked(m, kind)) return false;
+  m.unlocked.push(kind);
+  return true;
+}
+
+/** Swaps `out` of the lineup for `into`, which takes its place; false (nothing changes) unless
+ *  `out` is in the lineup and `into` is an unlocked potion that is not. */
+export function swapLineup(m: MetaSave, out: HeroKind, into: HeroKind): boolean {
+  const i = m.lineup.indexOf(out);
+  if (i < 0 || m.lineup.includes(into) || !heroUnlocked(m, into)) return false;
+  m.lineup[i] = into;
+  return true;
+}
+
+/** Unlocked potions left out of the lineup, in hero order. */
+export function benched(m: MetaSave): HeroKind[] {
+  return HERO_KINDS.filter((k) => heroUnlocked(m, k) && !m.lineup.includes(k));
 }
