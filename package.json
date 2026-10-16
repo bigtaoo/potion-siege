@@ -14,7 +14,8 @@
     "balance": "vitest run --config scripts/vitest.balance.config.js",
     "check": "npm run typecheck && npm run test && npm run build:crazygames",
     "collector": "node scripts/collector.mjs",
-    "report": "node scripts/report.mjs"
+    "report": "node scripts/report.mjs",
+    "early": "vitest run --config scripts/vitest.early.config.js"
   },
   "dependencies": {
     "pixi.js": "^8.6.6"
