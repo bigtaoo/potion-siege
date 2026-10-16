@@ -5,7 +5,7 @@ import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, typ
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair } from '../sim/tutorial';
-import { BALANCE, type BattleEvent, type HeroKind } from '../sim/types';
+import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
 import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
@@ -46,6 +46,9 @@ const POUR = 0.35;
 const WIND_UP = 0.25;
 /** Seconds a thrown vial takes to drift from the hand onto its true path. */
 const LEAVE_HAND = 0.15;
+
+/** Farther enemies first, so nearer ones overlap them. */
+const byDepth = (p: Enemy, q: Enemy): number => p.y - q.y;
 
 /** How a figure is moving: drawing back to throw (0-1), seconds since it threw, since it appeared. */
 interface FigureAnim {
@@ -100,7 +103,10 @@ export class BattleView extends Container {
   private readonly wallText: Text;
   private readonly cmdNext = label('', 34);
   private cmdPulse = 0;
+  /** The gold and notes that float up; hidden ones are reused. */
   private readonly floaters = new Container();
+  /** The enemies in drawing order, refilled every frame. */
+  private readonly depth: Enemy[] = [];
   private fxList: Effect[] = [];
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
@@ -132,7 +138,7 @@ export class BattleView extends Container {
     this.cellAnims = [];
     this.launches.clear();
     this.pours = [];
-    this.floaters.removeChildren().forEach((c) => c.destroy());
+    for (const f of this.floaters.children) f.visible = false;
   }
 
   /** Turns battle events into short-lived effects. */
@@ -218,8 +224,11 @@ export class BattleView extends Container {
     const w = this.world.clear();
     const u = this.under.clear();
     this.enemyArt.begin();
-    // farther enemies first, so nearer ones overlap them
-    for (const e of [...b.enemies].sort((p, q) => p.y - q.y)) {
+    const depth = this.depth;
+    depth.length = 0;
+    for (const e of b.enemies) depth.push(e);
+    depth.sort(byDepth);
+    for (const e of depth) {
       const tex = enemyTexture(e.kind);
       if (!tex) {
         drawEnemy(w, e);
@@ -254,29 +263,34 @@ export class BattleView extends Container {
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }
+    depth.length = 0;
     this.enemyArt.end();
     this.shotArt.begin();
-    for (const shot of b.projectiles) {
-      let p = shot;
+    for (const p of b.projectiles) {
       const look = potionLook(p.kind);
       if (!look) {
         drawProjectile(w, p.kind, p.x, p.y);
         continue;
       }
       // a thrown vial tumbling end over end, trailing fire; it leaves from the thrower's hand
+      let px = p.x;
+      let py = p.y;
       const launch = this.launches.get(p.id);
       if (launch) {
         const k = 1 - (t - launch.at) / LEAVE_HAND;
         if (k <= 0) this.launches.delete(p.id);
-        else p = { ...p, x: p.x + launch.dx * k * k, y: p.y + launch.dy * k * k };
+        else {
+          px += launch.dx * k * k;
+          py += launch.dy * k * k;
+        }
       }
-      const len = Math.hypot(p.tx - p.x, p.ty - p.y) || 1;
-      const dx = (p.x - p.tx) / len;
-      const dy = (p.y - p.ty) / len;
+      const len = Math.hypot(p.tx - px, p.ty - py) || 1;
+      const dx = (px - p.tx) / len;
+      const dy = (py - p.ty) / len;
       // the trail: one inked outline under all three blobs, so it reads as a single streak
-      for (let i = 3; i >= 1; i--) w.circle(p.x + dx * i * 16, p.y + dy * i * 16, 20 - i * 3 + 4).fill(INK);
-      for (let i = 3; i >= 1; i--) w.circle(p.x + dx * i * 16, p.y + dy * i * 16, 20 - i * 3).fill(look.glow[i - 1]);
-      const s = this.shotArt.put(look.body, p.x, p.y, 44 + p.star * 4);
+      for (let i = 3; i >= 1; i--) w.circle(px + dx * i * 16, py + dy * i * 16, 20 - i * 3 + 4).fill(INK);
+      for (let i = 3; i >= 1; i--) w.circle(px + dx * i * 16, py + dy * i * 16, 20 - i * 3).fill(look.glow[i - 1]);
+      const s = this.shotArt.put(look.body, px, py, 44 + p.star * 4);
       s.anchor.set(0.5);
       s.rotation = t * 14 + p.id;
     }
@@ -295,10 +309,11 @@ export class BattleView extends Container {
     this.fxList = this.fxList.filter((e) => (e.ttl -= dt) > 0);
     for (const e of this.fxList) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
     for (const v of b.vortices) vortexSwirl(fxGround, v.x, v.y, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / 0.4));
-    for (const f of [...this.floaters.children]) {
+    for (const f of this.floaters.children) {
+      if (!f.visible) continue;
       f.y -= 120 * dt;
       f.alpha -= dt * 1.2;
-      if (f.alpha <= 0) f.destroy();
+      if (f.alpha <= 0) f.visible = false;
     }
 
     const g = this.grid.clear();
@@ -556,11 +571,25 @@ export class BattleView extends Container {
     });
   }
 
+  /** A note floating up from (x, y) and fading, on a hidden one when there is one; at most 31. */
   private floater(text: string, x: number, y: number, color: number): void {
-    if (this.floaters.children.length > 30) return;
-    const t = label(text, 40, { fill: color });
-    t.position.set(x, y - 30);
-    this.floaters.addChild(t);
+    let shown = 0;
+    let free: Text | null = null;
+    for (const f of this.floaters.children as Text[]) {
+      if (f.visible) shown++;
+      else if (!free) free = f;
+    }
+    if (shown > 30) return;
+    if (!free) free = label(text, 40, { fill: color });
+    else {
+      if (free.text !== text) free.text = text;
+      if (free.style.fill !== color) free.style.fill = color;
+      free.alpha = 1;
+      free.visible = true;
+    }
+    free.position.set(x, y - 30);
+    // the newest on top, as when each was new
+    this.floaters.addChild(free);
   }
 
   private slotAt(e: FederatedPointerEvent): number | null {
