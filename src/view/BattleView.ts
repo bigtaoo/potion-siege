@@ -100,6 +100,8 @@ export class BattleView extends Container {
   private readonly wallText: Text;
   private readonly cmdNext = label('', 34);
   private cmdPulse = 0;
+  /** The small words' growth on a small board (see textBoost). */
+  private boost = 1;
   private readonly floaters = new Container();
   private fxList: Effect[] = [];
   private dragFrom: number | null = null;
@@ -136,6 +138,13 @@ export class BattleView extends Container {
   }
 
   /** Turns battle events into short-lived effects. */
+  /** Grows the wall's numbers and the commander's count for a small board. */
+  legible(k: number): void {
+    this.boost = k;
+    this.wallText.scale.set(Math.min(k, 1.4));
+    this.cmdNext.scale.set(k);
+  }
+
   react(events: BattleEvent[]): void {
     for (const ev of events) {
       switch (ev.type) {
@@ -486,7 +495,8 @@ export class BattleView extends Container {
     this.cmdNext.visible = next !== null;
     if (next === null) return;
     const per = C.summonsPerCell;
-    over.roundRect(CMD.x - 56, CMD.feet - CMD.height - 44, 112, 44, 22).fill({ color: 0x0a1320, alpha: 0.7 });
+    const k = this.boost;
+    over.roundRect(CMD.x - 56 * k, CMD.feet - CMD.height - 22 - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x0a1320, alpha: 0.7 });
     this.cmdNext.text = tr('commanderNext', { n: per - next, total: per });
   }
 

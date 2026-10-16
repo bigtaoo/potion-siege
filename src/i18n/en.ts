@@ -64,7 +64,7 @@ export const en = {
   },
   maxed: 'MAX',
   reward: '+{n}',
-  earned: 'Crystals earned',
+  earned: 'Earned',
   firstClear: 'Stage cleared! The next one is open',
   unlockHero: '{name} unlocked!',
   double: '×2 crystals',

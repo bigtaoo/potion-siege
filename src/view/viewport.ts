@@ -34,3 +34,10 @@ export function fitMenu(screenW: number, screenH: number): MenuFit {
   const scale = wide ? Math.min(screenW / DESIGN_H, screenH / DESIGN_W) : Math.min(screenW / DESIGN_W, screenH / DESIGN_H);
   return { scale, w: screenW / scale, h: screenH / scale, wide };
 }
+
+/** How much the battle's small words grow on a small board: a board fitted into an 800x450
+ *  embed is under a quarter of its design size, where they would be a few pixels tall.
+ *  1 from a 1280x720 screen (or a phone in portrait) up. */
+export function textBoost(boardScale: number): number {
+  return Math.min(1.5, Math.max(1, 0.35 / boardScale));
+}

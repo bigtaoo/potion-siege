@@ -20,15 +20,17 @@ export class Hud extends Container {
   private readonly waveText = label('', 56);
   private readonly stageText = label('', 44, { fill: COLORS.gold });
   private readonly goldText = label('', 56, { fill: COLORS.gold });
-  private readonly hintText = label(t('hint'), 36, { wordWrap: true, wordWrapWidth: 900 });
+  private readonly hintText = label(t('hint'), 36, { wordWrap: true, wordWrapWidth: 900, breakWords: true, align: 'center' });
   private readonly banner = label('', 76, { fill: COLORS.gold });
   /** Under the wave banner, on the wave a kind first comes in: its name and what it fears. */
-  private readonly newcomer = label('', 44, { wordWrap: true, wordWrapWidth: 960, align: 'center' });
+  private readonly newcomer = label('', 44, { wordWrap: true, wordWrapWidth: 960, breakWords: true, align: 'center' });
   /** In a daily challenge, its modifiers as chips under the stage. */
   private readonly mods = new Container();
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
   private bannerTime = 0;
+  /** The small words' growth on a small board (see textBoost). */
+  private boost = 1;
   private newcomerTime = 0;
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
@@ -46,7 +48,9 @@ export class Hud extends Container {
     this.coin.circle(90, 60, 26).fill(COLORS.gold).stroke({ width: 5, color: 0x0a1320 });
     this.goldText.anchor.set(0, 0.5);
     this.goldText.position.set(130, 60);
-    this.hintText.position.set(DESIGN_W / 2, 150);
+    // hung from its top, under the wave line, so a bigger hint grows down the field
+    this.hintText.anchor.set(0.5, 0);
+    this.hintText.position.set(DESIGN_W / 2, 108);
     // high on the field, above where the enemies walk in, so it does not hide them
     this.banner.position.set(DESIGN_W / 2, 270);
     this.banner.alpha = 0;
@@ -63,6 +67,24 @@ export class Hud extends Container {
     this.newcomer.alpha = 0;
     this.stageText.text = t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
+  }
+
+  /** Grows the small words for a small board; the hint wraps narrower to stay on it. */
+  legible(k: number): void {
+    if (k === this.boost) return;
+    this.boost = k;
+    const top = Math.min(k, 1.25);
+    this.waveText.scale.set(top);
+    this.stageText.scale.set(top);
+    this.goldText.scale.set(top);
+    this.goldText.x = 130 + (top - 1) * 30;
+    this.coin.scale.set(top);
+    this.coin.position.set(90 * (1 - top), 60 * (1 - top));
+    this.hintText.scale.set(k);
+    this.hintText.y = 108 + (top - 1) * 40;
+    this.hintText.style.wordWrapWidth = 960 / k;
+    this.newcomer.scale.set(Math.min(k, 1.3));
+    this.newcomer.style.wordWrapWidth = 960 / Math.min(k, 1.3);
   }
 
   /** The challenge's modifiers, a chip each down the right under the stage; the hint line
@@ -110,6 +132,13 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
+    for (const btn of [this.summonButton, this.upgradeButton]) {
+      // as big as the boost asks while the caption still fits on the button
+      const raw = btn.text.scale.x;
+      const w = btn.text.width / raw;
+      const h = btn.text.height / raw;
+      btn.text.scale.set(Math.min(this.boost, (BUTTON.w - 36) / w, (BUTTON.h - 12) / h));
+    }
     this.hintText.visible = this.hint && b.time < HINT_SECONDS && this.mods.children.length === 0;
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
