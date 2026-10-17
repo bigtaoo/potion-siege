@@ -131,7 +131,8 @@ How to record:
 - [ ] `npm run check` green; zip the contents of `dist-crazygames/` (index.html at the zip root)
 - [ ] The three covers chosen (and the Chinese set, if used)
 - [ ] The trailer in both aspect ratios
+- [ ] "Progress Save" switched on in the submission form (otherwise the data module is off and saves stay in the browser's localStorage only)
 - [ ] QA tool: 800x450, full screen, revive / ×2 / reroll ads, a midgame ad on the second run, progress after a reload
 - Notes:
   - In Basic Launch the portal serves no ads. The game then grants revive, ×2 and reroll without one, which is by design.
-  - The main JS chunk is 506 kB (Pixi plus the game, 3.0 MB total). It is fine for the portal's size limits, but code-splitting would speed up the first load.
+  - The main JS chunk is 533 kB (Pixi plus the game; the zip is 2.4 MB in 38 files). It is fine for the portal's size limits, but code-splitting would speed up the first load.

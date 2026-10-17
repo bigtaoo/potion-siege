@@ -157,6 +157,9 @@ class Game {
   private ended = false;
   /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
   private offered = { revive: false, double: false };
+  /** A rewarded ad was watched since the battle ended (the ×2): the portal wants no midgame ad
+   *  chained after it in the same break. */
+  private rewardedSinceEnd = false;
   /** The day the login panel last opened by itself. */
   private loginShown = '';
   private readonly autoplay: boolean;
@@ -206,8 +209,10 @@ class Game {
       return;
     }
     this.newBattle(null);
+    this.hud.hint = false; // the merge hint would show through the title, under its words
     this.overlay.showTitle(this.save.bestWave, () => {
       this.overlay.hide();
+      this.hud.hint = true;
       this.analytics.first('first_tap_start', { t: this.analytics.sessionSeconds });
       this.run = new RunTracker(this.analytics, this.battle!, this.save.runs + 1, 'first');
       this.perf.start();
@@ -409,7 +414,9 @@ class Game {
   private async watch(): Promise<boolean> {
     this.overlay.interactiveChildren = false; // no second tap while the ad plays
     try {
-      return await this.platform.rewarded(() => this.mute(true));
+      const ok = await this.platform.rewarded(() => this.mute(true));
+      if (ok) this.rewardedSinceEnd = true;
+      return ok;
     } finally {
       this.overlay.interactiveChildren = true;
       this.mute(false);
@@ -428,6 +435,7 @@ class Game {
 
   private finish(b: Battle): void {
     this.ended = true;
+    this.rewardedSinceEnd = false;
     if (this.challenge) {
       this.finishChallenge(b, this.challenge);
       return;
@@ -445,7 +453,8 @@ class Game {
     // a revived battle ending again pays only what it earned on top
     const { crystals: gain, firstClear } = this.purse.settle(this.save, result);
     this.store();
-    if (b.result === 'won') this.platform.celebrate();
+    // the portal's happytime is for rare moments: a stage beaten for the first time, not every win
+    if (b.result === 'won' && firstClear && !this.autoplay) this.platform.celebrate();
     this.run?.onEnd();
     this.perf.end();
     this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: firstClear });
@@ -466,7 +475,7 @@ class Game {
     recordChallenge(this.save, run.result.tier);
     this.save.bestWave = Math.max(this.save.bestWave, b.wave);
     this.store();
-    if (run.result.tier > 0) this.platform.celebrate();
+    if (run.result.crystals > 0) this.platform.celebrate(); // a new best tier today
     this.run?.onEnd();
     this.perf.end();
     this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
@@ -729,8 +738,8 @@ class Game {
   private async again(tab?: HomeTab): Promise<void> {
     this.overlay.hide();
     if (tab) this.tab = tab;
-    // never an ad after the very first battle
-    if (this.save.runs > 1) {
+    // never an ad after the very first battle, nor right after a rewarded one
+    if (this.save.runs > 1 && !this.rewardedSinceEnd) {
       await this.platform.midgame(() => this.mute(true));
       this.analytics.track('ad_midgame', { run: this.save.runs });
     }

@@ -2,6 +2,7 @@
   "version": "0.0.1",
   "configurations": [
     { "name": "web", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev"], "port": 5180 },
-    { "name": "crazygames", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:crazygames"], "port": 5181 }
+    { "name": "crazygames", "runtimeExecutable": "npm", "runtimeArgs": ["run", "dev:crazygames"], "port": 5181 },
+    { "name": "crazygames-dist", "runtimeExecutable": "npx", "runtimeArgs": ["vite", "preview", "--config", "vite.crazygames.config.js", "--port", "4186", "--strictPort"], "port": 4186 }
   ]
 }
