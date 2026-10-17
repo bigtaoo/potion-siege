@@ -598,8 +598,8 @@ export function stopwatchIcon(): Graphics {
 /** Two courses of wall stone. */
 export function wallIcon(): Graphics {
   const g = new Graphics();
-  slab(g, -46, -30, 92, 30, 0);
-  slab(g, -46, 0, 92, 30, 1);
+  slab(g, -46, -30, 92, 30, 0, false);
+  slab(g, -46, 0, 92, 30, 1, false);
   return g;
 }
 

@@ -11,7 +11,7 @@ export const COLORS = {
   text: 0xffffff,
   dim: 0x000000,
   button: 0x2f9e5b,
-  buttonOff: 0x7a6656,
+  buttonOff: 0xa39480,
   card: 0x1f3550,
   hpBack: 0x3a1010,
   hp: 0xe5484d,
@@ -80,13 +80,16 @@ export class Button extends Container {
     this.bg
       .clear()
       .roundRect(-w / 2, -h / 2 + 10, w, h, 36)
-      .fill(0x0e0c12)
+      .fill({ color: 0x3e3128, alpha: 0.45 })
       .roundRect(-w / 2, -h / 2, w, h, 36)
       .fill(this.enabled ? this.color : COLORS.buttonOff)
-      .stroke({ width: 7, color: 0x0e0c12 })
-      // a light band along the top edge, like the cel-shaded art
-      .roundRect(-w / 2 + 14, -h / 2 + 10, w - 28, 14, 7)
-      .fill({ color: 0xffffff, alpha: 0.22 });
+      // the darker lip along the bottom, then a light band along the top, like the cel-shaded art
+      .roundRect(-w / 2 + 4, h / 2 - 22, w - 8, 18, 14)
+      .fill({ color: 0x000000, alpha: 0.18 })
+      .roundRect(-w / 2 + 18, -h / 2 + 10, w - 36, 14, 7)
+      .fill({ color: 0xffffff, alpha: 0.3 })
+      .roundRect(-w / 2, -h / 2, w, h, 36)
+      .stroke({ width: 6, color: 0x4a3424 });
   }
 }
 
