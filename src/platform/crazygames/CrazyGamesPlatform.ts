@@ -2,8 +2,19 @@
 // loading and gameplay hooks, and its ads. Adapted from D:\standing's CrazyGamesPlatform.
 
 import { WebPlatform } from '../web';
-import { SafeStore, type Platform } from '../types';
+import { SafeStore, type KeyValueStore, type Platform } from '../types';
 import { CrazyGamesSdk } from './sdk';
+
+/** The data module throws (dataModuleDisabled) when Progress Save is off in the submission;
+ *  the save then stays in localStorage instead of only in memory. */
+function readable(store: KeyValueStore): boolean {
+  try {
+    store.getItem('mb.save');
+    return true;
+  } catch {
+    return false;
+  }
+}
 
 export class CrazyGamesPlatform extends WebPlatform implements Platform {
   override readonly name: string = 'crazygames';
@@ -13,7 +24,7 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
   private constructor(private readonly sdk: CrazyGamesSdk) {
     super();
     const store = sdk.dataStore();
-    if (store) this.storage = new SafeStore(store);
+    if (store && readable(store)) this.storage = new SafeStore(store);
   }
 
   /** Waits (bounded) for the SDK, because its data module only exists after init. */
