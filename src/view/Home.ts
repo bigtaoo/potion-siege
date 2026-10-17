@@ -55,7 +55,7 @@ import {
   workshopWall,
   wallIcon,
 } from './kit';
-import { canUpgradePotion, canUpgradeWorkshop, challengeShown } from './nudges';
+import { canUpgradePotion, canUpgradeWorkshop, challengeShown, shopDot } from './nudges';
 import { gem, HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
 
@@ -133,7 +133,7 @@ export function buildHome(
   const dots: Partial<Record<HomeTab, boolean>> = {
     potions: canUpgradePotion(m),
     workshop: canUpgradeWorkshop(m),
-    shop: chestReady(m, today),
+    shop: shopDot(m, today),
     codex: achievementsClaimable(m),
   };
   dots[tab] = false;
