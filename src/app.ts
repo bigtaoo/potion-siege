@@ -209,8 +209,10 @@ class Game {
       return;
     }
     this.newBattle(null);
+    this.hud.hint = false; // the merge hint would show through the title, under its words
     this.overlay.showTitle(this.save.bestWave, () => {
       this.overlay.hide();
+      this.hud.hint = true;
       this.analytics.first('first_tap_start', { t: this.analytics.sessionSeconds });
       this.run = new RunTracker(this.analytics, this.battle!, this.save.runs + 1, 'first');
       this.perf.start();
