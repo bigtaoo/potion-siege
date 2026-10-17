@@ -451,7 +451,8 @@ class Game {
     // a revived battle ending again pays only what it earned on top
     const { crystals: gain, firstClear } = this.purse.settle(this.save, result);
     this.store();
-    if (b.result === 'won') this.platform.celebrate();
+    // the portal's happytime is for rare moments: a stage beaten for the first time, not every win
+    if (b.result === 'won' && firstClear && !this.autoplay) this.platform.celebrate();
     this.run?.onEnd();
     this.perf.end();
     this.analytics.track('crystals', { gain, total: this.save.crystals, stage: result.stage, first: firstClear });
@@ -472,7 +473,7 @@ class Game {
     recordChallenge(this.save, run.result.tier);
     this.save.bestWave = Math.max(this.save.bestWave, b.wave);
     this.store();
-    if (run.result.tier > 0) this.platform.celebrate();
+    if (run.result.crystals > 0) this.platform.celebrate(); // a new best tier today
     this.run?.onEnd();
     this.perf.end();
     this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
