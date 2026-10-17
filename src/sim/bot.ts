@@ -1,5 +1,6 @@
-// A simple player for balance runs and ?autoplay: buys an upgrade when the grid is full or
-// gold piles up, otherwise summons, merges the highest pair it finds and takes the first skill.
+// A simple player for balance runs and ?autoplay: casts the commander's skill as soon as it is
+// charged, buys an upgrade when the grid is full or gold piles up, otherwise summons, merges the
+// highest pair it finds and takes the first skill.
 
 import { Battle, SLOT_COUNT } from './battle';
 import { TICK_RATE } from './math/fixed';
@@ -10,6 +11,7 @@ export function botAct(b: Battle): void {
     b.choose(b.choices[0]);
     return;
   }
+  if (b.canCast()) b.cast();
   if (b.canUpgrade() && (b.freeSlots().length === 0 || b.gold >= b.upgradeCost() + b.summonCost())) {
     b.upgrade();
     return;

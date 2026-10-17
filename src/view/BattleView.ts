@@ -9,7 +9,7 @@ import { endlessChapter } from '../sim/waves';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
-import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
+import { BALANCE, type BattleEvent, type CommanderSkill, type Enemy, type HeroKind } from '../sim/types';
 import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, loadField, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, glassShards, stunStars, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
@@ -24,6 +24,16 @@ const G = BALANCE.grid;
 const C = BALANCE.commander;
 /** Where the commander stands: feet on this point, below the wall between the two buttons. */
 const CMD = { x: C.x, feet: C.y, height: 180 };
+/** How far from the commander's middle a tap still casts. */
+const CMD_TAP = 120;
+/** The charge badge: up by the commander's raised flask. */
+const BADGE = { x: CMD.x + 100, y: CMD.feet - CMD.height + 30, r: 34 };
+/** Seconds the commander's raise-and-throw takes. */
+const CAST_TIME = 0.5;
+/** How high the thrown flask arcs above its straight path. */
+const FLASK_ARC = 320;
+const BREW_COLOR = 0xb36bff;
+const BOMB_COLOR = 0xff8a3d;
 /** Front of the thinnest wall (the bottom row only), and the wall's back edge. */
 const WALL_TOP = G.y0 + G.cellH * (G.rows - 1) - F.parapet;
 const WALL_BOTTOM = G.y0 + G.cellH * G.rows;
@@ -31,6 +41,11 @@ const WALL_BOTTOM = G.y0 + G.cellH * G.rows;
 const FIELD_H = WALL_BOTTOM;
 /** Seconds one field takes to fade into the next. */
 const FIELD_FADE = 1.6;
+
+/** Whether a tap at (x, y) is on the commander or its charge badge. */
+function onCommander(x: number, y: number): boolean {
+  return Math.hypot(x - CMD.x, y - (CMD.feet - CMD.height / 2)) < CMD_TAP || Math.hypot(x - BADGE.x, y - BADGE.y) < BADGE.r * 1.8;
+}
 
 /** The field `b` is on in `wave` (its current one by default): its stage's chapter, or in endless
  *  mode the chapter of the wave's band. */
@@ -116,6 +131,12 @@ export class BattleView extends Container {
   private readonly wallText: Text;
   private readonly cmdNext = label('', 34, { stroke: { color: 0x3e3128, width: 5 } });
   private cmdPulse = 0;
+  /** The commander's last cast, for the raise-and-throw; a summon gets a smaller nod. */
+  private cmdCast: { at: number; skill: CommanderSkill } = { at: -99, skill: 'bomb' };
+  private cmdNod = -99;
+  /** The commander's flasks in the air, as the view throws them. */
+  private thrown: { x: number; y: number; at: number; flight: number }[] = [];
+  private readonly castTap = label('', 30, { stroke: { color: 0x3e3128, width: 5 } });
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
   /** The gold and notes that float up; hidden ones are reused. */
@@ -145,9 +166,13 @@ export class BattleView extends Container {
     this.addChild(this.ground, this.wall, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.cmdNext.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.cmdNext, this.children.indexOf(this.wallText));
+    this.castTap.position.set(BADGE.x, BADGE.y - BADGE.r - 34);
+    this.addChildAt(this.castTap, this.children.indexOf(this.wallText));
     this.drawGround();
     this.eventMode = 'static';
-    this.hitArea = new Rectangle(G.x0, G.y0, G.cellW * G.cols, G.cellH * G.rows);
+    // the grid for the drags, and the commander for the casts
+    const grid = new Rectangle(G.x0, G.y0, G.cellW * G.cols, G.cellH * G.rows);
+    this.hitArea = { contains: (x: number, y: number) => grid.contains(x, y) || onCommander(x, y) };
     this.on('pointerdown', (e) => this.onDown(e));
     this.on('globalpointermove', (e) => this.onMove(e));
     this.on('pointerup', (e) => this.onUp(e));
@@ -162,6 +187,9 @@ export class BattleView extends Container {
     this.fxList = [];
     this.dragFrom = null;
     this.cmdPulse = 0;
+    this.cmdCast = { at: -99, skill: 'bomb' };
+    this.cmdNod = -99;
+    this.thrown = [];
     this.cellAnims = [];
     this.launches.clear();
     this.pours = [];
@@ -174,6 +202,7 @@ export class BattleView extends Container {
     this.boost = k;
     this.wallText.scale.set(Math.min(k, 1.4));
     this.cmdNext.scale.set(k);
+    this.castTap.scale.set(k);
   }
 
   react(events: BattleEvent[]): void {
@@ -221,8 +250,41 @@ export class BattleView extends Container {
         case 'summon':
         case 'merge': {
           const c = slotCenter(ev.slot);
+          // the commander nods its flask at each summon
+          if (ev.type === 'summon') this.cmdNod = this.time;
           // a poured merge bursts when the pour ends, see drawPours()
           if (!this.pours.some((p) => p.slot === ev.slot)) this.burst(c.x, c.y, ev.type === 'merge' ? 110 : 80, COLORS.gold, 0.35);
+          break;
+        }
+        case 'cast': {
+          // the commander draws back and flings a flask, or raises the brew over the wall
+          const bomb = ev.skill === 'bomb';
+          const color = bomb ? BOMB_COLOR : BREW_COLOR;
+          this.cmdCast = { at: this.time, skill: ev.skill };
+          this.burst(BADGE.x, BADGE.y, 110, color, 0.4);
+          if (bomb) this.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight });
+          else {
+            this.effect(0.7, (g, life) => {
+              g.circle(CMD.x, CMD.feet - CMD.height / 2, 120 + (1 - life) * 700).stroke({ width: 18 * life, color, alpha: life * 0.6 });
+            }, true);
+          }
+          this.floater(tr(bomb ? 'castBomb' : 'castBrew'), DESIGN_W / 2, WALL_TOP - 60, color);
+          break;
+        }
+        case 'flask': {
+          // the flask bursts: a fireball, a ring and glass
+          const { x, y, radius } = ev;
+          this.thrown.shift();
+          this.effect(0.6, (g, life) => {
+            const k = 1 - life;
+            g.circle(x, y, radius * (0.4 + k * 0.7)).fill({ color: BOMB_COLOR, alpha: life * 0.35 });
+            g.circle(x, y, radius * (0.2 + k * 0.5)).fill({ color: 0xffe08a, alpha: life * 0.5 });
+          }, true);
+          this.effect(0.5, (g, life) => {
+            g.circle(x, y, radius * (0.3 + (1 - life) * 0.9)).stroke({ width: 14 * life, color: 0xfff3c0, alpha: life });
+          });
+          this.effect(0.6, (g, life) => glassShards(g, x, y, 1 - life));
+          this.shake = Math.max(this.shake, 0.25);
           break;
         }
         case 'cellOpen': {
@@ -407,6 +469,7 @@ export class BattleView extends Container {
       s.anchor.set(0.5);
       s.rotation = t * 14 + p.id;
     }
+    this.drawThrown(w, t);
     this.shotArt.end();
     // wall health
     const frac = Math.max(0, b.wall / b.wallMax);
@@ -456,6 +519,15 @@ export class BattleView extends Container {
       if (!h) {
         this.cellAnims[s] = null;
         continue;
+      }
+      // the commander's brew: every potion on the wall bubbles purple while it lasts
+      if (b.brewTime > 0) {
+        const fade = Math.min(1, b.brewTime / TICK_RATE / 0.5);
+        g.ellipse(c.x, c.y + 38, 58 + 6 * Math.sin(t * 8 + s), 22).fill({ color: BREW_COLOR, alpha: 0.45 * fade });
+        for (let i = 0; i < 3; i++) {
+          const k = (t * 0.9 + i / 3 + s * 0.37) % 1;
+          ho.circle(c.x + Math.sin(s * 3 + i * 2.1) * 40, c.y + 40 - k * 110, 7 * (1 - k) + 3).fill({ color: BREW_COLOR, alpha: (1 - k) * 0.8 * fade });
+        }
       }
       let a = this.cellAnims[s];
       if (!a || a.id !== h.id) {
@@ -601,19 +673,39 @@ export class BattleView extends Container {
     s.scale.y *= grow * (1 + Math.sin(this.time * 3 + phase) * 0.025 - anim.wind * 0.08 + r * 0.1);
   }
 
-  /** The commander under the wall, and how far it is through the summons that build the next cell. */
+  /** The commander under the wall: how far it is through the summons that build the next cell,
+   *  its charge, and its raise-and-throw. */
   private drawCommander(under: Graphics, over: Graphics, b: Battle, dt: number): void {
+    const t = this.time;
     this.cmdPulse = Math.max(0, this.cmdPulse - dt * 1.5);
+    const full = b.charge >= C.charge;
     const pop = 1 + this.cmdPulse * 0.25;
     summonCircle(under, CMD.x, CMD.feet, 124, 30);
+    // charged: a golden glow behind it, pulsing, asking for the tap
+    if (full) {
+      const p = 0.5 + 0.5 * Math.sin(t * 6);
+      under.ellipse(CMD.x, CMD.feet - CMD.height * 0.45, 95 + p * 14, 125 + p * 14).fill({ color: COLORS.gold, alpha: 0.18 + p * 0.17 });
+    }
+    // the bomb: it leans back, then flings forward; the brew: it rises on its toes; a summon or
+    // a new cell: a quick nod up
+    const c = (t - this.cmdCast.at) / CAST_TIME;
+    const n = (t - this.cmdNod) / 0.3;
+    let lean = 0;
+    let lift = this.cmdPulse * 0.6;
+    if (c >= 0 && c < 1) {
+      if (this.cmdCast.skill === 'bomb') lean = c < 0.35 ? (-0.18 * c) / 0.35 : 0.22 * Math.sin(((c - 0.35) / 0.65) * Math.PI);
+      lift = Math.sin(c * Math.PI);
+    } else if (n >= 0 && n < 1) lift = Math.max(lift, Math.sin(n * Math.PI) * 0.35);
     const tex = commanderTexture();
     if (tex) {
       heroShadow(under, CMD.x, CMD.feet - 4, CMD.height * 0.6);
-      const s = this.heroArt.put(tex, CMD.x, CMD.feet, CMD.height * pop);
-      s.scale.y *= 1 + Math.sin(this.time * 2.2) * 0.03;
+      const s = this.heroArt.put(tex, CMD.x, CMD.feet - lift * 24, CMD.height * pop * (1 + lift * 0.08));
+      s.scale.y *= 1 + Math.sin(t * 2.2) * 0.03 + (full ? Math.abs(Math.sin(t * 6)) * 0.03 : 0);
+      s.rotation = lean;
     } else {
-      drawHero(over, 'arcane', CMD.x, CMD.feet - CMD.height / 2, 80 * pop);
+      drawHero(over, 'arcane', CMD.x, CMD.feet - CMD.height / 2 - lift * 24, 80 * pop);
     }
+    this.drawCharge(over, b, full);
     const next = b.summonsToNextCell();
     this.cmdNext.visible = next !== null;
     if (next === null) return;
@@ -621,6 +713,54 @@ export class BattleView extends Container {
     const k = this.boost;
     over.roundRect(CMD.x - 56 * k, CMD.feet - CMD.height - 22 - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x6e4c2f, alpha: 0.85 });
     this.cmdNext.text = tr('commanderNext', { n: per - next, total: per });
+  }
+
+  /** The charge badge by the commander's flask: a ring filling with kills around the next skill's
+   *  sign; once full, the call to tap, the ring running down to the self-cast. */
+  private drawCharge(g: Graphics, b: Battle, full: boolean): void {
+    const { x, y } = BADGE;
+    const bomb = b.nextCast === 'bomb';
+    const color = bomb ? BOMB_COLOR : BREW_COLOR;
+    const r = BADGE.r * this.boost * (full ? 1 + Math.abs(Math.sin(this.time * 6)) * 0.12 : 1);
+    g.circle(x, y, r + 9).fill({ color: 0x3e3128, alpha: 0.9 });
+    g.circle(x, y, r).fill(full ? color : 0x6e4c2f);
+    const frac = full ? 1 - b.chargedFor / ticks(C.autoCast) : b.charge / C.charge;
+    if (frac > 0) {
+      const a0 = -Math.PI / 2;
+      g.moveTo(x, y - r - 5).arc(x, y, r + 5, a0, a0 + Math.PI * 2 * Math.min(1, frac)).stroke({ width: 7, color: full ? 0xfff3c0 : color, cap: 'round' });
+    }
+    // the sign: a round flask with a fuse for the bomb, a tall one with bubbles for the brew
+    const k = r / 34;
+    const ink = full ? 0xfff8e8 : color;
+    if (bomb) {
+      g.circle(x, y + 5 * k, 13 * k).fill(ink);
+      g.rect(x - 4 * k, y - 15 * k, 8 * k, 10 * k).fill(ink);
+      g.moveTo(x, y - 15 * k).quadraticCurveTo(x + 8 * k, y - 24 * k, x + 13 * k, y - 18 * k).stroke({ width: 3 * k, color: 0xffe08a });
+    } else {
+      g.roundRect(x - 8 * k, y - 14 * k, 16 * k, 30 * k, 6 * k).fill(ink);
+      g.circle(x - 11 * k, y - 18 * k, 4 * k).fill(ink);
+      g.circle(x + 10 * k, y - 22 * k, 3 * k).fill(ink);
+    }
+    this.castTap.visible = full && !b.paused;
+    if (this.castTap.visible && this.castTap.text !== tr('castTap')) this.castTap.text = tr('castTap');
+  }
+
+  /** The commander's flasks in the air, arcing from its hand onto their mark, spinning. */
+  private drawThrown(g: Graphics, t: number): void {
+    const look = potionLook('fire');
+    const hx = CMD.x + 40;
+    const hy = CMD.feet - CMD.height;
+    for (const f of this.thrown) {
+      const k = Math.min(1, (t - f.at) / f.flight);
+      const x = hx + (f.x - hx) * k;
+      const y = hy + (f.y - hy) * k - FLASK_ARC * 4 * k * (1 - k);
+      for (let i = 3; i >= 1; i--) g.circle(x, y + i * 18, 18 - i * 3).fill({ color: BOMB_COLOR, alpha: 0.25 * (4 - i) });
+      if (look) {
+        const s = this.shotArt.put(look.body, x, y, 76);
+        s.anchor.set(0.5);
+        s.rotation = t * 12;
+      } else g.circle(x, y, 22).fill(BOMB_COLOR).stroke({ width: 4, color: INK });
+    }
   }
 
   private drawGround(): void {
@@ -741,6 +881,11 @@ export class BattleView extends Container {
   }
 
   private onDown(e: FederatedPointerEvent): void {
+    const p = this.toLocal(e.global);
+    if (onCommander(p.x, p.y)) {
+      if (this.battle?.canCast()) this.battle.cast();
+      return;
+    }
     const s = this.slotAt(e);
     this.idle = 0;
     if (s === null || !this.battle?.slots[s] || this.battle.paused) return;

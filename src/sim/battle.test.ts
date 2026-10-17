@@ -84,11 +84,11 @@ describe('Battle', () => {
     expect(b.slots[W]).not.toBeNull();
   });
 
-  it('lets the commander shoot on its own', () => {
+  it('leaves the enemies to the potions: the commander never shoots', () => {
     const b = new Battle(6);
     b.enemies.push(grunt(999, 500, 600, 1e6));
     for (let i = 0; i < 60; i++) b.step();
-    expect(b.enemies.find((e) => e.id === 999)!.hp).toBeLessThan(toFp(1e6));
+    expect(b.enemies.find((e) => e.id === 999)!.hp).toBe(toFp(1e6));
   });
 
   it('has a lineup of known heroes', () => {
@@ -232,11 +232,10 @@ describe('Battle', () => {
 });
 
 describe('damage dealt', () => {
-  /** No waves and the commander holds fire, so only the test's own shots land. */
+  /** No waves, so only the test's own shots land. */
   function quiet(): Battle {
     const b = new Battle(5);
     b.enemies = [];
-    b.commanderCooldown = 1e9;
     return b;
   }
 
@@ -281,9 +280,11 @@ describe('damage dealt', () => {
     const b = quiet();
     hit(b, 'arcane', enemy(b, 500, 400, 10), 1000);
     expect(u(b.dealt.arcane)).toBeCloseTo(10);
-    b.commanderCooldown = 0;
     enemy(b, 500, 400, 1e6);
+    b.charge = BALANCE.commander.charge;
+    expect(b.cast()).toBe(true);
     for (let i = 0; i < 60; i++) b.step();
+    expect(HERO_KINDS.reduce((a, k) => a + b.dealt[k], 0)).toBe(b.dealt.arcane);
     expect(u(b.dealt.arcane)).toBeCloseTo(10);
   });
 
@@ -316,7 +317,6 @@ describe('rust', () => {
   function rig(): { b: Battle; e: Enemy } {
     const b = new Battle(5);
     b.enemies = [];
-    b.commanderCooldown = 1e9;
     const e = grunt(9000, 500, 400, 1e6);
     b.enemies.push(e);
     return { b, e };
@@ -388,5 +388,102 @@ describe('lineup', () => {
         expect(hero === 'arcane' || also === 'arcane').toBe(false);
       }
     }
+  });
+});
+
+describe('commander skills', () => {
+  const C = BALANCE.commander;
+
+  /** No waves, a full charge. */
+  function charged(): Battle {
+    const b = new Battle(5);
+    (b as unknown as { pending: Spawn[] }).pending = [];
+    b.enemies = [];
+    b.charge = C.charge;
+    return b;
+  }
+
+  it('charges one a kill and a boss more, up to full', () => {
+    const b = new Battle(5);
+    (b as unknown as { pending: Spawn[] }).pending = [];
+    b.enemies = [grunt(1, 500, 400, 1)];
+    b.projectiles.push(shot('arcane', b.enemies[0], 10));
+    b.step();
+    expect(b.charge).toBe(1);
+    expect(b.canCast()).toBe(false);
+    expect(b.cast()).toBe(false);
+    const boss = grunt(2, 500, 400, 1);
+    boss.kind = 'boss';
+    b.enemies.push(boss);
+    b.charge = C.charge - 2;
+    b.projectiles.push(shot('arcane', boss, 10));
+    b.step();
+    expect(b.charge).toBe(C.charge);
+  });
+
+  it('throws the flask into the thick of them, then brews, in turn', () => {
+    const b = charged();
+    b.slots[W] = { id: 100, kind: 'arcane', star: 2, slot: W, cooldown: 1e9 };
+    const lone = grunt(1, 200, 700, 1e6);
+    const pack = [grunt(2, 700, 400, 1e6), grunt(3, 740, 420, 1e6), grunt(4, 680, 450, 1e6)];
+    b.enemies.push(lone, ...pack);
+    expect(b.nextCast).toBe('bomb');
+    expect(b.cast()).toBe(true);
+    expect(b.charge).toBe(0);
+    const cast = b.drain().find((e) => e.type === 'cast');
+    expect(cast).toMatchObject({ skill: 'bomb' });
+    // nothing lands until the flask has flown
+    b.step();
+    expect(pack[0].hp).toBe(toFp(1e6));
+    for (let i = 0; i < ticks(C.bomb.flight); i++) b.step();
+    const H = BALANCE.heroes.arcane;
+    const dps = (H.damage * BALANCE.starDamage[1] * BALANCE.starSpeed[1]) / H.interval;
+    for (const e of pack) {
+      expect(1e6 - u(e.hp)).toBeCloseTo(Math.max(C.bomb.min, dps * C.bomb.seconds), 0);
+      expect(e.slowTime).toBeGreaterThan(0);
+    }
+    expect(lone.hp).toBe(toFp(1e6));
+
+    b.charge = C.charge;
+    expect(b.nextCast).toBe('brew');
+    expect(b.cast()).toBe(true);
+    expect(b.brewTime).toBe(ticks(C.brew.time));
+    expect(b.nextCast).toBe('bomb');
+  });
+
+  it('throws faster while the brew lasts', () => {
+    const shots = (brew: boolean): number => {
+      const b = charged();
+      b.slots[W] = { id: 100, kind: 'arcane', star: 1, slot: W, cooldown: 0 };
+      b.enemies.push(grunt(1, 500, 400, 1e9));
+      b.casts = 1;
+      if (!brew) b.charge = 0;
+      else expect(b.cast()).toBe(true);
+      let n = 0;
+      for (let i = 0; i < ticks(C.brew.time); i++) {
+        b.step();
+        n += b.drain().filter((e) => e.type === 'shot').length;
+      }
+      return n;
+    };
+    expect(shots(true) / shots(false)).toBeCloseTo(1 + C.brew.speed, 0);
+    expect(shots(true)).toBeGreaterThan(shots(false));
+  });
+
+  it('casts by itself once the charge has waited, but only with something to throw at', () => {
+    const b = charged();
+    for (let i = 0; i < ticks(C.autoCast) + 5; i++) b.step();
+    expect(b.casts).toBe(0);
+    b.enemies.push(grunt(1, 500, 400, 1e6));
+    b.step();
+    expect(b.casts).toBe(1);
+    expect(b.charge).toBe(0);
+  });
+
+  it('replays a tapped cast', () => {
+    const b = charged();
+    b.enemies.push(grunt(1, 500, 400, 1e6));
+    b.cast();
+    expect(b.commands[b.commands.length - 1]).toMatchObject({ type: 'cast' });
   });
 });

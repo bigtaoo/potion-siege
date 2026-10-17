@@ -25,10 +25,9 @@ function pool(fielded: HeroKind[], levels: Partial<Record<HeroKind, number>>): S
   return out;
 }
 
-/** No enemies, and the commander holds fire, so only the test's own shots land. */
+/** No enemies, so only the test's own shots land. */
 function quiet(b: Battle): void {
   b.enemies = [];
-  b.commanderCooldown = 1e9;
 }
 
 /** An enemy at (x, y) with `hp` hit points, all in world units. */
@@ -185,16 +184,6 @@ describe('arcane, ice and lightning lines', () => {
     };
     expect(marked(1)).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark));
     expect(marked(10)).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark * (1 + BALANCE.skills.arcaneMarkPlus)));
-  });
-
-  it('leaves the commander bolts out of the arcane line', () => {
-    const b = withSkills(['arcaneMark', 'fireArcane']);
-    const e = enemy(b, 500, 600, 1e6);
-    const near = enemy(b, 560, 600, 1e6);
-    b.projectiles.push(shot('arcane', e, 100, { commander: true }));
-    b.step();
-    expect(e.markTime).toBe(0);
-    expect(near.hp).toBe(toFp(1e6));
   });
 
   it('splits a killing arcane bolt towards the nearest enemies, once', () => {
@@ -693,16 +682,12 @@ describe('the new kinds in battle', () => {
     return b;
   }
 
-  it('takes each potion by its resistance, the commander in full', () => {
+  it('takes each potion by its resistance', () => {
     const b = still();
     const brute = enemy(b, 500, 400, 1e6);
     brute.kind = 'brute';
     hit(b, 'ice', brute, 100);
     expect(1e6 - u(brute.hp)).toBeCloseTo(125);
-    const before = brute.hp;
-    b.projectiles.push(shot('fire', brute, 100, { id: 2, commander: true }));
-    b.step();
-    expect(u(before - brute.hp)).toBeCloseTo(100);
     b.projectiles.push(shot('fire', brute, 100, { id: 3 }));
     const mid = brute.hp;
     b.step();

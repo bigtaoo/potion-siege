@@ -21,9 +21,11 @@
   "commander": {
     "summonsPerCell": 5,
     "extraCells": 6,
-    "damage": 10,
-    "damageStep": 0.35,
-    "interval": 0.8,
+    "charge": 70,
+    "bossCharge": 20,
+    "autoCast": 8,
+    "bomb": { "seconds": 0.6, "min": 40, "radius": 190, "flight": 0.45, "slow": 0.35, "slowTime": 2 },
+    "brew": { "speed": 0.3, "time": 2 },
     "x": 540,
     "y": 1890
   },

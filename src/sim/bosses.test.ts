@@ -13,13 +13,12 @@ const CH = BALANCE.bosses.chapter;
 
 type Raw = { pending: Spawn[]; spawn(s: Spawn): void; harm(e: Enemy, damage: number, by: HeroKind | undefined): void };
 
-/** A boss walking down on its own: no wave spawns, no commander. */
+/** A boss walking down on its own: no wave spawns. */
 function alone(kind: BossKind, hp = 1e9): { b: Battle; raw: Raw; boss: Enemy } {
   const b = new Battle(1, battleSetup(newMeta(), FIRST_STAGE[kind]));
   const raw = b as unknown as Raw;
   raw.pending = [];
   b.enemies = [];
-  b.commanderCooldown = 1e9;
   raw.spawn({ at: 0, kind, hp });
   return { b, raw, boss: b.enemies[0] };
 }

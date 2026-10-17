@@ -131,14 +131,24 @@ export interface Projectile {
   tx: number;
   ty: number;
   damage: number;
-  /** Shot by the commander: the hero skill lines leave it alone. */
-  commander?: boolean;
   /** A bolt split off a kill; it does not split again. */
   split?: boolean;
   /** A lightning shot that also calls down a sky strike where it lands. */
   strike?: boolean;
   /** A wind shot that lands as a gust: a wall of wind across the whole field. */
   gust?: boolean;
+}
+
+/** The commander's two skills, cast in turn: a big flask thrown into the thick of the enemies,
+ *  and a brew that quickens every potion on the wall for a while. */
+export type CommanderSkill = 'bomb' | 'brew';
+
+/** The commander's flask in the air: it lands on (x, y) when `time` runs out. */
+export interface Flask {
+  x: number;
+  y: number;
+  time: number;
+  damage: number;
 }
 
 /** A whirlwind left where a wind shot killed (the vortex skill): it pulls the enemies around it
@@ -158,6 +168,10 @@ export type BattleEvent =
   | { type: 'shot'; slot: number; projectile: number }
   | { type: 'summon'; slot: number }
   | { type: 'merge'; slot: number; star: number; kind: HeroKind }
+  /** The commander cast a skill: the flask aimed at (x, y), or the brew (x, y unused). */
+  | { type: 'cast'; skill: CommanderSkill; x: number; y: number; flight: number }
+  /** The commander's flask burst on (x, y). */
+  | { type: 'flask'; x: number; y: number; radius: number }
   /** Enough summons for the commander to build a new cell onto the wall. */
   | { type: 'cellOpen'; slot: number; last: boolean }
   | { type: 'wave'; wave: number; boss: boolean }

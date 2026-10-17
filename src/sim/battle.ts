@@ -19,7 +19,7 @@ import { Prng } from './math/prng';
 import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
-import { BALANCE, isBoss, type BattleEvent, type Enemy, type EnemyKind, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type EnemyKind, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
 import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -64,7 +64,10 @@ const K = {
   cellW: toFp(B.grid.cellW),
   summonCooldown: cool(0.2),
   idleCooldown: cool(0.07),
-  commanderInterval: cool(C.interval),
+  bombRadius: toFp(C.bomb.radius),
+  bombMin: toFp(C.bomb.min),
+  /** The brew's quickening in permille of the potions' own speed. */
+  brew: 1000 + pm(C.brew.speed),
   /** Each hero kind's shot interval at each level. */
   interval: Object.fromEntries(Object.entries(B.heroes).map(([k, h]) => [k, B.starSpeed.map((s) => Math.round((h.interval * TICK_RATE * 1000) / s))])) as Record<HeroKind, number[]>,
   wallDps: Object.fromEntries(Object.entries(B.enemies).map(([k, e]) => [k, perTick(e.wallDps)])) as Record<EnemyKind, number>,
@@ -130,7 +133,9 @@ export type Command =
   | { type: 'reroll' }
   /** The reroll was offered and not taken (the ad failed): the offer keeps its cards. */
   | { type: 'noReroll' }
-  | { type: 'revive' };
+  | { type: 'revive' }
+  /** Tapping the commander once it is charged: the next of its skills. */
+  | { type: 'cast' };
 
 /** A command and the tick it was applied on. */
 export type Stamped = Command & { tick: number };
@@ -155,8 +160,17 @@ export class Battle {
   upgrades = 0;
   /** Cells the commander has built onto the wall, one every `summonsPerCell` summons. */
   built = 0;
-  /** The commander below the wall shoots too, harder with every cell built. */
-  commanderCooldown = cool(0.5);
+  /** The commander's charge, one a kill (more for a boss), up to `commander.charge`; full, it can
+   *  cast, and casts by itself once it has waited `autoCast` seconds. */
+  charge = 0;
+  /** Ticks the charge has been full. */
+  chargedFor = 0;
+  /** Skills cast so far: they go in turn, the flask first. */
+  casts = 0;
+  /** Ticks of the brew left: every potion throws faster while it lasts. */
+  brewTime = 0;
+  /** The commander's flasks in the air. */
+  flasks: Flask[] = [];
   kills = 0;
   /** Ticks played (the pauses for a pick do not count). */
   time = 0;
@@ -167,7 +181,7 @@ export class Battle {
   rerolled = false;
   result: 'won' | 'lost' | null = null;
   readonly slots: (Hero | null)[] = new Array(SLOT_COUNT).fill(null);
-  /** The damage each potion has dealt, overkill left out (the commander's is not counted), in FP:
+  /** The damage each potion has dealt, overkill left out (the commander's flask is not counted), in FP:
    *  the result screen's MVP. */
   readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
@@ -225,6 +239,15 @@ export class Battle {
   /** 1, plus one per cell built. */
   get commanderLevel(): number {
     return 1 + this.built;
+  }
+
+  /** The skill the commander casts next. */
+  get nextCast(): CommanderSkill {
+    return this.casts % 2 === 0 ? 'bomb' : 'brew';
+  }
+
+  canCast(): boolean {
+    return !this.paused && this.charge >= C.charge;
   }
 
   isOpen(slot: number): boolean {
@@ -322,6 +345,9 @@ export class Battle {
       case 'revive':
         done = this.doRevive();
         break;
+      case 'cast':
+        done = this.doCast();
+        break;
     }
     if (done || this.dice() !== dice) this.commands.push({ ...cmd, tick: this.time });
     return done;
@@ -351,6 +377,11 @@ export class Battle {
 
   choose(id: SkillId): boolean {
     return this.apply({ type: 'choose', id });
+  }
+
+  /** Casts the commander's next skill once it is charged. */
+  cast(): boolean {
+    return this.apply({ type: 'cast' });
   }
 
   /** Puts the wall back up after a lost battle (the rewarded revive). */
@@ -424,6 +455,54 @@ export class Battle {
     return true;
   }
 
+  private doCast(): boolean {
+    if (!this.canCast()) return false;
+    const skill = this.nextCast;
+    if (skill === 'bomb') {
+      const target = this.thickest();
+      // nothing on the field to throw at: the charge waits
+      if (!target) return false;
+      const flight = ticks(C.bomb.flight);
+      this.flasks.push({ x: target.x, y: target.y, time: flight, damage: Math.max(K.bombMin, muldiv(this.boardDps(), Math.round(C.bomb.seconds * 1000), 1000)) });
+      this.events.push({ type: 'cast', skill, x: target.x / FP, y: target.y / FP, flight: C.bomb.flight });
+    } else {
+      this.brewTime = ticks(C.brew.time);
+      this.events.push({ type: 'cast', skill, x: 0, y: 0, flight: 0 });
+    }
+    this.charge = 0;
+    this.chargedFor = 0;
+    this.casts++;
+    return true;
+  }
+
+  /** The enemy with the most others within the flask's reach, the one nearer the wall on a tie. */
+  private thickest(): Enemy | null {
+    let best: Enemy | null = null;
+    let most = 0;
+    for (const e of this.enemies) {
+      if (e.hp <= 0) continue;
+      let n = 0;
+      for (const o of this.enemies) if (o.hp > 0 && this.within(o, e.x, e.y, K.bombRadius)) n++;
+      if (n > most || (n === most && best && e.y > best.y)) {
+        best = e;
+        most = n;
+      }
+    }
+    return best;
+  }
+
+  /** What the potions on the wall deal a second between them, in FP: their shots' damage over
+   *  their intervals, with the skills and perks picked. */
+  private boardDps(): number {
+    let dps = 0;
+    for (const h of this.slots) {
+      if (!h) continue;
+      const speed = h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
+      dps += muldiv(this.fixed.damage[h.kind][h.star - 1], TICK_RATE * speed, K.interval[h.kind][h.star - 1]);
+    }
+    return dps;
+  }
+
   private doRevive(): boolean {
     if (this.result !== 'lost') return false;
     this.wall = Math.trunc(this.wallMax / 2);
@@ -458,6 +537,7 @@ export class Battle {
     this.stepEnemies();
     this.stepHeroes();
     this.stepCommander();
+    this.stepFlasks();
     this.stepProjectiles();
     this.reapDead();
     if (this.wall <= 0) this.end(false);
@@ -709,7 +789,8 @@ export class Battle {
         h.stunTime--;
         continue;
       }
-      h.cooldown -= h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
+      const speed = h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
+      h.cooldown -= this.brewTime > 0 ? times(speed, K.brew) : speed;
       if (h.cooldown > 0) continue;
       targets ??= this.targets();
       if (targets.length === 0) {
@@ -729,19 +810,29 @@ export class Battle {
     }
   }
 
-  /** The commander shoots plain arcane bolts, harder with each level; only the all-hero skills
-   *  (damage, speed, crit) apply to it. */
+  /** The brew wears off; a charge left full too long is cast by the commander itself. */
   private stepCommander(): void {
-    this.commanderCooldown -= this.fixed.speed;
-    if (this.commanderCooldown > 0) return;
-    const target = this.targets()[0];
-    if (!target) {
-      this.commanderCooldown = 0;
-      return;
-    }
-    this.commanderCooldown += K.commanderInterval;
-    const damage = Math.round(C.damage * (1 + C.damageStep * (this.commanderLevel - 1)) * (1 + B.skills.allDamage * this.skills.allDamage) * FP);
-    this.shoot('arcane', 1, toFp(C.x), toFp(C.y - 120), target, damage, { commander: true });
+    if (this.brewTime > 0) this.brewTime--;
+    if (this.charge < C.charge) return;
+    if (++this.chargedFor >= ticks(C.autoCast)) this.doCast();
+  }
+
+  /** The commander's flasks fly on; a landed one bursts on everything within its reach and slows
+   *  what lives through it. It is no potion, so no resistance takes from it. */
+  private stepFlasks(): void {
+    if (this.flasks.length === 0) return;
+    const R = C.bomb;
+    this.flasks = this.flasks.filter((f) => {
+      if (--f.time > 0) return true;
+      for (const e of this.enemies) {
+        if (e.hp <= 0 || !this.within(e, f.x, f.y, K.bombRadius)) continue;
+        this.harm(e, times(f.damage, this.splash(e)), undefined);
+        this.discharge(e);
+        if (e.hp > 0) this.slow(e, R.slow, ticks(R.slowTime));
+      }
+      this.events.push({ type: 'flask', x: f.x / FP, y: f.y / FP, radius: R.radius });
+      return false;
+    });
   }
 
   /** A hero's shot at `target`, `scale` permille of its damage. */
@@ -804,7 +895,7 @@ export class Battle {
   private impact(p: Projectile, target: Enemy | null): void {
     const h = B.heroes;
     const S = B.skills;
-    const by = p.commander ? undefined : p.kind;
+    const by = p.kind;
     switch (p.kind) {
       case 'fire': {
         const radius = this.fixed.fireRadius;
@@ -860,7 +951,7 @@ export class Battle {
     if (!target) return;
     this.harm(target, p.damage, by);
     this.discharge(target);
-    if (p.kind === 'arcane' && !p.commander) this.arcaneHit(p, target);
+    if (p.kind === 'arcane') this.arcaneHit(p, target);
     if (p.kind === 'ice') {
       this.slow(target, h.ice.slow, ticks(h.ice.slowTime));
       if (this.shotRng.chance(this.fixed.freezeChance, 1000)) this.freeze(target, S.iceFreezeTime, p.damage);
@@ -892,8 +983,7 @@ export class Battle {
    *  line's skills. `direct` is the one it was aimed at. */
   private windHit(e: Enemy, p: Projectile, direct: boolean): void {
     const S = B.skills;
-    if (!p.commander) this.push(e, p.star);
-    if (p.commander) return;
+    this.push(e, p.star);
     if (this.mods.vortex && direct && e.hp <= 0) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
     if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
       // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
@@ -982,7 +1072,7 @@ export class Battle {
   }
 
   /** Every bit of damage goes through here, for the enemy's resistance to the potion it came
-   *  from (`by`; the commander's shots have none), the arcane mark and the corrosion's rust (all
+   *  from (`by`; the commander's flask has none), the arcane mark and the corrosion's rust (all
    *  multiply), and for crediting that potion with what the enemy had left of it. */
   private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
     if (e.guardTime) return;
@@ -1135,6 +1225,7 @@ export class Battle {
       const gold = Math.round(((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold) / 1000);
       this.gold += gold;
       this.kills++;
+      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : 1));
       this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
       if (this.mods.fireChain && e.scorchTime > 0) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it

@@ -47,6 +47,13 @@ export function battleCues(events: readonly BattleEvent[]): Cue[] {
         // the upgrade button's click (the hud's buttons have no click of their own)
         if (ev.reason !== 'ultimate') out.push({ id: 'tap' });
         break;
+      case 'cast':
+        // the flask leaves the hand with a low pour; the brew bubbles up like a level up
+        out.push(ev.skill === 'bomb' ? { id: 'merge', rate: 0.75 } : { id: 'levelup' });
+        break;
+      case 'flask':
+        out.push({ id: 'hitFire', pan: pan(ev.x), rate: 0.6, gain: 1 });
+        break;
       case 'cellOpen':
         out.push({ id: 'crystal' });
         break;
