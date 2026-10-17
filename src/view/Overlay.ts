@@ -4,7 +4,7 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { CHALLENGE_TIERS, type ChallengeResult, type ModifierId } from '../sim/challenge';
 import { ENDLESS_MILESTONES, type EndlessResult } from '../sim/endless';
-import type { Reward } from '../sim/meta';
+import { DOUBLES_PER_DAY, type Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
 import {
@@ -160,6 +160,8 @@ export class Overlay extends Container {
 export interface EndExtras {
   onDouble: (() => void) | null;
   doubled: boolean;
+  /** Today's ×2s left, shown under the ×2 (greyed out at 0); undefined hides the line. */
+  doublesLeft?: number;
   dealt: { kind: HeroKind; damage: number }[];
   onTip: ((tab: TipTab) => void) | null;
   /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
@@ -345,10 +347,12 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
   what.anchor.set(0, 0.5);
   what.x = -iw / 2 + 40;
   c.addChild(what);
-  // with the ×2 on offer the gem and count follow the words; otherwise they sit on the right
-  const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
+  // with the ×2 on offer (or greyed out, today's used up) the gem and count follow the words;
+  // otherwise they sit on the right
+  const button = more.onDouble !== null || more.doublesLeft === 0;
+  const count = label(t('reward', { n: reward.crystals }), button ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
   count.anchor.set(1, 0.5);
-  if (more.onDouble) {
+  if (button) {
     // the words give way first (the English ones fill the row), so the count stays readable
     const end = iw / 2 - 290;
     const room = end - what.x - 100;
@@ -360,10 +364,18 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
     count.x = iw / 2 - 40 - (more.doubled ? 110 : 0);
   }
   c.addChild(count, gem(new Graphics(), count.x - count.width - 44, -2, 40));
-  if (more.onDouble) {
-    const b = adButton(t('double'), 250, 104, 'purple', more.onDouble, 38);
+  if (button) {
+    const left = more.doublesLeft;
+    const b = adButton(t('double'), 250, left === undefined ? 104 : 80, 'purple', more.onDouble ?? (() => {}), 38);
     b.x = iw / 2 - 140;
     c.addChild(b);
+    if (left !== undefined) {
+      b.y = -16;
+      b.setEnabled(left > 0);
+      const note = label(t('doublesLeft', { n: left, total: DOUBLES_PER_DAY }), 26, { fill: 0xcfe3ff, stroke: { color: P.line, width: 5 } });
+      note.position.set(b.x, 42);
+      c.addChild(note);
+    }
   } else if (more.doubled) {
     const seal = medal(44, P.brass);
     const x2 = label(t('doubled'), 38, { stroke: { color: P.line, width: 6 } });

@@ -12,8 +12,8 @@
 // STAGES (stage count, e.g. 50; stages past 20 keep stageHpLate growth), ENDLESS (placeholder
 // crystals per endless run, played instead of farming once ENDLESS_FROM stages are cleared),
 // CHAPTER_CHEST (crystals × the chapter on the first clear of every tenth stage), LATE_GROWTH
-// (enemy hit points a stage past 20 instead of stageHpLate.growth), DOUBLES (result ×2 ads a day,
-// default every battle: a proposed cap the game does not have yet), TAG, OUT_DIR.
+// (enemy hit points a stage past 20 instead of stageHpLate.growth), TAG, OUT_DIR. The result ×2
+// keeps to shop.doublesPerDay as in the game (BAL='{"shop":{"doublesPerDay":999}}' lifts it).
 import { it } from 'vitest';
 import { claimTier, recordChallenge, recordEvents, TRACK_IDS } from '../src/sim/achievements';
 import { Battle } from '../src/sim/battle';
@@ -21,7 +21,7 @@ import { botAct } from '../src/sim/bot';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge } from '../src/sim/challenge';
 import { addProgress, claimBonus, claimLogin, claimTask, rollDay } from '../src/sim/daily';
 import { TICK_RATE } from '../src/sim/math/fixed';
-import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, heroCost, heroUnlocked, newMeta, Purse, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
+import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, doublesLeft, heroCost, heroUnlocked, newMeta, Purse, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
 import { BALANCE, HERO_KINDS } from '../src/sim/types';
 
 function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
@@ -151,7 +151,6 @@ it('economy', () => {
   const endless = Number(env.ENDLESS ?? 0);
   const endlessFrom = Number(env.ENDLESS_FROM ?? 10);
   const chapterChest = Number(env.CHAPTER_CHEST ?? 0);
-  const doublesPerDay = env.DOUBLES ? Number(env.DOUBLES) : Infinity;
   const lateGrowth = env.LATE_GROWTH ? Number(env.LATE_GROWTH) : null;
   const setupFor = (m: MetaSave, stage: number): BattleSetup => {
     const s = battleSetup(m, stage);
@@ -228,7 +227,6 @@ it('economy', () => {
         }
       }
 
-      let doubles = 0;
       let frontierLosses = 0;
       let farm = m.cleared;
       while (time < minutes) {
@@ -259,8 +257,7 @@ it('economy', () => {
           m.crystals += chapterChest * (stage / 10);
           book('chapter', chapterChest * (stage / 10));
         }
-        if (ads && doubles < doublesPerDay) {
-          doubles++;
+        if (ads && doublesLeft(m) > 0 && purse.paid > 0) {
           book('double', purse.double(m, true));
           time += AD_MIN;
         }

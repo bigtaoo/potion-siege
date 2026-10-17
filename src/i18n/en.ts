@@ -68,6 +68,7 @@ export const en = {
   unlockHero: '{name} unlocked!',
   double: '×2 crystals',
   doubled: '×2',
+  doublesLeft: '{n}/{total} left today',
   damage: 'Damage dealt',
   side: {
     skills: 'Skills this run',

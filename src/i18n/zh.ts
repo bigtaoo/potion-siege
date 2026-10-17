@@ -69,6 +69,7 @@ export const zh: Table = {
   unlockHero: '解锁{name}！',
   double: '×2 晶石',
   doubled: '×2',
+  doublesLeft: '今日剩余 {n}/{total} 次',
   damage: '伤害统计',
   side: {
     skills: '本局技能',

@@ -280,8 +280,17 @@ export function applyRun(m: MetaSave, r: RunResult, reward: Reward): void {
   for (const k of reward.unlocked) unlockHero(m, k);
 }
 
+/** Result screen ×2 ads a day. */
+export const DOUBLES_PER_DAY = S.doublesPerDay;
+
+/** Result screen ×2 ads still on offer today (the day roll resets the count). */
+export function doublesLeft(m: MetaSave): number {
+  return Math.max(0, S.doublesPerDay - m.daily.doubles);
+}
+
 /** What one battle has paid out. A revived battle ending again pays only what it earned on top,
- *  and the rewarded ×2 pays what was earned so far once more, once per battle. */
+ *  and the rewarded ×2 pays what was earned so far once more, once per battle and
+ *  `doublesPerDay` times a day. */
 export class Purse {
   /** Crystals the battle itself has earned. */
   paid = 0;
@@ -307,9 +316,10 @@ export class Purse {
   double(m: MetaSave, ok: boolean): number {
     if (this.doubled) return 0;
     this.doubled = true;
-    if (!ok) return 0;
+    if (!ok || doublesLeft(m) <= 0 || this.paid <= 0) return 0;
     this.bonus = this.paid;
     m.crystals += this.bonus;
+    m.daily.doubles++;
     return this.bonus;
   }
 
@@ -320,10 +330,13 @@ export class Purse {
 }
 
 /** Which rewarded ads a result screen offers: the revive after a loss, once per battle, and the
- *  ×2 once per battle when there is something to double and no revive is on offer. */
-export function endOffers(lost: boolean, revived: boolean, ads: boolean, purse: Purse): { revive: boolean; double: boolean } {
+ *  ×2 once per battle when there is something to double, no revive is on offer and today's ×2s
+ *  are not used up (`capped`: it would be on offer but for that). */
+export function endOffers(m: MetaSave, lost: boolean, revived: boolean, ads: boolean, purse: Purse): { revive: boolean; double: boolean; capped: boolean } {
   const revive = ads && lost && !revived;
-  return { revive, double: ads && !revive && !purse.doubled && purse.paid > 0 };
+  const due = ads && !revive && !purse.doubled && purse.paid > 0;
+  const left = doublesLeft(m) > 0;
+  return { revive, double: due && left, capped: due && !left };
 }
 
 /** The stage whose first clear unlocks a potion outside the starting lineup, or null. */
