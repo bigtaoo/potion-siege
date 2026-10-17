@@ -23,7 +23,8 @@ describe('balance targets', () => {
   });
 
   it('makes stage 3 clearly harder than stage 1 on a fresh save', () => {
-    expect(winRate(runs(3, 20))).toBeLessThanOrEqual(winRate(fresh1) - 0.2);
+    // the epsilon: 0.85 - 0.2 is 0.6499... in floating point, and 13 / 20 has to pass
+    expect(winRate(runs(3, 20))).toBeLessThanOrEqual(winRate(fresh1) - 0.2 + 1e-9);
   });
 
   it('lets a late save beat stage 1 every time', () => {

@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
 import {
   AD_CRYSTALS, adsLeft, ADS_PER_DAY, applyRun, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, CHEST_CRYSTALS, chestReady, claimAd, claimChest,
-  endOffers, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward, swapLineup, unlockHero, unlockPrice, unlockStage,
+  endOffers, FIRST_SEED, firstSeed, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward, swapLineup, unlockHero, unlockPrice, unlockStage,
 } from './meta';
 import { BALANCE, LINEUP } from './types';
 
@@ -168,6 +168,16 @@ describe('meta', () => {
     purse.double(newMeta(), false);
     expect(endOffers(true, true, true, purse).double).toBe(false);
     expect(endOffers(false, false, true, new Purse()).double).toBe(false);
+  });
+
+  it('plays stage 1 on the fixed first seed until the first win', () => {
+    const m = newMeta();
+    expect(firstSeed(m)).toBe(FIRST_SEED);
+    new Purse().settle(m, { stage: 1, won: false, wave: 6, kills: 40 });
+    expect(firstSeed(m)).toBe(FIRST_SEED);
+    new Purse().settle(m, { stage: 1, won: true, wave: 10, kills: 120 });
+    expect(m.cleared).toBe(1);
+    expect(firstSeed(m)).toBeNull();
   });
 });
 

@@ -114,6 +114,37 @@ for (const r of runs) byWave.set(r.wave, (byWave.get(r.wave) ?? 0) + 1);
 console.log('ended at wave:');
 for (const [w, n] of [...byWave].sort((a, b) => a[0] - b[0])) console.log(`  ${String(w).padStart(2)} ${'#'.repeat(Math.ceil((40 * n) / runs.length))} ${n}`);
 
+// --- runs on a shared seed: a new player's stage 1 battles until the first win (FIRST_SEED in
+// src/sim/meta.ts) all play the same waves, so they compare run for run. A seed more than one
+// player has started on is a fixed one (random seeds do not repeat); builds before run_start
+// carried the seed have none and are left out.
+const starts = events.filter((e) => e.name === 'run_start' && e.props.seed !== undefined);
+const seedPlayers = new Map(); // seed -> Set of uids
+for (const e of starts) seedPlayers.set(e.props.seed, (seedPlayers.get(e.props.seed) ?? new Set()).add(e.uid));
+const shared = [...seedPlayers].filter(([, uids]) => uids.size > 1);
+if (shared.length) {
+  console.log('\n== Runs on a shared seed (first battles) ==');
+  console.log('seed        cause  players  runs   won     quit    median s  median wave  ended at wave');
+  for (const [seed] of shared) {
+    for (const cause of ['first', 'again']) {
+      const rs = starts
+        .filter((e) => e.props.seed === seed && e.props.cause === cause)
+        .map((e) => finals.get(`${e.uid}:${e.props.run}`))
+        .filter(Boolean);
+      if (!rs.length) continue;
+      const waves = new Map();
+      for (const r of rs) waves.set(r.wave, (waves.get(r.wave) ?? 0) + 1);
+      const hist = [...waves].sort((a, b) => a[0] - b[0]).map(([w, n]) => `w${w}:${n}`).join(' ');
+      const who = new Set(starts.filter((e) => e.props.seed === seed && e.props.cause === cause).map((e) => e.uid)).size;
+      const won = rs.filter((r) => r.result === 'won').length;
+      const quit = rs.filter((r) => r.result === 'quit').length;
+      console.log(
+        `${String(seed).padEnd(12)}${cause.padEnd(7)}${String(who).padStart(7)}${String(rs.length).padStart(6)}  ${pct(won, rs.length).padEnd(8)}${pct(quit, rs.length).padEnd(8)}${String(median(rs.map((r) => r.secs))).padStart(8)}  ${String(median(rs.map((r) => r.wave))).padStart(11)}  ${hist}`,
+      );
+    }
+  }
+}
+
 // --- skills and ads ---
 const picks = new Map();
 const offers = new Map();

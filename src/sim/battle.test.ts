@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, SLOT_COUNT, WALL_ROW } from './battle';
-import { playOut } from './bot';
+import { botAct, playOut } from './bot';
 import { FP, TICK_RATE, ticks, toFp } from './math/fixed';
 import { skillHeroes } from './skills';
 import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP, type Projectile } from './types';
+import type { Spawn } from './waves';
 
 /** The first cell of the wall row, open from the start. */
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -191,6 +192,39 @@ describe('Battle', () => {
     expect([a.wave, a.kills, a.result]).toEqual([c.wave, c.kills, c.result]);
   });
 
+  it('sends the same enemies on a seed whatever the player does', () => {
+    // each enemy as it comes in: kind, place, speed, hit points (ids are shared with the heroes)
+    const arrivals = (act: (b: Battle) => void) => {
+      const b = new Battle(42);
+      const seen = new Set<number>();
+      const out: string[] = [];
+      for (let t = 0; t < 600 * TICK_RATE && b.result === null; t++) {
+        act(b);
+        b.step();
+        b.drain();
+        for (const e of b.enemies) if (!seen.has(e.id)) (seen.add(e.id), out.push(`${e.kind} ${e.x} ${e.speed} ${e.maxHp}`));
+      }
+      return out;
+    };
+    const idle = arrivals(() => {});
+    const played = arrivals(botAct);
+    expect(idle.length).toBeGreaterThan(20);
+    expect(played.length).toBeGreaterThan(idle.length);
+    expect(played.slice(0, idle.length)).toEqual(idle);
+  });
+
+  it('rolls the same summons on a seed however long the player waits for them', () => {
+    // by 10 s the commander has been shooting (and rolling crits) at wave 1 for a while
+    const opening = (wait: number) => {
+      const b = new Battle(42);
+      for (let t = 0; t < wait * TICK_RATE; t++) b.step();
+      b.summon();
+      b.summon();
+      return b.slots.flatMap((h) => (h ? [`${h.slot} ${h.kind}`] : []));
+    };
+    expect(opening(10)).toEqual(opening(0));
+  });
+
   it('lets a simple bot get well into the run', () => {
     const b = playOut(7);
     expect(b.wave).toBeGreaterThanOrEqual(6);
@@ -258,11 +292,18 @@ describe('damage dealt', () => {
     LINEUP.forEach((kind, i) => (b.slots[W + i] = { id: 500 + i, kind, star: 3, slot: W + i, cooldown: 0 }));
     const credited = () => HERO_KINDS.reduce((a, k) => a + b.dealt[k], 0);
     let lost = 0;
+    // an enemy can come in and die in the same step (a splash already in flight), so what
+    // spawns counts too: the hit points that left the wave plan less those still standing
+    const pending = () => (b as unknown as { pending: Spawn[] }).pending;
     for (let i = 0; i < 900 && !b.paused && !b.result; i++) {
       const before = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
+      const planned = new Set(pending());
       b.step();
       const after = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
       for (const [id, hp] of before) lost += hp - (after.get(id) ?? 0);
+      const left = new Set(pending());
+      for (const s of planned) if (!left.has(s)) lost += s.hp;
+      for (const e of b.enemies) if (!before.has(e.id)) lost -= Math.max(0, e.hp);
     }
     expect(credited()).toBeGreaterThan(0);
     expect(credited()).toBeLessThanOrEqual(lost);

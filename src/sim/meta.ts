@@ -203,6 +203,24 @@ export function buyWorkshop(m: MetaSave, id: WorkshopId): boolean {
   return true;
 }
 
+/** The seed of a new player's battles: the first one, and stage 1 again until it is won, so
+ *  their telemetry compares run for run (the waves are the same whatever the player does).
+ *  Picked by scripts/first-seed.test.ts over seeds 1-2000 on the stage 1 base setup: the first
+ *  two summons are a fire pair side by side on the wall (cells 18 and 19, just right of the
+ *  middle), so the tutorial's merge is one short drag on the first potions the art shows off; the
+ *  third is a lightning one in the middle cell, so there is one pair to point at; wave 1 comes
+ *  down both halves of the field evenly (12 / 13 of 25); and the bot wins with the wall untouched
+ *  whether it acts every tick or only every 0.5, 1 or 2 s. Summons roll on their own stream, so
+ *  this opening holds however long the player waits between taps. A change to what the battle
+ *  rolls its dice for, or in what order, changes what this seed plays: run the script again
+ *  (SEEDS=2000 npx vitest run --config scripts/vitest.seed.config.js) and repick. */
+export const FIRST_SEED = 609;
+
+/** FIRST_SEED for a save that has not won a battle yet on stage 1, else null (a random one). */
+export function firstSeed(m: MetaSave): number | null {
+  return m.cleared === 0 && m.stage === 1 ? FIRST_SEED : null;
+}
+
 export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
   const heroes = {} as Record<HeroKind, number>;
   for (const k of Object.keys(m.heroes) as HeroKind[]) heroes[k] = heroDamage(m.heroes[k]);

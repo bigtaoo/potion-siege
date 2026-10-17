@@ -20,7 +20,7 @@ export class RunTracker {
     private readonly run: number,
     cause: 'first' | 'again' | 'autoplay' | 'challenge' | 'endless',
   ) {
-    a.track('run_start', { run, cause, stage: battle.setup.stage });
+    a.track('run_start', { run, cause, stage: battle.setup.stage, seed: battle.seed });
   }
 
   onEvents(events: BattleEvent[]): void {
