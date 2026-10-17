@@ -18,7 +18,8 @@
     "early": "vitest run --config scripts/vitest.early.config.js",
     "late": "vitest run --config scripts/vitest.late.config.js",
     "endless": "vitest run --config scripts/vitest.endless.config.js",
-    "economy": "node scripts/economy.mjs"
+    "economy": "node scripts/economy.mjs",
+    "chapters": "vitest run --config scripts/vitest.chapters.config.js"
   },
   "dependencies": {
     "pixi.js": "^8.6.6"

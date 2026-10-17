@@ -57,6 +57,8 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
   const fly = e.kind === 'flyer';
   // a flyer's shadow is smaller and fainter, cast from up in the air
   if (art !== 'over') g.ellipse(x, y + r * 0.8, r * (fly ? 0.7 : 0.9), r * (fly ? 0.22 : 0.3)).fill({ color: 0x000000, alpha: fly ? 0.2 : 0.3 });
+  // an elite stands in a gold ring
+  if (e.elite && art !== 'over') g.ellipse(x, y + r * 0.8, r * 1.15, r * 0.4).stroke({ width: 6, color: COLORS.gold, alpha: 0.9 });
   if (art === 'under') return;
   if (art) {
     enemyBars(g, e, y - r * (ENEMY_ART.height - ENEMY_ART.feet + (fly ? ENEMY_ART.lift : 0)) - 18);
@@ -83,6 +85,8 @@ function enemyBars(g: Graphics, e: Enemy, top: number): void {
   const { x, radius: r } = e;
   const w = Math.max(60, r * 1.6);
   top = Math.max(104, top); // never over the wave title in the top bar
+  // an elite's bar is framed in gold
+  if (e.elite) g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: 0x6e4c2f });
   g.rect(x - w / 2, top, w, 10).fill(COLORS.hpBack);
   g.rect(x - w / 2, top, (w * Math.max(0, e.hp)) / e.maxHp, 10).fill(COLORS.hp);
 }
