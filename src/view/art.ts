@@ -36,6 +36,7 @@ const FILES = [
   'icon_allSpeed',
   'icon_gold',
   'icon_wallRepair',
+  'tutorial_hand',
   'bg_field.jpg',
 ] as const;
 
@@ -163,6 +164,11 @@ export function fieldTexture(): Texture | undefined {
 export function enemyTexture(kind: EnemyKind, e?: { shieldMax?: number; shield?: number; core?: boolean }): Texture | undefined {
   const look = kind === 'tripod' && e?.shieldMax && !e.shield ? 'tripod_bare' : kind === 'gear' && e?.core ? 'gear_core' : kind;
   return textures.get(`enemy_${look}`) ?? textures.get(`enemy_${kind}`);
+}
+
+/** The tutorial's pointing glove, fingertip up and to the right (see Tutorial.ts). */
+export function handTexture(): Texture | undefined {
+  return textures.get('tutorial_hand');
 }
 
 export function iconTexture(id: SkillId): Texture | undefined {

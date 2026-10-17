@@ -7,7 +7,7 @@ import type { MetaSave } from './meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP, type BattleEvent, type EnemyKind, type HeroKind } from './types';
 import { FIRST_STAGE } from './waves';
 
-export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'login', 'workshop'] as const;
+export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'endless', 'login', 'workshop'] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface Tier {
@@ -46,6 +46,8 @@ export const TRACKS: Record<TrackId, readonly Tier[]> = {
   kills: [T(1000, 80), T(10000, 200)],
   battles: [T(10, 60), T(50, 150)],
   challenge: [T(BALANCE.challenge.tiers.length, 100)],
+  // the best endless wave
+  endless: BALANCE.endless.achievement,
   login: [T(7, 100)],
   workshop: [T(1, 200)],
 };
@@ -96,6 +98,8 @@ export function trackProgress(m: MetaSave, id: TrackId, tier: number): number {
       return m.runs;
     case 'challenge':
       return s.challengeTier;
+    case 'endless':
+      return m.endless.best;
     case 'login':
       return m.daily.claims;
     case 'workshop':

@@ -11,7 +11,7 @@ const merge = (kind: (typeof HERO_KINDS)[number], star: number): BattleEvent => 
 const kill = (kind: (typeof ENEMY_KINDS)[number]): BattleEvent => ({ type: 'kill', kind, x: 0, y: 0, gold: 1, boss: kind === 'boss' });
 
 describe('achievements', () => {
-  it('pays about 3750 crystals in all, every tier above the one before', () => {
+  it('pays about 4350 crystals in all (600 of them for endless waves), every tier above the one before', () => {
     let total = 0;
     for (const id of TRACK_IDS) {
       TRACKS[id].forEach((tier, i) => {
@@ -19,7 +19,7 @@ describe('achievements', () => {
         if (i > 0) expect(tier.goal).toBeGreaterThan(TRACKS[id][i - 1].goal);
       });
     }
-    expect(total).toBe(3750);
+    expect(total).toBe(4350);
   });
 
   it('starts with nothing to claim', () => {

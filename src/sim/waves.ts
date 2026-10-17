@@ -65,9 +65,23 @@ export function flyerShare(stage: number): number {
   return stage < f.stage ? 0 : Math.min(f.maxShare, f.share + f.shareStep * (stage - f.stage));
 }
 
-/** Whether a boss comes in `wave`; the daily challenge can bring more of them. */
-export function isBossWave(wave: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves): boolean {
-  return bossWaves.includes(wave);
+/** Whether a boss comes in `wave`; the daily challenge can bring more of them, and endless mode
+ *  sends one every `endless.bossEvery` waves for as long as it lasts. */
+export function isBossWave(wave: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves, endless = false): boolean {
+  return endless ? wave % BALANCE.endless.bossEvery === 0 : bossWaves.includes(wave);
+}
+
+/** The bosses endless mode takes turns with, one boss wave after another. */
+export const ENDLESS_BOSSES: readonly EnemyKind[] = ['boss'];
+
+/** The boss of an endless boss wave. */
+export function endlessBoss(wave: number): EnemyKind {
+  return ENDLESS_BOSSES[(Math.floor(wave / BALANCE.endless.bossEvery) - 1) % ENDLESS_BOSSES.length];
+}
+
+/** Endless waves past the last wave of a stage, 0 up to it: how far the mix has tilted. */
+function endlessExtra(wave: number, endless: boolean): number {
+  return endless ? Math.max(0, wave - BALANCE.waves.count) : 0;
 }
 
 /** Base hit points of a grunt in this 1-based wave (multiplied out, not a power: the same bits
@@ -81,18 +95,30 @@ export function waveHp(wave: number): number {
 
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
- *  without flyers plans exactly as before they came; winders come at fixed times on top. */
-export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly number[] = BALANCE.waves.bossWaves): Spawn[] {
+ *  without flyers plans exactly as before they came; winders come at fixed times on top.
+ *  `endless`: past the stage's last wave the waves keep coming, `endless.hpGrowth` tougher each,
+ *  the crowd capped at `endless.maxCount` (what it would have had over the cap goes into hit
+ *  points), more brutes, flyers and winders in the mix, and a boss every `endless.bossEvery`. */
+export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly number[] = BALANCE.waves.bossWaves, endless = false): Spawn[] {
   const w = BALANCE.waves;
-  const hp = waveHp(wave);
+  const E = BALANCE.endless;
+  const extra = endlessExtra(wave, endless);
+  let hp = waveHp(wave - extra);
+  for (let i = 0; i < extra; i++) hp *= E.hpGrowth;
+  let crowdCount = w.baseCount + w.countStep * (wave - 1);
+  if (extra > 0 && crowdCount > E.maxCount) {
+    hp = (hp * crowdCount) / E.maxCount;
+    crowdCount = E.maxCount;
+  }
   const hpOf = (kind: EnemyKind) => Math.round(hp * BALANCE.enemies[kind].hp * FP);
-  const boss = isBossWave(wave, bossWaves);
+  const boss = isBossWave(wave, bossWaves, endless);
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
   // but more of them on the road (permille)
   const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
-  const count = Math.round(((w.baseCount + w.countStep * (wave - 1)) * (boss ? 0.5 : 1) * crowd) / 1000);
+  const count = Math.round((crowdCount * (boss ? 0.5 : 1) * crowd) / 1000);
   // the rolls are in permille
-  const fly = wave >= FIRST_WAVE.flyer ? Math.round(flyerShare(stage) * 1000) : 0;
+  const fly = wave >= FIRST_WAVE.flyer ? Math.round(Math.min(Math.max(flyerShare(stage), E.flyerMax), flyerShare(stage) + E.flyerStep * extra) * 1000) : 0;
+  const brute = Math.min(Math.max(150, E.bruteMax), 150 + E.bruteStep * extra);
   const span = ticks(w.spawnWindow);
   const spawns: Spawn[] = [];
   for (let i = 0; i < count; i++) {
@@ -101,7 +127,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
     if (roll < fly) kind = 'flyer';
     else {
       roll = Math.trunc(((roll - fly) * 1000) / (1000 - fly));
-      kind = wave >= FIRST_WAVE.brute && roll < 150 ? 'brute' : wave >= FIRST_WAVE.runner && roll < 400 ? 'runner' : 'grunt';
+      kind = wave >= FIRST_WAVE.brute && roll < brute ? 'brute' : wave >= FIRST_WAVE.runner && roll < brute + 250 ? 'runner' : 'grunt';
     }
     const spawn: Spawn = { at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) };
     if (crowd !== 1000) {
@@ -111,14 +137,16 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
     spawns.push(spawn);
   }
   if (boss) {
-    const kind = bossForStage(stage);
+    const kind = endless ? endlessBoss(wave) : bossForStage(stage);
     spawns.unshift({ at: 0, kind, hp: hpOf(kind) });
   }
   const wd = BALANCE.winder;
   if (onStage('winder', stage) && wave >= wd.wave) {
-    const n = stage >= wd.twoFrom ? 2 : 1;
+    const base = stage >= wd.twoFrom ? 2 : 1;
+    const n = Math.max(base, Math.min(E.winderMax, base + Math.floor(extra / E.winderEvery)));
     for (let i = 0; i < n; i++) {
-      const at = boss ? ticks(wd.bossAt[i]) : ticks(w.spawnWindow * wd.at[i]);
+      // more winders than the fixed times: spread evenly over the window instead
+      const at = n > wd.at.length ? Math.trunc((span * (i + 1)) / (n + 1)) : boss ? ticks(wd.bossAt[i]) : ticks(w.spawnWindow * wd.at[i]);
       spawns.push({ at, kind: 'winder', hp: hpOf('winder') });
     }
     spawns.sort((a, b) => a.at - b.at);
@@ -128,12 +156,12 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
 
 /** The kinds that can come in `wave` of `stage`, in the order the codex lists them: what the
  *  wide battle screen forecasts, without rolling the wave itself. */
-export function waveKinds(wave: number, stage: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves): EnemyKind[] {
+export function waveKinds(wave: number, stage: number, bossWaves: readonly number[] = BALANCE.waves.bossWaves, endless = false): EnemyKind[] {
   const kinds: EnemyKind[] = ['grunt'];
   if (wave >= FIRST_WAVE.runner) kinds.push('runner');
   if (wave >= FIRST_WAVE.brute) kinds.push('brute');
   if (wave >= FIRST_WAVE.flyer && flyerShare(stage) > 0) kinds.push('flyer');
   if (onStage('winder', stage) && wave >= BALANCE.winder.wave) kinds.push('winder');
-  if (isBossWave(wave, bossWaves)) kinds.push(bossForStage(stage));
+  if (isBossWave(wave, bossWaves, endless)) kinds.push(endless ? endlessBoss(wave) : bossForStage(stage));
   return kinds;
 }

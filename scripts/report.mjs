@@ -97,6 +97,31 @@ if (assists.length) {
   console.log(`tutorial did it for them: ${[...by].map(([k, n]) => `${k} ${n}`).join(', ')}`);
 }
 
+// --- first session, battle 1 to battle 3: who gets how far, and what the result screen's tap was ---
+const s1 = events.filter((e) => e.session === 1 && newUids.has(e.uid));
+const reached = (pred) => new Set(s1.filter(pred).map((e) => e.uid));
+const funnelRow = (label, set, extra = '') => console.log(label.padEnd(24), pct(set.size, newUids.size).padStart(7), `  (${set.size})${extra}`);
+console.log(`\n== First session, battles 1-3 (${newUids.size} players) ==`);
+funnelRow('loaded', newUids);
+funnelRow('first_input', reached((e) => e.name === 'first_input'));
+for (const step of ['summon', 'merge', 'upgrade', 'pick']) {
+  const rows = s1.filter((e) => e.name === 'tutorial_step' && e.props.step === step);
+  if (!rows.length) continue;
+  const helped = rows.filter((e) => e.props.by === 'assist').length;
+  const secs = median(rows.flatMap((e) => (e.props.shownT === null ? [] : [e.props.doneT - e.props.shownT])));
+  funnelRow(`tutorial ${step}`, new Set(rows.map((e) => e.uid)), `  assist ${pct(helped, rows.length)}, median ${secs}s on screen`);
+}
+const run1 = reached((e) => e.name === 'run_end' && e.props.run === 1);
+funnelRow('run 1 end', run1);
+const acts = s1.filter((e) => e.name === 'result_action' && e.props.run === 1);
+const firstAct = new Map(); // uid -> the first tap on run 1's result
+for (const e of acts) if (!firstAct.has(e.uid)) firstAct.set(e.uid, e);
+const byAct = new Map();
+for (const e of firstAct.values()) byAct.set(e.props.action, [...(byAct.get(e.props.action) ?? []), e.props.secs]);
+for (const [action, secs] of byAct) funnelRow(`  result: ${action}`, new Set([...firstAct].filter(([, e]) => e.props.action === action).map(([uid]) => uid)), `  median ${median(secs)}s`);
+funnelRow('run 2 start', reached((e) => e.name === 'run_start' && e.props.run === 2));
+funnelRow('run 3 start', reached((e) => e.name === 'run_start' && e.props.run === 3));
+
 // --- session length ---
 const sessionSecs = events.filter((e) => e.name === 'session_end').map((e) => e.props.secs);
 console.log(`\n== Sessions ==\nmedian length ${median(sessionSecs)}s over ${sessionSecs.length} ended sessions`);
@@ -113,6 +138,37 @@ const byWave = new Map();
 for (const r of runs) byWave.set(r.wave, (byWave.get(r.wave) ?? 0) + 1);
 console.log('ended at wave:');
 for (const [w, n] of [...byWave].sort((a, b) => a[0] - b[0])) console.log(`  ${String(w).padStart(2)} ${'#'.repeat(Math.ceil((40 * n) / runs.length))} ${n}`);
+
+// --- runs on a shared seed: a new player's stage 1 battles until the first win (FIRST_SEED in
+// src/sim/meta.ts) all play the same waves, so they compare run for run. A seed more than one
+// player has started on is a fixed one (random seeds do not repeat); builds before run_start
+// carried the seed have none and are left out.
+const starts = events.filter((e) => e.name === 'run_start' && e.props.seed !== undefined);
+const seedPlayers = new Map(); // seed -> Set of uids
+for (const e of starts) seedPlayers.set(e.props.seed, (seedPlayers.get(e.props.seed) ?? new Set()).add(e.uid));
+const shared = [...seedPlayers].filter(([, uids]) => uids.size > 1);
+if (shared.length) {
+  console.log('\n== Runs on a shared seed (first battles) ==');
+  console.log('seed        cause  players  runs   won     quit    median s  median wave  ended at wave');
+  for (const [seed] of shared) {
+    for (const cause of ['first', 'again']) {
+      const rs = starts
+        .filter((e) => e.props.seed === seed && e.props.cause === cause)
+        .map((e) => finals.get(`${e.uid}:${e.props.run}`))
+        .filter(Boolean);
+      if (!rs.length) continue;
+      const waves = new Map();
+      for (const r of rs) waves.set(r.wave, (waves.get(r.wave) ?? 0) + 1);
+      const hist = [...waves].sort((a, b) => a[0] - b[0]).map(([w, n]) => `w${w}:${n}`).join(' ');
+      const who = new Set(starts.filter((e) => e.props.seed === seed && e.props.cause === cause).map((e) => e.uid)).size;
+      const won = rs.filter((r) => r.result === 'won').length;
+      const quit = rs.filter((r) => r.result === 'quit').length;
+      console.log(
+        `${String(seed).padEnd(12)}${cause.padEnd(7)}${String(who).padStart(7)}${String(rs.length).padStart(6)}  ${pct(won, rs.length).padEnd(8)}${pct(quit, rs.length).padEnd(8)}${String(median(rs.map((r) => r.secs))).padStart(8)}  ${String(median(rs.map((r) => r.wave))).padStart(11)}  ${hist}`,
+      );
+    }
+  }
+}
 
 // --- skills and ads ---
 const picks = new Map();

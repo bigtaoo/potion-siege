@@ -2,6 +2,7 @@
 // Days are local calendar dates ('2026-10-15'), passed in so the rules stay testable. A missed
 // day does not reset the login streak; the next claim simply gives the next day's reward.
 
+import { endlessOpen } from './endless';
 import type { MetaSave } from './meta';
 import { Rng } from './rng';
 import { BALANCE } from './types';
@@ -64,12 +65,14 @@ export function hash(s: string): number {
   return h >>> 0;
 }
 
-/** On a new day, rolls that day's tasks (the same for everyone on that date). */
+/** On a new day, rolls that day's tasks (the same for everyone on that date who has the same
+ *  modes open: the endless task only comes once endless mode is open). */
 export function rollDay(m: MetaSave, today: string): void {
   if (m.daily.day === today) return;
   m.daily.day = today;
   m.daily.bonus = false;
-  m.daily.tasks = new Rng(hash(today)).sample(TASK_IDS, D.taskCount).map((id) => ({ id, progress: 0, claimed: false }));
+  const pool = TASK_IDS.filter((id) => id !== 'endless' || endlessOpen(m));
+  m.daily.tasks = new Rng(hash(today)).sample(pool, D.taskCount).map((id) => ({ id, progress: 0, claimed: false }));
 }
 
 export function taskGoal(id: TaskId): number {

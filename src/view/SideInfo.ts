@@ -229,7 +229,9 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
   head.y = top + 4;
   c.addChild(head);
 
-  const count = BALANCE.waves.count;
+  // endless mode has no last wave, and a boss every few for as long as it lasts
+  const endless = b.setup.endless === true;
+  const count = endless ? Infinity : BALANCE.waves.count;
   const stage = b.setup.stage;
   const bossWaves = b.setup.modifiers?.bossWaves ?? BALANCE.waves.bossWaves;
   const first = Math.max(1, b.wave);
@@ -255,8 +257,8 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
       s.position.set(iw / 2 - 22, y - rh / 2 + 34);
       c.addChild(s);
     }
-    const before = new Set<EnemyKind>(wave > 1 ? waveKinds(wave - 1, stage, bossWaves) : []);
-    const kinds = waveKinds(wave, stage, bossWaves);
+    const before = new Set<EnemyKind>(wave > 1 ? waveKinds(wave - 1, stage, bossWaves, endless) : []);
+    const kinds = waveKinds(wave, stage, bossWaves, endless);
     const size = Math.min(86, rh - 80, (iw - 40) / kinds.length - 8);
     kinds.forEach((kind, k) => {
       const x = -iw / 2 + 24 + size / 2 + k * (size + 8);
@@ -279,11 +281,12 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
   });
 
   // when the next boss comes
-  const next = bossWaves.filter((n) => n >= Math.max(1, b.wave)).sort((x, y) => x - y)[0];
+  const every = BALANCE.endless.bossEvery;
+  const next = endless ? Math.ceil(first / every) * every : bossWaves.filter((n) => n >= first).sort((x, y) => x - y)[0];
   if (next !== undefined) {
     const n = next - Math.max(1, b.wave);
     const text = n === 0 ? t('side.bossNow') : n === 1 ? t('side.bossNext') : t('side.bossIn', { n });
-    const line = ink(text, 32, { fill: isBossWave(b.wave, bossWaves) ? P.red : P.brassDark });
+    const line = ink(text, 32, { fill: isBossWave(b.wave, bossWaves, endless) ? P.red : P.brassDark });
     line.y = h / 2 - 80;
     c.addChild(line);
   }

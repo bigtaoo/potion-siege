@@ -14,19 +14,21 @@ import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challenge, type ChallengeResult } from './sim/challenge';
 import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
+import { beginEndless, bookEndless, endlessPay, endlessSetup, nextMilestone, type EndlessResult } from './sim/endless';
 import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
-  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
+  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, firstSeed, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
   type MetaSave,
 } from './sim/meta';
 import { botAct } from './sim/bot';
-import { mergeablePair, Tutorial } from './sim/tutorial';
+import { mergeablePair, Tutorial, type TutorialStep } from './sim/tutorial';
 import { FP } from './sim/math/fixed';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomePanel, type HomeTab } from './view/Home';
+import { loginPops, offersNext, upgradeHintKind } from './view/nudges';
 import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
 import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
@@ -76,6 +78,16 @@ export async function boot(platform: Platform): Promise<void> {
     touch: navigator.maxTouchPoints > 0,
     ...safeDevice(app),
   });
+  // inside a portal's iframe the page can have no size yet at boot: the size once it has one
+  if (!(window.innerWidth > 0 && window.innerHeight > 0)) {
+    const sized = () => {
+      if (!(window.innerWidth > 0 && window.innerHeight > 0)) return;
+      window.removeEventListener('resize', sized);
+      analytics.track('viewport', { w: window.innerWidth, h: window.innerHeight, t: analytics.sessionSeconds });
+    };
+    window.addEventListener('resize', sized);
+    requestAnimationFrame(() => requestAnimationFrame(sized));
+  }
   game.perf.anomalies.listen(window, app.canvas);
   // the first tap or key ever: the player is really there (the battle is already live by then)
   const input = () => {
@@ -177,6 +189,8 @@ class Game {
   /** The battle is today's challenge: which one, the streak bonus its start paid and, once it
    *  ended, what it booked. */
   private challenge: { ch: Challenge; streakBonus: number; result: ChallengeResult | null } | null = null;
+  /** The battle is an endless run: what its ends booked so far (a revived run ends twice). */
+  private endless: { result: EndlessResult | null } | null = null;
   private revived = false;
   /** The battle's end is booked: the battle stands still and is not booked again while the
    *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
@@ -188,6 +202,14 @@ class Game {
   private rewardedSinceEnd = false;
   /** The day the login panel last opened by itself. */
   private loginShown = '';
+  /** The tutorial step on screen for `tutorial_step`: when it first showed (battle seconds) and
+   *  whether the assist did it. */
+  private tutLog: { step: TutorialStep; shownT: number | null; assisted: boolean } | null = null;
+  /** When this battle's result screen first came up (ms), for `result_action`; 0 before. */
+  private resultAt = 0;
+  /** The home screen's one-time pointer is on the potion's button (so leaving the tab ends it). */
+  private hintOnButton = false;
+  private hintHand: Container | null = null;
   private readonly autoplay: boolean;
   private readonly speed: number;
   /** Turns frame time into battle ticks, `speed` times over, and says how far into the next
@@ -250,17 +272,23 @@ class Game {
   }
 
   /** `cause` null: an idle battle under the home screen, no run. */
-  private newBattle(cause: 'first' | 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
+  private newBattle(cause: 'first' | 'again' | 'next' | 'autoplay' | 'challenge' | 'endless' | null, ch: Challenge | null = null): void {
     this.run?.close('again');
-    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    // a new player's runs on stage 1 share one seed until the first win, for comparable telemetry
+    const fixed = cause === 'first' || cause === 'again' ? firstSeed(this.save) : null;
+    const seed = fixed ?? (Math.random() * 2 ** 32) >>> 0;
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? endlessSetup(this.save) : battleSetup(this.save));
     this.challenge = null;
+    this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     if (this.run) this.perf.start();
     this.revived = false;
     this.ended = false;
     this.offered = { revive: false, double: false };
+    this.resultAt = 0;
     this.tutorial = null;
+    this.tutLog = null;
     this.hud.hint = true;
     this.loop = new FixedStep();
     this.view.attach(this.battle);
@@ -305,6 +333,9 @@ class Game {
     if (this.menu.visible) {
       this.lessons.visible = false;
       this.menu.scale.set(m.scale);
+      // the pointer's hand pushes toward what it points at and back
+      const hand = this.hintHand && !this.hintHand.destroyed ? this.hintHand.children[0] : null;
+      if (hand) hand.y = 14 + Math.sin(performance.now() / 160) * 14;
       const old = this.menuFit;
       // a new page size is a new layout
       if (!old || old.wide !== m.wide || Math.abs(old.w - m.w) > 1 || Math.abs(old.h - m.h) > 1) this.home(this.panel);
@@ -342,6 +373,7 @@ class Game {
   private beginTutorial(): void {
     if (this.autoplay || this.save.tutorial || this.battle?.setup.stage !== 1) return;
     this.tutorial = new Tutorial();
+    this.tutLog = { step: 'summon', shownT: null, assisted: false };
     this.hud.hint = false;
   }
 
@@ -361,12 +393,16 @@ class Game {
     const tut = this.tutorial;
     if (tut && b) {
       tut.update(b, events);
+      this.logStep(tut, b);
       if (tut.done) this.endTutorial(false);
       // a step left alone is done for the player, and the banner says so
       const helped = !tut.done && !this.overlay.visible && !this.ended ? tut.assist(b) : null;
       if (helped) {
-        this.hud.say(t(`tutorial.helped.${helped as 'summon' | 'merge' | 'upgrade'}`));
-        this.analytics.track('tutorial_assist', { step: helped, t: Math.round(b.seconds) });
+        const step = helped as 'summon' | 'merge' | 'upgrade';
+        this.hud.say(t(`tutorial.helped.${step}`));
+        this.analytics.track('tutorial_assist', { step, t: Math.round(b.seconds) });
+        this.run?.onAssist(step);
+        if (this.tutLog?.step === step) this.tutLog.assisted = true;
       }
     }
     const step = this.tutorial && b && this.root.visible ? this.tutorial.showing(b) : null;
@@ -374,6 +410,17 @@ class Game {
     const up = step === 'pick' ? this.overlay.visible : !this.overlay.visible;
     this.lessons.scale.set(m.scale);
     this.lessons.show(step && up && b ? this.lessonFor(step, b, m) : null, m.w, m.h, m.wide, dt);
+  }
+
+  /** `tutorial_step` once a step is done: when it first showed and was done (battle seconds),
+   *  and whether the player or the assist did it. */
+  private logStep(tut: Tutorial, b: Battle): void {
+    const log = this.tutLog;
+    if (!log) return;
+    if (log.shownT === null && tut.showing(b) === log.step) log.shownT = Math.round(b.seconds);
+    if (tut.step === log.step) return;
+    this.analytics.track('tutorial_step', { step: log.step, shownT: log.shownT, doneT: Math.round(b.seconds), by: log.assisted ? 'assist' : 'player' });
+    this.tutLog = tut.step ? { step: tut.step, shownT: null, assisted: false } : null;
   }
 
   private lessonFor(step: NonNullable<ReturnType<Tutorial['showing']>>, b: Battle, m: MenuFit): Lesson {
@@ -464,6 +511,10 @@ class Game {
       this.finishChallenge(b, this.challenge);
       return;
     }
+    if (this.endless) {
+      this.finishEndless(b, this.endless);
+      return;
+    }
     this.platform.gameplayStop();
     // the tutorial belongs to the first battle only, however far it got
     if (this.tutorial) this.endTutorial(true);
@@ -504,6 +555,41 @@ class Game {
     this.perf.end();
     this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
     this.showEnd(b);
+  }
+
+  /** Books an endless run: the per-wave crystals through the purse (so the revive and the ×2
+   *  work as after a stage), then the best wave and any milestone reached for the first time. */
+  private finishEndless(b: Battle, run: NonNullable<Game['endless']>): void {
+    this.platform.gameplayStop();
+    rollDay(this.save, dayOf(new Date()));
+    if (!this.revived) {
+      this.save.runs++;
+      addProgress(this.save, 'play');
+      addProgress(this.save, 'endless');
+    }
+    const result = { stage: b.setup.stage, won: false, wave: b.wave, kills: b.kills };
+    const { crystals: gain } = this.purse.settle(this.save, result, { crystals: endlessPay(this.save, b.wave), firstClear: false, unlocked: [] });
+    const booked = bookEndless(this.save, b.wave);
+    // a revived run ending again: the best before the run still counts, milestones add up
+    run.result = run.result ? { ...booked, before: run.result.before, record: b.wave > run.result.before, milestones: run.result.milestones + booked.milestones } : booked;
+    this.store();
+    if (booked.milestones > 0 || (booked.record && booked.before > 0)) this.platform.celebrate();
+    this.run?.onEnd();
+    this.perf.end();
+    this.analytics.track('endless_end', { wave: b.wave, best: this.save.endless.best, record: run.result.record, gain, milestones: booked.milestones, revived: this.revived });
+    this.showEnd(b);
+  }
+
+  /** Starts an endless run from the battle tab. */
+  private playEndless(): void {
+    beginEndless(this.save);
+    this.store();
+    this.analytics.track('endless_start', { best: this.save.endless.best, runs: this.save.endless.runs });
+    this.newBattle('endless');
+    this.menu.visible = false;
+    this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.root.visible = true;
+    this.platform.gameplayStart();
   }
 
   /** Starts today's challenge (`ad`: the retry a rewarded ad bought). */
@@ -549,8 +635,14 @@ class Game {
   private home(panel: HomePanel = null): void {
     const today = dayOf(new Date());
     rollDay(this.save, today);
-    if (panel === null && canClaimLogin(this.save, today) && this.loginShown !== today) panel = 'login';
-    if (panel === 'login') this.loginShown = today;
+    const entering = !this.menu.visible;
+    // not between the first battles: once a few runs are in, the first time each day
+    if (panel === null && loginPops(this.save) && canClaimLogin(this.save, today) && this.loginShown !== today) {
+      panel = 'login';
+      this.loginShown = today;
+      this.analytics.track('dialog', { id: 'login', action: 'open', auto: true, run: this.save.runs });
+    }
+    if (entering) this.analytics.track('home_view', { tab: this.tab, from: 'enter', run: this.save.runs });
     this.newBattle(null);
     this.panel = panel;
     this.overlay.hide();
@@ -560,21 +652,38 @@ class Game {
     this.menu.scale.set(fit.scale);
     this.menu.visible = true;
     this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    // the one-time pointer at a potion upgrade, until the player has seen its button
+    const hint = this.autoplay || panel ? null : upgradeHintKind(this.save);
+    if (hint) this.analytics.first(this.tab === 'potions' ? 'hint_upgrade_button' : 'hint_upgrade_tab', { run: this.save.runs });
+    this.hintOnButton = !!hint && this.tab === 'potions';
     this.menu.addChild(buildHome(this.save, {
       tab: (tab) => {
+        if (this.hintOnButton && tab !== 'potions') this.hintDone(false);
         this.tab = tab;
         this.picked = null;
+        this.analytics.track('home_view', { tab, from: 'tab', run: this.save.runs });
         this.home();
       },
-      panel: (p) => this.home(p),
+      panel: (p) => {
+        const old = panel;
+        if ((old === 'login' || old === 'tasks') && p !== old) this.analytics.track('dialog', { id: old, action: 'close', run: this.save.runs });
+        if ((p === 'login' || p === 'tasks') && p !== old) this.analytics.track('dialog', { id: p, action: 'open', auto: false, run: this.save.runs });
+        this.home(p);
+      },
       claimLogin: (at) => {
         const n = claimLogin(this.save, today);
-        if (n > 0) this.claimed('login', n, panel, at);
+        if (n === 0) return;
+        // claimed, the login closes by itself
+        this.analytics.track('dialog', { id: 'login', action: 'claim', run: this.save.runs });
+        this.claimed('login', n, null, at);
       },
       claimTask: (i, at) => {
         const id = this.save.daily.tasks[i]?.id;
         const n = claimTask(this.save, i);
-        if (n > 0) this.claimed(`task_${id}`, n, panel, at);
+        if (n > 0) {
+          this.analytics.track('dialog', { id: 'tasks', action: 'claim', item: id ?? null, run: this.save.runs });
+          this.claimed(`task_${id}`, n, panel, at);
+        }
       },
       claimBonus: (at) => {
         const n = claimBonus(this.save);
@@ -589,9 +698,13 @@ class Game {
         this.store();
         this.home();
       },
-      hero: (kind) => this.buy(buyHero(this.save, kind), `hero_${kind}`),
+      hero: (kind) => {
+        const ok = buyHero(this.save, kind);
+        if (ok && hint) this.hintDone(true);
+        this.buy(ok, `hero_${kind}`, this.save.heroes[kind]);
+      },
       lineup: (kind) => this.lineup(kind),
-      workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`),
+      workshop: (id) => this.buy(buyWorkshop(this.save, id), `shop_${id}`, this.save.workshop[id]),
       claimChest: (at) => {
         const n = claimChest(this.save, today);
         if (n > 0) this.claimed('shop_chest', n, panel, at);
@@ -600,6 +713,7 @@ class Game {
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
       challenge: () => this.playChallenge(false),
       challengeAd: () => void this.challengeAd(),
+      endless: () => this.playEndless(),
       sound: (which) => {
         this.save.sound[which] = !this.save.sound[which];
         this.audio.prefs(this.save.sound);
@@ -607,6 +721,8 @@ class Game {
         this.home('settings');
       },
       play: () => {
+        if (this.hintOnButton) this.hintDone(false);
+        this.analytics.track('battle_start_tap', { stage: this.save.stage, from: 'home', run: this.save.runs + 1 });
         this.newBattle('again');
         this.beginTutorial();
         this.menu.visible = false;
@@ -614,7 +730,17 @@ class Game {
         this.root.visible = true;
         this.platform.gameplayStart();
       },
-    }, this.tab, panel, today, fit, this.picked, !this.autoplay && this.platform.rewardedAvailable()));
+    }, this.tab, panel, today, fit, this.picked, !this.autoplay && this.platform.rewardedAvailable(), hint));
+    this.hintHand = hint ? this.menu.getChildByLabel('hintHand', true) : null;
+  }
+
+  /** The pointer at a potion upgrade is over: the player bought one, or saw the button and moved on. */
+  private hintDone(bought: boolean): void {
+    this.hintOnButton = false;
+    if (this.save.upgradeHint) return;
+    this.save.upgradeHint = true;
+    this.store();
+    this.analytics.track('hint_upgrade_done', { bought, run: this.save.runs });
   }
 
   /** The shop's rewarded ad: crystals when it was watched, a few times a day. The menu takes no
@@ -685,11 +811,12 @@ class Game {
     }
   }
 
-  private buy(ok: boolean, item: string): void {
+  /** `level`: the level the purchase reached, where it has one. */
+  private buy(ok: boolean, item: string, level: number | null = null): void {
     if (!ok) return;
     this.audio.play('levelup');
     this.store();
-    this.analytics.track('meta_buy', { item, crystals: this.save.crystals });
+    this.analytics.track('meta_buy', { item, level, crystals: this.save.crystals });
     this.home();
   }
 
@@ -697,10 +824,16 @@ class Game {
     const secs = Math.round(b.seconds);
     const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
     const run = this.challenge;
+    const won = b.result === 'won';
+    const next = !run && !this.endless && won && !this.autoplay && offersNext(this.save, b.setup.stage);
+    if (!this.resultAt) {
+      this.resultAt = performance.now();
+      this.analytics.track('result_shown', { run: this.save.runs, stage: b.setup.stage, won, next, challenge: !!run });
+    }
     if (run?.result) {
       const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: Math.round(b.dealt[kind] / FP) }] : []));
       const reward = { crystals: run.result.crystals + run.streakBonus, firstClear: false, unlocked: [] };
-      this.overlay.showEnd(b.result === 'won', stats, reward, () => void this.again(), null, {
+      this.overlay.showEnd(won, stats, reward, () => this.leaveResult('home'), null, {
         onDouble: null,
         doubled: false,
         dealt,
@@ -716,12 +849,54 @@ class Game {
     this.offered.revive ||= canRevive;
     this.offered.double ||= canDouble;
     const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: Math.round(b.dealt[kind] / FP) }] : []));
-    this.overlay.showEnd(b.result === 'won', stats, this.purse.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null, {
-      onDouble: canDouble ? () => void this.double(b) : null,
+    this.overlay.showEnd(won, stats, this.purse.reward, () => this.leaveResult('home'), canRevive ? () => {
+      this.resultAction('revive');
+      void this.revive(b);
+    } : null, {
+      onDouble: canDouble ? () => {
+        this.resultAction('double');
+        void this.double(b);
+      } : null,
       doubled: this.purse.bonus > 0,
       dealt,
-      onTip: b.result === 'lost' ? (tab) => void this.again(tab) : null,
+      onTip: b.result === 'lost' ? (tab) => this.leaveResult('tip', tab) : null,
+      onNext: next ? () => void this.next(b) : null,
+      endless: this.endless?.result ? { result: this.endless.result, best: this.save.endless.best, next: nextMilestone(this.save) } : undefined,
     });
+  }
+
+  /** `result_action`: the result screen's tap, and how long after it came up. */
+  private resultAction(action: 'next' | 'home' | 'tip' | 'revive' | 'double', tab?: HomeTab): void {
+    const secs = Math.round((performance.now() - this.resultAt) / 1000);
+    this.analytics.track('result_action', { action, tab: tab ?? null, secs, run: this.save.runs });
+  }
+
+  private leaveResult(action: 'home' | 'tip', tab?: HomeTab): void {
+    this.resultAction(action, tab);
+    void this.again(tab);
+  }
+
+  /** From a won stage's result straight into the next stage, no home screen between. */
+  private async next(b: Battle): Promise<void> {
+    this.resultAction('next');
+    this.overlay.hide();
+    this.save.stage = Math.min(maxStage(this.save), b.setup.stage + 1);
+    this.store();
+    this.analytics.track('battle_start_tap', { stage: this.save.stage, from: 'result', run: this.save.runs + 1 });
+    await this.breakAd();
+    this.newBattle('next');
+    this.root.visible = true;
+    this.platform.gameplayStart();
+  }
+
+  /** The portal's midgame ad between battles: never after the very first one, nor right after
+   *  a rewarded one. */
+  private async breakAd(): Promise<void> {
+    if (this.save.runs > 1 && !this.rewardedSinceEnd) {
+      await this.platform.midgame(() => this.mute(true));
+      this.analytics.track('ad_midgame', { run: this.save.runs });
+    }
+    this.mute(false);
   }
 
   /** The rewarded ×2: what the battle earned, paid once more. */
@@ -762,12 +937,7 @@ class Game {
   private async again(tab?: HomeTab): Promise<void> {
     this.overlay.hide();
     if (tab) this.tab = tab;
-    // never an ad after the very first battle, nor right after a rewarded one
-    if (this.save.runs > 1 && !this.rewardedSinceEnd) {
-      await this.platform.midgame(() => this.mute(true));
-      this.analytics.track('ad_midgame', { run: this.save.runs });
-    }
-    this.mute(false);
+    await this.breakAd();
     if (!this.autoplay) {
       this.home();
       return;

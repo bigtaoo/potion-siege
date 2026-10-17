@@ -3,9 +3,14 @@
 // apply() (summon, move, upgrade, choose, reroll, revive).
 //
 // It is deterministic: the state is all integers (see types.ts for the units), it steps at a
-// fixed TICK_RATE, and its dice are one Prng. The same seed, setup and commands at the same
-// ticks play the same battle on every engine (replay.ts), which determinismLint.test.ts and
-// replay.test.ts hold it to.
+// fixed TICK_RATE, and its dice are Prng streams from the seed, one per concern: the enemies'
+// (the waves, where each enemy comes in, how fast), the summons' (the cell and kind of each
+// summon and merge, the cells built), the shots' (crits, freezes) and the skill cards'. What the
+// player does never draws from the enemies' stream, so a seed sends the same waves whatever the
+// player does; and since shots fire on their own clock, the n-th summon rolls the same dice
+// however long the player waits for it. The same seed, setup and commands at the same ticks play
+// the same battle on every engine (replay.ts), which determinismLint.test.ts and replay.test.ts
+// hold it to.
 
 import { resistOf } from './enemies';
 import { dist, dist2, FP, muldiv, perTick, TICK_RATE, ticks, toFp } from './math/fixed';
@@ -18,6 +23,9 @@ import { BALANCE, isBoss, type BattleEvent, type Enemy, type EnemyKind, type Her
 import { isBossWave, planWave, waveHp, type Spawn } from './waves';
 
 const B = BALANCE;
+/** Mixed into the seed for each stream but the enemies' (Prng hashes its seed, so the streams
+ *  are unrelated). */
+const STREAM = { summon: 0x5bd1e995, shot: 0x27d4eb2f, card: 0x165667b1 } as const;
 export const SLOT_COUNT = B.grid.cols * B.grid.rows;
 
 /** A slot's centre in world units. */
@@ -128,7 +136,14 @@ export type Command =
 export type Stamped = Command & { tick: number };
 
 export class Battle {
-  readonly rng: Prng;
+  /** The enemies' dice: the wave plans and each spawn's place and speed. */
+  readonly enemyRng: Prng;
+  /** Summon cells and kinds, merged kinds, the cells the commander builds. */
+  readonly summonRng: Prng;
+  /** Crits and freezes. */
+  readonly shotRng: Prng;
+  /** The skill cards offered. */
+  readonly cardRng: Prng;
   gold: number;
   wallMax: number;
   wall: number;
@@ -186,7 +201,10 @@ export class Battle {
     readonly seed: number,
     readonly setup: BattleSetup = BASE_SETUP,
   ) {
-    this.rng = new Prng(seed);
+    this.enemyRng = new Prng(seed);
+    this.summonRng = new Prng(seed ^ STREAM.summon);
+    this.shotRng = new Prng(seed ^ STREAM.shot);
+    this.cardRng = new Prng(seed ^ STREAM.card);
     this.perks = perksFor(setup.heroLevels);
     this.mods = mods(this.skills, this.perks);
     this.fixed = fixedMods(this.mods, setup);
@@ -271,10 +289,15 @@ export class Battle {
     return this.choices !== null && !this.rerolled;
   }
 
+  /** Where all the dice stand: a command that rolled any of them changed the battle. */
+  private dice(): string {
+    return `${this.enemyRng.peek()} ${this.summonRng.peek()} ${this.shotRng.peek()} ${this.cardRng.peek()}`;
+  }
+
   /** Runs a player command on this tick; whether it did anything. A command that changed the
    *  state (or rolled the dice) is kept in `commands`, stamped with the tick. */
   apply(cmd: Command): boolean {
-    const dice = this.rng.peek();
+    const dice = this.dice();
     let done: boolean;
     switch (cmd.type) {
       case 'summon':
@@ -300,7 +323,7 @@ export class Battle {
         done = this.doRevive();
         break;
     }
-    if (done || this.rng.peek() !== dice) this.commands.push({ ...cmd, tick: this.time });
+    if (done || this.dice() !== dice) this.commands.push({ ...cmd, tick: this.time });
     return done;
   }
 
@@ -338,12 +361,12 @@ export class Battle {
   private doSummon(): boolean {
     if (!this.canSummon()) return false;
     this.gold -= this.summonCost();
-    const slot = pick(this.rng, this.freeSlots());
+    const slot = pick(this.summonRng, this.freeSlots());
     this.summons++;
-    this.slots[slot] = { id: this.nextId++, kind: pick(this.rng, this.setup.lineup), star: 1, slot, cooldown: K.summonCooldown };
+    this.slots[slot] = { id: this.nextId++, kind: pick(this.summonRng, this.setup.lineup), star: 1, slot, cooldown: K.summonCooldown };
     this.events.push({ type: 'summon', slot });
     if (this.summons % C.summonsPerCell === 0 && this.built < C.extraCells) {
-      const cell = pick(this.rng, this.buildable());
+      const cell = pick(this.summonRng, this.buildable());
       this.open[cell] = true;
       this.built++;
       this.events.push({ type: 'cellOpen', slot: cell, last: this.built === C.extraCells });
@@ -374,7 +397,7 @@ export class Battle {
     this.shotCount.delete(a.id);
     this.shotCount.delete(this.slots[to]!.id);
     this.slots[from] = null;
-    const kind = pick(this.rng, this.setup.lineup);
+    const kind = pick(this.summonRng, this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: K.summonCooldown };
     this.events.push({ type: 'merge', slot: to, star, kind });
     if (star === B.maxStar) this.offer('ultimate', kind);
@@ -438,7 +461,7 @@ export class Battle {
     this.stepProjectiles();
     this.reapDead();
     if (this.wall <= 0) this.end(false);
-    else if (this.wave === B.waves.count && this.pending.length === 0 && this.enemies.length === 0) this.end(true);
+    else if (!this.setup.endless && this.wave === B.waves.count && this.pending.length === 0 && this.enemies.length === 0) this.end(true);
   }
 
   private end(won: boolean): void {
@@ -450,9 +473,10 @@ export class Battle {
     this.wave = wave;
     this.waveTime = 0;
     const bossWaves = this.setup.modifiers?.bossWaves;
-    this.pending = planWave(wave, this.rng, this.setup.stage, bossWaves).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
+    const endless = this.setup.endless === true;
+    this.pending = planWave(wave, this.enemyRng, this.setup.stage, bossWaves, endless).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
     if (wave > 1) this.gold += Math.round(B.waves.waveBonusGold * (this.setup.modifiers?.waveGold ?? 1));
-    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves) });
+    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves, endless) });
   }
 
   private stepWaves(): void {
@@ -460,7 +484,7 @@ export class Battle {
     while (this.pending.length > 0 && this.pending[0].at <= this.waveTime) this.spawn(this.pending.shift()!);
     const w = B.waves;
     const bossAlive = this.enemies.some((e) => isBoss(e.kind));
-    if (this.wave < w.count && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
+    if ((this.setup.endless || this.wave < w.count) && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
       this.startWave(this.wave + 1);
     }
   }
@@ -471,9 +495,9 @@ export class Battle {
     const def = B.enemies[s.kind];
     const radius = toFp(def.radius);
     const id = this.nextId;
-    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.rng.range(K.left + radius, K.right - radius);
+    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
     const y = at ? at.y : K.top - radius;
-    const speed = times(times(perTick(def.speed), this.rng.range(900, 1100)), pm(this.setup.modifiers?.enemySpeed ?? 1));
+    const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm(this.setup.modifiers?.enemySpeed ?? 1));
     const e: Enemy = {
       id: this.nextId++,
       kind: s.kind,
@@ -736,7 +760,7 @@ export class Battle {
   }
 
   private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number, extra: Partial<Projectile> = {}): void {
-    const crit = this.rng.chance(this.fixed.crit, 1000);
+    const crit = this.shotRng.chance(this.fixed.crit, 1000);
     this.projectiles.push({
       ...extra,
       id: this.nextId++,
@@ -838,7 +862,7 @@ export class Battle {
     if (p.kind === 'arcane' && !p.commander) this.arcaneHit(p, target);
     if (p.kind === 'ice') {
       this.slow(target, h.ice.slow, ticks(h.ice.slowTime));
-      if (this.rng.chance(this.fixed.freezeChance, 1000)) this.freeze(target, S.iceFreezeTime, p.damage);
+      if (this.shotRng.chance(this.fixed.freezeChance, 1000)) this.freeze(target, S.iceFreezeTime, p.damage);
       if (this.mods.frostbite && target.freezeTime <= 0) {
         // no stacking while it is frozen anyway
         target.chillTime = ticks(S.frostbiteTime);
@@ -1152,6 +1176,6 @@ export class Battle {
 
   private roll(focus?: HeroKind, exclude: readonly SkillId[] = []): SkillId[] {
     const fielded = new Set(this.slots.flatMap((h) => (h ? [h.kind] : [])));
-    return rollChoices(this.rng, this.skills, fielded, this.setup.heroLevels, focus, exclude, this.setup.modifiers?.banned);
+    return rollChoices(this.cardRng, this.skills, fielded, this.setup.heroLevels, focus, exclude, this.setup.modifiers?.banned);
   }
 }

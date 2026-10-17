@@ -3,9 +3,10 @@
 // for the merge), and a cream speech card in the light workshop style with a skip button. The
 // battle runs on underneath and every tap reaches it: nothing but the skip button takes taps.
 
-import { Container, Graphics, type Text } from 'pixi.js';
+import { Container, Graphics, Sprite, type Text } from 'pixi.js';
 import { t } from '../i18n';
 import { TUTORIAL_STEPS, type TutorialStep } from '../sim/tutorial';
+import { handTexture } from './art';
 import { balanced, fit, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
 
 export interface Rect {
@@ -34,7 +35,8 @@ export class TutorialLayer extends Container {
   private readonly dim = new Graphics();
   private readonly rings = new Graphics();
   private readonly arrow = new Graphics();
-  private readonly hand = handShape();
+  /** Its finger points up from the origin; the drawn glove until the art is in. */
+  private readonly hand = new Container();
   private readonly card = new Container();
   private holes: Rect[] = [];
   private key = '';
@@ -45,6 +47,7 @@ export class TutorialLayer extends Container {
     this.visible = false;
     this.dim.eventMode = 'none'; // the battle under it keeps taking taps
     this.hand.eventMode = 'none';
+    this.hand.addChild(handShape());
     this.arrow.eventMode = 'none';
     this.rings.eventMode = 'none';
     this.addChild(this.dim, this.rings, this.arrow, this.hand, this.card);
@@ -62,6 +65,7 @@ export class TutorialLayer extends Container {
     this.holes = pick ? [] : joined(lesson.holes.map((r) => grow(r, PAD)));
     this.dim.visible = !pick;
     this.hand.visible = !pick;
+    this.useHandArt();
 
     const key = `${lesson.step}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}`;
     if (key !== this.key) {
@@ -132,6 +136,15 @@ export class TutorialLayer extends Container {
     this.card.eventMode = 'passive';
   }
 
+  /** Swaps the drawn glove for the painted one once it has loaded. */
+  private useHandArt(): void {
+    if (this.hand.children[0] instanceof Sprite) return;
+    const art = handArt();
+    if (!art) return;
+    this.hand.removeChildren().forEach((c) => c.destroy());
+    this.hand.addChild(art);
+  }
+
   private animate(lesson: Lesson): void {
     const s = this.time;
     const pulse = 0.5 + 0.5 * Math.sin(s * 5);
@@ -164,7 +177,25 @@ export class TutorialLayer extends Container {
   }
 }
 
-/** A gloved hand pointing up, its fingertip at the origin: the index finger out, the other
+/** The painted glove pointing up, its fingertip at the origin; undefined until it has loaded. */
+function handArt(): Sprite | undefined {
+  const tex = handTexture();
+  if (!tex) return undefined;
+  const art = new Sprite(tex);
+  // the fingertip, in the art's own pixels; the painting points up and to the right
+  art.anchor.set(334 / tex.width, 18 / tex.height);
+  art.rotation = -1.03;
+  art.scale.set(0.68 * (343 / tex.width));
+  return art;
+}
+
+/** A pointing hand for other screens, its fingertip at the origin: the painted glove, or the
+ *  drawn one while the art is not in. */
+export function pointingHand(): Container {
+  return handArt() ?? handShape();
+}
+
+/** Until public/art/tutorial_hand.png is in: a gloved hand pointing up, its fingertip at the origin: the index finger out, the other
  *  three curled against the palm, the thumb along the side and a brass cuff. */
 function handShape(): Graphics {
   const edge = { width: 6, color: LIGHT.edge, join: 'round' as const };
