@@ -10,7 +10,7 @@ import { achievementsClaimable, nextTier, TRACK_IDS, TRACKS, trackProgress, trac
 import { CHALLENGE_TIERS } from '../sim/challenge';
 import { enemyStats, resistLabel, resists } from '../sim/enemies';
 import { heroUnlocked, unlockStage, type MetaSave } from '../sim/meta';
-import { BALANCE, HERO_KINDS, type EnemyKind, type HeroKind } from '../sim/types';
+import { BALANCE, BOSS_KINDS, HERO_KINDS, isBoss, type EnemyKind, type HeroKind } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
 import { potionLook } from './art';
 import {
@@ -224,11 +224,15 @@ function flasks(r: Container, cx: number, feet: number, n: number, rh: number, c
 
 // ---- the clockwork army ----
 
-/** The army in two pages: the four of the first stages, then the ones that join later. */
+/** The army in pages: the four of the first stages, the ones that join later, then each later
+ *  chapter's boss. */
 const PAGES: EnemyKind[][] = [
   ['grunt', 'runner', 'brute', 'boss'],
   ['flyer', 'winder'],
+  BOSS_KINDS.slice(1),
 ];
+/** The kinds with a line on what they do (every kind off the first page). */
+type TraitKind = Exclude<EnemyKind, 'grunt' | 'runner' | 'brute' | 'boss'>;
 /** The page shown, kept while the tab is rebuilt. */
 let monsterPage = 0;
 
@@ -268,7 +272,8 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
     PAGES[monsterPage].forEach((kind, i) => {
       let card: Container;
       if (monsterPage > 0) {
-        const ch = Math.min(rows ? 330 : 300, (inner - GAP) / 2);
+        const n = Math.max(2, PAGES[monsterPage].length);
+        const ch = Math.min(rows ? 330 : 300, (inner - GAP * (n - 1)) / n);
         card = monsterRow(kind, stage, w - 60, ch, true);
         card.y = -h / 2 + HEAD + ch / 2 + i * (ch + GAP);
       } else if (rows) {
@@ -288,8 +293,8 @@ function monsterBoard(stage: number, w: number, h: number, rows: boolean): Conta
     back.position.set(-w / 2 + 54, -h / 2 + 58);
     count.position.set(-w / 2 + 114, -h / 2 + 58);
     next.position.set(-w / 2 + 174, -h / 2 + 58);
-    // a dot while the picked stage sends a kind from the next page
-    if (monsterPage === 0 && PAGES[1].some((k) => stage >= FIRST_STAGE[k])) redDot(next, 22, -22);
+    // a dot while the picked stage sends a kind from a later page
+    if (PAGES.slice(monsterPage + 1).some((p) => p.some((k) => stage >= FIRST_STAGE[k]))) redDot(next, 22, -22);
     page.addChild(back, count, next);
   };
   show();
@@ -349,7 +354,7 @@ function monsterRow(kind: EnemyKind, stage: number, rw: number, rh: number, trai
   row.position.set(cx, trait ? 0 : 24);
   c.addChild(head, row);
   if (trait) {
-    const l = fit(ink(t(`codex.trait.${kind as 'flyer' | 'winder'}`), 26, { fill: P.ink }), rw / 2 - 14 - tx);
+    const l = fit(ink(t(`codex.trait.${kind as TraitKind}`), 26, { fill: P.ink }), rw / 2 - 14 - tx);
     l.anchor.set(0, 0.5);
     l.position.set(tx, rh / 2 - 34);
     c.addChild(l);
@@ -364,7 +369,7 @@ function art(kind: EnemyKind, stage: number, bw: number, bh: number, x: number, 
   c.position.set(x, y);
   const sprite = enemySprite(kind, bw, bh);
   c.addChild(new Graphics().ellipse(0, bh * 0.4, bw * 0.34, bh * 0.07).fill({ color: 0x000000, alpha: 0.2 }), sprite);
-  if (kind === 'boss') {
+  if (isBoss(kind)) {
     const tag = bossTag(22);
     tag.position.set(bw / 2 - 46, -bh / 2 + 18);
     c.addChild(tag);

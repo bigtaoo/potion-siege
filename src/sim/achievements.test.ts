@@ -5,6 +5,7 @@ import {
 import { claimLogin } from './daily';
 import { newMeta, parseMeta } from './meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, type BattleEvent } from './types';
+import { FIRST_STAGE } from './waves';
 
 const merge = (kind: (typeof HERO_KINDS)[number], star: number): BattleEvent => ({ type: 'merge', slot: 0, star, kind });
 const kill = (kind: (typeof ENEMY_KINDS)[number]): BattleEvent => ({ type: 'kill', kind, x: 0, y: 0, gold: 1, boss: kind === 'boss' });
@@ -90,7 +91,7 @@ describe('achievements', () => {
 
     // from before achievements: the kinds its cleared stages sent count as beaten, nothing claimed
     const old = parseMeta(JSON.stringify({ cleared: 20, runs: 60, crystals: 5 }));
-    expect(old.achievements.stats.beaten).toEqual([...ENEMY_KINDS]);
+    expect(old.achievements.stats.beaten).toEqual(ENEMY_KINDS.filter((k) => FIRST_STAGE[k] <= 20));
     expect(old.achievements.claimed.stages).toBe(0);
     expect(trackReady(old, 'stages')).toBe(true);
     expect(trackReady(old, 'enemies')).toBe(true);

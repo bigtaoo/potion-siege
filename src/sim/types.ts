@@ -13,9 +13,18 @@ export const LINEUP = BALANCE.lineup as readonly HeroKind[];
 export type OfferReason = 'upgrade' | 'ultimate';
 
 /** The clockwork army: the first four from stage 1, weakest first, then the two that join on
- *  later stages. */
-export const ENEMY_KINDS = ['grunt', 'runner', 'brute', 'boss', 'flyer', 'winder'] as const;
+ *  later stages, then the bosses of the later chapters. */
+export const ENEMY_KINDS = ['grunt', 'runner', 'brute', 'boss', 'flyer', 'winder', 'clock', 'tripod', 'anvil', 'gear'] as const;
 export type EnemyKind = (typeof ENEMY_KINDS)[number];
+
+/** The boss of each chapter of ten stages, in order: the steam tank leads the first. */
+export const BOSS_KINDS = ['boss', 'clock', 'tripod', 'anvil', 'gear'] as const satisfies readonly EnemyKind[];
+export type BossKind = (typeof BOSS_KINDS)[number];
+
+/** Whether `kind` is one of the chapter bosses: too big to freeze, push or wind back. */
+export function isBoss(kind: EnemyKind): kind is BossKind {
+  return (BOSS_KINDS as readonly EnemyKind[]).includes(kind);
+}
 
 export interface Hero {
   id: number;
@@ -26,6 +35,8 @@ export interface Hero {
   slot: number;
   /** Thousandths of a tick until the next shot (attack speed takes off a fraction of a tick). */
   cooldown: number;
+  /** Ticks it still stands dazed by an anvil's slam on the wall, not throwing. */
+  stunTime?: number;
 }
 
 // The battle state is all integers (src/sim/math/fixed.ts): positions, radii and hit points in
@@ -87,6 +98,21 @@ export interface Enemy {
   phase?: number;
   /** A winder's ticks until it next winds back the enemies around it. */
   windTime?: number;
+  /** A clock boss's ticks until it next lets mice out of its pendulum door. */
+  broodTime?: number;
+  /** A tripod's glass bell jar (FP), which takes the hits before it, and its full strength. */
+  shield?: number;
+  shieldMax?: number;
+  /** Ticks until a broken bell jar has grown back. */
+  shieldTime?: number;
+  /** An anvil's ticks until it next leaps (or, at the wall, slams it), and the ticks left of a
+   *  leap under way. */
+  hopTime?: number;
+  leapTime?: number;
+  /** A gear king that lost its iron rim: the crowned core runs on, built differently. */
+  core?: boolean;
+  /** Ticks it takes no damage while the rim flies apart. */
+  guardTime?: number;
 }
 
 export interface Projectile {
@@ -138,6 +164,16 @@ export type BattleEvent =
   | { type: 'wallHit' }
   /** A winder wound back the enemies within `radius`: healed, thawed and sped up again. */
   | { type: 'rewind'; x: number; y: number; radius: number }
+  /** The clock boss let clockwork mice out of its pendulum door. */
+  | { type: 'brood'; x: number; y: number }
+  /** A tripod's bell jar shattered (up false) or grew back (up true). */
+  | { type: 'jar'; x: number; y: number; up: boolean }
+  /** An anvil sprang forward. */
+  | { type: 'leap'; x: number; y: number }
+  /** An anvil slammed the wall, dazing the potions in these slots. */
+  | { type: 'slam'; x: number; y: number; slots: number[] }
+  /** A gear king's iron rim flew apart, leaving the crowned core. */
+  | { type: 'crack'; x: number; y: number }
   /** A wind gust swept the field `depth` deep either side of y. */
   | { type: 'gust'; x: number; y: number; depth: number }
   /** A wind hit knocked an enemy back from (x, y). */

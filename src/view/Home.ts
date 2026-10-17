@@ -13,7 +13,7 @@ import {
 } from '../sim/challenge';
 import { achievementsClaimable, type TrackId } from '../sim/achievements';
 import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { onStage } from '../sim/waves';
 import {
@@ -305,7 +305,7 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     const s = enemySprite(kind, size);
     s.x = (i - (kinds.length - 1) / 2) * step;
     row.addChild(s);
-    if (kind === 'boss') {
+    if (isBoss(kind)) {
       const tag = bossTag(18);
       tag.position.set(s.x, size / 2 + 4);
       row.addChild(tag);

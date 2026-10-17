@@ -4,7 +4,7 @@
 // the battle's events; the rest is read straight off the save.
 
 import type { MetaSave } from './meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP, type BattleEvent, type EnemyKind, type HeroKind } from './types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP, type BattleEvent, type EnemyKind, type HeroKind } from './types';
 import { FIRST_STAGE } from './waves';
 
 export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'login', 'workshop'] as const;
@@ -87,7 +87,7 @@ export function trackProgress(m: MetaSave, id: TrackId, tier: number): number {
     case 'unlock':
       return LINEUP.length + m.unlocked.length;
     case 'enemies':
-      return tier === 0 ? Number(s.beaten.includes('boss')) : s.beaten.length;
+      return tier === 0 ? Number(s.beaten.some(isBoss)) : s.beaten.length;
     case 'merges':
       return s.merges;
     case 'kills':
