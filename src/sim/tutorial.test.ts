@@ -1,16 +1,29 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, WALL_ROW } from './battle';
-import { mergeablePair, Tutorial } from './tutorial';
+import { TICK_RATE } from './math/fixed';
+import { ASSIST_SECONDS, mergeablePair, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
+
+/** Steps the battle `secs` seconds, the tutorial watching (and assisting) as the shell does. */
+function run(b: Battle, tut: Tutorial, secs: number): (string | null)[] {
+  const helped: (string | null)[] = [];
+  for (let i = 0; i < secs * TICK_RATE && !b.paused; i++) {
+    b.step();
+    tut.update(b, b.drain());
+    const s = tut.assist(b);
+    if (s) helped.push(s);
+    tut.update(b, b.drain());
+  }
+  return helped;
+}
 
 describe('tutorial', () => {
   it('walks through summon, merge, the first upgrade and its pick', () => {
     const b = new Battle(1);
     const tut = new Tutorial();
     expect(tut.showing(b)).toBe('summon');
-    expect(tut.holds(b)).toBe(true);
 
     b.summon();
     tut.update(b, b.drain());
@@ -18,7 +31,6 @@ describe('tutorial', () => {
     // no pair yet: the battle plays on until there is one
     b.slots.fill(null);
     expect(tut.showing(b)).toBeNull();
-    expect(tut.holds(b)).toBe(false);
 
     b.slots[W] = { id: 1, kind: 'fire', star: 1, slot: W, cooldown: 1 };
     b.slots[W + 1] = { id: 2, kind: 'fire', star: 1, slot: W + 1, cooldown: 1 };
@@ -36,12 +48,69 @@ describe('tutorial', () => {
     tut.update(b, b.drain());
     expect(tut.step).toBe('pick');
     expect(tut.showing(b)).toBe('pick');
-    // the pick pauses the battle by itself
-    expect(tut.holds(b)).toBe(false);
     b.choose(b.choices![0]);
     tut.update(b, b.drain());
     expect(tut.done).toBe(true);
     expect(tut.showing(b)).toBeNull();
+  });
+
+  it('never holds the battle: it keeps ticking while a step points', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    tut.update(b, b.drain());
+    expect(tut.showing(b)).toBe('summon');
+    run(b, tut, 2);
+    expect(b.seconds).toBeGreaterThanOrEqual(2);
+    expect(tut.step).toBe('summon');
+  });
+
+  it('does a step itself once the player has left it alone long enough', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    tut.update(b, b.drain());
+    expect(run(b, tut, ASSIST_SECONDS - 1)).toEqual([]);
+    expect(run(b, tut, 2)).toEqual(['summon']);
+    expect(tut.step).toBe('merge');
+    expect(b.summons).toBe(1);
+  });
+
+  it('keeps summoning for an idle player until there is a pair to merge', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    tut.update(b, b.drain());
+    const helped = run(b, tut, 60);
+    expect(helped[0]).toBe('summon');
+    expect(helped).toContain('merge');
+    expect(b.summons).toBeGreaterThanOrEqual(2);
+  });
+
+  it('merges and upgrades for an idle player, but leaves the pick to them', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    b.summon();
+    tut.update(b, b.drain());
+    b.slots[W] = { id: 91, kind: 'fire', star: 1, slot: W, cooldown: 1 };
+    b.slots[W + 1] = { id: 92, kind: 'fire', star: 1, slot: W + 1, cooldown: 1 };
+    tut.update(b, b.drain());
+    expect(run(b, tut, ASSIST_SECONDS + 1)).toContain('merge');
+    expect(tut.step).toBe('upgrade');
+    b.gold = 1e5;
+    tut.update(b, b.drain());
+    expect(run(b, tut, ASSIST_SECONDS + 1)).toEqual(['upgrade']);
+    expect(tut.step).toBe('pick');
+    expect(b.choices).not.toBeNull();
+    expect(tut.assist(b)).toBeNull();
+  });
+
+  it('restarts the wait when the player acts before it runs out', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    tut.update(b, b.drain());
+    run(b, tut, ASSIST_SECONDS - 2);
+    b.summon();
+    tut.update(b, b.drain());
+    expect(tut.step).toBe('merge');
+    expect(b.summons).toBe(1);
   });
 
   it('stops pointing once skipped', () => {
@@ -49,6 +118,7 @@ describe('tutorial', () => {
     const tut = new Tutorial();
     tut.skip();
     expect(tut.done).toBe(true);
-    expect(tut.holds(b)).toBe(false);
+    expect(tut.showing(b)).toBeNull();
+    expect(tut.assist(b)).toBeNull();
   });
 });
