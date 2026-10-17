@@ -15,7 +15,7 @@ import { FIRST_STAGE } from '../sim/waves';
 import { potionLook } from './art';
 import {
   bossTag, bottle, calendarIcon, enemySprite, fit, flask, gearIcon, ink, LIGHT, lightPanel, lightTile, lock, P, PillButton, plate, redDot, stopwatchIcon,
-  swordsIcon, tappable, wallIcon,
+  infinityIcon, swordsIcon, tappable, wallIcon,
 } from './kit';
 import { codexStage } from './nudges';
 import { INK, star, stillPotion } from './potion';
@@ -546,6 +546,9 @@ function trackIcon(id: TrackId, size: number): Container {
       break;
     case 'challenge':
       add(stopwatchIcon());
+      break;
+    case 'endless':
+      add(infinityIcon());
       break;
     case 'login':
       add(calendarIcon());

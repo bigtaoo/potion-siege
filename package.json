@@ -16,7 +16,8 @@
     "collector": "node scripts/collector.mjs",
     "report": "node scripts/report.mjs",
     "early": "vitest run --config scripts/vitest.early.config.js",
-    "late": "vitest run --config scripts/vitest.late.config.js"
+    "late": "vitest run --config scripts/vitest.late.config.js",
+    "endless": "vitest run --config scripts/vitest.endless.config.js"
   },
   "dependencies": {
     "pixi.js": "^8.6.6"

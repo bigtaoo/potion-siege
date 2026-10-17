@@ -4,6 +4,7 @@
 
 import { newAchievements, parseAchievements, type AchievementSave } from './achievements';
 import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
+import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import type { SkillId } from './skills';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
@@ -34,6 +35,8 @@ export interface MetaSave {
   /** The first-battle tutorial was finished or skipped, and does not show again. */
   tutorial: boolean;
   challenge: ChallengeSave;
+  /** Endless mode's best wave and the milestones it has paid. */
+  endless: EndlessSave;
   /** The settings' music and sound effects toggles. */
   sound: { music: boolean; sfx: boolean };
   achievements: AchievementSave;
@@ -63,6 +66,8 @@ export interface BattleSetup {
   startGold: number;
   /** The daily challenge's twists on the rules; absent in every other battle. */
   modifiers?: BattleModifiers;
+  /** Endless mode: no last wave, the waves keep coming until the wall falls. */
+  endless?: boolean;
 }
 
 /** What a daily challenge changes inside the battle (the wall, enemy hit points, start gold
@@ -96,6 +101,7 @@ export function newMeta(): MetaSave {
     shop: { chestDay: '', adDay: '', ads: 0 },
     tutorial: false,
     challenge: newChallenge(),
+    endless: newEndless(),
     sound: { music: true, sfx: true },
     achievements: newAchievements(),
   };
@@ -140,6 +146,7 @@ export function parseMeta(raw: string | null): MetaSave {
   // a save from before the tutorial that has played already knows the game
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
   out.challenge = parseChallenge(data.challenge);
+  out.endless = parseEndless(data.endless);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
   out.sound = { music: sound.music !== false, sfx: sound.sfx !== false };
   out.achievements = parseAchievements(data.achievements, out.cleared);
@@ -263,9 +270,9 @@ export class Purse {
   firstClear = false;
   unlocked: HeroKind[] = [];
 
-  /** Books a result screen's reward; returns the crystals to pay now. */
-  settle(m: MetaSave, r: RunResult): Reward {
-    const reward = runReward(m, r);
+  /** Books a result screen's reward (a stage's, unless another mode passes its own); returns
+   *  the crystals to pay now. */
+  settle(m: MetaSave, r: RunResult, reward = runReward(m, r)): Reward {
     const gain = Math.max(0, reward.crystals - this.paid);
     this.paid += gain;
     this.firstClear ||= reward.firstClear;

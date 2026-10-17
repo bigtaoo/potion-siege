@@ -436,7 +436,7 @@ export class Battle {
     this.stepProjectiles();
     this.reapDead();
     if (this.wall <= 0) this.end(false);
-    else if (this.wave === B.waves.count && this.pending.length === 0 && this.enemies.length === 0) this.end(true);
+    else if (!this.setup.endless && this.wave === B.waves.count && this.pending.length === 0 && this.enemies.length === 0) this.end(true);
   }
 
   private end(won: boolean): void {
@@ -448,9 +448,10 @@ export class Battle {
     this.wave = wave;
     this.waveTime = 0;
     const bossWaves = this.setup.modifiers?.bossWaves;
-    this.pending = planWave(wave, this.rng, this.setup.stage, bossWaves).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
+    const endless = this.setup.endless === true;
+    this.pending = planWave(wave, this.rng, this.setup.stage, bossWaves, endless).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
     if (wave > 1) this.gold += Math.round(B.waves.waveBonusGold * (this.setup.modifiers?.waveGold ?? 1));
-    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves) });
+    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves, endless) });
   }
 
   private stepWaves(): void {
@@ -458,7 +459,7 @@ export class Battle {
     while (this.pending.length > 0 && this.pending[0].at <= this.waveTime) this.spawn(this.pending.shift()!);
     const w = B.waves;
     const bossAlive = this.enemies.some((e) => e.kind === 'boss');
-    if (this.wave < w.count && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
+    if ((this.setup.endless || this.wave < w.count) && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
       this.startWave(this.wave + 1);
     }
   }

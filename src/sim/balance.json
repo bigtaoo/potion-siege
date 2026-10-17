@@ -247,7 +247,8 @@
       "ultimate": { "n": 1, "reward": 80 },
       "skill": { "n": 6, "reward": 50 },
       "boss": { "n": 2, "reward": 80 },
-      "challenge": { "n": 1, "reward": 60 }
+      "challenge": { "n": 1, "reward": 60 },
+      "endless": { "n": 1, "reward": 60 }
     }
   },
   "challenge": {
@@ -273,6 +274,35 @@
       "solo": { "kinds": 3 },
       "goldRain": { "killGold": 1.5, "startGold": 0 }
     }
+  },
+  "endless": {
+    "unlock": 10,
+    "stage": 10,
+    "hpGrowth": 1.03,
+    "maxCount": 60,
+    "bruteStep": 5,
+    "bruteMax": 350,
+    "flyerStep": 0.005,
+    "flyerMax": 0.35,
+    "winderEvery": 10,
+    "winderMax": 4,
+    "bossEvery": 5,
+    "perWave": 10,
+    "runCap": 300,
+    "milestones": [
+      { "wave": 10, "reward": 100 },
+      { "wave": 15, "reward": 150 },
+      { "wave": 20, "reward": 250 },
+      { "wave": 25, "reward": 350 },
+      { "wave": 30, "reward": 500 },
+      { "wave": 40, "reward": 800 },
+      { "wave": 50, "reward": 1200 }
+    ],
+    "achievement": [
+      { "goal": 15, "reward": 100 },
+      { "goal": 25, "reward": 200 },
+      { "goal": 40, "reward": 300 }
+    ]
   },
   "shop": {
     "chest": 60,

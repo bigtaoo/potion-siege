@@ -595,6 +595,25 @@ export function stopwatchIcon(): Graphics {
     .fill(P.line);
 }
 
+/** A brass infinity loop: endless mode. */
+export function infinityIcon(): Graphics {
+  const g = new Graphics();
+  // the loop as a lemniscate, traced once in the outline colour and once in brass over it
+  const pts: number[] = [];
+  for (let i = 0; i < 64; i++) {
+    const a = (i / 64) * Math.PI * 2;
+    const d = 1 + Math.sin(a) ** 2;
+    pts.push((46 * Math.cos(a)) / d, (46 * Math.sin(a) * Math.cos(a)) / d);
+  }
+  return g
+    .poly(pts)
+    .stroke({ width: 24, color: P.line, join: 'round' })
+    .poly(pts)
+    .stroke({ width: 14, color: P.brass, join: 'round' })
+    .poly(pts.map((v, i) => (i % 2 ? v - 2 : v)))
+    .stroke({ width: 4, color: P.brassLight, join: 'round', alpha: 0.8 });
+}
+
 /** Two courses of wall stone. */
 export function wallIcon(): Graphics {
   const g = new Graphics();
