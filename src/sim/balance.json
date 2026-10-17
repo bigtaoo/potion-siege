@@ -224,31 +224,31 @@
     "stageHpLate": { "from": 14, "growth": 1.06 },
     "stageHpScale": { "9": 0.98, "10": 1.07, "13": 0.97, "14": 0.94, "15": 0.97, "16": 0.96, "19": 0.98, "20": 0.97 },
     "stageCount": 20,
-    "reward": { "perWave": 4, "perKills": 10, "winBonus": 40, "firstClear": 30, "stageStep": 0.25 },
-    "heroMax": 20,
+    "reward": { "perWave": 5, "perKills": 10, "winBonus": 55, "firstClear": 30, "stageStep": 0.1 },
+    "heroMax": 40,
     "heroDamage": 0.15,
     "heroCost": { "base": 60, "growth": 1.15 },
     "workshop": {
       "wall": { "max": 10, "step": 0.1, "base": 60, "growth": 1.5 },
       "startGold": { "max": 10, "step": 15, "base": 50, "growth": 1.5 },
-      "crystals": { "max": 10, "step": 0.1, "base": 80, "growth": 1.55 }
+      "crystals": { "max": 10, "step": 0.05, "base": 80, "growth": 1.55 }
     }
   },
   "daily": {
-    "login": [50, 80, 120, 160, 200, 250, 500],
+    "login": [60, 100, 140, 180, 220, 280, 600],
     "taskCount": 3,
-    "allDone": 50,
+    "allDone": 100,
     "tasks": {
-      "play": { "n": 3, "reward": 60 },
-      "win": { "n": 1, "reward": 80 },
-      "kill": { "n": 300, "reward": 60 },
-      "summon": { "n": 40, "reward": 50 },
-      "merge": { "n": 25, "reward": 60 },
-      "ultimate": { "n": 1, "reward": 80 },
-      "skill": { "n": 6, "reward": 50 },
-      "boss": { "n": 2, "reward": 80 },
-      "challenge": { "n": 1, "reward": 60 },
-      "endless": { "n": 1, "reward": 60 }
+      "play": { "n": 3, "reward": 75 },
+      "win": { "n": 1, "reward": 100 },
+      "kill": { "n": 300, "reward": 75 },
+      "summon": { "n": 40, "reward": 60 },
+      "merge": { "n": 25, "reward": 75 },
+      "ultimate": { "n": 1, "reward": 100 },
+      "skill": { "n": 6, "reward": 60 },
+      "boss": { "n": 2, "reward": 100 },
+      "challenge": { "n": 1, "reward": 75 },
+      "endless": { "n": 1, "reward": 75 }
     }
   },
   "challenge": {
@@ -305,8 +305,8 @@
     ]
   },
   "shop": {
-    "chest": 60,
-    "ad": 40,
+    "chest": 100,
+    "ad": 60,
     "adsPerDay": 3,
     "unlock": { "poison": 800, "wind": 1200 }
   }
