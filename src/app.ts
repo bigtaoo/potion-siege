@@ -16,7 +16,7 @@ import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challe
 import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
 import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
-  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
+  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, firstSeed, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
   type MetaSave,
 } from './sim/meta';
 import { botAct } from './sim/bot';
@@ -252,7 +252,9 @@ class Game {
   /** `cause` null: an idle battle under the home screen, no run. */
   private newBattle(cause: 'first' | 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
     this.run?.close('again');
-    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    // a new player's runs on stage 1 share one seed until the first win, for comparable telemetry
+    const fixed = cause === 'first' || cause === 'again' ? firstSeed(this.save) : null;
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(fixed ?? (Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
     this.challenge = null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
