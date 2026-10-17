@@ -7,7 +7,7 @@
 // purchase, claim or resize.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { t } from '../i18n';
+import { t, type TextKey } from '../i18n';
 import {
   bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge,
 } from '../sim/challenge';
@@ -17,6 +17,7 @@ import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskD
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { onStage } from '../sim/waves';
+import { CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterInfo, chapterOf, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists } from '../sim/chapters';
 import {
   AD_CRYSTALS, adsLeft, ADS_PER_DAY, benched, CHEST_CRYSTALS, chestReady, heroCost, heroDamage, heroUnlocked, maxStage, unlockPrice, unlockStage,
   WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId,
@@ -64,7 +65,7 @@ import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'tasks' | 'settings' | 'challenge' | HeroKind | null;
+export type HomePanel = 'login' | 'tasks' | 'settings' | 'challenge' | 'chapters' | HeroKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -77,6 +78,10 @@ export interface HomeActions {
   /** The next tier of an achievement track. */
   claimTier(id: TrackId, at: Container): void;
   stage(delta: number): void;
+  /** A stage tile on the chapters panel was tapped. */
+  pickStage(stage: number): void;
+  /** A finished chapter's one-time chest. */
+  claimChapter(chapter: number, at: Container): void;
   hero(kind: HeroKind): void;
   /** A potion on the battle tab's lineup row was tapped. */
   lineup(kind: HeroKind): void;
@@ -142,6 +147,7 @@ export function buildHome(
     workshop: canUpgradeWorkshop(m),
     shop: shopDot(m, today),
     codex: achievementsClaimable(m),
+    battle: anyChestWaiting(m),
   };
   dots[tab] = false;
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
@@ -149,6 +155,7 @@ export function buildHome(
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
+  else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
   return root;
 }
@@ -283,7 +290,7 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     const lx = a.x + (a.w - rw - 40) / 2;
     stageCard(root, m, act, lx, a.y + 100, 300);
     const by = a.y + a.h - 120;
-    commander(root, lx, a.y + 420, by - START_H / 2 - 30);
+    commander(root, lx, a.y + 100 + CARD_BOTTOM + 20, by - START_H / 2 - 30);
     startButton(root, act, lx, by);
     const block = lineupH + banners * (50 + BANNER_H);
     const ly = a.y + 60 + Math.max(0, (a.h - 120 - block) / 2);
@@ -298,7 +305,7 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     const cx = a.x + a.w / 2;
     const pw = Math.min(960, a.w - 80);
     stageCard(root, m, act, cx, a.y + 80);
-    let y = a.y + 350;
+    let y = a.y + 80 + CARD_BOTTOM + 60;
     lineupPanel(root, m, act, picked, cx, y + lineupH / 2, pw, lineupH);
     y += lineupH + 40;
     if (challenge) {
@@ -319,7 +326,12 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
 const START_H = 180;
 const BANNER_H = 150;
 
-/** The stage plate between its arrows, and under it the heads of the enemies it sends. */
+/** How far below the plate's middle the stage card reaches, its twist tags included. */
+const CARD_BOTTOM = 320;
+
+/** The stage plate between its arrows, and under it a card with the stage's chapter (its name,
+ *  a pip a stage and the progress) over the heads of the enemies it sends, the stage's twists
+ *  as tags on its lower edge. Tapping the card opens the chapters. */
 function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, ax = 340): void {
   const arrow = (dx: number, text: string, on: boolean, d: number) => {
     const c = tappable(new Container(), () => on && act.stage(d));
@@ -330,12 +342,37 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     root.addChild(c);
   };
   const kinds = ENEMY_KINDS.filter((k) => onStage(k, m.stage));
-  const size = 96;
-  const step = size + 14;
-  const rw = kinds.length * step + 30;
+  const size = 88;
+  const step = size + 12;
+  const ch = chapterOf(m.stage);
+  const card = tappable(new Container(), () => act.panel('chapters'));
+  card.position.set(x, y + 85);
+  const cw = Math.max(kinds.length * step + 30, 2 * ax + 40);
+  const chh = 214;
+  card.addChild(inset(cw, chh, 0, 36));
+  // the chapter line: its name on the left, a pip a stage, the count on the right
+  const name = ink(chapterTitle(ch), 32, { fontWeight: '900' });
+  name.anchor.set(0, 0.5);
+  name.position.set(-cw / 2 + 28, 38);
+  const count = ink(t('chapter.progress', { n: chapterProgress(m, ch), total: CHAPTER_SIZE }), 30, { fill: P.inkSoft, fontWeight: '900' });
+  count.anchor.set(1, 0.5);
+  count.position.set(cw / 2 - 28, 38);
+  card.addChild(name, count);
+  const [first] = chapterStages(ch);
+  const right = count.x - count.width - 30;
+  const pstep = Math.min(30, (right - (name.x + name.width + 30)) / CHAPTER_SIZE);
+  if (pstep >= 19) {
+    const pips = new Graphics();
+    for (let i = 0; i < CHAPTER_SIZE; i++) {
+      const stage = first + i;
+      const px = right - (CHAPTER_SIZE - 1 - i) * pstep - pstep / 2;
+      pips.circle(px, 38, isFinale(stage) ? 10 : 7).fill(stage <= m.cleared ? P.brass : LIGHT.face).stroke({ width: stage === m.stage ? 5 : 3, color: stage === m.stage ? P.red : P.line });
+    }
+    card.addChild(pips);
+  }
+  if (anyChestWaiting(m)) redDot(card, cw / 2 - 8, 6);
   const row = new Container();
-  row.position.set(x, y + 150);
-  row.addChild(inset(rw, size + 34, -(size + 34) / 2, 36));
+  row.position.set(0, 126);
   kinds.forEach((kind, i) => {
     const s = enemySprite(kind, size);
     s.x = (i - (kinds.length - 1) / 2) * step;
@@ -346,11 +383,46 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
       row.addChild(tag);
     }
   });
+  card.addChild(row);
+  const twists = stageTwists(m.stage);
+  if (twists.length > 0) {
+    // one twist says what it does; two only name themselves
+    const tags = new Container();
+    let tx = 0;
+    for (const id of twists) {
+      const text = twists.length === 1 ? `${t(`twist.${id}.name`)} · ${t(`twist.${id}.desc`)}` : t(`twist.${id}.name`);
+      const tg = twistTag(text, id === 'finale' || id === 'elite' ? P.red : P.brassDark, cw - 60);
+      tg.x = tx + tg.width / 2;
+      tx += tg.width + 14;
+      tags.addChild(tg);
+    }
+    tags.position.set(-(tx - 14) / 2, chh + 4);
+    card.addChild(tags);
+  }
   const p = plate(t('stage', { n: m.stage }), 64, 420);
   p.position.set(x, y);
-  root.addChild(row, p);
+  root.addChild(card, p);
   arrow(-ax, '◀', m.stage > 1, -1);
   arrow(ax, '▶', m.stage < maxStage(m), 1);
+}
+
+function chapterTitle(ch: number): string {
+  return t('chapter.title', { n: ch, name: t(`chapter.name.${chapterInfo(ch).id}` as TextKey) });
+}
+
+/** A twist's tag on the stage card: cream text on a coloured pill, at most `max` across. */
+function twistTag(text: string, color: number, max: number): Container {
+  const c = new Container();
+  const tx = label(text, 28, { stroke: { color: P.line, width: 5 } });
+  fitText(tx, max - 40);
+  const w = tx.width + 40;
+  c.addChild(new Graphics().roundRect(-w / 2, -24, w, 48, 24).fill(color).stroke({ width: 4, color: P.line }), tx);
+  return c;
+}
+
+function anyChestWaiting(m: MetaSave): boolean {
+  for (let ch = 1; ch <= CHAPTER_COUNT; ch++) if (chestWaiting(m, ch)) return true;
+  return false;
 }
 
 /** The commander standing on its shadow, as tall as the room from `top` to `feet` allows. */
@@ -987,6 +1059,83 @@ function frame(act: HomeActions, title: string, h: number, fit: MenuFit): { pane
   box.addChild(bg, head, close);
   p.addChild(shade, box);
   return { panel: p, box };
+}
+
+/** The five chapters, a row each: the name, the one-time chest (its button once every stage is
+ *  cleared) and a tile a stage - cleared ones brass, the finale red, the chosen one ringed, a dot
+ *  on a stage with a twist; a chapter not open yet says what opens it. Tapping an open stage
+ *  picks it. */
+function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
+  const rowH = 186;
+  const h = CHAPTER_COUNT * (rowH + 14) + 130;
+  const { panel, box } = frame(act, t('chapter.panel'), h, fit);
+  const top = -h / 2 + 90;
+  for (let ch = 1; ch <= CHAPTER_COUNT; ch++) {
+    const r = new Container();
+    r.position.set(0, top + (ch - 1) * (rowH + 14) + rowH / 2);
+    box.addChild(r);
+    r.addChild(lightTile(860, rowH, 26));
+    const open = chapterOpen(m, ch);
+    const [first] = chapterStages(ch);
+    const name = ink(chapterTitle(ch), 38, { fontWeight: '900' });
+    name.anchor.set(0, 0.5);
+    name.position.set(-400, -50);
+    fitText(name, 470);
+    r.addChild(name);
+    const waiting = chestWaiting(m, ch);
+    const opened = m.chapterChests.includes(ch);
+    const icon = chestIcon();
+    icon.scale.set(0.5);
+    icon.position.set(130, -46);
+    if (!waiting && !opened) icon.alpha = 0.55;
+    r.addChild(icon);
+    if (waiting) {
+      const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
+      b.position.set(290, -50);
+      r.addChild(b);
+      redDot(r, 392, -82);
+    } else if (opened) {
+      const done = ink(t('chapter.chestDone'), 32, { fill: P.inkSoft, fontWeight: '900' });
+      done.anchor.set(0, 0.5);
+      done.position.set(180, -50);
+      r.addChild(done);
+    } else {
+      const g = gem(new Graphics(), 196, -50, 22);
+      const n = ink(String(chapterChest(ch)), 32, { fill: LIGHT.crystal, fontWeight: '900' });
+      n.anchor.set(0, 0.5);
+      n.position.set(224, -50);
+      const c = ink(`${chapterProgress(m, ch)}/${CHAPTER_SIZE}`, 32, { fill: P.inkSoft, fontWeight: '900' });
+      c.anchor.set(1, 0.5);
+      c.position.set(400, -50);
+      r.addChild(g, n, c);
+    }
+    if (!open) {
+      name.alpha = 0.6;
+      const text = ink(t('chapter.locked', { n: first - 1 }), 34, { fill: P.inkSoft, fontWeight: '900' });
+      text.position.set(24, 36);
+      const l = lock();
+      l.scale.set(0.6);
+      l.position.set(text.x - text.width / 2 - 36, 36);
+      r.addChild(text, l);
+      continue;
+    }
+    for (let i = 0; i < CHAPTER_SIZE; i++) {
+      const stage = first + i;
+      const can = stage <= maxStage(m);
+      const tile = tappable(new Container(), () => can && act.pickStage(stage));
+      tile.position.set(-351 + i * 78, 36);
+      const finale = isFinale(stage);
+      const cleared = stage <= m.cleared;
+      const g = new Graphics().roundRect(-34, -34, 68, 68, 16).fill(cleared ? (finale ? 0xd0644f : P.brass) : LIGHT.face).stroke({ width: 4, color: P.line });
+      if (stage === m.stage) g.roundRect(-42, -42, 84, 84, 22).stroke({ width: 6, color: P.red });
+      const n = cleared ? label(String(stage), 30, { stroke: { color: P.line, width: 5 } }) : ink(String(stage), 30, { fill: P.inkSoft, fontWeight: '900' });
+      tile.addChild(g, n);
+      if (stageTwists(stage).length > 0) tile.addChild(new Graphics().circle(26, -26, 9).fill(finale ? P.red : P.brassDark).stroke({ width: 3, color: P.line }));
+      if (!can) tile.alpha = 0.45;
+      r.addChild(tile);
+    }
+  }
+  return panel;
 }
 
 /** The seven days of the login track: claimed ones ticked, today's lit up. */

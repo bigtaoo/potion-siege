@@ -107,7 +107,7 @@ describe('daily challenge', () => {
     for (const w of C.mods.twinBoss.waves) {
       expect(isBossWave(w, twin)).toBe(true);
       expect(isBossWave(w)).toBe(false);
-      expect(planWave(w, new Prng(1), 3, twin)[0].kind).toBe('boss');
+      expect(planWave(w, new Prng(1), 3, { bossWaves: twin })[0].kind).toBe('boss');
     }
     // the iron wall never offers the repair
     const iron = new Battle(2, challengeSetup(m, { ...c, mods: ['ironWall'] }));

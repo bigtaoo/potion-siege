@@ -44,6 +44,10 @@ const env = proc.env;
  *  campaign without ads at 5 runs a day (tag "enemies", heroCost 60/1.15, firstClear 30).
  *  19 and 20 are extrapolated (+20% a stage, as 16-18 grow); "clear" for stage s is arrive[s+1]. */
 const ARRIVE = [0, 0, 290, 560, 865, 1195, 1555, 2330, 2830, 3550, 4755, 5545, 6665, 8250, 10095, 12700, 15380, 20305, 24385, 29600, 35500, 42500];
+/** Past stage 21 the starting four and the workshop are bought out (45,170 crystals): chapters
+ *  3-5 are fought on a maxed save. */
+const MAXED = 45170;
+while (ARRIVE.length < BALANCE.meta.stageCount + 2) ARRIVE.push(MAXED);
 
 /** The next buy, cheapest first over the fielded four and the workshop; the carry's levels
  *  count at half their price, so it is bought about five levels ahead of the others. */

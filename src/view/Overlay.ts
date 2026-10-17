@@ -128,6 +128,7 @@ export class Overlay extends Container {
     }
     if (ch && ch.streakBonus > 0) left.push(section(ribbon(`${t('challenge.streakBonus', { n: ch.streak })} ${t('reward', { n: ch.streakBonus })}`, W - 200), 110));
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
+    if (reward.chest) left.push(section(ribbon(t('chapter.cleared', { c: reward.chest }), W - 200), 110));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));

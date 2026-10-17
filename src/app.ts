@@ -22,6 +22,7 @@ import {
 } from './sim/meta';
 import { botAct } from './sim/bot';
 import { mergeablePair, Tutorial, type TutorialStep } from './sim/tutorial';
+import { openChapterChest } from './sim/chapters';
 import { FP } from './sim/math/fixed';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt } from './view/art';
@@ -697,6 +698,15 @@ class Game {
         this.save.stage = Math.min(maxStage(this.save), Math.max(1, this.save.stage + d));
         this.store();
         this.home();
+      },
+      pickStage: (stage) => {
+        this.save.stage = Math.min(maxStage(this.save), Math.max(1, stage));
+        this.store();
+        this.home();
+      },
+      claimChapter: (ch, at) => {
+        const n = openChapterChest(this.save, ch);
+        if (n > 0) this.claimed(`chapter_${ch}`, n, panel, at);
       },
       hero: (kind) => {
         const ok = buyHero(this.save, kind);

@@ -4,11 +4,12 @@
 import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, type Text, type Texture } from 'pixi.js';
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
+import { stageField } from '../sim/chapters';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
 import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
-import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
+import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, loadField, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, glassShards, stunStars, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { healthTube, innerFace, slab, summonCircle, wallTop, workshopFloor, type WallColumn } from './stone';
@@ -118,6 +119,8 @@ export class BattleView extends Container {
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
   private shake = 0;
+  /** The field art under the battle, when there is art. */
+  private field: Sprite | null = null;
   private battle: Battle | null = null;
   private time = 0;
   private idle = 0;
@@ -139,6 +142,7 @@ export class BattleView extends Container {
 
   attach(battle: Battle): void {
     this.battle = battle;
+    this.showField(stageField(battle.setup.stage));
     this.fxList = [];
     this.dragFrom = null;
     this.cmdPulse = 0;
@@ -593,7 +597,7 @@ export class BattleView extends Container {
     // the field runs right down to the wall, so built cells stand out on it
     const bg = fieldTexture();
     if (bg) {
-      const s = new Sprite(bg);
+      const s = (this.field = new Sprite(bg));
       s.width = DESIGN_W;
       s.height = FIELD_H;
       this.addChildAt(s, this.getChildIndex(g));
@@ -616,6 +620,18 @@ export class BattleView extends Container {
       g.rect(tx, WALL_TOP - 50, 50, WALL_BOTTOM - WALL_TOP + 50).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
       g.rect(tx, WALL_TOP - 70, 20, 24).rect(tx + 30, WALL_TOP - 70, 20, 24).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
     }
+  }
+
+  /** Lays the chapter's field under the battle, once it has come in if it is still on its way. */
+  private showField(key: string): void {
+    const set = (t: Texture | undefined) => {
+      if (!this.field || !t || this.battle?.setup.stage === undefined || stageField(this.battle.setup.stage) !== key) return;
+      this.field.texture = t;
+      this.field.width = DESIGN_W;
+      this.field.height = FIELD_H;
+    };
+    set(fieldTexture(key));
+    void loadField(key).then(set);
   }
 
   /** The wall from above, redrawn only when a cell is built: a slab for every built cell, each

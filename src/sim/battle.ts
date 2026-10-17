@@ -474,7 +474,7 @@ export class Battle {
     this.waveTime = 0;
     const bossWaves = this.setup.modifiers?.bossWaves;
     const endless = this.setup.endless === true;
-    this.pending = planWave(wave, this.enemyRng, this.setup.stage, bossWaves, endless).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
+    this.pending = planWave(wave, this.enemyRng, this.setup.stage, this.setup.modifiers, endless).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
     if (wave > 1) this.gold += Math.round(B.waves.waveBonusGold * (this.setup.modifiers?.waveGold ?? 1));
     this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves, endless) });
   }
@@ -493,7 +493,7 @@ export class Battle {
    *  field let it out. */
   private spawn(s: Spawn, at?: { x: number; y: number }): void {
     const def = B.enemies[s.kind];
-    const radius = toFp(def.radius);
+    const radius = toFp(s.elite ? def.radius * B.elite.radius : def.radius);
     const id = this.nextId;
     const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
     const y = at ? at.y : K.top - radius;
@@ -529,6 +529,7 @@ export class Battle {
       atWall: false,
       gold: s.gold ?? 1000,
     };
+    if (s.elite) e.elite = true;
     if (s.kind === 'flyer') {
       // its swing starts at a point set by its id, so the dice stay as they were before flyers
       e.x0 = Math.min(K.right - radius - K.weave, Math.max(K.left + radius + K.weave, e.x));

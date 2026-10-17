@@ -6,7 +6,9 @@ import { newAchievements, parseAchievements, type AchievementSave } from './achi
 import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
+import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
 import type { SkillId } from './skills';
+import type { WaveMods } from './waves';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
@@ -42,6 +44,8 @@ export interface MetaSave {
   /** The settings' music and sound effects toggles. */
   sound: { music: boolean; sfx: boolean };
   achievements: AchievementSave;
+  /** The chapters whose one-time crystal chest has been opened. */
+  chapterChests: number[];
 }
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
@@ -72,9 +76,10 @@ export interface BattleSetup {
   endless?: boolean;
 }
 
-/** What a daily challenge changes inside the battle (the wall, enemy hit points, start gold
- *  and lineup it changes in the setup itself). */
-export interface BattleModifiers {
+/** What a daily challenge or a stage's chapter changes inside the battle (the wall, enemy hit
+ *  points, start gold and lineup the challenge changes in the setup itself); the wave plan's
+ *  part (mix, flyers, winders, elites) only a chapter's stages bring. */
+export interface BattleModifiers extends WaveMods {
   /** Multipliers on enemy speed, the summon price, the gold between waves and per kill. */
   enemySpeed: number;
   summonCost: number;
@@ -107,6 +112,7 @@ export function newMeta(): MetaSave {
     endless: newEndless(),
     sound: { music: true, sfx: true },
     achievements: newAchievements(),
+    chapterChests: [],
   };
 }
 
@@ -154,6 +160,10 @@ export function parseMeta(raw: string | null): MetaSave {
   const sound = (data.sound ?? {}) as Record<string, unknown>;
   out.sound = { music: sound.music !== false, sfx: sound.sfx !== false };
   out.achievements = parseAchievements(data.achievements, out.cleared);
+  // a save from before chapters keeps the chests of the chapters it finished for the home
+  // screen to open
+  const chests = Array.isArray(data.chapterChests) ? data.chapterChests : [];
+  out.chapterChests = [...new Set(chests.map(Number))].filter((c) => Number.isInteger(c) && c >= 1 && c <= chapterOf(M.stageCount)).sort((a, b) => a - b);
   return out;
 }
 
@@ -162,12 +172,15 @@ export function maxStage(m: MetaSave): number {
   return Math.min(M.stageCount, m.cleared + 1);
 }
 
-/** Enemy hit points of a stage: stageHpGrowth a stage, and stageHpLate.growth a stage past
- *  stageHpLate.from, times the stage's entry in stageHpScale (1 where it has none). */
+/** Enemy hit points of a stage: stageHpGrowth a stage, stageHpLate.growth a stage past
+ *  stageHpLate.from and stageHpEnd.growth past stageHpEnd.from,
+ *  times the stage's entry in stageHpScale (1 where it has none). */
 export function stageHp(stage: number): number {
   const late = M.stageHpLate;
+  const end = M.stageHpEnd;
   const scale = (M.stageHpScale as Record<string, number | undefined>)[stage] ?? 1;
-  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** Math.max(0, stage - late.from) * scale;
+  const mid = Math.max(0, Math.min(stage, end.from) - late.from);
+  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** mid * end.growth ** Math.max(0, stage - end.from) * scale;
 }
 
 export function heroDamage(level: number): number {
@@ -228,6 +241,7 @@ export function firstSeed(m: MetaSave): number | null {
 export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
   const heroes = {} as Record<HeroKind, number>;
   for (const k of Object.keys(m.heroes) as HeroKind[]) heroes[k] = heroDamage(m.heroes[k]);
+  const modifiers = stageModifiers(stage);
   return {
     stage,
     enemyHp: stageHp(stage),
@@ -236,6 +250,7 @@ export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
     lineup: [...m.lineup],
     wallHp: BALANCE.wallHp * (1 + workshopValue('wall', m.workshop.wall)),
     startGold: BALANCE.startGold + workshopValue('startGold', m.workshop.startGold),
+    ...(modifiers && { modifiers }),
   };
 }
 
@@ -255,6 +270,9 @@ export interface Reward {
   firstClear: boolean;
   /** Potions that first clear unlocked. */
   unlocked: HeroKind[];
+  /** Crystals of the chapter chest this battle opened (its chapter's finale cleared the first
+   *  time), on top of `crystals`; 0 without one. Never doubled by the ×2 ad. */
+  chest?: number;
 }
 
 /** Crystals for a battle, won or lost: waves reached and kills, more on later stages, a bonus
@@ -300,6 +318,8 @@ export class Purse {
   doubled = false;
   firstClear = false;
   unlocked: HeroKind[] = [];
+  /** Crystals of the chapter chest this battle opened. */
+  chest = 0;
 
   /** Books a result screen's reward (a stage's, unless another mode passes its own); returns
    *  the crystals to pay now. */
@@ -309,7 +329,9 @@ export class Purse {
     this.firstClear ||= reward.firstClear;
     this.unlocked.push(...reward.unlocked);
     applyRun(m, r, { ...reward, crystals: gain });
-    return { ...reward, crystals: gain };
+    const chest = reward.firstClear && isFinale(r.stage) ? openChapterChest(m, chapterOf(r.stage)) : 0;
+    this.chest += chest;
+    return { ...reward, crystals: gain, ...(chest > 0 && { chest }) };
   }
 
   /** The ×2 ad has ended (`ok`: it was watched); returns the crystals it paid. */
@@ -325,7 +347,7 @@ export class Purse {
 
   /** What the result screen shows. */
   get reward(): Reward {
-    return { crystals: this.paid + this.bonus, firstClear: this.firstClear, unlocked: this.unlocked };
+    return { crystals: this.paid + this.bonus, firstClear: this.firstClear, unlocked: this.unlocked, ...(this.chest > 0 && { chest: this.chest }) };
   }
 }
 

@@ -154,9 +154,29 @@ export function commanderTexture(): Texture | undefined {
   return textures.get('commander');
 }
 
-/** The playfield above the wall. */
-export function fieldTexture(): Texture | undefined {
-  return textures.get('bg_field');
+/** The chapter fields past the first, fetched only when a stage of theirs is chosen, so the
+ *  first battle waits on none of them. */
+const FIELDS = new Set(['bg_snow', 'bg_rail', 'bg_foundry', 'bg_clock']);
+const fetching = new Map<string, Promise<Texture | undefined>>();
+
+/** Starts fetching a chapter's field; resolves with it, or undefined when it cannot be had. */
+export function loadField(key: string): Promise<Texture | undefined> {
+  const have = textures.get(key);
+  if (have || !FIELDS.has(key)) return Promise.resolve(have);
+  let p = fetching.get(key);
+  if (!p) {
+    p = Assets.load<Texture>(`${import.meta.env.BASE_URL}art/${key}.jpg`).then(
+      (t) => (textures.set(key, t), t),
+      (err) => (console.warn(`art: ${key} failed to load, keeping the first field`, err), undefined),
+    );
+    fetching.set(key, p);
+  }
+  return p;
+}
+
+/** The playfield above the wall: the chapter's own once it is in, else the first chapter's. */
+export function fieldTexture(key = 'bg_field'): Texture | undefined {
+  return textures.get(key) ?? textures.get('bg_field');
 }
 
 /** `e`, when given, picks the look of a boss's second state: the tripod without its jar, the
