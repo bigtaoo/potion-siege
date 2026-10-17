@@ -132,7 +132,7 @@ export class Overlay extends Container {
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));
-    const buttons = endButtons(onContinue, onRevive);
+    const buttons = endButtons(onContinue, onRevive, more.onNext ?? null);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];
     const heights = cols.map((col) => col.reduce((a, c) => a + c.h, 0));
@@ -164,6 +164,9 @@ export interface EndExtras {
   onTip: ((tab: TipTab) => void) | null;
   /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
   challenge?: ChallengeEnd;
+  /** Straight into the next stage, the big button, with Continue as a smaller 返回 under it
+   *  (a new player's first wins). */
+  onNext?: (() => void) | null;
   /** An endless run's result: the wave it reached, the best and the next milestone. */
   endless?: EndlessEnd;
 }
@@ -444,9 +447,18 @@ function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: numbe
   return { c, h: top + items.length * (rh + gap) + 20 };
 }
 
-/** The revive (with the ad sign) on top when there is one, Continue under it. */
-function endButtons(onContinue: () => void, onRevive: (() => void) | null): Section {
+/** The revive (with the ad sign) on top when there is one, Continue under it; or Next Stage
+ *  with a smaller 返回 under it. */
+function endButtons(onContinue: () => void, onRevive: (() => void) | null, onNext: (() => void) | null): Section {
   const c = new Container();
+  if (onNext) {
+    const next = new PillButton(t('nextStage'), 620, 150, 'green', onNext, 62);
+    next.y = 95;
+    const back = new PillButton(t('back'), 380, 104, 'brass', onContinue, 44);
+    back.y = 250;
+    c.addChild(next, back);
+    return { c, h: 330 };
+  }
   let by = 20;
   if (onRevive) {
     const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);

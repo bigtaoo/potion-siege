@@ -34,6 +34,8 @@ export interface MetaSave {
   shop: ShopSave;
   /** The first-battle tutorial was finished or skipped, and does not show again. */
   tutorial: boolean;
+  /** The home screen's one-time pointer at the first affordable potion upgrade was seen. */
+  upgradeHint: boolean;
   challenge: ChallengeSave;
   /** Endless mode's best wave and the milestones it has paid. */
   endless: EndlessSave;
@@ -100,6 +102,7 @@ export function newMeta(): MetaSave {
     lineup: [...LINEUP],
     shop: { chestDay: '', adDay: '', ads: 0 },
     tutorial: false,
+    upgradeHint: false,
     challenge: newChallenge(),
     endless: newEndless(),
     sound: { music: true, sfx: true },
@@ -145,6 +148,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.shop.ads = int(shop.ads, 0, S.adsPerDay, 0);
   // a save from before the tutorial that has played already knows the game
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
+  out.upgradeHint = data.upgradeHint === undefined ? out.runs > 0 : data.upgradeHint === true;
   out.challenge = parseChallenge(data.challenge);
   out.endless = parseEndless(data.endless);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
