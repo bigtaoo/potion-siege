@@ -192,7 +192,7 @@ export const en = {
     trait: {
       flyer: "Flies: can't be frozen, takes half from splash",
       winder: 'Rewinds: every 3s heals and thaws enemies near it',
-      clock: 'Breeds: every 5s lets 2 clockwork mice out of its pendulum door',
+      clock: 'Breeds: every 4s lets 2 clockwork mice out of its pendulum door',
       tripod: 'Bell jar: takes the hits first, ice x3, the rest x0.7; regrows 12s after it breaks',
       anvil: 'Leaps: springs forward every 8s, not while slowed; slams the wall and stuns potions',
       gear: 'Two phases: at half health the rim shatters and the crowned core charges, weaknesses flip',

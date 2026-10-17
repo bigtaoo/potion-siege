@@ -122,7 +122,7 @@
       "gold": 12
     },
     "clock": {
-      "hp": 30,
+      "hp": 37,
       "speed": 30,
       "radius": 90,
       "wallDps": 140,
@@ -152,7 +152,7 @@
   },
   "bosses": {
     "chapter": 10,
-    "clock": { "every": 5, "first": 3, "mice": 2, "hp": 0.5, "gold": 0.5, "spread": 60 },
+    "clock": { "every": 4, "first": 3, "mice": 2, "hp": 0.5, "gold": 0.5, "spread": 60 },
     "tripod": { "shield": 0.25, "ice": 3, "other": 0.7, "regrow": 12 },
     "anvil": { "every": 8, "leap": 120, "leapTime": 0.7, "slamFirst": 1, "slamEvery": 6, "slam": 1, "stun": 2, "reach": 90 },
     "gear": { "at": 0.5, "guard": 0.5, "speed": 1.7 }
