@@ -342,6 +342,8 @@
     "winderEvery": 10,
     "winderMax": 4,
     "bossEvery": 5,
+    "chapterEvery": 10,
+    "hpScale": 0.856,
     "perWave": 10,
     "runCap": 300,
     "milestones": [

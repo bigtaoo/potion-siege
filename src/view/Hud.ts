@@ -2,12 +2,12 @@
 // either side of the commander at the bottom.
 
 import { Container, Graphics } from 'pixi.js';
-import { t } from '../i18n';
+import { t, type TextKey } from '../i18n';
 import type { Battle } from '../sim/battle';
 import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
 import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
-import { bossForStage, endlessBoss, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
+import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
@@ -140,6 +140,10 @@ export class Hud extends Container {
           this.newcomer.text = '';
           this.showBoss(kind, weak.join(t('listSep')));
         } else this.newcomer.text = t('newEnemy', { name: t(`enemy.${kind}`), weak: weak.join(t('listSep')) });
+        this.newcomerTime = 5;
+      } else if (this.battle?.setup.endless && ev.wave > 1 && endlessChapter(ev.wave) !== endlessChapter(ev.wave - 1)) {
+        // endless mode moves on to the next chapter's field: say where
+        this.newcomer.text = t('endlessChapter', { name: t(`chapter.name.${BALANCE.chapters[endlessChapter(ev.wave) - 1].id}` as TextKey) });
         this.newcomerTime = 5;
       }
     }

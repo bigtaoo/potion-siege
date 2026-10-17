@@ -111,6 +111,26 @@ export function endlessBossesMet(wave: number): BossKind[] {
   return met;
 }
 
+/** The chapter whose field and theme an endless wave is in: the outskirts for the first
+ *  `endless.chapterEvery` waves, then the snowfield, the rail yard, the foundry, the clock tower
+ *  and round again. 1-based, as in chapters.ts. */
+export function endlessChapter(wave: number): number {
+  const n = BALANCE.chapters.length;
+  return (Math.floor((Math.max(1, wave) - 1) / BALANCE.endless.chapterEvery) % n) + 1;
+}
+
+/** What the chapter of an endless wave's band changes in it: its theme's walking mix, extra
+ *  flyers, winders and elites (the outskirts change nothing, so the first band plans as the
+ *  endless stage did). The stage twists stay with their stages. */
+export function endlessTheme(wave: number): WaveMods & { speed?: number } {
+  return BALANCE.chapters[endlessChapter(wave) - 1].theme as WaveMods & { speed?: number };
+}
+
+/** How fast the walkers of an endless wave go, times the usual: its chapter theme's speed. */
+export function endlessSpeed(wave: number): number {
+  return endlessTheme(wave).speed ?? 1;
+}
+
 /** Endless waves past the last wave of a stage, 0 up to it: how far the mix has tilted. */
 function endlessExtra(wave: number, endless: boolean): number {
   return endless ? Math.max(0, wave - BALANCE.waves.count) : 0;
@@ -143,14 +163,27 @@ export function crowdOf(wave: number, endless = false): { hp: number; count: num
   return { hp, count };
 }
 
+/** `mods` with an endless wave's chapter theme laid over: its mix wins, flyers, winders and elites add up. */
+function withTheme(mods: WaveMods, wave: number): WaveMods {
+  const t = endlessTheme(wave);
+  const out: WaveMods = { ...mods };
+  if (t.mix) out.mix = t.mix;
+  if (t.flyers) out.flyers = (out.flyers ?? 0) + t.flyers;
+  if (t.winders) out.winders = (out.winders ?? 0) + t.winders;
+  if (t.elite) out.elite = (out.elite ?? 0) + t.elite;
+  return out;
+}
+
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top.
  *  `mods` are a stage's chapter theme and twists (or a challenge's bosses); none plans as before.
  *  `endless`: past the stage's last wave the waves keep coming, `endless.hpGrowth` tougher each,
  *  the crowd capped at `endless.maxCount` (what it would have had over the cap goes into hit
- *  points), more brutes, flyers and winders in the mix, and a boss every `endless.bossEvery`. */
+ *  points), more brutes, flyers and winders in the mix, and a boss every `endless.bossEvery`; every
+ *  `endless.chapterEvery` waves the mix takes the next chapter's theme (`endlessTheme`). */
 export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}, endless = false): Spawn[] {
+  if (endless) mods = withTheme(mods, wave);
   const w = BALANCE.waves;
   const E = BALANCE.endless;
   const bossWaves = mods.bossWaves ?? w.bossWaves;
@@ -200,8 +233,10 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   }
   const wd = BALANCE.winder;
   if (onStage('winder', stage) && wave >= wd.wave) {
-    const base = Math.min(wd.at.length, (stage >= wd.twoFrom ? 2 : 1) + (mods.winders ?? 0));
-    const n = Math.max(base, Math.min(E.winderMax, base + Math.floor(extra / E.winderEvery)));
+    const own = stage >= wd.twoFrom ? 2 : 1;
+    const base = Math.min(wd.at.length, own + (mods.winders ?? 0));
+    // endless: the stage's own winders grow to endless.winderMax, a chapter theme's come on top
+    const n = extra > 0 ? Math.max(base, Math.min(E.winderMax, own + Math.floor(extra / E.winderEvery)) + (mods.winders ?? 0)) : base;
     for (let i = 0; i < n; i++) {
       // more winders than the fixed times: spread evenly over the window instead
       const at = n > wd.at.length ? Math.trunc((span * (i + 1)) / (n + 1)) : boss ? ticks(wd.bossAt[i]) : ticks(w.spawnWindow * wd.at[i]);
@@ -215,6 +250,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
 /** The kinds that can come in `wave` of `stage`, in the order the codex lists them: what the
  *  wide battle screen forecasts, without rolling the wave itself. */
 export function waveKinds(wave: number, stage: number, mods: WaveMods = {}, endless = false): EnemyKind[] {
+  if (endless) mods = withTheme(mods, wave);
   const bossWaves = mods.bossWaves ?? BALANCE.waves.bossWaves;
   const kinds: EnemyKind[] = ['grunt'];
   if (wave >= FIRST_WAVE.runner) kinds.push('runner');

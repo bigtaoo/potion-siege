@@ -6,6 +6,7 @@ export const zh: Table = {
   upgrade: '强化',
   wave: '第 {n}/{total} 波',
   waveEndless: '第 {n} 波',
+  endlessChapter: '战场转移：{name}',
   bossWave: 'BOSS 来袭！',
   bossNew: '新 BOSS 登场',
   bossWeak: '弱点：{weak}',
