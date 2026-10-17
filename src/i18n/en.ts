@@ -5,6 +5,7 @@ export const en = {
   upgrade: 'Upgrade',
   wave: 'Wave {n}/{total}',
   waveEndless: 'Wave {n}',
+  endlessChapter: 'Onward to the {name}',
   bossWave: 'BOSS WAVE!',
   bossNew: 'New boss',
   bossWeak: 'Weak to {weak}',

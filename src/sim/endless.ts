@@ -48,9 +48,12 @@ export function endlessOpen(m: MetaSave): boolean {
   return m.cleared >= E.unlock;
 }
 
-/** The battle setup of an endless run: the player's potions and workshop on the endless stage. */
+/** The battle setup of an endless run: the player's potions and workshop on the endless stage,
+ *  its enemies `endless.hpScale` as tough (the stage is a chapter finale, whose extra hit points
+ *  are for the one stage battle, not for a run that keeps growing). */
 export function endlessSetup(m: MetaSave): BattleSetup {
-  return { ...battleSetup(m, E.stage), endless: true };
+  const setup = battleSetup(m, E.stage);
+  return { ...setup, enemyHp: setup.enemyHp * E.hpScale, endless: true };
 }
 
 /** Counts a run as started. */

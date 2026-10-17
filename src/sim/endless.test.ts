@@ -3,10 +3,10 @@ import { Battle } from './battle';
 import { playOut } from './bot';
 import { rollDay } from './daily';
 import { bookEndless, endlessOpen, endlessPay, endlessSetup, milestonesOf, nextMilestone, parseEndless } from './endless';
-import { newMeta, parseMeta, Purse } from './meta';
+import { newMeta, parseMeta, Purse, stageHp } from './meta';
 import { Prng } from './math/prng';
 import { BALANCE, BOSS_KINDS, HERO_KINDS, isBoss } from './types';
-import { bossForStage, crowdOf, endlessBoss, endlessBossesMet, isBossWave, planWave, waveKinds } from './waves';
+import { bossForStage, crowdOf, endlessBoss, endlessBossesMet, endlessChapter, endlessSpeed, endlessTheme, isBossWave, planWave, waveKinds } from './waves';
 
 const E = BALANCE.endless;
 /** Hit points a wave sends, averaged over a few rolls of its mix. */
@@ -99,11 +99,60 @@ describe('endless waves', () => {
   });
 });
 
+describe('endless chapters', () => {
+  it('moves on a chapter every band of waves, the outskirts first, round and round', () => {
+    const at = (w: number) => BALANCE.chapters[endlessChapter(w) - 1].id;
+    expect([1, 10, 11, 20, 21, 31, 41, 50, 51, 61].map(at)).toEqual(['outskirts', 'outskirts', 'snowfield', 'snowfield', 'railyard', 'foundry', 'clocktower', 'clocktower', 'outskirts', 'snowfield']);
+    expect(endlessChapter(E.stage)).toBe(1);
+  });
+
+  it("plans each band with its chapter's theme", () => {
+    const share = (wave: number, kind: string) => {
+      let n = 0;
+      let all = 0;
+      for (let seed = 1; seed <= 30; seed++) {
+        const plan = planWave(wave, new Prng(seed), E.stage, undefined, true);
+        n += plan.filter((s) => s.kind === kind).length;
+        all += plan.length;
+      }
+      return n / all;
+    };
+    // the rail yard's crowd runs, the foundry brings one more winder, the clock tower elites
+    expect(share(22, 'runner')).toBeGreaterThan(share(19, 'runner') * 1.3);
+    const winders = (w: number) => planWave(w, new Prng(1), E.stage, undefined, true).filter((s) => s.kind === 'winder').length;
+    // (past the cap of the stage's own, so the foundry's second lap shows it plainly)
+    expect(winders(81)).toBe(winders(79) + 1);
+    expect(winders(89)).toBe(winders(91) + 1);
+    expect(winders(89)).toBeGreaterThan(E.winderMax);
+    expect(planWave(41, new Prng(1), E.stage, undefined, true).some((s) => s.elite)).toBe(true);
+    expect(planWave(39, new Prng(1), E.stage, undefined, true).some((s) => s.elite)).toBe(false);
+    expect(endlessSpeed(15)).toBe(endlessTheme(15).speed);
+    expect(endlessSpeed(25)).toBeGreaterThan(1);
+    expect(endlessSpeed(45)).toBe(1);
+  });
+
+  it('walks the rail yard faster than the snowfield', () => {
+    const speedIn = (wave: number) => {
+      const b = new Battle(7, endlessSetup(cleared(BALANCE.meta.heroMax)));
+      (b as unknown as { startWave(w: number): void }).startWave(wave);
+      for (let i = 0; i < 200 && !b.enemies.some((e) => e.kind === 'grunt'); i++) b.step();
+      const g = b.enemies.filter((e) => e.kind === 'grunt');
+      return g.reduce((a, e) => a + e.speed, 0) / g.length;
+    };
+    expect(speedIn(21)).toBeGreaterThan(speedIn(11) * 1.08);
+  });
+});
+
 describe('endless battle', () => {
   it('never runs out of waves: it goes past the last wave and only ends when the wall falls', () => {
     const b = playOut(11, 1500, endlessSetup(cleared(BALANCE.meta.heroMax)));
     expect(b.wave).toBeGreaterThan(BALANCE.waves.count);
     expect(b.result).not.toBe('won');
+  });
+
+  it("takes the finale's extra hit points off the endless stage", () => {
+    expect(endlessSetup(cleared()).enemyHp).toBeCloseTo(stageHp(E.stage) * E.hpScale, 9);
+    expect(E.hpScale).toBeLessThan(1);
   });
 
   it('a stage battle still ends after its last wave', () => {

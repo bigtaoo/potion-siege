@@ -20,7 +20,7 @@ import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, isBoss, type BattleEvent, type Enemy, type EnemyKind, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
-import { crowdOf, isBossWave, planWave, type Spawn } from './waves';
+import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
 /** Mixed into the seed for each stream but the enemies' (Prng hashes its seed, so the streams
@@ -497,7 +497,7 @@ export class Battle {
     const id = this.nextId;
     const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
     const y = at ? at.y : K.top - radius;
-    const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm(this.setup.modifiers?.enemySpeed ?? 1));
+    const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm((this.setup.modifiers?.enemySpeed ?? 1) * (this.setup.endless ? endlessSpeed(this.wave) : 1)));
     const e: Enemy = {
       id: this.nextId++,
       kind: s.kind,

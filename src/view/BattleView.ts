@@ -5,6 +5,7 @@ import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, typ
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { stageField } from '../sim/chapters';
+import { endlessChapter } from '../sim/waves';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
@@ -28,6 +29,14 @@ const WALL_TOP = G.y0 + G.cellH * (G.rows - 1) - F.parapet;
 const WALL_BOTTOM = G.y0 + G.cellH * G.rows;
 /** How far down the field art reaches; the wall covers its bottom. */
 const FIELD_H = WALL_BOTTOM;
+/** Seconds one field takes to fade into the next. */
+const FIELD_FADE = 1.6;
+
+/** The field `b` is on in `wave` (its current one by default): its stage's chapter, or in endless
+ *  mode the chapter of the wave's band. */
+function fieldOf(b: Battle, wave = b.wave): string {
+  return b.setup.endless ? BALANCE.chapters[endlessChapter(wave) - 1].bg : stageField(b.setup.stage);
+}
 /** Design y where the wall's inner face ends and the workshop floor starts. */
 const FLOOR_Y = 1672;
 /** Where the figures of a level 1-3 cell stand, back to front, and how tall they are. */
@@ -121,6 +130,11 @@ export class BattleView extends Container {
   private shake = 0;
   /** The field art under the battle, when there is art. */
   private field: Sprite | null = null;
+  /** The field the battle is on now, and the next one fading in over it (endless mode moves on a
+   *  chapter every few waves). */
+  private fieldKey = '';
+  private readonly fieldNext = new Sprite();
+  private fieldFade = 0;
   private battle: Battle | null = null;
   private time = 0;
   private idle = 0;
@@ -142,7 +156,9 @@ export class BattleView extends Container {
 
   attach(battle: Battle): void {
     this.battle = battle;
-    this.showField(stageField(battle.setup.stage));
+    this.fieldFade = 0;
+    this.fieldNext.visible = false;
+    this.showField(fieldOf(battle));
     this.fxList = [];
     this.dragFrom = null;
     this.cmdPulse = 0;
@@ -163,6 +179,13 @@ export class BattleView extends Container {
   react(events: BattleEvent[]): void {
     for (const ev of events) {
       switch (ev.type) {
+        case 'wave':
+          if (this.battle?.setup.endless) {
+            if (fieldOf(this.battle, ev.wave) !== this.fieldKey) this.showField(fieldOf(this.battle, ev.wave), true);
+            // the next band's field, so it is in by the time the battle gets there
+            void loadField(fieldOf(this.battle, ev.wave + BALANCE.endless.chapterEvery));
+          }
+          break;
         case 'hit':
           // the fire blast is wide, so it goes on the ground and the enemies in it stay visible
           this.effect(HIT_TIME[ev.kind], (g, life) => hitEffect(g, ev.kind, ev.x, ev.y, ev.radius, 1 - life), ev.kind === 'fire');
@@ -273,6 +296,14 @@ export class BattleView extends Container {
     this.position.set((Math.random() - 0.5) * this.shake * 40, (Math.random() - 0.5) * this.shake * 40);
 
     this.time += dt;
+    if (this.fieldFade > 0) {
+      this.fieldFade = Math.max(0, this.fieldFade - dt);
+      this.fieldNext.alpha = 1 - this.fieldFade / FIELD_FADE;
+      if (this.fieldFade === 0 && this.field) {
+        this.field.texture = this.fieldNext.texture;
+        this.fieldNext.visible = false;
+      }
+    }
     const t = this.time;
     const w = this.world.clear();
     const u = this.under.clear();
@@ -601,6 +632,8 @@ export class BattleView extends Container {
       s.width = DESIGN_W;
       s.height = FIELD_H;
       this.addChildAt(s, this.getChildIndex(g));
+      this.fieldNext.visible = false;
+      this.addChildAt(this.fieldNext, this.getChildIndex(g));
     } else {
       g.rect(F.left - 20, 0, F.right - F.left + 40, WALL_TOP).fill(COLORS.fieldEdge);
       g.rect(F.left, 0, F.right - F.left, WALL_TOP).fill(COLORS.field);
@@ -622,10 +655,23 @@ export class BattleView extends Container {
     }
   }
 
-  /** Lays the chapter's field under the battle, once it has come in if it is still on its way. */
-  private showField(key: string): void {
+  /** Lays the chapter's field under the battle, once it has come in if it is still on its way;
+   *  `fade`: over the one there, in FIELD_FADE seconds. */
+  private showField(key: string, fade = false): void {
+    this.fieldKey = key;
     const set = (t: Texture | undefined) => {
-      if (!this.field || !t || this.battle?.setup.stage === undefined || stageField(this.battle.setup.stage) !== key) return;
+      if (!this.field || !t || this.fieldKey !== key) return;
+      if (fade && this.field.texture !== t) {
+        if (this.fieldFade > 0) this.field.texture = this.fieldNext.texture;
+        const n = this.fieldNext;
+        n.texture = t;
+        n.width = DESIGN_W;
+        n.height = FIELD_H;
+        n.alpha = 0;
+        n.visible = true;
+        this.fieldFade = FIELD_FADE;
+        return;
+      }
       this.field.texture = t;
       this.field.width = DESIGN_W;
       this.field.height = FIELD_H;
