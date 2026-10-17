@@ -6,9 +6,9 @@ import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
-import { BALANCE, ENEMY_KINDS, type BattleEvent, type HeroKind } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
-import { fit, ink, LIGHT, lightTile, modifierIcon } from './kit';
+import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -20,7 +20,11 @@ export class Hud extends Container {
   private readonly waveText = label('', 56);
   private readonly stageText = label('', 44, { fill: COLORS.gold });
   private readonly goldText = label('', 56, { fill: COLORS.gold });
-  private readonly hintText = label(t('hint'), 36, { wordWrap: true, wordWrapWidth: 900, breakWords: true, align: 'center' });
+  /** The opening hint as a banner: cream words on a dark plate with a brass rim, under the wave line. */
+  private readonly hintText = label(t('hint'), 46, { fill: 0xfff3d6, wordWrap: true, wordWrapWidth: 860, breakWords: true, align: 'center', lineHeight: 60 });
+  private readonly hintPlate = new Graphics();
+  private readonly hintBox = new Container();
+  private hintSize = '';
   private readonly banner = label('', 76, { fill: COLORS.gold });
   /** Under the wave banner, on the wave a kind first comes in: its name and what it fears. */
   private readonly newcomer = label('', 44, { wordWrap: true, wordWrapWidth: 960, breakWords: true, align: 'center' });
@@ -32,6 +36,8 @@ export class Hud extends Container {
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
   private newcomerTime = 0;
+  /** A new chapter boss's card: its art, name, what it does and what it is weak to. */
+  private readonly bossCard = new Container();
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
   hint = true;
@@ -50,13 +56,14 @@ export class Hud extends Container {
     this.goldText.position.set(130, 60);
     // hung from its top, under the wave line, so a bigger hint grows down the field
     this.hintText.anchor.set(0.5, 0);
-    this.hintText.position.set(DESIGN_W / 2, 108);
+    this.hintBox.position.set(DESIGN_W / 2, 118);
+    this.hintBox.addChild(this.hintPlate, this.hintText);
     // high on the field, above where the enemies walk in, so it does not hide them
     this.banner.position.set(DESIGN_W / 2, 270);
     this.banner.alpha = 0;
     this.newcomer.position.set(DESIGN_W / 2, 370);
     this.newcomer.alpha = 0;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintText, this.banner, this.newcomer, this.mods, this.upgradeButton, this.summonButton);
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods, this.upgradeButton, this.summonButton);
   }
 
   attach(battle: Battle): void {
@@ -65,6 +72,7 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
+    this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
   }
@@ -80,9 +88,9 @@ export class Hud extends Container {
     this.goldText.x = 130 + (top - 1) * 30;
     this.coin.scale.set(top);
     this.coin.position.set(90 * (1 - top), 60 * (1 - top));
-    this.hintText.scale.set(k);
-    this.hintText.y = 108 + (top - 1) * 40;
-    this.hintText.style.wordWrapWidth = 960 / k;
+    this.hintBox.scale.set(Math.min(k, 1.3));
+    this.hintBox.y = 118 + (top - 1) * 40;
+    this.hintText.style.wordWrapWidth = 940 / Math.min(k, 1.3) - 80;
     this.newcomer.scale.set(Math.min(k, 1.3));
     this.newcomer.style.wordWrapWidth = 960 / Math.min(k, 1.3);
   }
@@ -122,10 +130,39 @@ export class Hud extends Container {
       const kind = ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
       if (kind) {
         const weak = resists(kind).filter((r) => r.value > 1).map((r) => t(`hero.${r.element}`));
-        this.newcomer.text = t('newEnemy', { name: t(`enemy.${kind}`), weak: weak.join(t('listSep')) });
+        if (isBoss(kind)) {
+          this.newcomer.text = '';
+          this.showBoss(kind, weak.join(t('listSep')));
+        } else this.newcomer.text = t('newEnemy', { name: t(`enemy.${kind}`), weak: weak.join(t('listSep')) });
         this.newcomerTime = 5;
       }
     }
+  }
+
+  private showBoss(kind: BossKind, weak: string): void {
+    const c = this.bossCard;
+    c.removeChildren().forEach((o) => o.destroy({ children: true }));
+    const w = 860;
+    const h = 250;
+    const art = enemySprite(kind, 200, 220);
+    art.position.set(-w / 2 + 130, 0);
+    const tag = bossTag(22);
+    tag.position.set(-w / 2 + 130, h / 2 - 26);
+    const tx = -w / 2 + 250;
+    const room = w / 2 - 30 - tx;
+    const head = fit(ink(t('bossNew'), 26, { fill: LIGHT.edge }), room);
+    const name = fit(ink(t(`enemy.${kind}`), 48), room);
+    const lines = [head, name];
+    if (kind !== 'boss') lines.push(fit(ink(t(`codex.trait.${kind}`), 28), room));
+    lines.push(fit(ink(t('bossWeak', { weak }), 28, { fill: 0xb23a2a }), room));
+    c.addChild(lightTile(w, h, 28), art, tag);
+    lines.forEach((l, i) => {
+      l.anchor.set(0, 0.5);
+      l.position.set(tx, -h / 2 + 40 + i * 56);
+      c.addChild(l);
+    });
+    // under the BOSS WAVE banner
+    c.position.set(DESIGN_W / 2, 500);
   }
 
   update(dt: number): void {
@@ -144,13 +181,29 @@ export class Hud extends Container {
       const h = btn.text.height / raw;
       btn.text.scale.set(Math.min(this.boost, (BUTTON.w - 36) / w, (BUTTON.h - 12) / h));
     }
-    this.hintText.visible = this.hint && b.seconds < HINT_SECONDS && this.mods.children.length === 0;
+    this.hintBox.visible = this.hint && b.seconds < HINT_SECONDS && this.mods.children.length === 0;
+    if (this.hintBox.visible) this.fitHint();
+    // it fades out over its last second
+    this.hintBox.alpha = Math.min(1, HINT_SECONDS - b.seconds);
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);
     this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.7) * 0.6);
     this.newcomerTime = b.paused ? this.newcomerTime : Math.max(0, this.newcomerTime - dt);
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
+    this.bossCard.alpha = this.newcomer.alpha;
+    this.bossCard.scale.set(1 + Math.max(0, this.newcomerTime - 4.8) * 0.8);
+  }
+
+  /** The hint's plate around its words, drawn again when they wrap differently. */
+  private fitHint(): void {
+    const w = this.hintText.width + 64;
+    const h = this.hintText.height + 30;
+    const size = `${Math.round(w)}x${Math.round(h)}`;
+    if (size === this.hintSize) return;
+    this.hintSize = size;
+    this.hintText.y = 15;
+    this.hintPlate.clear().roundRect(-w / 2, 0, w, h, 28).fill({ color: 0x14202c, alpha: 0.82 }).stroke({ width: 5, color: P.brass });
   }
 
   /** Where a button is on the board, for the tutorial to point at. */

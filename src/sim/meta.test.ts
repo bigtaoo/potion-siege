@@ -1,8 +1,9 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
+import { rollDay } from './daily';
 import {
   AD_CRYSTALS, adsLeft, ADS_PER_DAY, applyRun, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, CHEST_CRYSTALS, chestReady, claimAd, claimChest,
-  endOffers, FIRST_SEED, firstSeed, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward, swapLineup, unlockHero, unlockPrice, unlockStage,
+  DOUBLES_PER_DAY, doublesLeft, endOffers, FIRST_SEED, firstSeed, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, Purse, runReward, swapLineup, unlockHero, unlockPrice, unlockStage,
 } from './meta';
 import { BALANCE, LINEUP } from './types';
 
@@ -161,13 +162,64 @@ describe('meta', () => {
   it('offers the ×2 only when no revive is on offer, once per battle', () => {
     const purse = new Purse();
     purse.settle(newMeta(), { stage: 1, won: false, wave: 6, kills: 40 });
-    expect(endOffers(true, false, true, purse)).toEqual({ revive: true, double: false });
-    expect(endOffers(true, true, true, purse)).toEqual({ revive: false, double: true });
-    expect(endOffers(false, false, true, purse)).toEqual({ revive: false, double: true });
-    expect(endOffers(true, true, false, purse)).toEqual({ revive: false, double: false });
+    const m = newMeta();
+    expect(endOffers(m, true, false, true, purse)).toEqual({ revive: true, double: false, capped: false });
+    expect(endOffers(m, true, true, true, purse)).toEqual({ revive: false, double: true, capped: false });
+    expect(endOffers(m, false, false, true, purse)).toEqual({ revive: false, double: true, capped: false });
+    expect(endOffers(m, true, true, false, purse)).toEqual({ revive: false, double: false, capped: false });
     purse.double(newMeta(), false);
-    expect(endOffers(true, true, true, purse).double).toBe(false);
-    expect(endOffers(false, false, true, new Purse()).double).toBe(false);
+    expect(endOffers(m, true, true, true, purse).double).toBe(false);
+    expect(endOffers(m, false, false, true, new Purse()).double).toBe(false);
+  });
+
+  it('pays the ×2 doublesPerDay times a day, then shows it used up', () => {
+    const m = newMeta();
+    rollDay(m, '2026-10-15');
+    const battle = () => {
+      const purse = new Purse();
+      purse.settle(m, { stage: 1, won: false, wave: 6, kills: 40 });
+      return purse;
+    };
+    expect(DOUBLES_PER_DAY).toBe(BALANCE.shop.doublesPerDay);
+    for (let i = 0; i < DOUBLES_PER_DAY; i++) {
+      const purse = battle();
+      expect(doublesLeft(m)).toBe(DOUBLES_PER_DAY - i);
+      expect(endOffers(m, false, false, true, purse)).toEqual({ revive: false, double: true, capped: false });
+      expect(purse.double(m, true)).toBeGreaterThan(0);
+    }
+    expect(doublesLeft(m)).toBe(0);
+    const purse = battle();
+    expect(endOffers(m, false, false, true, purse)).toEqual({ revive: false, double: false, capped: true });
+    // no ads, or a revive on offer: nothing to grey out
+    expect(endOffers(m, false, false, false, purse).capped).toBe(false);
+    expect(endOffers(m, true, false, true, purse).capped).toBe(false);
+    const before = m.crystals;
+    expect(purse.double(m, true)).toBe(0);
+    expect(m.crystals).toBe(before);
+    rollDay(m, '2026-10-16');
+    expect(doublesLeft(m)).toBe(DOUBLES_PER_DAY);
+    expect(battle().double(m, true)).toBeGreaterThan(0);
+  });
+
+  it('does not count a failed or empty ×2 against the day', () => {
+    const m = newMeta();
+    const purse = new Purse();
+    purse.settle(m, { stage: 1, won: false, wave: 6, kills: 40 });
+    purse.double(m, false);
+    new Purse().double(m, true);
+    expect(doublesLeft(m)).toBe(DOUBLES_PER_DAY);
+  });
+
+  it('reads an old save without the ×2 count as none used today', () => {
+    const m = newMeta();
+    rollDay(m, '2026-10-15');
+    const old = JSON.parse(JSON.stringify(m));
+    delete old.daily.doubles;
+    const back = parseMeta(JSON.stringify(old));
+    expect(back.daily.doubles).toBe(0);
+    expect(doublesLeft(back)).toBe(DOUBLES_PER_DAY);
+    m.daily.doubles = 2;
+    expect(parseMeta(JSON.stringify(m)).daily.doubles).toBe(2);
   });
 
   it('plays stage 1 on the fixed first seed until the first win', () => {

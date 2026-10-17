@@ -14,6 +14,12 @@ const FILES = [
   'enemy_boss',
   'enemy_flyer',
   'enemy_winder',
+  'enemy_clock',
+  'enemy_tripod',
+  'enemy_tripod_bare',
+  'enemy_anvil',
+  'enemy_gear',
+  'enemy_gear_core',
   'icon_crit',
   'commander',
   'potion_fire_body',
@@ -173,8 +179,11 @@ export function fieldTexture(key = 'bg_field'): Texture | undefined {
   return textures.get(key) ?? textures.get('bg_field');
 }
 
-export function enemyTexture(kind: EnemyKind): Texture | undefined {
-  return textures.get(`enemy_${kind}`);
+/** `e`, when given, picks the look of a boss's second state: the tripod without its jar, the
+ *  gear king's bare core. */
+export function enemyTexture(kind: EnemyKind, e?: { shieldMax?: number; shield?: number; core?: boolean }): Texture | undefined {
+  const look = kind === 'tripod' && e?.shieldMax && !e.shield ? 'tripod_bare' : kind === 'gear' && e?.core ? 'gear_core' : kind;
+  return textures.get(`enemy_${look}`) ?? textures.get(`enemy_${kind}`);
 }
 
 /** The tutorial's pointing glove, fingertip up and to the right (see Tutorial.ts). */

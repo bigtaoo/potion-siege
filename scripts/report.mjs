@@ -97,6 +97,31 @@ if (assists.length) {
   console.log(`tutorial did it for them: ${[...by].map(([k, n]) => `${k} ${n}`).join(', ')}`);
 }
 
+// --- first session, battle 1 to battle 3: who gets how far, and what the result screen's tap was ---
+const s1 = events.filter((e) => e.session === 1 && newUids.has(e.uid));
+const reached = (pred) => new Set(s1.filter(pred).map((e) => e.uid));
+const funnelRow = (label, set, extra = '') => console.log(label.padEnd(24), pct(set.size, newUids.size).padStart(7), `  (${set.size})${extra}`);
+console.log(`\n== First session, battles 1-3 (${newUids.size} players) ==`);
+funnelRow('loaded', newUids);
+funnelRow('first_input', reached((e) => e.name === 'first_input'));
+for (const step of ['summon', 'merge', 'upgrade', 'pick']) {
+  const rows = s1.filter((e) => e.name === 'tutorial_step' && e.props.step === step);
+  if (!rows.length) continue;
+  const helped = rows.filter((e) => e.props.by === 'assist').length;
+  const secs = median(rows.flatMap((e) => (e.props.shownT === null ? [] : [e.props.doneT - e.props.shownT])));
+  funnelRow(`tutorial ${step}`, new Set(rows.map((e) => e.uid)), `  assist ${pct(helped, rows.length)}, median ${secs}s on screen`);
+}
+const run1 = reached((e) => e.name === 'run_end' && e.props.run === 1);
+funnelRow('run 1 end', run1);
+const acts = s1.filter((e) => e.name === 'result_action' && e.props.run === 1);
+const firstAct = new Map(); // uid -> the first tap on run 1's result
+for (const e of acts) if (!firstAct.has(e.uid)) firstAct.set(e.uid, e);
+const byAct = new Map();
+for (const e of firstAct.values()) byAct.set(e.props.action, [...(byAct.get(e.props.action) ?? []), e.props.secs]);
+for (const [action, secs] of byAct) funnelRow(`  result: ${action}`, new Set([...firstAct].filter(([, e]) => e.props.action === action).map(([uid]) => uid)), `  median ${median(secs)}s`);
+funnelRow('run 2 start', reached((e) => e.name === 'run_start' && e.props.run === 2));
+funnelRow('run 3 start', reached((e) => e.name === 'run_start' && e.props.run === 3));
+
 // --- session length ---
 const sessionSecs = events.filter((e) => e.name === 'session_end').map((e) => e.props.secs);
 console.log(`\n== Sessions ==\nmedian length ${median(sessionSecs)}s over ${sessionSecs.length} ended sessions`);

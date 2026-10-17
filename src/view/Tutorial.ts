@@ -138,14 +138,10 @@ export class TutorialLayer extends Container {
 
   /** Swaps the drawn glove for the painted one once it has loaded. */
   private useHandArt(): void {
-    const tex = handTexture();
-    if (!tex || this.hand.children[0] instanceof Sprite) return;
+    if (this.hand.children[0] instanceof Sprite) return;
+    const art = handArt();
+    if (!art) return;
     this.hand.removeChildren().forEach((c) => c.destroy());
-    const art = new Sprite(tex);
-    // the fingertip, in the art's own pixels; the painting points up and to the right
-    art.anchor.set(334 / tex.width, 18 / tex.height);
-    art.rotation = -1.03;
-    art.scale.set(0.68 * (343 / tex.width));
     this.hand.addChild(art);
   }
 
@@ -179,6 +175,24 @@ export class TutorialLayer extends Container {
       this.hand.scale.set(1);
     }
   }
+}
+
+/** The painted glove pointing up, its fingertip at the origin; undefined until it has loaded. */
+function handArt(): Sprite | undefined {
+  const tex = handTexture();
+  if (!tex) return undefined;
+  const art = new Sprite(tex);
+  // the fingertip, in the art's own pixels; the painting points up and to the right
+  art.anchor.set(334 / tex.width, 18 / tex.height);
+  art.rotation = -1.03;
+  art.scale.set(0.68 * (343 / tex.width));
+  return art;
+}
+
+/** A pointing hand for other screens, its fingertip at the origin: the painted glove, or the
+ *  drawn one while the art is not in. */
+export function pointingHand(): Container {
+  return handArt() ?? handShape();
 }
 
 /** Until public/art/tutorial_hand.png is in: a gloved hand pointing up, its fingertip at the origin: the index finger out, the other

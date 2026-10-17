@@ -6,11 +6,11 @@ import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { stageField } from '../sim/chapters';
 import { mergeablePair } from '../sim/tutorial';
-import { FP, TICK_RATE, toFp } from '../sim/math/fixed';
+import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
 import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
 import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, loadField, potionLook, ultimateTexture } from './art';
-import { HIT_TIME, chainBolt, gearBurst, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
+import { HIT_TIME, chainBolt, gearBurst, glassShards, stunStars, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { healthTube, innerFace, slab, summonCircle, wallTop, workshopFloor, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
@@ -217,6 +217,40 @@ export class BattleView extends Container {
         case 'rewind':
           this.effect(0.7, (g, life) => rewindWave(g, ev.x, ev.y, ev.radius, 1 - life), true);
           break;
+        case 'brood':
+          // the pendulum door bangs open and the mice tumble out at its feet
+          this.burst(ev.x, ev.y + 40, 110, 0xd9a441, 0.4);
+          break;
+        case 'jar':
+          if (ev.up) this.burst(ev.x, ev.y - 120, 170, 0x8fe6f0, 0.5);
+          else {
+            // the bell jar bursts into glass
+            const { x, y } = ev;
+            this.effect(0.6, (g, life) => glassShards(g, x, y - 120, 1 - life));
+            this.shake = Math.max(this.shake, 0.15);
+          }
+          break;
+        case 'leap':
+          this.burst(ev.x, ev.y + 60, 90, 0xb8a07a, 0.35);
+          break;
+        case 'slam': {
+          // the anvil comes down on the wall: the potions under it see stars
+          this.shake = Math.max(this.shake, 0.35);
+          this.burst(ev.x, ev.y + 60, 160, 0xff7a2a, 0.4);
+          for (const slot of ev.slots) {
+            const c = slotCenter(slot);
+            this.burst(c.x, c.y, 100, 0xffe25a, 0.35);
+          }
+          break;
+        }
+        case 'crack': {
+          // the rim shatters off the gear king and the crowned core runs on
+          const { x, y } = ev;
+          this.effect(0.9, (g, life) => gearBurst(g, x, y, true, 1 - life));
+          this.burst(x, y - 100, 200, 0xb58cff, 0.5);
+          this.shake = Math.max(this.shake, 0.4);
+          break;
+        }
         case 'gust':
           this.effect(0.5, (g, life) => gustWave(g, F.left, F.right, ev.y, ev.depth, 1 - life), true);
           break;
@@ -247,9 +281,10 @@ export class BattleView extends Container {
     depth.length = 0;
     for (let i = 0; i < b.enemies.length; i++) {
       const e = b.enemies[i];
-      const o = (this.drawn[i] ??= { ...e });
-      Object.assign(o, e);
-      o.elite = e.elite; // optional, so a reused copy would keep the last one's
+      // a fresh copy for a new enemy: a boss's optional fields (shield, core...) must not linger
+      let o = this.drawn[i];
+      if (!o || o.id !== e.id) o = this.drawn[i] = { ...e };
+      else Object.assign(o, e);
       o.x = lerpX(e, alpha);
       o.y = lerpY(e, alpha);
       o.radius = e.radius / FP;
@@ -257,7 +292,7 @@ export class BattleView extends Container {
     }
     depth.sort(byDepth);
     for (const e of depth) {
-      const tex = enemyTexture(e.kind);
+      const tex = enemyTexture(e.kind, e);
       if (!tex) {
         drawEnemy(w, e);
         continue;
@@ -280,6 +315,23 @@ export class BattleView extends Container {
         const hop = Math.abs(Math.sin(step * 2)) * 0.35;
         s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height * (1 + jolt * 0.12));
         s.rotation = Math.sin(step * 2) * 0.03;
+      } else if (e.kind === 'anvil') {
+        // on its spring: it crouches before a leap, sails up in an arc, and squashes as it lands
+        const A = BALANCE.bosses.anvil;
+        const flight = ticks(A.leapTime);
+        const up = e.leapTime ? Math.sin(Math.PI * (1 - e.leapTime / flight)) : 0;
+        const crouch = !e.leapTime && !e.atWall && e.hopTime !== undefined && e.hopTime < 8 ? 1 - e.hopTime / 8 : 0;
+        const bob = Math.abs(Math.sin(step * 1.5)) * 0.4;
+        s = this.enemyArt.put(tex, e.x, feet - up * 130 - bob * 6, e.radius * ENEMY_ART.height);
+        s.scale.y *= 1 - crouch * 0.18 + up * 0.1;
+        s.scale.x *= 1 + crouch * 0.1 - up * 0.05;
+        s.rotation = 0;
+      } else if (e.kind === 'gear') {
+        // the cog rolls from side to side; the bare core scurries on its legs
+        const core = !!e.core;
+        const hop = Math.abs(Math.sin(step * (core ? 2 : 1)));
+        s = this.enemyArt.put(tex, e.x, feet - hop * (core ? 10 : 4), e.radius * ENEMY_ART.height * (core ? 0.8 : 1));
+        s.rotation = core ? Math.sin(step * 2) * 0.06 : Math.sin(step * 0.8) * 0.12;
       } else {
         // the tank rolls on tracks: no steps, only a rumble
         const tracks = e.kind === 'boss';
@@ -393,6 +445,7 @@ export class BattleView extends Container {
       });
       const hop = hint?.includes(s) ? Math.abs(Math.sin(t * 7)) * 16 : 0;
       this.hero(g, ho, this.heroArt, this.potions, h.kind, h.star, c.x, c.y - 10 - hop, 1, s === from ? 0.35 : 1, s, dim, anim);
+      if (h.stunTime) stunStars(ho, c.x, c.y - G.cellH / 2 - 6, t);
     }
     this.drawPours(ho);
     this.drawCommander(g, ho, b, dt);

@@ -12,15 +12,15 @@
 // the same battle on every engine (replay.ts), which determinismLint.test.ts and replay.test.ts
 // hold it to.
 
-import { resist } from './enemies';
+import { resistOf } from './enemies';
 import { dist, dist2, FP, muldiv, perTick, TICK_RATE, ticks, toFp } from './math/fixed';
 import { pick } from './math/pick';
 import { Prng } from './math/prng';
 import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
-import { BALANCE, type BattleEvent, type Enemy, type EnemyKind, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
-import { isBossWave, planWave, type Spawn } from './waves';
+import { BALANCE, isBoss, type BattleEvent, type Enemy, type EnemyKind, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import { isBossWave, planWave, waveHp, type Spawn } from './waves';
 
 const B = BALANCE;
 /** Mixed into the seed for each stream but the enemies' (Prng hashes its seed, so the streams
@@ -186,6 +186,8 @@ export class Battle {
   /** Shots per hero id, for the lightning sky strike and the wind gust. */
   private shotCount = new Map<number, number>();
   private pending: Spawn[] = [];
+  /** Enemies let out on the field this tick, brought on after the enemies have moved. */
+  private hatch: { s: Spawn; x: number; y: number }[] = [];
   private events: BattleEvent[] = [];
   /** The array drain() handed out last time, refilled after the next drain. */
   private drained: BattleEvent[] = [];
@@ -425,7 +427,7 @@ export class Battle {
   private doRevive(): boolean {
     if (this.result !== 'lost') return false;
     this.wall = Math.trunc(this.wallMax / 2);
-    this.enemies = this.enemies.filter((e) => e.kind === 'boss');
+    this.enemies = this.enemies.filter((e) => isBoss(e.kind));
     this.result = null;
     return true;
   }
@@ -481,18 +483,20 @@ export class Battle {
     this.waveTime++;
     while (this.pending.length > 0 && this.pending[0].at <= this.waveTime) this.spawn(this.pending.shift()!);
     const w = B.waves;
-    const bossAlive = this.enemies.some((e) => e.kind === 'boss');
+    const bossAlive = this.enemies.some((e) => isBoss(e.kind));
     if ((this.setup.endless || this.wave < w.count) && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
       this.startWave(this.wave + 1);
     }
   }
 
-  private spawn(s: Spawn): void {
+  /** Brings `s` onto the field: at the top at a random x, or at `at` (FP) when something on the
+   *  field let it out. */
+  private spawn(s: Spawn, at?: { x: number; y: number }): void {
     const def = B.enemies[s.kind];
     const radius = toFp(s.elite ? def.radius * B.elite.radius : def.radius);
     const id = this.nextId;
-    const x = this.enemyRng.range(K.left + radius, K.right - radius);
-    const y = K.top - radius;
+    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
+    const y = at ? at.y : K.top - radius;
     const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm(this.setup.modifiers?.enemySpeed ?? 1));
     const e: Enemy = {
       id: this.nextId++,
@@ -532,7 +536,61 @@ export class Battle {
       e.phase = (id * K.weavePhase) % BRAD_FULL;
     }
     if (s.kind === 'winder') e.windTime = ticks(B.winder.every);
+    if (s.kind === 'clock') e.broodTime = ticks(B.bosses.clock.first);
+    if (s.kind === 'tripod') {
+      e.shield = e.shieldMax = times(s.hp, pm(B.bosses.tripod.shield));
+      e.shieldTime = 0;
+    }
+    if (s.kind === 'anvil') {
+      e.hopTime = ticks(B.bosses.anvil.every);
+      e.leapTime = 0;
+    }
     this.enemies.push(e);
+  }
+
+  /** The clock boss opens its pendulum door and lets clockwork mice out at its feet, half as
+   *  tough and half the gold of the wave's own. They come out after the loop over the field,
+   *  so they start moving on the next tick. */
+  private brood(c: Enemy): void {
+    const P = B.bosses.clock;
+    const hp = Math.round(waveHp(this.wave) * B.enemies.runner.hp * this.setup.enemyHp * P.hp * FP);
+    const spread = toFp(P.spread);
+    for (let i = 0; i < P.mice; i++) {
+      const side = P.mice === 1 ? 0 : muldiv(spread, 2 * i - (P.mice - 1), P.mice - 1);
+      this.hatch.push({ s: { at: 0, kind: 'runner', hp, gold: pm(P.gold) }, x: c.x + side, y: c.y + muldiv(c.radius, 1, 2) });
+    }
+    this.events.push({ type: 'brood', x: c.x / FP, y: c.y / FP });
+  }
+
+  /** How far an anvil on the way moves this tick, `step` walking: every so often it springs
+   *  forward a long way. Slowed, its spring cannot wind up, so the time to the next leap stands. */
+  private hop(e: Enemy, step: number): number {
+    const A = B.bosses.anvil;
+    if (e.leapTime! > 0) {
+      e.leapTime!--;
+      return Math.trunc(toFp(A.leap) / ticks(A.leapTime));
+    }
+    if (e.slowTime <= 0 && --e.hopTime! <= 0) {
+      e.hopTime = ticks(A.every);
+      e.leapTime = ticks(A.leapTime);
+      this.events.push({ type: 'leap', x: e.x / FP, y: e.y / FP });
+    }
+    return step;
+  }
+
+  /** An anvil at the wall slams down on it: a big bite out of the wall, and the potions in the
+   *  cells under it stand dazed for a while. */
+  private slam(e: Enemy): void {
+    const A = B.bosses.anvil;
+    this.wall -= K.wallDps.anvil * ticks(A.slam);
+    const reach = toFp(A.reach);
+    const slots: number[] = [];
+    for (const h of this.slots) {
+      if (!h || Math.abs(toFp(slotCenter(h.slot).x) - e.x) > reach) continue;
+      h.stunTime = Math.max(h.stunTime ?? 0, ticks(A.stun));
+      slots.push(h.slot);
+    }
+    this.events.push({ type: 'slam', x: e.x / FP, y: e.y / FP, slots });
   }
 
   /** The y of the frontmost enemy that is not a winder, or -Infinity with none on the field. */
@@ -553,7 +611,7 @@ export class Battle {
   private rewind(w: Enemy): void {
     const R = B.winder;
     for (const o of this.enemies) {
-      if (o === w || o.hp <= 0 || o.kind === 'boss' || !this.within(o, w.x, w.y, toFp(R.range))) continue;
+      if (o === w || o.hp <= 0 || isBoss(o.kind) || !this.within(o, w.x, w.y, toFp(R.range))) continue;
       o.hp = Math.min(o.maxHp, o.hp + times(o.maxHp, pm(R.heal)));
       o.freezeTime = 0;
       o.slowTime = 0;
@@ -595,27 +653,47 @@ export class Battle {
         // weaves from side to side on the way down; at the wall it hovers where it stopped
         e.x = e.x0! + muldiv(K.weave, sinB(e.phase! + muldiv(this.time, K.weaveRate, TICK_RATE)), TRIG_ONE);
       }
-      if (e.kind !== 'boss') for (const v of this.vortices) this.pull(e, v);
+      if (!isBoss(e.kind)) for (const v of this.vortices) this.pull(e, v);
       if (e.kind === 'winder' && !e.atWall) {
         if (--e.windTime! <= 0) {
           e.windTime = ticks(B.winder.every);
           this.rewind(e);
         }
       }
+      if (e.kind === 'clock' && --e.broodTime! <= 0) {
+        e.broodTime = ticks(B.bosses.clock.every);
+        this.brood(e);
+      }
+      if (e.kind === 'tripod' && e.shield! <= 0 && --e.shieldTime! <= 0) {
+        e.shield = e.shieldMax;
+        this.events.push({ type: 'jar', x: e.x / FP, y: e.y / FP, up: true });
+      }
+      if (e.guardTime) e.guardTime--;
       const wall = this.wallFront(e.x) - e.radius;
       // a winder keeps behind the crowd it winds, and waits for it
       const stop = e.kind === 'winder' && front > -Infinity ? Math.min(wall, Math.max(e.y, front - toFp(B.winder.gap))) : wall;
       if (e.y < stop) {
-        e.y = Math.min(stop, e.y + (e.slowTime > 0 ? times(e.speed, e.slowFactor) : e.speed));
+        const step = e.slowTime > 0 ? times(e.speed, e.slowFactor) : e.speed;
+        e.y = Math.min(stop, e.y + (e.kind === 'anvil' ? this.hop(e, step) : step));
       } else if (e.y >= wall) {
         // a cell just built under it pushes it back to the new front
         e.y = wall;
+        if (!e.atWall && e.kind === 'anvil') {
+          e.leapTime = 0;
+          e.hopTime = ticks(B.bosses.anvil.slamFirst);
+        }
         e.atWall = true;
         this.wall -= K.wallDps[e.kind];
         hitWall = true;
+        if (e.kind === 'anvil' && --e.hopTime! <= 0) {
+          e.hopTime = ticks(B.bosses.anvil.slamEvery);
+          this.slam(e);
+        }
       }
     }
     if (hitWall) this.events.push({ type: 'wallHit' });
+    for (const h of this.hatch) this.spawn(h.s, h);
+    this.hatch.length = 0;
   }
 
   /** Alive enemies, front (closest to the wall) first. */
@@ -627,6 +705,10 @@ export class Battle {
     let targets: Enemy[] | null = null;
     for (const h of this.slots) {
       if (!h) continue;
+      if (h.stunTime) {
+        h.stunTime--;
+        continue;
+      }
       h.cooldown -= h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
       if (h.cooldown > 0) continue;
       targets ??= this.targets();
@@ -836,7 +918,7 @@ export class Battle {
    *  its key spun the wrong way: its rewind starts over. */
   private push(e: Enemy, star: number): void {
     const W = B.heroes.wind;
-    if (e.kind === 'boss') {
+    if (isBoss(e.kind)) {
       this.slow(e, W.bossSlow, ticks(W.bossSlowTime));
       return;
     }
@@ -903,11 +985,38 @@ export class Battle {
    *  from (`by`; the commander's shots have none), the arcane mark and the corrosion's rust (all
    *  multiply), and for crediting that potion with what the enemy had left of it. */
   private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
-    let dealt = by ? times(damage, pm(resist(e.kind, by))) : damage;
+    if (e.guardTime) return;
+    if (e.shield) {
+      // the tripod's bell jar takes it all: frost cracks the glass, the rest barely marks it
+      const T = B.bosses.tripod;
+      let into = times(damage, pm(by === 'ice' ? T.ice : T.other));
+      if (e.markTime > 0) into = times(into, 1000 + this.fixed.mark);
+      if (by) this.dealt[by] += Math.max(0, Math.min(e.shield, into));
+      e.shield -= into;
+      if (e.shield <= 0) {
+        e.shield = 0;
+        e.shieldTime = ticks(T.regrow);
+        this.events.push({ type: 'jar', x: e.x / FP, y: e.y / FP, up: false });
+      }
+      return;
+    }
+    let dealt = by ? times(damage, pm(resistOf(e, by))) : damage;
     if (e.markTime > 0) dealt = times(dealt, 1000 + this.fixed.mark);
     dealt = times(dealt, 1000 + this.fixed.rustStep * e.rust);
     if (by) this.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
     e.hp -= dealt;
+    if (e.kind === 'gear' && !e.core && e.hp <= times(e.maxHp, pm(B.bosses.gear.at))) this.crack(e);
+  }
+
+  /** The gear king's iron rim flies apart at half its health, whatever the hit: the crowned core
+   *  stands a moment, then runs on faster, weak where the rim was strong. */
+  private crack(e: Enemy): void {
+    const G = B.bosses.gear;
+    e.hp = times(e.maxHp, pm(G.at));
+    e.core = true;
+    e.guardTime = ticks(G.guard);
+    e.speed = times(e.speed, pm(G.speed));
+    this.events.push({ type: 'crack', x: e.x / FP, y: e.y / FP });
   }
 
   /** A hit by another potion sets off the static a lightning hit left. */
@@ -966,12 +1075,12 @@ export class Battle {
   private freeze(e: Enemy, seconds: number, hit: number): void {
     const S = B.skills;
     const time = times(ticks(seconds), this.fixed.freezeTime);
-    if (e.kind !== 'boss' && e.kind !== 'flyer') {
+    if (!isBoss(e.kind) && e.kind !== 'flyer') {
       e.freezeTime = Math.max(e.freezeTime, time);
       return;
     }
     this.slow(e, S.bossFreezeSlow, time);
-    if (this.mods.shatter && e.kind === 'boss') {
+    if (this.mods.shatter && isBoss(e.kind)) {
       this.harm(e, times(hit, pm(S.bossShatter)), 'ice');
       this.events.push({ type: 'hit', kind: 'ice', x: e.x / FP, y: e.y / FP, radius: e.radius / FP });
     }
@@ -1026,7 +1135,7 @@ export class Battle {
       const gold = Math.round(((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold) / 1000);
       this.gold += gold;
       this.kills++;
-      this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: e.kind === 'boss' });
+      this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
       if (this.mods.fireChain && e.scorchTime > 0) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)

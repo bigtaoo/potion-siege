@@ -4,7 +4,7 @@ import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { CHALLENGE_TIERS, type ChallengeResult, type ModifierId } from '../sim/challenge';
 import { ENDLESS_MILESTONES, type EndlessResult } from '../sim/endless';
-import type { Reward } from '../sim/meta';
+import { DOUBLES_PER_DAY, type Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
 import {
@@ -133,7 +133,7 @@ export class Overlay extends Container {
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));
-    const buttons = endButtons(onContinue, onRevive);
+    const buttons = endButtons(onContinue, onRevive, more.onNext ?? null);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];
     const heights = cols.map((col) => col.reduce((a, c) => a + c.h, 0));
@@ -161,10 +161,15 @@ export class Overlay extends Container {
 export interface EndExtras {
   onDouble: (() => void) | null;
   doubled: boolean;
+  /** Today's ×2s left, shown under the ×2 (greyed out at 0); undefined hides the line. */
+  doublesLeft?: number;
   dealt: { kind: HeroKind; damage: number }[];
   onTip: ((tab: TipTab) => void) | null;
   /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
   challenge?: ChallengeEnd;
+  /** Straight into the next stage, the big button, with Continue as a smaller 返回 under it
+   *  (a new player's first wins). */
+  onNext?: (() => void) | null;
   /** An endless run's result: the wave it reached, the best and the next milestone. */
   endless?: EndlessEnd;
 }
@@ -343,10 +348,12 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
   what.anchor.set(0, 0.5);
   what.x = -iw / 2 + 40;
   c.addChild(what);
-  // with the ×2 on offer the gem and count follow the words; otherwise they sit on the right
-  const count = label(t('reward', { n: reward.crystals }), more.onDouble ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
+  // with the ×2 on offer (or greyed out, today's used up) the gem and count follow the words;
+  // otherwise they sit on the right
+  const button = more.onDouble !== null || more.doublesLeft === 0;
+  const count = label(t('reward', { n: reward.crystals }), button ? 72 : 84, { fill: 0x9beaff, stroke: { color: LIGHT.crystal, width: 8 } });
   count.anchor.set(1, 0.5);
-  if (more.onDouble) {
+  if (button) {
     // the words give way first (the English ones fill the row), so the count stays readable
     const end = iw / 2 - 290;
     const room = end - what.x - 100;
@@ -358,10 +365,18 @@ function purse(reward: Reward, more: EndExtras, iw: number): Section {
     count.x = iw / 2 - 40 - (more.doubled ? 110 : 0);
   }
   c.addChild(count, gem(new Graphics(), count.x - count.width - 44, -2, 40));
-  if (more.onDouble) {
-    const b = adButton(t('double'), 250, 104, 'purple', more.onDouble, 38);
+  if (button) {
+    const left = more.doublesLeft;
+    const b = adButton(t('double'), 250, left === undefined ? 104 : 80, 'purple', more.onDouble ?? (() => {}), 38);
     b.x = iw / 2 - 140;
     c.addChild(b);
+    if (left !== undefined) {
+      b.y = -16;
+      b.setEnabled(left > 0);
+      const note = label(t('doublesLeft', { n: left, total: DOUBLES_PER_DAY }), 26, { fill: 0xcfe3ff, stroke: { color: P.line, width: 5 } });
+      note.position.set(b.x, 42);
+      c.addChild(note);
+    }
   } else if (more.doubled) {
     const seal = medal(44, P.brass);
     const x2 = label(t('doubled'), 38, { stroke: { color: P.line, width: 6 } });
@@ -445,9 +460,18 @@ function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: numbe
   return { c, h: top + items.length * (rh + gap) + 20 };
 }
 
-/** The revive (with the ad sign) on top when there is one, Continue under it. */
-function endButtons(onContinue: () => void, onRevive: (() => void) | null): Section {
+/** The revive (with the ad sign) on top when there is one, Continue under it; or Next Stage
+ *  with a smaller 返回 under it. */
+function endButtons(onContinue: () => void, onRevive: (() => void) | null, onNext: (() => void) | null): Section {
   const c = new Container();
+  if (onNext) {
+    const next = new PillButton(t('nextStage'), 620, 150, 'green', onNext, 62);
+    next.y = 95;
+    const back = new PillButton(t('back'), 380, 104, 'brass', onContinue, 44);
+    back.y = 250;
+    c.addChild(next, back);
+    return { c, h: 330 };
+  }
   let by = 20;
   if (onRevive) {
     const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);

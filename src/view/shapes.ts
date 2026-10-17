@@ -1,7 +1,7 @@
 // Placeholder art: every hero and enemy is drawn from plain shapes until real art arrives.
 
 import type { Graphics } from 'pixi.js';
-import type { Enemy, HeroKind } from '../sim/types';
+import { isBoss, type Enemy, type HeroKind } from '../sim/types';
 import { COLORS, HERO_COLORS } from './ui';
 
 function polygon(cx: number, cy: number, r: number, sides: number, turn = -Math.PI / 2): number[] {
@@ -45,7 +45,7 @@ export function heroShadow(g: Graphics, x: number, y: number, w: number, alpha =
   g.ellipse(x, y, w / 2, w * 0.16).fill({ color: 0x000000, alpha: 0.3 * alpha });
 }
 
-const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e, flyer: 0xc9a24a, winder: 0x3f9a96 } as const;
+const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e, flyer: 0xc9a24a, winder: 0x3f9a96, clock: 0x7a3b22, tripod: 0x3fa7b5, anvil: 0xd2602a, gear: 0x6a3d9a } as const;
 
 /** Height of an enemy's art, where its feet go and how high a flyer hangs over its shadow,
  *  relative to its hit circle. */
@@ -68,8 +68,8 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
   else if (e.kind === 'brute') g.roundRect(x - r, y - r, r * 2, r * 2, r * 0.4);
   else g.circle(x, y, r);
   const frozen = e.freezeTime > 0;
-  g.fill(frozen ? 0xbfefff : ENEMY_COLORS[e.kind]).stroke({ width: e.kind === 'boss' ? 9 : 6, color: 0x0a1320 });
-  if (e.kind === 'boss') {
+  g.fill(frozen ? 0xbfefff : ENEMY_COLORS[e.kind]).stroke({ width: isBoss(e.kind) ? 9 : 6, color: 0x0a1320 });
+  if (isBoss(e.kind)) {
     g.poly([x - r * 0.6, y - r * 0.8, x - r * 0.6, y - r * 1.25, x - r * 0.3, y - r * 1.0, x, y - r * 1.35, x + r * 0.3, y - r * 1.0, x + r * 0.6, y - r * 1.25, x + r * 0.6, y - r * 0.8])
       .fill(COLORS.gold)
       .stroke({ width: 5, color: 0x0a1320 });
@@ -78,7 +78,7 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
   if (e.burnTime > 0) g.circle(x, y, r + 6).stroke({ width: 5, color: HERO_COLORS.fire, alpha: 0.8 });
   if (e.poisonTime > 0) g.circle(x, y, r + 6).stroke({ width: 5, color: HERO_COLORS.poison, alpha: 0.8 });
   if (e.slowTime > 0 && !frozen) g.circle(x, y, r + 12).stroke({ width: 4, color: HERO_COLORS.ice, alpha: 0.7 });
-  enemyBars(g, e, y - r - (e.kind === 'boss' ? 60 : 22));
+  enemyBars(g, e, y - r - (isBoss(e.kind) ? 60 : 22));
 }
 
 function enemyBars(g: Graphics, e: Enemy, top: number): void {
@@ -89,6 +89,11 @@ function enemyBars(g: Graphics, e: Enemy, top: number): void {
   if (e.elite) g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: 0x6e4c2f });
   g.rect(x - w / 2, top, w, 10).fill(COLORS.hpBack);
   g.rect(x - w / 2, top, (w * Math.max(0, e.hp)) / e.maxHp, 10).fill(COLORS.hp);
+  // the tripod's bell jar takes the hits first: its own glassy bar just above
+  if (e.shieldMax) {
+    g.rect(x - w / 2, top - 14, w, 10).fill(COLORS.hpBack);
+    g.rect(x - w / 2, top - 14, (w * Math.max(0, e.shield ?? 0)) / e.shieldMax, 10).fill(0x8fe6f0);
+  }
 }
 
 export function drawProjectile(g: Graphics, kind: HeroKind, x: number, y: number): void {

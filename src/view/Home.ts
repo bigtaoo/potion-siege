@@ -14,7 +14,7 @@ import {
 import { achievementsClaimable, type TrackId } from '../sim/achievements';
 import { endlessOpen, nextMilestone } from '../sim/endless';
 import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
 import { onStage } from '../sim/waves';
 import { CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterInfo, chapterOf, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists } from '../sim/chapters';
@@ -60,6 +60,7 @@ import {
 } from './kit';
 import { canUpgradePotion, canUpgradeWorkshop, challengeShown, shopDot } from './nudges';
 import { gem, HERO_COLORS, label } from './ui';
+import { pointingHand } from './Tutorial';
 import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
@@ -115,7 +116,8 @@ const RAIL = 230;
 const TOP = 150;
 
 /** `picked`: a reserve potion tapped on the lineup row, waiting for the one it replaces; `ads`:
- *  a rewarded ad can be offered. */
+ *  a rewarded ad can be offered; `hint`: the potion whose upgrade the one-time pointer is after
+ *  (a hand on the potions tab, then on that potion's button). */
 export function buildHome(
   m: MetaSave,
   act: HomeActions,
@@ -125,6 +127,7 @@ export function buildHome(
   fit: MenuFit,
   picked: HeroKind | null = null,
   ads = false,
+  hint: HeroKind | null = null,
 ): Container {
   const root = new Container();
   const { w, h, wide } = fit;
@@ -133,7 +136,7 @@ export function buildHome(
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
   if (tab === 'battle') battleTab(root, m, act, area, picked, today);
-  else if (tab === 'potions') potionsTab(root, m, act, area);
+  else if (tab === 'potions') potionsTab(root, m, act, area, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier));
   else shopTab(root, m, act, area, today, ads);
@@ -147,7 +150,7 @@ export function buildHome(
     battle: anyChestWaiting(m),
   };
   dots[tab] = false;
-  nav(root, act, tab, fit, dots);
+  nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit));
@@ -197,7 +200,7 @@ function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, l
 
 /** The five tabs: along the bottom of a portrait page, down the left of a landscape one; the
  *  battle tab in the middle is a big raised medallion. */
-function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots: Partial<Record<HomeTab, boolean>>): void {
+function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots: Partial<Record<HomeTab, boolean>>, point = false): void {
   const { w, h, wide } = fit;
   const bar = new Graphics();
   if (wide) {
@@ -242,7 +245,24 @@ function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFit, dots
     if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -96 : -110) : -62);
     if (!on) slot.alpha = big ? 1 : 0.85;
     root.addChild(slot);
+    // the pointer comes down onto the potions tab from above right, or up into its rail slot from below
+    if (point && id === 'potions') {
+      root.addChild(wide ? pointer(slot.x + 40, slot.y + 64, -0.6, 0.8) : pointer(slot.x + 22, slot.y - NAV / 2 + 6, Math.PI + 0.5));
+    }
   });
+}
+
+/** The one-time pointer: the tutorial's hand, its fingertip at `x, y` turned by `rotation`
+ *  (0 points up); the game nudges its child back and forth (label hintHand). */
+function pointer(x: number, y: number, rotation: number, scale = 1): Container {
+  const c = new Container();
+  c.label = 'hintHand';
+  c.eventMode = 'none';
+  c.position.set(x, y);
+  c.rotation = rotation;
+  c.scale.set(scale);
+  c.addChild(pointingHand());
+  return c;
 }
 
 function navIcon(id: HomeTab): Container {
@@ -357,9 +377,9 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     const s = enemySprite(kind, size);
     s.x = (i - (kinds.length - 1) / 2) * step;
     row.addChild(s);
-    if (kind === 'boss') {
-      const tag = bossTag(16);
-      tag.position.set(s.x, size / 2 + 2);
+    if (isBoss(kind)) {
+      const tag = bossTag(18);
+      tag.position.set(s.x, size / 2 + 4);
       row.addChild(tag);
     }
   });
@@ -659,7 +679,7 @@ function titledPanel(root: Container, title: string, x: number, y: number, w: nu
 }
 
 /** A card per potion: portrait, level, the milestones reached and the level-up button. */
-function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
+function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Area, hint: HeroKind | null): void {
   const head = plate(t('potions'), 52);
   head.position.set(a.x + a.w / 2, a.y + 60);
   root.addChild(head);
@@ -676,6 +696,12 @@ function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Area): vo
     card.position.set(a.x + a.w / 2 + (col - (inRow - 1) / 2) * (cw + 30), a.y + 150 + ch / 2 + row * (ch + 40));
     root.addChild(card);
   });
+  // over all the cards: up at the hinted potion's price button from below it
+  const i = hint ? HERO_KINDS.indexOf(hint) : -1;
+  if (i >= 0) {
+    const card = root.children[root.children.length - HERO_KINDS.length + i];
+    root.addChild(pointer(card.x + cw * 0.22, card.y + ch / 2 - 34, 0, 0.8));
+  }
 }
 
 function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch: number): Container {

@@ -6,6 +6,8 @@ export const en = {
   wave: 'Wave {n}/{total}',
   waveEndless: 'Wave {n}',
   bossWave: 'BOSS WAVE!',
+  bossNew: 'New boss',
+  bossWeak: 'Weak to {weak}',
   newEnemy: 'New enemy: {name}\nWeak to {weak}',
   listSep: ', ',
   hint: 'Drag two matching potions together: they fuse into a random stronger one',
@@ -66,6 +68,7 @@ export const en = {
   unlockHero: '{name} unlocked!',
   double: '×2 crystals',
   doubled: '×2',
+  doublesLeft: '{n}/{total} left today',
   damage: 'Damage dealt',
   side: {
     skills: 'Skills this run',
@@ -87,6 +90,8 @@ export const en = {
     stage: { name: 'Change stage', desc: 'Earn crystals on an easier stage' },
   },
   continue: 'Continue',
+  nextStage: 'Next Stage',
+  back: 'Home',
   shop: {
     wall: { name: 'Thick Walls', desc: 'Wall HP +{p}%' },
     startGold: { name: 'Pocket Money', desc: 'Start with +{n} gold' },
@@ -188,6 +193,10 @@ export const en = {
     trait: {
       flyer: "Flies: can't be frozen, takes half from splash",
       winder: 'Rewinds: every 3s heals and thaws enemies near it',
+      clock: 'Breeds: every 4s lets 2 clockwork mice out of its pendulum door',
+      tripod: 'Bell jar: takes the hits first, ice x3, the rest x0.7; regrows 12s after it breaks',
+      anvil: 'Leaps: springs forward every 8s, not while slowed; slams the wall and stuns potions',
+      gear: 'Two phases: at half health the rim shatters and the crowned core charges, weaknesses flip',
     },
     speed: 'Speed {n}',
     wallDps: 'Siege {n}/s',
@@ -240,6 +249,10 @@ export const en = {
     boss: 'Steam Tank',
     flyer: 'Ornithopter',
     winder: 'Winder Spider',
+    clock: 'Clocktower Strider',
+    tripod: 'Bell Jar Tripod',
+    anvil: 'Anvil Hopper',
+    gear: 'Gear King',
   },
   skill: {
     allDamage: { name: 'Sharpened', desc: 'All potions +15% damage' },

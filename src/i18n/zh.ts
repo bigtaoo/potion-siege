@@ -7,6 +7,8 @@ export const zh: Table = {
   wave: '第 {n}/{total} 波',
   waveEndless: '第 {n} 波',
   bossWave: 'BOSS 来袭！',
+  bossNew: '新 BOSS 登场',
+  bossWeak: '弱点：{weak}',
   newEnemy: '新敌人：{name}\n弱点：{weak}',
   listSep: '、',
   hint: '把两瓶相同的药剂拖到一起：合成一瓶随机的更强药剂',
@@ -67,6 +69,7 @@ export const zh: Table = {
   unlockHero: '解锁{name}！',
   double: '×2 晶石',
   doubled: '×2',
+  doublesLeft: '今日剩余 {n}/{total} 次',
   damage: '伤害统计',
   side: {
     skills: '本局技能',
@@ -88,6 +91,8 @@ export const zh: Table = {
     stage: { name: '换个关卡', desc: '回到简单的关卡攒晶石' },
   },
   continue: '继续',
+  nextStage: '下一关',
+  back: '返回',
   shop: {
     wall: { name: '厚墙', desc: '城墙生命 +{p}%' },
     startGold: { name: '零花钱', desc: '开局金币 +{n}' },
@@ -189,6 +194,10 @@ export const zh: Table = {
     trait: {
       flyer: '飞行：冻不住，溅射伤害只吃一半',
       winder: '倒带：每 3 秒给周围敌人回血、解冻',
+      clock: '放鼠：每 4 秒从钟摆门放出 2 只发条鼠',
+      tripod: '玻璃罩：先挡下伤害，冰霜 ×3、其它 ×0.7，碎后 12 秒长回',
+      anvil: '飞扑：每 8 秒往前一跳，减速时跳不起来；砸墙眩晕下面的药剂',
+      gear: '两阶段：半血时铁圈崩碎，王冠核心加速冲锋，克制反转',
     },
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
@@ -241,6 +250,10 @@ export const zh: Table = {
     boss: '蒸汽坦克',
     flyer: '扑翼机',
     winder: '上弦蜘蛛',
+    clock: '落地钟巨人',
+    tripod: '玻璃钟罩三足机',
+    anvil: '铁砧跳跳',
+    gear: '齿轮王',
   },
   skill: {
     allDamage: { name: '磨砺', desc: '所有药剂伤害 +15%' },
