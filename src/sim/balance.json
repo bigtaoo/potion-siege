@@ -308,6 +308,7 @@
     "chest": 100,
     "ad": 60,
     "adsPerDay": 3,
+    "doublesPerDay": 3,
     "unlock": { "poison": 800, "wind": 1200 }
   }
 }

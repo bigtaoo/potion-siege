@@ -34,6 +34,16 @@ describe('daily', () => {
     expect(a.daily.tasks.every((t) => t.progress === 0)).toBe(true);
   });
 
+  it('resets the result ×2 count with the day, not within it', () => {
+    const m = newMeta();
+    rollDay(m, '2026-10-15');
+    m.daily.doubles = 3;
+    rollDay(m, '2026-10-15');
+    expect(m.daily.doubles).toBe(3);
+    rollDay(m, '2026-10-16');
+    expect(m.daily.doubles).toBe(0);
+  });
+
   it('pays a task once, only when it is done', () => {
     const m = newMeta();
     rollDay(m, '2026-10-15');

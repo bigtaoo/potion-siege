@@ -22,7 +22,7 @@
   5. 每场之后领任务和成就，然后从最便宜的开始买：上阵四瓶加工坊，四瓶满了再买毒和风。
 - **看广告的玩家**：每场都点 ×2，输了就复活。
 - **50 关**：用 `STAGES=50` 模拟。20 关以后每关怪物血量 ×1.018（见下文"50 关"）。章节宝箱是 `CHAPTER_CHEST=300` × 章号，在第 10/20/… 关首通时给。
-- **其他开关**：`ENDLESS` 是无尽模式每局的占位收入（一局 6 分钟），`DOUBLES` 是每天 ×2 次数的上限（代码里还没有这个上限）。
+- **其他开关**：`ENDLESS` 是无尽模式每局的占位收入（一局 6 分钟），结算 ×2 按 `shop.doublesPerDay` 限次，和游戏一样（`BAL='{"shop":{"doublesPerDay":999}}'` 可以去掉上限）。
 - **结果文件**：原始结果在 ref/balance/economy/*.md，前期曲线在 ref/balance/early/econ.md。
 
 ## 问题（现在的数值）
@@ -155,7 +155,7 @@ D30 存档：
   - 它占看广告玩家收入的 42–48%，加上复活，进度快约 2.3–3 倍（regular 第 31 天 → 第 11 天打完 50 关）。
   - 结果就是看了"必须看"。
 
-**建议（要改代码，不在我的键里，作为后续）：每天 ×2 最多 3 次**，后面的局只给正常收入。模拟结果（DOUBLES=3）：
+**已上线：每天 ×2 最多 3 次（`shop.doublesPerDay`）**，后面的局只给正常收入，结算页的 ×2 变灰并显示"今日剩余 0/3 次"。计数在 `daily.doubles`，换天时清零。模拟结果（上限前 → 3 次/天）：
 
 | 档位 | 全满级：不限 → 3 次/天 | 不看广告 |
 |---|---|---|
@@ -163,7 +163,7 @@ D30 存档：
 | regular +广告 | 39 → 52 | 78 |
 | heavy +广告 | 13 → 23 | 28 |
 
-看广告仍然快约 1.2–1.5 倍，值得看，但不再是必须的。可以把上限做成 `shop.doublesPerDay`。
+看广告仍然快约 1.2–1.5 倍，值得看，但不再是必须的。上线后复跑（STAGES=50）：heavy +广告 23 天，regular +广告 51 天，不看广告的不变（28 / 79）。
 
 ## 无尽模式：占位收入的安全范围
 
@@ -204,6 +204,6 @@ D30 存档：
 TAG=C50g STAGES=50 LATE_GROWTH=1.018 CHAPTER_CHEST=300 npm run economy
 ```
 
-- `DOUBLES=3`：每天 ×2 上限；`ENDLESS=800`：无尽占位收入；`BAL='{...}'`：临时覆盖 balance.json。
+- ×2 上限读 `shop.doublesPerDay`；`ENDLESS=800`：无尽占位收入；`BAL='{...}'`：临时覆盖 balance.json。
 - `npm run economy -- report TAG...`：只重写报告。
 - 前期曲线：`EARLY_MODE=campaign RUNS=5 DAYS=10 PLAYERS=8 TAG=… npm run early`，然后 `node scripts/early-report.mjs`。

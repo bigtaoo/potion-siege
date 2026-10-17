@@ -28,6 +28,8 @@ export interface DailySave {
   lastClaim: string;
   /** Today's bonus for claiming all three tasks was paid. */
   bonus: boolean;
+  /** Result screen ×2 ads paid out today. */
+  doubles: number;
 }
 
 /** The local calendar date of `now`. */
@@ -37,7 +39,7 @@ export function dayOf(now: Date): string {
 }
 
 export function newDaily(): DailySave {
-  return { day: '', tasks: [], claims: 0, lastClaim: '', bonus: false };
+  return { day: '', tasks: [], claims: 0, lastClaim: '', bonus: false, doubles: 0 };
 }
 
 /** Reads the stored daily part, dropping anything that does not fit. */
@@ -49,6 +51,7 @@ export function parseDaily(v: unknown): DailySave {
   if (typeof d.lastClaim === 'string') out.lastClaim = d.lastClaim;
   out.claims = Math.max(0, Math.floor(Number(d.claims)) || 0);
   out.bonus = d.bonus === true;
+  out.doubles = Math.max(0, Math.floor(Number(d.doubles)) || 0);
   if (Array.isArray(d.tasks)) {
     for (const t of d.tasks as Record<string, unknown>[]) {
       if (!t || !TASK_IDS.includes(t.id as TaskId)) continue;
@@ -71,6 +74,7 @@ export function rollDay(m: MetaSave, today: string): void {
   if (m.daily.day === today) return;
   m.daily.day = today;
   m.daily.bonus = false;
+  m.daily.doubles = 0;
   const pool = TASK_IDS.filter((id) => id !== 'endless' || endlessOpen(m));
   m.daily.tasks = new Rng(hash(today)).sample(pool, D.taskCount).map((id) => ({ id, progress: 0, claimed: false }));
 }

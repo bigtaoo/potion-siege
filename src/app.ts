@@ -17,7 +17,7 @@ import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
 import { beginEndless, bookEndless, endlessPay, endlessSetup, nextMilestone, type EndlessResult } from './sim/endless';
 import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
-  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, firstSeed, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
+  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, doublesLeft, endOffers, firstSeed, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
   type MetaSave,
 } from './sim/meta';
 import { botAct } from './sim/bot';
@@ -757,7 +757,7 @@ class Game {
       return;
     }
     const ads = !this.autoplay && this.platform.rewardedAvailable();
-    const { revive: canRevive, double: canDouble } = endOffers(b.result === 'lost', this.revived, ads, this.purse);
+    const { revive: canRevive, double: canDouble, capped } = endOffers(this.save, b.result === 'lost', this.revived, ads, this.purse);
     if (canRevive && !this.offered.revive) this.run?.onReviveOffer();
     if (canDouble && !this.offered.double) this.run?.onDoubleOffer();
     this.offered.revive ||= canRevive;
@@ -766,6 +766,7 @@ class Game {
     this.overlay.showEnd(b.result === 'won', stats, this.purse.reward, () => void this.again(), canRevive ? () => void this.revive(b) : null, {
       onDouble: canDouble ? () => void this.double(b) : null,
       doubled: this.purse.bonus > 0,
+      doublesLeft: canDouble || capped ? doublesLeft(this.save) : undefined,
       dealt,
       onTip: b.result === 'lost' ? (tab) => void this.again(tab) : null,
       endless: this.endless?.result ? { result: this.endless.result, best: this.save.endless.best, next: nextMilestone(this.save) } : undefined,
