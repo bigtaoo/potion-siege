@@ -30,12 +30,13 @@ Requirements checked against docs.crazygames.com (game covers, preview video) on
 > Hold the wall for 10 waves against tin soldiers, clock mice, boiler golems, ornithopters, winder spiders
 > and the steam tank boss. Each enemy fears different potions — read the wave forecast and plan your brew.
 >
-> Between battles, level up your potions, upgrade the workshop, unlock new stages and take on the daily
-> challenge with its own twists.
+> Between battles, level up your potions, upgrade the workshop, push through five chapters — from the
+> outskirts to the clock tower, each with its own boss — and take on the daily challenge with its own twists.
 >
 > - Merge-and-defend battles that last a few minutes
 > - 6 potion heroes, 30+ skills, ultimate potions with bonus skills
-> - 6 clockwork enemies with their own weaknesses, 20 stages
+> - 6 clockwork enemies with their own weaknesses and 5 bosses, 50 stages in 5 chapters
+> - Endless mode: how many waves can your wall hold?
 > - Daily challenge, daily tasks and rewards
 > - English and Chinese
 
@@ -50,11 +51,12 @@ Requirements checked against docs.crazygames.com (game covers, preview video) on
 > 守住 10 波进攻：锡兵、发条鼠、锅炉魔像、扑翼机、上弦蜘蛛，还有蒸汽坦克首领。每种敌人怕的药水不同——
 > 看看波次预告，提前布阵。
 >
-> 战斗之外，升级药水、强化工坊、解锁新关卡，再挑战每天规则不同的每日挑战。
+> 战斗之外，升级药水、强化工坊、从城郊一路打到钟楼，闯过各有首领的五个章节，再挑战每天规则不同的每日挑战。
 >
 > - 几分钟一局的合成守城
 > - 6 种药水英雄，30 多个技能，终极药水附赠技能
-> - 6 种发条敌人，各有弱点，共 20 关
+> - 6 种发条敌人各有弱点，外加 5 个首领，5 章共 50 关
+> - 无尽模式：看你的城墙能守多少波
 > - 每日挑战、每日任务与奖励
 > - 中文与英文
 
