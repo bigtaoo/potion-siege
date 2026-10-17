@@ -131,7 +131,7 @@ export function bestToday(m: MetaSave, today: string): number {
   return m.challenge.date === today ? m.challenge.best : 0;
 }
 
-/** Today's challenge has not been tried yet (the red dot on the battle tab). */
+/** Today's challenge has not been tried yet. */
 export function challengeFresh(m: MetaSave, today: string): boolean {
   return attemptsUsed(m, today) === 0;
 }

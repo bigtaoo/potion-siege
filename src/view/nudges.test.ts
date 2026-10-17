@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { heroCost, newMeta, WORKSHOP_IDS, workshopCost } from '../sim/meta';
+import { claimChest, heroCost, newMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
-import { canUpgradePotion, canUpgradeWorkshop, CHALLENGE_AFTER, challengeOpen, challengeShown, codexStage } from './nudges';
+import { canBuyUnlock, canUpgradePotion, canUpgradeWorkshop, CHALLENGE_AFTER, challengeOpen, challengeShown, codexStage, shopDot } from './nudges';
 
 /** A new save's potions are all at level 1. */
 const cheapestHero = (): number => heroCost(1)!;
@@ -42,6 +42,37 @@ describe('workshop dot', () => {
     m.crystals = 1e9;
     for (const id of WORKSHOP_IDS) m.workshop[id] = BALANCE.meta.workshop[id].max;
     expect(canUpgradeWorkshop(m)).toBe(false);
+  });
+});
+
+describe('shop dot', () => {
+  const today = '2026-10-17';
+  const cheapestUnlock = (): number => Math.min(...HERO_KINDS.map((k) => unlockPrice(k) ?? Infinity));
+
+  it("lights while today's chest is shut and goes out once it is opened", () => {
+    const m = newMeta();
+    m.crystals = 0;
+    expect(shopDot(m, today)).toBe(true);
+    claimChest(m, today);
+    m.crystals = 0;
+    expect(shopDot(m, today)).toBe(false);
+    // a new day brings a new chest
+    expect(shopDot(m, '2026-10-18')).toBe(true);
+  });
+
+  it('lights for a locked potion the crystals can buy, not a crystal before, and not once it is owned', () => {
+    const m = newMeta();
+    claimChest(m, today);
+    m.crystals = cheapestUnlock() - 1;
+    expect(canBuyUnlock(m)).toBe(false);
+    expect(shopDot(m, today)).toBe(false);
+    m.crystals = cheapestUnlock();
+    expect(canBuyUnlock(m)).toBe(true);
+    expect(shopDot(m, today)).toBe(true);
+    m.crystals = 1e9;
+    for (const k of HERO_KINDS) if (unlockPrice(k) !== null) unlockHero(m, k);
+    expect(canBuyUnlock(m)).toBe(false);
+    expect(shopDot(m, today)).toBe(false);
   });
 });
 
