@@ -12,6 +12,7 @@ import {
   bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge,
 } from '../sim/challenge';
 import { achievementsClaimable, type TrackId } from '../sim/achievements';
+import { endlessOpen, nextMilestone } from '../sim/endless';
 import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
@@ -34,6 +35,7 @@ import {
   chestIcon,
   enemySprite,
   gearIcon,
+  infinityIcon,
   ink,
   inkWrapped,
   inset,
@@ -87,6 +89,8 @@ export interface HomeActions {
   /** Today's challenge: the free attempt, and the one a rewarded ad buys. */
   challenge(): void;
   challengeAd(): void;
+  /** An endless run. */
+  endless(): void;
   /** Flips the music or the sound effects toggle. */
   sound(which: 'music' | 'sfx'): void;
 }
@@ -249,6 +253,8 @@ function navIcon(id: HomeTab): Container {
  *  reaches it. */
 function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, picked: HeroKind | null, today: string): void {
   const challenge = challengeShown(m);
+  const endless = endlessOpen(m);
+  const banners = (challenge ? 1 : 0) + (endless ? 1 : 0);
   const lineupH = lineupHeight(m);
   if (a.wide) {
     // the stage, commander and button on the left; the lineup and the challenge on the right
@@ -259,10 +265,15 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     const by = a.y + a.h - 120;
     commander(root, lx, a.y + 420, by - START_H / 2 - 30);
     startButton(root, act, lx, by);
-    const block = lineupH + (challenge ? 50 + BANNER_H : 0);
+    const block = lineupH + banners * (50 + BANNER_H);
     const ly = a.y + 60 + Math.max(0, (a.h - 120 - block) / 2);
     lineupPanel(root, m, act, picked, rx, ly + lineupH / 2, rw, lineupH);
-    if (challenge) challengeBanner(root, m, act, today, rx, ly + lineupH + 50 + BANNER_H / 2, rw);
+    let y = ly + lineupH + 50 + BANNER_H / 2;
+    if (challenge) {
+      challengeBanner(root, m, act, today, rx, y, rw);
+      y += 50 + BANNER_H;
+    }
+    if (endless) endlessBanner(root, m, act, rx, y, rw);
   } else {
     const cx = a.x + a.w / 2;
     const pw = Math.min(960, a.w - 80);
@@ -272,6 +283,10 @@ function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, pick
     y += lineupH + 40;
     if (challenge) {
       challengeBanner(root, m, act, today, cx, y + BANNER_H / 2, pw);
+      y += BANNER_H + 30;
+    }
+    if (endless) {
+      endlessBanner(root, m, act, cx, y + BANNER_H / 2, pw);
       y += BANNER_H + 30;
     }
     // clear of the battle medallion that rises out of the tab bar
@@ -375,6 +390,49 @@ function challengeBanner(root: Container, m: MetaSave, act: HomeActions, today: 
   }
   if (sub.width > room) sub.scale.set(room / sub.width);
   const go = new PillButton(free ? t('challenge.go') : t('challenge.details'), bw, 84, free ? 'green' : 'brass', () => act.panel('challenge'), 40);
+  go.position.set(bx, -2);
+  c.addChild(icon, title, sub, go);
+}
+
+/** Endless mode in one line, once the first chapter is cleared: the best wave and the next
+ *  milestone's crystals (or what the mode is, before the first run), and the way in. */
+function endlessBanner(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, w: number): void {
+  const c = tappable(new Container(), act.endless);
+  c.position.set(x, y);
+  root.addChild(c);
+  c.addChild(lightPanel(w, BANNER_H));
+  const icon = new Container();
+  const loop = infinityIcon();
+  loop.scale.set(0.62);
+  icon.addChild(medal(42), loop);
+  icon.position.set(-w / 2 + 84, -4);
+  const bw = 220;
+  const bx = w / 2 - 50 - bw / 2;
+  const x0 = -w / 2 + 146;
+  const room = bx - bw / 2 - 24 - x0;
+  const title = ink(t('endless.title'), 40, { fontWeight: '900' });
+  title.anchor.set(0, 0.5);
+  title.position.set(x0, -24);
+  fitText(title, room);
+  const sub = new Container();
+  sub.position.set(x0, 26);
+  const best = m.endless.best;
+  const words = ink(best > 0 ? t('endless.best', { n: best }) : t('endless.sub'), 32, { fill: P.inkSoft });
+  words.anchor.set(0, 0.5);
+  sub.addChild(words);
+  const next = nextMilestone(m);
+  if (best > 0 && next) {
+    const at = words.width + 24;
+    const goal = ink(t('endless.goal', { n: next.wave }), 32, { fill: P.inkSoft });
+    goal.anchor.set(0, 0.5);
+    goal.x = at;
+    const n = ink(String(next.reward), 34, { fill: LIGHT.crystal, fontWeight: '900' });
+    n.anchor.set(0, 0.5);
+    n.x = at + goal.width + 48;
+    sub.addChild(goal, gem(new Graphics(), at + goal.width + 26, -2, 15), n);
+  }
+  if (sub.width > room) sub.scale.set(room / sub.width);
+  const go = new PillButton(t('endless.go'), bw, 84, 'green', act.endless, 40);
   go.position.set(bx, -2);
   c.addChild(icon, title, sub, go);
 }

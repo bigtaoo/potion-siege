@@ -3,6 +3,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../i18n';
 import { CHALLENGE_TIERS, type ChallengeResult, type ModifierId } from '../sim/challenge';
+import { ENDLESS_MILESTONES, type EndlessResult } from '../sim/endless';
 import type { Reward } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { skillHeroes, skillMax, type SkillId, type SkillLevels } from '../sim/skills';
@@ -11,6 +12,7 @@ import {
   bottle,
   coinsIcon,
   gearIcon,
+  infinityIcon,
   ink,
   medal,
   modifierIcon,
@@ -114,9 +116,16 @@ export class Overlay extends Container {
     const W = 900;
     const cw = W - 120;
     const ch = more.challenge;
-    const left: Section[] = [header(won, ch), statTiles(stats, cw)];
+    const en = more.endless;
+    const left: Section[] = [en ? endlessHeader(en) : header(won, ch), statTiles(stats, cw)];
     if (ch) left.push(challengeTrack(ch, cw));
+    if (en) left.push(endlessTrack(en, cw));
     left.push(purse(reward, more, cw));
+    if (en?.result.record) left.push(section(ribbon(t('endless.record'), W - 200), 110));
+    if (en && en.result.milestones > 0) {
+      const top = ENDLESS_MILESTONES.filter((s) => en.result.wave >= s.wave).pop();
+      left.push(section(ribbon(`${t('endless.milestone', { n: top?.wave ?? en.result.wave })} ${t('reward', { n: en.result.milestones })}`, W - 200), 110));
+    }
     if (ch && ch.streakBonus > 0) left.push(section(ribbon(`${t('challenge.streakBonus', { n: ch.streak })} ${t('reward', { n: ch.streakBonus })}`, W - 200), 110));
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
@@ -155,6 +164,16 @@ export interface EndExtras {
   onTip: ((tab: TipTab) => void) | null;
   /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
   challenge?: ChallengeEnd;
+  /** An endless run's result: the wave it reached, the best and the next milestone. */
+  endless?: EndlessEnd;
+}
+
+export interface EndlessEnd {
+  result: EndlessResult;
+  /** The best wave, this run included. */
+  best: number;
+  /** The next milestone not reached yet, null once all are. */
+  next: { wave: number; reward: number } | null;
 }
 
 export interface ChallengeEnd {
@@ -194,6 +213,55 @@ function header(won: boolean, ch?: ChallengeEnd): Section {
   head.y = 80;
   c.addChild(crest, head);
   return { c, h: 200 };
+}
+
+/** An endless run's plate: the loop, with stars round it on a new record. */
+function endlessHeader(en: EndlessEnd): Section {
+  const c = new Container();
+  const crest = en.result.record ? stars(3) : new Container();
+  crest.y = -30;
+  const loop = new Container();
+  const ring = infinityIcon();
+  ring.scale.set(0.9);
+  loop.addChild(medal(64), ring);
+  loop.y = en.result.record ? -40 : -30;
+  const head = plate(t('endless.result'), 72, 560, 'brass');
+  head.y = 80;
+  c.addChild(crest, loop, head);
+  return { c, h: 200 };
+}
+
+/** How far the run got against the best, and the bar toward the next milestone (from the one
+ *  before it). */
+function endlessTrack(en: EndlessEnd, cw: number): Section {
+  const c = new Container();
+  c.addChild(inset(cw, 200, 0, 30));
+  const x0 = -cw / 2 + 50;
+  const x1 = cw / 2 - 50;
+  const reached = ink(t('endless.reached', { n: en.result.wave }), 38, { fontWeight: '900' });
+  reached.anchor.set(0, 0.5);
+  reached.position.set(x0, 46);
+  const best = ink(t('endless.bestLine', { n: en.best }), 32, { fill: P.inkSoft });
+  best.anchor.set(1, 0.5);
+  best.position.set(x1, 46);
+  c.addChild(reached, best);
+  const cy = 110;
+  const track = new Graphics().roundRect(x0, cy - 12, x1 - x0, 24, 12).fill(LIGHT.tile).stroke({ width: 4, color: LIGHT.edge });
+  c.addChild(track);
+  const foot = ink('', 30, { fill: P.inkSoft });
+  foot.position.set(0, 160);
+  if (en.next) {
+    const from = ENDLESS_MILESTONES.filter((s) => s.wave < en.next!.wave).pop()?.wave ?? 0;
+    const frac = Math.max(0, Math.min(1, (en.best - from) / (en.next.wave - from)));
+    if (frac > 0) track.roundRect(x0 + 4, cy - 8, Math.max(16, (x1 - x0 - 8) * frac), 16, 8).fill(0x4cc35a);
+    foot.text = `${t('endless.next', { n: en.next.wave })}   ${t('reward', { n: en.next.reward })}`;
+    c.addChild(gem(new Graphics(), foot.width / 2 + 30, 158, 14));
+  } else {
+    track.roundRect(x0 + 4, cy - 8, x1 - x0 - 8, 16, 8).fill(0x4cc35a);
+    foot.text = t('endless.allDone');
+  }
+  c.addChild(foot);
+  return { c, h: 230 };
 }
 
 /** Wave, kills and time (the parts of `stats`), a parchment tile each. */

@@ -14,6 +14,7 @@ import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challenge, type ChallengeResult } from './sim/challenge';
 import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
+import { beginEndless, bookEndless, endlessPay, endlessSetup, nextMilestone, type EndlessResult } from './sim/endless';
 import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
   adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, endOffers, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
@@ -177,6 +178,8 @@ class Game {
   /** The battle is today's challenge: which one, the streak bonus its start paid and, once it
    *  ended, what it booked. */
   private challenge: { ch: Challenge; streakBonus: number; result: ChallengeResult | null } | null = null;
+  /** The battle is an endless run: what its ends booked so far (a revived run ends twice). */
+  private endless: { result: EndlessResult | null } | null = null;
   private revived = false;
   /** The battle's end is booked: the battle stands still and is not booked again while the
    *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
@@ -250,10 +253,12 @@ class Game {
   }
 
   /** `cause` null: an idle battle under the home screen, no run. */
-  private newBattle(cause: 'first' | 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
+  private newBattle(cause: 'first' | 'again' | 'autoplay' | 'challenge' | 'endless' | null, ch: Challenge | null = null): void {
     this.run?.close('again');
-    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
+    const seed = (Math.random() * 2 ** 32) >>> 0;
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? endlessSetup(this.save) : battleSetup(this.save));
     this.challenge = null;
+    this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     if (this.run) this.perf.start();
@@ -464,6 +469,10 @@ class Game {
       this.finishChallenge(b, this.challenge);
       return;
     }
+    if (this.endless) {
+      this.finishEndless(b, this.endless);
+      return;
+    }
     this.platform.gameplayStop();
     // the tutorial belongs to the first battle only, however far it got
     if (this.tutorial) this.endTutorial(true);
@@ -504,6 +513,41 @@ class Game {
     this.perf.end();
     this.analytics.track('challenge_end', { day: run.ch.day, wave: b.wave, tier: run.result.tier, gain: run.result.crystals, attempt: this.save.challenge.attempts });
     this.showEnd(b);
+  }
+
+  /** Books an endless run: the per-wave crystals through the purse (so the revive and the ×2
+   *  work as after a stage), then the best wave and any milestone reached for the first time. */
+  private finishEndless(b: Battle, run: NonNullable<Game['endless']>): void {
+    this.platform.gameplayStop();
+    rollDay(this.save, dayOf(new Date()));
+    if (!this.revived) {
+      this.save.runs++;
+      addProgress(this.save, 'play');
+      addProgress(this.save, 'endless');
+    }
+    const result = { stage: b.setup.stage, won: false, wave: b.wave, kills: b.kills };
+    const { crystals: gain } = this.purse.settle(this.save, result, { crystals: endlessPay(this.save, b.wave), firstClear: false, unlocked: [] });
+    const booked = bookEndless(this.save, b.wave);
+    // a revived run ending again: the best before the run still counts, milestones add up
+    run.result = run.result ? { ...booked, before: run.result.before, record: b.wave > run.result.before, milestones: run.result.milestones + booked.milestones } : booked;
+    this.store();
+    if (booked.milestones > 0 || (booked.record && booked.before > 0)) this.platform.celebrate();
+    this.run?.onEnd();
+    this.perf.end();
+    this.analytics.track('endless_end', { wave: b.wave, best: this.save.endless.best, record: run.result.record, gain, milestones: booked.milestones, revived: this.revived });
+    this.showEnd(b);
+  }
+
+  /** Starts an endless run from the battle tab. */
+  private playEndless(): void {
+    beginEndless(this.save);
+    this.store();
+    this.analytics.track('endless_start', { best: this.save.endless.best, runs: this.save.endless.runs });
+    this.newBattle('endless');
+    this.menu.visible = false;
+    this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.root.visible = true;
+    this.platform.gameplayStart();
   }
 
   /** Starts today's challenge (`ad`: the retry a rewarded ad bought). */
@@ -600,6 +644,7 @@ class Game {
       unlock: (kind) => this.buy(buyUnlock(this.save, kind), `unlock_${kind}`),
       challenge: () => this.playChallenge(false),
       challengeAd: () => void this.challengeAd(),
+      endless: () => this.playEndless(),
       sound: (which) => {
         this.save.sound[which] = !this.save.sound[which];
         this.audio.prefs(this.save.sound);
@@ -721,6 +766,7 @@ class Game {
       doubled: this.purse.bonus > 0,
       dealt,
       onTip: b.result === 'lost' ? (tab) => void this.again(tab) : null,
+      endless: this.endless?.result ? { result: this.endless.result, best: this.save.endless.best, next: nextMilestone(this.save) } : undefined,
     });
   }
 

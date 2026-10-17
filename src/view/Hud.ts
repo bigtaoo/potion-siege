@@ -65,7 +65,7 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
-    this.stageText.text = t('stage', { n: battle.setup.stage });
+    this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
   }
 
@@ -109,10 +109,15 @@ export class Hud extends Container {
     });
   }
 
+  /** "Wave n/10", or just "Wave n" in endless mode, which has no last wave. */
+  private waveLabel(n: number): string {
+    return this.battle?.setup.endless ? t('waveEndless', { n }) : t('wave', { n, total: BALANCE.waves.count });
+  }
+
   react(events: BattleEvent[]): void {
     for (const ev of events) {
       if (ev.type !== 'wave') continue;
-      this.show(ev.boss ? t('bossWave') : t('wave', { n: ev.wave, total: BALANCE.waves.count }));
+      this.show(ev.boss ? t('bossWave') : this.waveLabel(ev.wave));
       const stage = this.battle?.setup.stage;
       const kind = ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
       if (kind) {
@@ -126,7 +131,7 @@ export class Hud extends Container {
   update(dt: number): void {
     const b = this.battle;
     if (!b) return;
-    this.waveText.text = t('wave', { n: b.wave, total: BALANCE.waves.count });
+    this.waveText.text = this.waveLabel(b.wave);
     this.goldText.text = `${b.gold}`;
     this.summonButton.text.text = `${t('summon')}\n● ${b.summonCost()}`;
     this.summonButton.setEnabled(b.canSummon());
