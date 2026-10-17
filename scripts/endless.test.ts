@@ -1,10 +1,10 @@
 // `npm run endless`: how far endless runs get for a player at three points of the campaign -
-// a stage-10 clear (endless just opened) and a maxed save (every potion and the workshop bought
-// out, which the crystals of a stage-20 clear already buy, so stage 30/50 players are there too). Per save it plays the bot on the starting
+// a stage-10 clear (endless just opened), 56k crystals spent (every potion at 20 and the workshop out before
+// heroMax went to 40) and a maxed save (every potion at heroMax). Per save it plays the bot on the starting
 // four and on each swap of corrosion or the gale tonic for a starting potion, and reports the
 // wave runs end on (median, p10, p90) and the crystals one run pays (wave pay + first-time
 // milestones, before the workshop bonus and the ×2 ad). BAL='{...}' overrides balance.json;
-// SEEDS (default 30).
+// SEEDS (default 30); MAXSEC, the longest a run plays (default 7200 s).
 import { it } from 'vitest';
 import { playOut } from '../src/sim/bot';
 import { buyHero, buyWorkshop, heroCost, newMeta, workshopCost, type MetaSave, type WorkshopId } from '../src/sim/meta';
@@ -20,6 +20,7 @@ function merge(into: Record<string, unknown>, from: Record<string, unknown>): vo
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
 if (env.BAL) merge(BALANCE as unknown as Record<string, unknown>, JSON.parse(env.BAL));
 const SEEDS = Number(env.SEEDS ?? 30);
+const MAXSEC = Number(env.MAXSEC ?? 7200);
 const E = BALANCE.endless;
 
 /** The cheapest buy over the fielded four and the workshop, as late-game.test.ts buys. */
@@ -51,7 +52,8 @@ const milestoneSum = (wave: number) => E.milestones.slice(0, milestonesOf(wave))
 it('endless reach', () => {
   const saves: [string, number][] = [
     ['stage 10 clear', 4755],
-    ['maxed (stage 20+: the stage-20 budget already buys it all)', 1e9],
+    ['mid (56k crystals spent)', 56_000],
+    [`maxed (potions at ${BALANCE.meta.heroMax})`, 1e9],
   ];
   const swaps: [string, HeroKind[]][] = [['starting four', [...LINEUP]]];
   for (const extra of HERO_KINDS.filter((k) => !LINEUP.includes(k))) {
@@ -62,7 +64,7 @@ it('endless reach', () => {
     for (const [lname, lineup] of name.startsWith('stage 10') ? swaps.slice(0, 1) : swaps) {
       const m = saveFor(budget, lineup);
       const waves: number[] = [];
-      for (let s = 1; s <= SEEDS; s++) waves.push(playOut(1000 + s, 3600, endlessSetup(m)).wave);
+      for (let s = 1; s <= SEEDS; s++) waves.push(playOut(1000 + s, MAXSEC, endlessSetup(m)).wave);
       const med = pct(waves, 0.5);
       const levels = m.lineup.map((k) => m.heroes[k]).join('/') + ` w${m.workshop.wall}`;
       lines.push(`| ${name} | ${lname} | ${levels} | ${med} | ${pct(waves, 0.1)} | ${pct(waves, 0.9)} | ${Math.min(E.runCap, E.perWave * med)} |`);

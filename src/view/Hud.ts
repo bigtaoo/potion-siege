@@ -6,8 +6,8 @@ import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
-import { BALANCE, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
-import { FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
+import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
+import { bossForStage, endlessBoss, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
@@ -127,7 +127,13 @@ export class Hud extends Container {
       if (ev.type !== 'wave') continue;
       this.show(ev.boss ? t('bossWave') : this.waveLabel(ev.wave));
       const stage = this.battle?.setup.stage;
-      const kind = ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
+      // endless mode brings in every other chapter's boss in turn: each gets its card on its first lap
+      const visitor = this.battle?.setup.endless && ev.boss ? endlessBoss(ev.wave) : undefined;
+      const firstLap = ev.wave - BALANCE.waves.count <= (BOSS_KINDS.length - 1) * BALANCE.endless.bossEvery;
+      const kind =
+        visitor && visitor !== bossForStage(BALANCE.endless.stage)
+          ? firstLap ? visitor : undefined
+          : ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
       if (kind) {
         const weak = resists(kind).filter((r) => r.value > 1).map((r) => t(`hero.${r.element}`));
         if (isBoss(kind)) {

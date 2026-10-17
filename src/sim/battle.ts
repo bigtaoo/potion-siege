@@ -20,7 +20,7 @@ import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, isBoss, type BattleEvent, type Enemy, type EnemyKind, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
-import { isBossWave, planWave, waveHp, type Spawn } from './waves';
+import { crowdOf, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
 /** Mixed into the seed for each stream but the enemies' (Prng hashes its seed, so the streams
@@ -553,7 +553,7 @@ export class Battle {
    *  so they start moving on the next tick. */
   private brood(c: Enemy): void {
     const P = B.bosses.clock;
-    const hp = Math.round(waveHp(this.wave) * B.enemies.runner.hp * this.setup.enemyHp * P.hp * FP);
+    const hp = Math.round(crowdOf(this.wave, this.setup.endless === true).hp * B.enemies.runner.hp * this.setup.enemyHp * P.hp * FP);
     const spread = toFp(P.spread);
     for (let i = 0; i < P.mice; i++) {
       const side = P.mice === 1 ? 0 : muldiv(spread, 2 * i - (P.mice - 1), P.mice - 1);

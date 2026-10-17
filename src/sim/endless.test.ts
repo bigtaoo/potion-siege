@@ -5,8 +5,8 @@ import { rollDay } from './daily';
 import { bookEndless, endlessOpen, endlessPay, endlessSetup, milestonesOf, nextMilestone, parseEndless } from './endless';
 import { newMeta, parseMeta, Purse } from './meta';
 import { Prng } from './math/prng';
-import { BALANCE, HERO_KINDS } from './types';
-import { ENDLESS_BOSSES, isBossWave, planWave, waveKinds } from './waves';
+import { BALANCE, BOSS_KINDS, HERO_KINDS, isBoss } from './types';
+import { bossForStage, crowdOf, endlessBoss, endlessBossesMet, isBossWave, planWave, waveKinds } from './waves';
 
 const E = BALANCE.endless;
 /** Hit points a wave sends, averaged over a few rolls of its mix. */
@@ -59,9 +59,43 @@ describe('endless waves', () => {
       const boss = w % E.bossEvery === 0;
       expect(isBossWave(w, undefined, true)).toBe(boss);
       const plan = planWave(w, new Prng(w), E.stage, undefined, true);
-      expect(plan.some((s) => ENDLESS_BOSSES.includes(s.kind))).toBe(boss);
-      expect(waveKinds(w, E.stage, undefined, true).some((k) => ENDLESS_BOSSES.includes(k))).toBe(boss);
+      expect(plan.filter((s) => isBoss(s.kind)).map((s) => s.kind)).toEqual(boss ? [endlessBoss(w)] : []);
+      expect(waveKinds(w, E.stage, undefined, true).filter(isBoss)).toEqual(boss ? [endlessBoss(w)] : []);
     }
+  });
+
+  it('meets every chapter boss in turn once past the endless stage, its own boss first', () => {
+    expect(endlessBoss(5)).toBe(bossForStage(E.stage));
+    expect(endlessBoss(10)).toBe(bossForStage(E.stage));
+    const lap = [15, 20, 25, 30, 35].map(endlessBoss);
+    expect([...lap].sort()).toEqual([...BOSS_KINDS].sort());
+    expect(lap).toEqual(['clock', 'tripod', 'anvil', 'gear', 'boss']);
+    expect(endlessBoss(40)).toBe('clock');
+    expect(endlessBossesMet(14)).toEqual(['boss']);
+    expect(endlessBossesMet(22)).toEqual(['boss', 'clock', 'tripod']);
+    expect(endlessBossesMet(999)).toHaveLength(BOSS_KINDS.length);
+  });
+
+  it('scales each boss with the endless hit points: tougher every boss wave, whichever boss it is', () => {
+    // hit points per point of the kind's own toughness, so the five bosses compare
+    const unit = (w: number) => {
+      const boss = planWave(w, new Prng(1), E.stage, undefined, true).find((s) => isBoss(s.kind))!;
+      return boss.hp / BALANCE.enemies[boss.kind].hp;
+    };
+    for (let w = 10; w < 60; w += E.bossEvery) expect(unit(w + E.bossEvery)).toBeGreaterThan(unit(w));
+  });
+
+  it('hatches the clock mice as tough as the endless crowd, not on the stage curve', () => {
+    const b = new Battle(5, endlessSetup(cleared(BALANCE.meta.heroMax)));
+    const run = b as unknown as { startWave(w: number): void; hatch: { s: { kind: string; hp: number; gold?: number } }[]; brood(c: unknown): void; enemies: { kind: string }[] };
+    run.startWave(40);
+    for (let i = 0; i < 30 && !b.enemies.some((e) => e.kind === 'clock'); i++) b.step();
+    run.hatch.length = 0;
+    run.brood(b.enemies.find((e) => e.kind === 'clock'));
+    const mouse = run.hatch[0].s;
+    const P = BALANCE.bosses.clock;
+    expect(mouse.hp).toBe(Math.round(crowdOf(40, true).hp * BALANCE.enemies.runner.hp * b.setup.enemyHp * P.hp * 1000));
+    expect(crowdOf(40, true).hp * 20).toBeLessThan(crowdOf(40).hp);
   });
 });
 
