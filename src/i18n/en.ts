@@ -87,6 +87,8 @@ export const en = {
     stage: { name: 'Change stage', desc: 'Earn crystals on an easier stage' },
   },
   continue: 'Continue',
+  nextStage: 'Next Stage',
+  back: 'Home',
   shop: {
     wall: { name: 'Thick Walls', desc: 'Wall HP +{p}%' },
     startGold: { name: 'Pocket Money', desc: 'Start with +{n} gold' },

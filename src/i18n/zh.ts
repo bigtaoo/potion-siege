@@ -88,6 +88,8 @@ export const zh: Table = {
     stage: { name: '换个关卡', desc: '回到简单的关卡攒晶石' },
   },
   continue: '继续',
+  nextStage: '下一关',
+  back: '返回',
   shop: {
     wall: { name: '厚墙', desc: '城墙生命 +{p}%' },
     startGold: { name: '零花钱', desc: '开局金币 +{n}' },

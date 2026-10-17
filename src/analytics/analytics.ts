@@ -7,7 +7,7 @@ import type { KeyValueStore } from '../platform/types';
 const PLAYER_KEY = 'mb.player';
 const DAY_MS = 86_400_000;
 
-export type Props = Record<string, string | number | boolean | string[] | null>;
+export type Props = Record<string, string | number | boolean | string[] | number[] | null>;
 
 export interface TrackedEvent {
   name: string;

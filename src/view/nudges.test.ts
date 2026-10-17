@@ -1,8 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { claimChest, heroCost, newMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
+import { claimChest, heroCost, heroUnlocked, maxStage, newMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
-import { canBuyUnlock, canUpgradePotion, canUpgradeWorkshop, CHALLENGE_AFTER, challengeOpen, challengeShown, codexStage, shopDot } from './nudges';
+import {
+  canBuyUnlock, canUpgradePotion, canUpgradeWorkshop, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, LOGIN_AFTER_RUNS, loginPops, NEXT_UNTIL, offersNext, shopDot, upgradeHintKind,
+} from './nudges';
 
 /** A new save's potions are all at level 1. */
 const cheapestHero = (): number => heroCost(1)!;
@@ -96,14 +98,63 @@ describe('challenge gate', () => {
     expect(challengeOpen(m)).toBe(true);
   });
 
-  it('shows the banner, without opening the dot, while a task asks for the challenge', () => {
+  it('shows the banner, without opening the dot, while a task asks for the challenge past the first stages', () => {
     const m = newMeta();
-    m.cleared = 1;
+    m.cleared = CHALLENGE_TASK_AFTER - 1;
     m.daily.tasks = [{ id: 'challenge', progress: 0, claimed: false }];
+    expect(challengeShown(m)).toBe(false);
+    m.cleared = CHALLENGE_TASK_AFTER;
     expect(challengeOpen(m)).toBe(false);
     expect(challengeShown(m)).toBe(true);
     m.daily.tasks[0].claimed = true;
     expect(challengeShown(m)).toBe(false);
+  });
+});
+
+describe('first battles', () => {
+  it('offers the next stage after the first wins, then goes home first', () => {
+    const m = newMeta();
+    m.runs = 1;
+    m.cleared = 1;
+    expect(offersNext(m, 1)).toBe(true);
+    m.runs = 2;
+    m.cleared = 2;
+    expect(offersNext(m, 2)).toBe(true);
+    m.runs = NEXT_UNTIL;
+    m.cleared = NEXT_UNTIL;
+    expect(offersNext(m, 3)).toBe(false);
+    // a player still short of the stages keeps the button
+    m.runs = 6;
+    m.cleared = 2;
+    expect(offersNext(m, 2)).toBe(true);
+  });
+
+  it('never offers a stage past the last one', () => {
+    const m = newMeta();
+    m.runs = 1;
+    m.cleared = maxStage({ ...m, cleared: 999 });
+    expect(offersNext(m, maxStage(m))).toBe(false);
+  });
+
+  it('keeps the login from opening by itself in the first runs', () => {
+    const m = newMeta();
+    m.runs = LOGIN_AFTER_RUNS - 1;
+    expect(loginPops(m)).toBe(false);
+    m.runs = LOGIN_AFTER_RUNS;
+    expect(loginPops(m)).toBe(true);
+  });
+
+  it('points at the first affordable potion once, after a win', () => {
+    const m = newMeta();
+    m.crystals = 10_000;
+    expect(upgradeHintKind(m)).toBe(null);
+    m.cleared = 1;
+    expect(upgradeHintKind(m)).toBe(HERO_KINDS.find((k) => heroUnlocked(m, k)));
+    m.crystals = 0;
+    expect(upgradeHintKind(m)).toBe(null);
+    m.crystals = 10_000;
+    m.upgradeHint = true;
+    expect(upgradeHintKind(m)).toBe(null);
   });
 });
 
