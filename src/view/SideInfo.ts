@@ -6,7 +6,7 @@ import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import { SKILL_IDS, skillHeroes, skillMax, type SkillId } from '../sim/skills';
-import { BALANCE, type EnemyKind, type HeroKind } from '../sim/types';
+import { BALANCE, isBoss, type EnemyKind, type HeroKind } from '../sim/types';
 import { isBossWave, waveKinds } from '../sim/waves';
 import { cardIcon } from './Overlay';
 import { bossTag, bottle, enemySprite, fit, ink, inset, LIGHT, lightPanel, lightTile, P, plate } from './kit';
@@ -264,7 +264,7 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
       const x = -iw / 2 + 24 + size / 2 + k * (size + 8);
       const ey = y + 22;
       c.addChild(placed(enemySprite(kind, size, size), x, ey));
-      if (kind === 'boss') {
+      if (isBoss(kind)) {
         const bt = bossTag(14);
         bt.position.set(x, ey + size / 2 - 4);
         c.addChild(bt);

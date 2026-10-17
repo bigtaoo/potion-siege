@@ -23,10 +23,31 @@ export const RESIST: Record<EnemyKind, Partial<Record<HeroKind, number>>> = {
   // acid gums the mainspring and magic unwinds it; its own gears turn back the cold; wind
   // catches the big key and spins it the wrong way
   winder: { poison: 1.5, arcane: 1.25, ice: 0.5, wind: 1.5 },
+  // the long case is dry wood and burns, the brass works inside carry the sparks; wood does not
+  // rust, and a lone bolt barely scratches it
+  clock: { fire: 1.25, lightning: 1.25, arcane: 0.75, poison: 0.75 },
+  // under its bell jar (which only frost cracks) the bare works rust and chill fast; the brass
+  // base takes the heat
+  tripod: { poison: 1.5, ice: 1.25, fire: 0.75 },
+  // the cold makes the hot iron brittle and the wind rocks it on its spring; the spring grounds
+  // the sparks, and a bolt glances off the iron
+  anvil: { ice: 1.25, wind: 1.25, lightning: 0.5, arcane: 0.75 },
+  // the iron rim holds the heat and grounds the sparks, but acid eats into it (once the rim is
+  // gone, GEAR_CORE)
+  gear: { fire: 0.5, lightning: 0.5, arcane: 0.75, poison: 1.5 },
 };
+
+/** The gear king's crowned core once the rim is gone: bare brass that magic and sparks go
+ *  through, and acid barely marks. */
+export const GEAR_CORE: Partial<Record<HeroKind, number>> = { arcane: 1.25, lightning: 1.25, poison: 0.5 };
 
 export function resist(kind: EnemyKind, element: HeroKind): number {
   return RESIST[kind][element] ?? 1;
+}
+
+/** `resist` for this one enemy: a gear king's core goes by GEAR_CORE. */
+export function resistOf(e: { kind: EnemyKind; core?: boolean }, element: HeroKind): number {
+  return e.core ? (GEAR_CORE[element] ?? 1) : resist(e.kind, element);
 }
 
 /** Every element with its multiplier against `kind`, in hero order: the codex shows all of

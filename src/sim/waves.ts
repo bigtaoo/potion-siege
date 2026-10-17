@@ -2,7 +2,7 @@
 
 import { FP, ticks } from './math/fixed';
 import type { Prng } from './math/prng';
-import { BALANCE, type EnemyKind } from './types';
+import { BALANCE, BOSS_KINDS, isBoss, type BossKind, type EnemyKind } from './types';
 
 export interface Spawn {
   /** Ticks after the wave starts. */
@@ -14,14 +14,30 @@ export interface Spawn {
   gold?: number;
 }
 
+/** The boss of the chapter `stage` is in: the steam tank on stages 1-10, then a new one every
+ *  ten stages; past the last of them they come round again. */
+export function bossForStage(stage: number): BossKind {
+  const chapter = Math.max(1, Math.ceil(stage / BALANCE.bosses.chapter));
+  return BOSS_KINDS[(chapter - 1) % BOSS_KINDS.length];
+}
+
+/** The first stage of the chapter `kind` leads. */
+function bossStage(kind: BossKind): number {
+  return BOSS_KINDS.indexOf(kind) * BALANCE.bosses.chapter + 1;
+}
+
 /** The first stage each kind can turn up on. */
 export const FIRST_STAGE: Record<EnemyKind, number> = {
   grunt: 1,
   runner: 1,
   brute: 1,
-  boss: 1,
+  boss: bossStage('boss'),
   flyer: BALANCE.flyer.stage,
   winder: BALANCE.winder.stage,
+  clock: bossStage('clock'),
+  tripod: bossStage('tripod'),
+  anvil: bossStage('anvil'),
+  gear: bossStage('gear'),
 };
 
 /** The first wave each kind can turn up in, on the stages it is on. */
@@ -32,11 +48,15 @@ export const FIRST_WAVE: Record<EnemyKind, number> = {
   boss: Math.min(...BALANCE.waves.bossWaves),
   flyer: BALANCE.flyer.wave,
   winder: BALANCE.winder.wave,
+  clock: Math.min(...BALANCE.waves.bossWaves),
+  tripod: Math.min(...BALANCE.waves.bossWaves),
+  anvil: Math.min(...BALANCE.waves.bossWaves),
+  gear: Math.min(...BALANCE.waves.bossWaves),
 };
 
-/** Whether `kind` can turn up on `stage` at all. */
+/** Whether `kind` can turn up on `stage` at all: a boss only in its own chapter. */
 export function onStage(kind: EnemyKind, stage: number): boolean {
-  return stage >= FIRST_STAGE[kind];
+  return isBoss(kind) ? bossForStage(stage) === kind : stage >= FIRST_STAGE[kind];
 }
 
 /** The share of a wave's crowd that flies, on this stage: none before the flyers' stage. */
@@ -73,7 +93,7 @@ export function waveHp(wave: number): number {
   return hp;
 }
 
-/** The spawns of one wave of `stage`, sorted by time. Boss waves add the boss at the start and
+/** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top.
  *  `endless`: past the stage's last wave the waves keep coming, `endless.hpGrowth` tougher each,
@@ -117,7 +137,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
     spawns.push(spawn);
   }
   if (boss) {
-    const kind = endless ? endlessBoss(wave) : 'boss';
+    const kind = endless ? endlessBoss(wave) : bossForStage(stage);
     spawns.unshift({ at: 0, kind, hp: hpOf(kind) });
   }
   const wd = BALANCE.winder;
@@ -142,6 +162,6 @@ export function waveKinds(wave: number, stage: number, bossWaves: readonly numbe
   if (wave >= FIRST_WAVE.brute) kinds.push('brute');
   if (wave >= FIRST_WAVE.flyer && flyerShare(stage) > 0) kinds.push('flyer');
   if (onStage('winder', stage) && wave >= BALANCE.winder.wave) kinds.push('winder');
-  if (isBossWave(wave, bossWaves, endless)) kinds.push(endless ? endlessBoss(wave) : 'boss');
+  if (isBossWave(wave, bossWaves, endless)) kinds.push(endless ? endlessBoss(wave) : bossForStage(stage));
   return kinds;
 }

@@ -18,8 +18,8 @@ describe('enemy resistances', () => {
     }
   });
 
-  it('lets only the boiler golem shrug off corrosion, and the winder fear it most', () => {
-    for (const kind of ENEMY_KINDS) expect(resist(kind, 'poison')).toBe(kind === 'brute' ? 0.5 : kind === 'winder' ? 1.5 : 1);
+  it('lets only the boiler golem and the wooden clock shrug off corrosion, and the winder, the bare tripod and the iron-rimmed gear king fear it most', () => {
+    for (const kind of ENEMY_KINDS) expect(resist(kind, 'poison')).toBe(kind === 'brute' ? 0.5 : kind === 'winder' || kind === 'tripod' || kind === 'gear' ? 1.5 : kind === 'clock' ? 0.75 : 1);
   });
 
   it('lets the gale tear at the ornithopter and the winder, and the heavy ones stand in it', () => {

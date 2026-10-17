@@ -6,9 +6,9 @@ import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
-import { BALANCE, ENEMY_KINDS, type BattleEvent, type HeroKind } from '../sim/types';
+import { BALANCE, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
-import { fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
+import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -36,6 +36,8 @@ export class Hud extends Container {
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
   private newcomerTime = 0;
+  /** A new chapter boss's card: its art, name, what it does and what it is weak to. */
+  private readonly bossCard = new Container();
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
   hint = true;
@@ -61,7 +63,7 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomer.position.set(DESIGN_W / 2, 370);
     this.newcomer.alpha = 0;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.mods, this.upgradeButton, this.summonButton);
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods, this.upgradeButton, this.summonButton);
   }
 
   attach(battle: Battle): void {
@@ -70,6 +72,7 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
+    this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
   }
@@ -127,10 +130,39 @@ export class Hud extends Container {
       const kind = ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
       if (kind) {
         const weak = resists(kind).filter((r) => r.value > 1).map((r) => t(`hero.${r.element}`));
-        this.newcomer.text = t('newEnemy', { name: t(`enemy.${kind}`), weak: weak.join(t('listSep')) });
+        if (isBoss(kind)) {
+          this.newcomer.text = '';
+          this.showBoss(kind, weak.join(t('listSep')));
+        } else this.newcomer.text = t('newEnemy', { name: t(`enemy.${kind}`), weak: weak.join(t('listSep')) });
         this.newcomerTime = 5;
       }
     }
+  }
+
+  private showBoss(kind: BossKind, weak: string): void {
+    const c = this.bossCard;
+    c.removeChildren().forEach((o) => o.destroy({ children: true }));
+    const w = 860;
+    const h = 250;
+    const art = enemySprite(kind, 200, 220);
+    art.position.set(-w / 2 + 130, 0);
+    const tag = bossTag(22);
+    tag.position.set(-w / 2 + 130, h / 2 - 26);
+    const tx = -w / 2 + 250;
+    const room = w / 2 - 30 - tx;
+    const head = fit(ink(t('bossNew'), 26, { fill: LIGHT.edge }), room);
+    const name = fit(ink(t(`enemy.${kind}`), 48), room);
+    const lines = [head, name];
+    if (kind !== 'boss') lines.push(fit(ink(t(`codex.trait.${kind}`), 28), room));
+    lines.push(fit(ink(t('bossWeak', { weak }), 28, { fill: 0xb23a2a }), room));
+    c.addChild(lightTile(w, h, 28), art, tag);
+    lines.forEach((l, i) => {
+      l.anchor.set(0, 0.5);
+      l.position.set(tx, -h / 2 + 40 + i * 56);
+      c.addChild(l);
+    });
+    // under the BOSS WAVE banner
+    c.position.set(DESIGN_W / 2, 500);
   }
 
   update(dt: number): void {
@@ -159,6 +191,8 @@ export class Hud extends Container {
     this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.7) * 0.6);
     this.newcomerTime = b.paused ? this.newcomerTime : Math.max(0, this.newcomerTime - dt);
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
+    this.bossCard.alpha = this.newcomer.alpha;
+    this.bossCard.scale.set(1 + Math.max(0, this.newcomerTime - 4.8) * 0.8);
   }
 
   /** The hint's plate around its words, drawn again when they wrap differently. */

@@ -72,7 +72,7 @@
       "push": 45,
       "pushStar": [1, 1.3, 1.6, 2],
       "pushTime": 1.5,
-      "weight": { "grunt": 0.75, "runner": 1, "brute": 0.4, "boss": 0, "flyer": 1.5, "winder": 1 },
+      "weight": { "grunt": 0.75, "runner": 1, "brute": 0.4, "boss": 0, "flyer": 1.5, "winder": 1, "clock": 0, "tripod": 0, "anvil": 0, "gear": 0 },
       "bossSlow": 0.3,
       "bossSlowTime": 0.5,
       "unlockStage": 10
@@ -120,7 +120,42 @@
       "radius": 42,
       "wallDps": 10,
       "gold": 12
+    },
+    "clock": {
+      "hp": 30,
+      "speed": 30,
+      "radius": 90,
+      "wallDps": 140,
+      "gold": 150
+    },
+    "tripod": {
+      "hp": 30,
+      "speed": 30,
+      "radius": 90,
+      "wallDps": 150,
+      "gold": 150
+    },
+    "anvil": {
+      "hp": 34,
+      "speed": 22,
+      "radius": 90,
+      "wallDps": 130,
+      "gold": 150
+    },
+    "gear": {
+      "hp": 46,
+      "speed": 26,
+      "radius": 90,
+      "wallDps": 160,
+      "gold": 200
     }
+  },
+  "bosses": {
+    "chapter": 10,
+    "clock": { "every": 5, "first": 3, "mice": 2, "hp": 0.5, "gold": 0.5, "spread": 60 },
+    "tripod": { "shield": 0.25, "ice": 3, "other": 0.7, "regrow": 12 },
+    "anvil": { "every": 8, "leap": 120, "leapTime": 0.7, "slamFirst": 1, "slamEvery": 6, "slam": 1, "stun": 2, "reach": 90 },
+    "gear": { "at": 0.5, "guard": 0.5, "speed": 1.7 }
   },
   "flyer": {
     "stage": 3,

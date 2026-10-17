@@ -295,3 +295,28 @@ export function vortexSwirl(g: Graphics, x: number, y: number, radius: number, t
     g.poly(pts, false).stroke({ width: 5, color: k % 2 ? WIND[0] : WIND[1], alpha, cap: 'round', join: 'round' });
   }
 }
+
+/** The tripod's bell jar bursting: glass shards flung out and falling, `p` 0 to 1. */
+export function glassShards(g: Graphics, x: number, y: number, p: number): void {
+  const a = fade(p);
+  const e = easeOut(Math.min(1, p * 2));
+  if (p < 0.3) g.circle(x, y, 150 * (0.8 + e * 0.4)).stroke({ width: 10 * (1 - p / 0.3), color: 0xd8fbff, alpha: 1 - p / 0.3 });
+  for (let i = 0; i < 12; i++) {
+    const ang = (i / 12) * Math.PI * 2 + 0.3;
+    const v = 220 + (i % 3) * 70;
+    const px = x + Math.cos(ang) * v * e;
+    const py = y + Math.sin(ang) * v * e * 0.8 + 380 * p * p;
+    const spin = p * 8 * (i % 2 ? 1 : -1) + i;
+    const s = 16 + (i % 4) * 5;
+    const pts = [0, -s, s * 0.6, s * 0.5, -s * 0.5, s * 0.4].flatMap((v, j, arr) => (j % 2 ? [] : [px + v * Math.cos(spin) - arr[j + 1] * Math.sin(spin), py + v * Math.sin(spin) + arr[j + 1] * Math.cos(spin)]));
+    g.poly(pts).fill({ color: 0xbff4fa, alpha: a * 0.9 }).stroke({ width: 3, color: INK, alpha: a });
+  }
+}
+
+/** Dazed: three little stars circling over a stunned cell. */
+export function stunStars(g: Graphics, x: number, y: number, t: number): void {
+  for (let i = 0; i < 3; i++) {
+    const ang = t * 4 + (i * Math.PI * 2) / 3;
+    star(g, x + Math.cos(ang) * 46, y + Math.sin(ang) * 12, 20, ang, [0xf5b800, 0xffe94a, 0xffffff], 3);
+  }
+}
