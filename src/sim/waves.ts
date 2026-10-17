@@ -71,12 +71,27 @@ export function isBossWave(wave: number, bossWaves: readonly number[] = BALANCE.
   return endless ? wave % BALANCE.endless.bossEvery === 0 : bossWaves.includes(wave);
 }
 
-/** The bosses endless mode takes turns with, one boss wave after another. */
-export const ENDLESS_BOSSES: readonly EnemyKind[] = ['boss'];
+/** The bosses endless mode takes turns with, in chapter order: the endless stage's own boss on its
+ *  boss waves, then past its last wave one chapter's boss after another, round and round. */
+export const ENDLESS_BOSSES: readonly BossKind[] = BOSS_KINDS;
 
-/** The boss of an endless boss wave. */
-export function endlessBoss(wave: number): EnemyKind {
-  return ENDLESS_BOSSES[(Math.floor(wave / BALANCE.endless.bossEvery) - 1) % ENDLESS_BOSSES.length];
+/** The boss of an endless boss wave: the first ten waves are the endless stage's own (the tank),
+ *  then the clock on wave 15, the tripod on 20, the anvil on 25, the gear king on 30, the tank on 35... */
+export function endlessBoss(wave: number): BossKind {
+  const E = BALANCE.endless;
+  if (wave <= BALANCE.waves.count) return bossForStage(E.stage);
+  const turn = Math.floor((wave - BALANCE.waves.count) / E.bossEvery);
+  return ENDLESS_BOSSES[(ENDLESS_BOSSES.indexOf(bossForStage(E.stage)) + turn) % ENDLESS_BOSSES.length];
+}
+
+/** The bosses an endless run reaching `wave` has met, in the order it met them. */
+export function endlessBossesMet(wave: number): BossKind[] {
+  const met: BossKind[] = [];
+  for (let w = BALANCE.endless.bossEvery; w <= wave && met.length < ENDLESS_BOSSES.length; w += BALANCE.endless.bossEvery) {
+    const kind = endlessBoss(w);
+    if (!met.includes(kind)) met.push(kind);
+  }
+  return met;
 }
 
 /** Endless waves past the last wave of a stage, 0 up to it: how far the mix has tilted. */
@@ -93,6 +108,24 @@ export function waveHp(wave: number): number {
   return hp;
 }
 
+/** A grunt's base hit points in `wave` and how many the wave's crowd counts. In endless mode past the
+ *  stage's last wave the hit points grow `endless.hpGrowth` a wave instead, and the crowd stops at
+ *  `endless.maxCount`, what it would have had over the cap going into hit points. Whatever else
+ *  the wave brings on (the clock's mice) is as tough as its crowd. */
+export function crowdOf(wave: number, endless = false): { hp: number; count: number } {
+  const w = BALANCE.waves;
+  const E = BALANCE.endless;
+  const extra = endlessExtra(wave, endless);
+  let hp = waveHp(wave - extra);
+  for (let i = 0; i < extra; i++) hp *= E.hpGrowth;
+  let count = w.baseCount + w.countStep * (wave - 1);
+  if (extra > 0 && count > E.maxCount) {
+    hp = (hp * count) / E.maxCount;
+    count = E.maxCount;
+  }
+  return { hp, count };
+}
+
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top.
@@ -103,13 +136,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, bossWaves: readonly
   const w = BALANCE.waves;
   const E = BALANCE.endless;
   const extra = endlessExtra(wave, endless);
-  let hp = waveHp(wave - extra);
-  for (let i = 0; i < extra; i++) hp *= E.hpGrowth;
-  let crowdCount = w.baseCount + w.countStep * (wave - 1);
-  if (extra > 0 && crowdCount > E.maxCount) {
-    hp = (hp * crowdCount) / E.maxCount;
-    crowdCount = E.maxCount;
-  }
+  const { hp, count: crowdCount } = crowdOf(wave, endless);
   const hpOf = (kind: EnemyKind) => Math.round(hp * BALANCE.enemies[kind].hp * FP);
   const boss = isBossWave(wave, bossWaves, endless);
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,

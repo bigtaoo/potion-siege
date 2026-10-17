@@ -11,7 +11,7 @@ import { CHALLENGE_TIERS } from '../sim/challenge';
 import { enemyStats, resistLabel, resists } from '../sim/enemies';
 import { heroUnlocked, unlockStage, type MetaSave } from '../sim/meta';
 import { BALANCE, BOSS_KINDS, HERO_KINDS, isBoss, type EnemyKind, type HeroKind } from '../sim/types';
-import { FIRST_STAGE } from '../sim/waves';
+import { endlessBossesMet, FIRST_STAGE } from '../sim/waves';
 import { potionLook } from './art';
 import {
   bossTag, bottle, calendarIcon, enemySprite, fit, flask, gearIcon, ink, LIGHT, lightPanel, lightTile, lock, P, PillButton, plate, redDot, stopwatchIcon,
@@ -100,14 +100,14 @@ function bookPage(root: Container, m: MetaSave, a: CodexArea, top: number): void
     const hw = Math.min(840, (a.w - 3 * gap) * 0.52);
     const mw = a.w - 3 * gap - hw;
     const ph = bottom - top;
-    root.addChild(heroBoard(m, hw, ph), monsterBoard(m.stage, mw, ph, true));
+    root.addChild(heroBoard(m, hw, ph), monsterBoard(m, mw, ph, true));
     root.children[0].position.set(a.x + gap + hw / 2, top + ph / 2);
     root.children[1].position.set(a.x + 2 * gap + hw + mw / 2, top + ph / 2);
   } else {
     const pw = Math.min(1000, a.w - 60);
     const hh = 770;
     const mh = bottom - top - hh - 30;
-    root.addChild(heroBoard(m, pw, hh), monsterBoard(m.stage, pw, mh, false));
+    root.addChild(heroBoard(m, pw, hh), monsterBoard(m, pw, mh, false));
     root.children[0].position.set(a.x + a.w / 2, top + hh / 2);
     root.children[1].position.set(a.x + a.w / 2, bottom - mh / 2);
   }
@@ -235,11 +235,15 @@ const PAGES: EnemyKind[][] = [
 type TraitKind = Exclude<EnemyKind, 'grunt' | 'runner' | 'brute' | 'boss'>;
 /** The page shown, kept while the tab is rebuilt. */
 let monsterPage = 0;
+/** The bosses the best endless run has met: shown in full, whatever stage is picked. */
+let met: readonly EnemyKind[] = [];
 
 /** The first page as four cards side by side on a portrait page, four rows on a landscape one;
  *  the later kinds as rows, with room for what each does. Arrows by the title turn the page.
  *  The numbers are for the stage picked on the battle tab. */
-function monsterBoard(stage: number, w: number, h: number, rows: boolean): Container {
+function monsterBoard(m: MetaSave, w: number, h: number, rows: boolean): Container {
+  const stage = m.stage;
+  met = endlessBossesMet(m.endless.best);
   const c = board(t('codex.monsters'), w, h);
   const note = ink(t('codex.stage', { n: stage }), 26, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
@@ -374,8 +378,8 @@ function art(kind: EnemyKind, stage: number, bw: number, bh: number, x: number, 
     tag.position.set(bw / 2 - 46, -bh / 2 + 18);
     c.addChild(tag);
   }
-  if (stage < FIRST_STAGE[kind]) {
-    // not on the picked stage yet: a dark shape, and the stage it first comes on
+  if (stage < FIRST_STAGE[kind] && !met.includes(kind)) {
+    // not on the picked stage yet, nor met in endless mode: a dark shape, and the stage it first comes on
     for (const s of sprite.children) if (s instanceof Sprite) s.tint = 0x4a4038;
     const tag = fit(label(t('codex.from', { n: FIRST_STAGE[kind] }), 24, { fill: P.cream, stroke: { color: INK, width: 6 } }), bw);
     tag.y = bh * 0.3;
