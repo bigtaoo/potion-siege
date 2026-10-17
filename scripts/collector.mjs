@@ -8,6 +8,11 @@
 //
 // With COLLECTOR_DIR set (the container does) it writes one file per UTC day instead,
 // <dir>/events-YYYY-MM-DD.ndjson. GET /health answers 200 for the container's healthcheck.
+//
+// GET /b?h=<host>&s=<step>&b=<build>[&ms=<n>] counts an anonymous load checkpoint, no id:
+// `open_*` from the CrazyGames page's inline script before anything else downloads
+// (vite.crazygames.config.js), `loaded_*` once the first battle frame is up (app.ts). It lands
+// in the same file as {name: 'beacon', step, host, build, ms}.
 
 import { appendFileSync, mkdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -32,9 +37,25 @@ const sizeOf = (file) => {
   }
 };
 
+const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
+const HOSTS = ['crazygames', 'web'];
+
+/** The line a checkpoint request writes, or null when it is not one. */
+function beaconLine(url, received) {
+  const q = new URL(url, 'http://x').searchParams;
+  const step = q.get('s');
+  const host = q.get('h');
+  const build = q.get('b') ?? '';
+  if (!BEACONS.includes(step) || !HOSTS.includes(host) || !/^[\w.+-]{1,40}$/.test(build)) return null;
+  const ms = q.has('ms') ? Number(q.get('ms')) : NaN;
+  const line = { name: 'beacon', step, host, build, ts: received, received };
+  if (Number.isInteger(ms) && ms >= 0 && ms < 3_600_000) line.ms = ms;
+  return line;
+}
+
 const cors = {
   'Access-Control-Allow-Origin': '*',
-  'Access-Control-Allow-Methods': 'POST, OPTIONS',
+  'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
 
@@ -56,6 +77,15 @@ const limited = (req) => {
 createServer((req, res) => {
   if (req.method === 'GET' && req.url === '/health') return res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
   if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
+  if (req.method === 'GET' && req.url?.startsWith('/b?')) {
+    if (limited(req)) return res.writeHead(429, cors).end();
+    const received = Date.now();
+    const line = beaconLine(req.url, received);
+    if (!line) return res.writeHead(400, cors).end();
+    const file = fileFor(received);
+    if (sizeOf(file) < MAX_FILE) appendFileSync(file, JSON.stringify(line) + '\n');
+    return res.writeHead(204, cors).end();
+  }
   if (req.method !== 'POST' || req.url !== '/e') return res.writeHead(404, cors).end();
   if (limited(req)) return res.writeHead(429, cors).end();
   let body = '';

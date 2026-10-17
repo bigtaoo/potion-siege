@@ -1,7 +1,7 @@
-// The first battle's tutorial over the whole screen: the page dimmed except for a cut-out
-// around the control to use, a pulsing hand on it (dragging from one hero to the other for the
-// merge), and a cream speech card in the light workshop style with a skip button. Taps inside
-// the cut-out reach the battle below; everything else on the dim is swallowed.
+// The first battle's tutorial over the whole screen: the page lightly dimmed except for a
+// cut-out around the control to use, a pulsing hand on it (dragging from one hero to the other
+// for the merge), and a cream speech card in the light workshop style with a skip button. The
+// battle runs on underneath and every tap reaches it: nothing but the skip button takes taps.
 
 import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../i18n';
@@ -26,8 +26,8 @@ export interface Lesson {
   clear: Rect;
 }
 
-/** The dim, a warm dark brown rather than black. */
-const DIM = { color: P.line, alpha: 0.62 };
+/** The dim, a warm dark brown rather than black, light enough to watch the battle through. */
+const DIM = { color: P.line, alpha: 0.42 };
 const PAD = 14;
 
 export class TutorialLayer extends Container {
@@ -43,8 +43,7 @@ export class TutorialLayer extends Container {
   constructor(private readonly onSkip: () => void) {
     super();
     this.visible = false;
-    this.dim.eventMode = 'static'; // swallow taps outside the cut-outs
-    this.dim.hitArea = { contains: (x: number, y: number) => !this.holes.some((r) => inside(r, x, y)) };
+    this.dim.eventMode = 'none'; // the battle under it keeps taking taps
     this.hand.eventMode = 'none';
     this.arrow.eventMode = 'none';
     this.rings.eventMode = 'none';
@@ -62,7 +61,6 @@ export class TutorialLayer extends Container {
     const pick = lesson.step === 'pick';
     this.holes = pick ? [] : joined(lesson.holes.map((r) => grow(r, PAD)));
     this.dim.visible = !pick;
-    this.dim.eventMode = pick ? 'none' : 'static';
     this.hand.visible = !pick;
 
     const key = `${lesson.step}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}`;
@@ -224,10 +222,6 @@ function drawArc(g: Graphics, a: { x: number; y: number }, m: { x: number; y: nu
 function quad(a: { x: number; y: number }, m: { x: number; y: number }, b: { x: number; y: number }, k: number): { x: number; y: number } {
   const u = 1 - k;
   return { x: u * u * a.x + 2 * u * k * m.x + k * k * b.x, y: u * u * a.y + 2 * u * k * m.y + k * k * b.y };
-}
-
-function inside(r: Rect, x: number, y: number): boolean {
-  return x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h;
 }
 
 function grow(r: Rect, d: number): Rect {

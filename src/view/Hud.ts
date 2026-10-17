@@ -154,6 +154,11 @@ export class Hud extends Container {
     return { x: b.x - BUTTON.w / 2, y: b.y - BUTTON.h / 2, w: BUTTON.w, h: BUTTON.h };
   }
 
+  /** A line in the wave banner's place, e.g. the tutorial saying it did a step. */
+  say(text: string): void {
+    this.show(text);
+  }
+
   private show(text: string): void {
     this.banner.text = text;
     this.bannerTime = 2;

@@ -82,24 +82,6 @@ export class Overlay extends Container {
     return box;
   }
 
-  showTitle(best: number, onStart: () => void): void {
-    this.open(0.55, () => this.showTitle(best, onStart));
-    const box = this.box(1080, 1000);
-    const title = label(t('title'), 140, { fill: COLORS.gold });
-    title.y = -340;
-    const tap = label(t('tapToStart'), 70);
-    tap.y = 40;
-    box.addChild(title, tap);
-    if (best > 0) {
-      const b = label(t('bestWave', { n: best }), 50);
-      b.y = -200;
-      box.addChild(b);
-    }
-    const area = this.children[0];
-    area.cursor = 'pointer';
-    area.once('pointertap', onStart);
-  }
-
   /** Three tall cards side by side, and under them the rewarded refresh when `onReroll` is
    *  given. `levels` says how far each skill has been taken. */
   showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null): void {

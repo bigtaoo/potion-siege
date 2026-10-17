@@ -38,16 +38,63 @@ for (const d of [1, 2, 3, 7, 14, 30]) {
   console.log(`D${d}`.padEnd(5), pct(back.length, eligible.length).padStart(7), `  (${back.length}/${eligible.length})`);
 }
 
+// --- loading: anonymous open/loaded checkpoints (collector GET /b), no id ---
+const beacons = events.filter((e) => e.name === 'beacon');
+if (beacons.length) {
+  console.log('\n== Loading (launches, anonymous) ==');
+  console.log('host        device    opened  loaded  loaded/opened  median load ms');
+  for (const host of ['crazygames', 'web']) {
+    for (const kind of ['desktop', 'touch']) {
+      const opened = beacons.filter((e) => e.host === host && e.step === `open_${kind}`).length;
+      const loaded = beacons.filter((e) => e.host === host && e.step === `loaded_${kind}`);
+      if (!opened && !loaded.length) continue;
+      // the web build has no inline open beacon: only its loads count
+      const share = host === 'crazygames' ? pct(loaded.length, opened).padStart(13) : '-'.padStart(13);
+      console.log(`${host.padEnd(12)}${kind.padEnd(10)}${String(opened).padStart(6)}  ${String(loaded.length).padStart(6)}  ${share}  ${String(median(loaded.flatMap((e) => (e.ms === undefined ? [] : [e.ms])))).padStart(14)}`);
+    }
+  }
+  console.log('opened but never loaded = launches lost to download size, a crash or a closed tab before the first frame');
+}
+
+// --- new players by the first build they played (version+commit) ---
+const firstBuild = new Map(); // uid -> build of their first session
+for (const e of events) if (e.name === 'session_start' && e.session === 1 && !firstBuild.has(e.uid)) firstBuild.set(e.uid, e.build ?? '?');
+if (firstBuild.size) {
+  const firstsOf = (name) => new Set(events.filter((e) => e.name === name).map((e) => e.uid));
+  const input = firstsOf('first_input');
+  const merged = firstsOf('first_merge');
+  const ran = new Set(events.filter((e) => e.name === 'run_end').map((e) => e.uid));
+  const groups = new Map();
+  for (const [uid, build] of firstBuild) groups.set(build, [...(groups.get(build) ?? []), uid]);
+  console.log('\n== New players by first build played ==');
+  console.log('build                   players  input   merge   run end  D1');
+  for (const [build, uids] of [...groups].sort((a, b) => b[1].length - a[1].length)) {
+    const n = uids.length;
+    const share = (set) => pct(uids.filter((u) => set.has(u)).length, n).padStart(7);
+    const p1 = uids.map((u) => players.get(u)).filter((p) => p && p.installTs < Infinity && newest - p.installTs >= 2 * DAY);
+    const d1 = pct(p1.filter((p) => p.days.has(1)).length, p1.length);
+    console.log(`${build.padEnd(22)}${String(n).padStart(8)} ${share(input)} ${share(merged)} ${share(ran)}  ${d1} (${p1.length})`);
+  }
+}
+
 // --- first-session funnel ---
 const firstSession = (name) => new Set(events.filter((e) => e.name === name && e.session === 1).map((e) => e.uid));
 const newUids = new Set(events.filter((e) => e.name === 'session_start' && e.session === 1).map((e) => e.uid));
 console.log(`\n== First-session funnel (${newUids.size} players) ==`);
-for (const step of ['session_start', 'first_tap_start', 'first_summon', 'first_merge', 'first_level_up', 'run_end', 'run_start']) {
+// first_input: the first tap or key (builds before the live first battle sent first_tap_start)
+for (const step of ['session_start', 'first_input', 'first_summon', 'first_merge', 'first_level_up', 'run_end', 'run_start']) {
   const set = step === 'run_start'
     ? new Set(events.filter((e) => e.name === 'run_start' && e.session === 1 && e.props.cause === 'again').map((e) => e.uid))
     : firstSession(step);
   const label = step === 'run_start' ? 'second run' : step;
   console.log(label.padEnd(16), pct(set.size, newUids.size).padStart(7), `  (${set.size})`);
+}
+
+const assists = events.filter((e) => e.name === 'tutorial_assist');
+if (assists.length) {
+  const by = new Map();
+  for (const e of assists) by.set(e.props.step, (by.get(e.props.step) ?? 0) + 1);
+  console.log(`tutorial did it for them: ${[...by].map(([k, n]) => `${k} ${n}`).join(', ')}`);
 }
 
 // --- session length ---

@@ -1,9 +1,8 @@
 // The game shell: owns the Pixi app, fits the 1080x1920 design to the screen and runs the
-// flow title -> battle (with skill picks) -> end -> home (upgrades) -> battle. The very first
-// battle starts from the title with one tap; the home screen comes after it.
+// flow battle (with skill picks) -> end -> home (upgrades) -> battle. A new player lands in a
+// live first battle as soon as loading is over, no tap first; the home screen comes after it.
 
 import { Application, Container, Graphics, Text } from 'pixi.js';
-import pkg from '../package.json';
 import { Analytics, type Sink } from './analytics/analytics';
 import { memProbe } from './analytics/memProbe';
 import { deviceProps, PerfReport } from './analytics/perfReport';
@@ -40,6 +39,8 @@ import { gpuName, QualityRuntime } from './view/qualityRuntime';
 import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
+/** `version+commit`, stamped at build time (scripts/buildId.mjs), e.g. 0.0.1+61b33eb. */
+const BUILD = __PS_BUILD__;
 
 
 export async function boot(platform: Platform): Promise<void> {
@@ -76,6 +77,12 @@ export async function boot(platform: Platform): Promise<void> {
     ...safeDevice(app),
   });
   game.perf.anomalies.listen(window, app.canvas);
+  // the first tap or key ever: the player is really there (the battle is already live by then)
+  const input = () => {
+    analytics.first('first_input', { t: analytics.sessionSeconds });
+    for (const type of ['pointerdown', 'keydown']) window.removeEventListener(type, input, true);
+  };
+  for (const type of ['pointerdown', 'keydown']) window.addEventListener(type, input, { capture: true, passive: true });
   // mobile browsers often skip pagehide, so also flush whenever the tab is hidden
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
@@ -85,6 +92,25 @@ export async function boot(platform: Platform): Promise<void> {
   });
   window.addEventListener('pagehide', () => game.leave());
   game.start();
+  // the first battle frame is on screen two animation frames later: the `loaded` checkpoint
+  requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name)));
+}
+
+/** The anonymous `loaded` count beside the CrazyGames page's inline `open` one (see
+ *  vite.crazygames.config.js): no id, sent whatever the privacy state, split by touch/desktop. */
+function loadedBeacon(host: string): void {
+  const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
+  if (!url || new URLSearchParams(location.search).has('autoplay')) return;
+  // a local preview of a production build counts nothing, like the open beacon
+  const h = location.hostname;
+  if (h === 'localhost' || h === '[::1]' || h.startsWith('127.')) return;
+  try {
+    const kind = matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop';
+    const q = `h=${encodeURIComponent(host)}&b=${encodeURIComponent(BUILD)}&s=loaded_${kind}&ms=${Math.round(performance.now())}`;
+    void fetch(`${url.replace(/\/e$/, '')}/b?${q}`, { mode: 'no-cors', keepalive: true }).catch(() => {});
+  } catch {
+    // a count lost, never the game
+  }
 }
 
 /** What the quality level starts from; a touch screen with a phone's browser counts as a phone. */
@@ -119,7 +145,7 @@ function createAnalytics(platform: Platform, params: URLSearchParams): Analytics
   if (params.has('track')) sinks.push(new ConsoleSink());
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (url && !params.has('autoplay')) sinks.push(new BeaconSink(url));
-  return new Analytics(platform.storage, sinks, pkg.version, platform.name);
+  return new Analytics(platform.storage, sinks, BUILD, platform.name);
 }
 
 class Game {
@@ -208,17 +234,10 @@ class Game {
       this.home();
       return;
     }
-    this.newBattle(null);
-    this.hud.hint = false; // the merge hint would show through the title, under its words
-    this.overlay.showTitle(this.save.bestWave, () => {
-      this.overlay.hide();
-      this.hud.hint = true;
-      this.analytics.first('first_tap_start', { t: this.analytics.sessionSeconds });
-      this.run = new RunTracker(this.analytics, this.battle!, this.save.runs + 1, 'first');
-      this.perf.start();
-      this.beginTutorial();
-      this.platform.gameplayStart();
-    });
+    // a new player: straight into the first battle, live, with the tutorial pointing
+    this.newBattle('first');
+    this.beginTutorial();
+    this.platform.gameplayStart();
   }
 
   /** The page is going away: report the run in progress and the session length. */
@@ -230,8 +249,8 @@ class Game {
     this.analytics.flush();
   }
 
-  /** `cause` null: the title screen is up and the run starts when the player taps. */
-  private newBattle(cause: 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
+  /** `cause` null: an idle battle under the home screen, no run. */
+  private newBattle(cause: 'first' | 'again' | 'autoplay' | 'challenge' | null, ch: Challenge | null = null): void {
     this.run?.close('again');
     this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle((Math.random() * 2 ** 32) >>> 0, battleSetup(this.save));
     this.challenge = null;
@@ -295,10 +314,9 @@ class Game {
     const b = this.battle;
     let events: BattleEvent[] = [];
     if (b && !this.overlay.visible && !this.ended) {
-      // the battle stands still while a tutorial step waits for its tap
-      // (the bot picks its cards at once, so autoplay never stops for an offer)
+      // the bot picks its cards at once, so autoplay never stops for an offer
       if (this.autoplay && b.choices) botAct(b);
-      if (!this.tutorial?.holds(b) && !b.paused) {
+      if (!b.paused) {
         const steps = this.loop.advance(dt * 1000, this.speed);
         for (let i = 0; i < steps; i++) {
           if (this.autoplay) botAct(b);
@@ -344,6 +362,12 @@ class Game {
     if (tut && b) {
       tut.update(b, events);
       if (tut.done) this.endTutorial(false);
+      // a step left alone is done for the player, and the banner says so
+      const helped = !tut.done && !this.overlay.visible && !this.ended ? tut.assist(b) : null;
+      if (helped) {
+        this.hud.say(t(`tutorial.helped.${helped as 'summon' | 'merge' | 'upgrade'}`));
+        this.analytics.track('tutorial_assist', { step: helped, t: Math.round(b.seconds) });
+      }
     }
     const step = this.tutorial && b && this.root.visible ? this.tutorial.showing(b) : null;
     // the pick shows over the skill cards, every other step over the battle itself
