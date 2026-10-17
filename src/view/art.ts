@@ -30,6 +30,7 @@ const FILES = [
   'icon_allSpeed',
   'icon_gold',
   'icon_wallRepair',
+  'tutorial_hand',
   'bg_field.jpg',
 ] as const;
 
@@ -154,6 +155,11 @@ export function fieldTexture(): Texture | undefined {
 
 export function enemyTexture(kind: EnemyKind): Texture | undefined {
   return textures.get(`enemy_${kind}`);
+}
+
+/** The tutorial's pointing glove, fingertip up and to the right (see Tutorial.ts). */
+export function handTexture(): Texture | undefined {
+  return textures.get('tutorial_hand');
 }
 
 export function iconTexture(id: SkillId): Texture | undefined {
