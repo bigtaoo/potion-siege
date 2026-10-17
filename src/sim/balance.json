@@ -222,6 +222,7 @@
   "meta": {
     "stageHpGrowth": 1.12,
     "stageHpLate": { "from": 14, "growth": 1.06 },
+    "stageHpScale": { "9": 0.98, "10": 1.07, "13": 0.97, "14": 0.94, "15": 0.97, "16": 0.96, "19": 0.98, "20": 0.97 },
     "stageCount": 20,
     "reward": { "perWave": 4, "perKills": 10, "winBonus": 40, "firstClear": 30, "stageStep": 0.25 },
     "heroMax": 20,

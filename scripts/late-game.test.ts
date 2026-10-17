@@ -9,7 +9,8 @@
 // enemies do the wall damage and how much one skill card granted at the start moves the win rate.
 // Written to D:/fang/ref/balance/late/<TAG>.md (OUT_DIR overrides) and a JSON summary beside it.
 // BAL='{...}' overrides balance.json as in balance.test.ts; SEEDS (default 60), STAGES=10-20,
-// SKILLS=0 skips the card section, SKILL_STAGES=12,16,19 and SKILL_SEEDS set it up.
+// SKILLS=0 skips the card section, SKILL_STAGES=12,16,19 and SKILL_SEEDS set it up; CURVE_ONLY=1
+// plays only the starting four (arrive and clear), for quick tuning passes.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { TICK_RATE } from '../src/sim/math/fixed';
@@ -174,6 +175,7 @@ it('late game', () => {
   if (env.BAL) merge(BALANCE as unknown as Record<string, unknown>, JSON.parse(env.BAL));
   const seeds = Number(env.SEEDS ?? 60);
   const tag = env.TAG ?? 'base';
+  const curveOnly = env.CURVE_ONLY === '1';
   const t0 = Date.now();
   const cells: Cell[] = [];
   const cell = (group: string, stage: number, name: string, lineup: HeroKind[], budget: number, carry?: HeroKind): Cell => {
@@ -199,6 +201,7 @@ it('late game', () => {
     const arrive = ARRIVE[stage];
     cell('start', stage, 'arrive', [...LINEUP], arrive);
     cell('start', stage, 'clear', [...LINEUP], ARRIVE[stage + 1]);
+    if (curveOnly) continue;
     for (const extra of extras) {
       if (stage <= unlock(extra)) continue;
       for (const out of LINEUP)
@@ -221,7 +224,7 @@ it('late game', () => {
     const out = options.reduce((a, o) => (o.w > a.w ? o : a)).out;
     bestSwap[extra] = LINEUP.map((k) => (k === out ? extra : k));
   }
-  for (const stage of stageRange()) {
+  for (const stage of curveOnly ? [] : stageRange()) {
     for (const k of HERO_KINDS) {
       if (!LINEUP.includes(k) && stage <= unlock(k)) continue;
       cell('carry', stage, `carry ${k}`, LINEUP.includes(k) ? [...LINEUP] : bestSwap[k], ARRIVE[stage], k);
@@ -245,7 +248,7 @@ it('late game', () => {
   lines.push('');
 
   // 2. swaps
-  for (const extra of extras) {
+  for (const extra of curveOnly ? [] : extras) {
     const names = LINEUP.map((out) => swapName(extra, out));
     const stages = stageRange().filter((s) => s > unlock(extra));
     if (stages.length === 0) continue;
@@ -260,22 +263,24 @@ it('late game', () => {
   }
 
   // 3. carries
-  lines.push('## Each potion as the carry (arrive save, its levels ~5 ahead)', '');
-  lines.push(`| st | ${HERO_KINDS.map((k) => `${short(k)} win | share`).join(' | ')} |`, `|---|${HERO_KINDS.map(() => '---|---').join('|')}|`);
-  for (const stage of stageRange()) {
-    const row = HERO_KINDS.map((k) => {
-      const c = cells.find((x) => x.group === 'carry' && x.stage === stage && x.carry === k);
-      return c ? `${pct(win(c))} | ${pct(shares(c.runs, c.lineup)[k])}` : '– | –';
+  if (!curveOnly) {
+    lines.push('## Each potion as the carry (arrive save, its levels ~5 ahead)', '');
+    lines.push(`| st | ${HERO_KINDS.map((k) => `${short(k)} win | share`).join(' | ')} |`, `|---|${HERO_KINDS.map(() => '---|---').join('|')}|`);
+    for (const stage of stageRange()) {
+      const row = HERO_KINDS.map((k) => {
+        const c = cells.find((x) => x.group === 'carry' && x.stage === stage && x.carry === k);
+        return c ? `${pct(win(c))} | ${pct(shares(c.runs, c.lineup)[k])}` : '– | –';
+      });
+      lines.push(`| ${stage} | ${row.join(' | ')} |`);
+    }
+    lines.push('', `Carry lineups: poison ${bestSwap.poison?.join(' ')}, wind ${bestSwap.wind?.join(' ')}; the rest the starting four.`, '');
+    const carryAvg = HERO_KINDS.map((k) => {
+      const cs = cells.filter((c) => c.group === 'carry' && c.carry === k);
+      const lost = cs.flatMap((c) => c.runs).filter((r) => !r.won);
+      return `| ${k} | ${pct(mean(cs.map(win)))} | ${cs.length} | ${pct(mean(cs.map((c) => shares(c.runs, c.lineup)[k])))} | ${lost.length ? mean(lost.map((r) => r.wave)).toFixed(1) : '–'} | ${wallLeft(cs.flatMap((c) => c.runs))} |`;
     });
-    lines.push(`| ${stage} | ${row.join(' | ')} |`);
+    lines.push('| carry | win μ over stages | stages | its damage share | loss wave μ | wall left in wins |', '|---|---|---|---|---|---|', ...carryAvg, '');
   }
-  lines.push('', `Carry lineups: poison ${bestSwap.poison?.join(' ')}, wind ${bestSwap.wind?.join(' ')}; the rest the starting four.`, '');
-  const carryAvg = HERO_KINDS.map((k) => {
-    const cs = cells.filter((c) => c.group === 'carry' && c.carry === k);
-    const lost = cs.flatMap((c) => c.runs).filter((r) => !r.won);
-    return `| ${k} | ${pct(mean(cs.map(win)))} | ${cs.length} | ${pct(mean(cs.map((c) => shares(c.runs, c.lineup)[k])))} | ${lost.length ? mean(lost.map((r) => r.wave)).toFixed(1) : '–'} | ${wallLeft(cs.flatMap((c) => c.runs))} |`;
-  });
-  lines.push('| carry | win μ over stages | stages | its damage share | loss wave μ | wall left in wins |', '|---|---|---|---|---|---|', ...carryAvg, '');
 
   // 4. enemies: who does the wall damage, per lineup family
   const families: [string, Cell[]][] = [
@@ -297,7 +302,7 @@ it('late game', () => {
   }
   lines.push('');
 
-  if (env.SKILLS !== '0') {
+  if (env.SKILLS !== '0' && !curveOnly) {
     // 5. skills: one card granted at the start (the bot gets only a card or two a battle, too few to
     // judge them by), against no card, on the same lineup and save. Starting-four and generic cards
     // on the starting four, corrosion and gale cards on their best swap.

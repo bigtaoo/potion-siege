@@ -152,10 +152,11 @@ export function maxStage(m: MetaSave): number {
 }
 
 /** Enemy hit points of a stage: stageHpGrowth a stage, and stageHpLate.growth a stage past
- *  stageHpLate.from. */
+ *  stageHpLate.from, times the stage's entry in stageHpScale (1 where it has none). */
 export function stageHp(stage: number): number {
   const late = M.stageHpLate;
-  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** Math.max(0, stage - late.from);
+  const scale = (M.stageHpScale as Record<string, number | undefined>)[stage] ?? 1;
+  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** Math.max(0, stage - late.from) * scale;
 }
 
 export function heroDamage(level: number): number {
