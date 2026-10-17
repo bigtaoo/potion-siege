@@ -31,7 +31,6 @@ const FILES = [
   'icon_gold',
   'icon_wallRepair',
   'bg_field.jpg',
-  'bg_base',
 ] as const;
 
 const textures = new Map<string, Texture>();
@@ -151,11 +150,6 @@ export function commanderTexture(): Texture | undefined {
 /** The playfield above the wall. */
 export function fieldTexture(): Texture | undefined {
   return textures.get('bg_field');
-}
-
-/** The wall and the workshop floor under it. */
-export function baseTexture(): Texture | undefined {
-  return textures.get('bg_base');
 }
 
 export function enemyTexture(kind: EnemyKind): Texture | undefined {

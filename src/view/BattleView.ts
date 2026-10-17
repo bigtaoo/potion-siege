@@ -8,14 +8,14 @@ import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
 import { BALANCE, type BattleEvent, type Enemy, type HeroKind } from '../sim/types';
-import { SpriteLayer, baseTexture, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
+import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
-import { STONE, slab, wallTop, type WallColumn } from './stone';
+import { healthTube, innerFace, slab, summonCircle, wallTop, workshopFloor, type WallColumn } from './stone';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
 import { COLORS, label } from './ui';
 import { lerpX, lerpY } from './fixedStep';
-import { DESIGN_W } from './viewport';
+import { DESIGN_H, DESIGN_W } from './viewport';
 
 const F = BALANCE.field;
 const G = BALANCE.grid;
@@ -27,8 +27,8 @@ const WALL_TOP = G.y0 + G.cellH * (G.rows - 1) - F.parapet;
 const WALL_BOTTOM = G.y0 + G.cellH * G.rows;
 /** How far down the field art reaches; the wall covers its bottom. */
 const FIELD_H = WALL_BOTTOM;
-/** Design y of the top of the wall's inner face in the floor art (tools/make_base_bg.py). */
-const BASE_TOP = 1607;
+/** Design y where the wall's inner face ends and the workshop floor starts. */
+const FLOOR_Y = 1672;
 /** Where the figures of a level 1-3 cell stand, back to front, and how tall they are. */
 const FIGURES: { spots: [number, number][]; height: number }[] = [
   { spots: [[0, 0]], height: 92 },
@@ -37,7 +37,7 @@ const FIGURES: { spots: [number, number][]; height: number }[] = [
 ];
 /** The wall's health bar, set into the wall's inner face. */
 const BAR_H = 30;
-const BAR_Y = BASE_TOP + 14;
+const BAR_Y = WALL_BOTTOM + 16;
 const ULTIMATE_HEIGHT = 150;
 /** Wide ultimates (arms spread out) are drawn shorter so they stay inside their cell. */
 const ULTIMATE_WIDTH = 155;
@@ -104,7 +104,7 @@ export class BattleView extends Container {
   private pours: { slot: number; kind: HeroKind; star: number; start: number }[] = [];
   private readonly drag = new Graphics();
   private readonly wallText: Text;
-  private readonly cmdNext = label('', 34);
+  private readonly cmdNext = label('', 34, { stroke: { color: 0x3e3128, width: 5 } });
   private cmdPulse = 0;
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
@@ -124,7 +124,7 @@ export class BattleView extends Container {
 
   constructor() {
     super();
-    this.wallText = label('', 40);
+    this.wallText = label('', 40, { stroke: { color: 0x3e3128, width: 6 } });
     this.addChild(this.ground, this.wall, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.cmdNext.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.cmdNext, this.children.indexOf(this.wallText));
@@ -323,8 +323,7 @@ export class BattleView extends Container {
     // wall health
     const frac = Math.max(0, b.wall / b.wallMax);
     const barY = BAR_Y;
-    w.roundRect(F.left, barY, F.right - F.left, BAR_H, BAR_H / 2).fill(COLORS.hpBack);
-    w.roundRect(F.left, barY, Math.max(BAR_H, (F.right - F.left) * frac), BAR_H, BAR_H / 2).fill(frac > 0.3 ? 0x4cd964 : COLORS.hp);
+    healthTube(w, F.left, barY, F.right - F.left, BAR_H, frac);
     this.wallText.text = `${Math.ceil(Math.max(0, b.wall) / FP)} / ${Math.round(b.wallMax / FP)}`;
     this.wallText.position.set(DESIGN_W / 2, barY + BAR_H / 2);
 
@@ -517,7 +516,7 @@ export class BattleView extends Container {
   private drawCommander(under: Graphics, over: Graphics, b: Battle, dt: number): void {
     this.cmdPulse = Math.max(0, this.cmdPulse - dt * 1.5);
     const pop = 1 + this.cmdPulse * 0.25;
-    under.ellipse(CMD.x, CMD.feet, 104, 22).fill({ color: 0x1e140e, alpha: 0.45 }).stroke({ width: 5, color: COLORS.gold });
+    summonCircle(under, CMD.x, CMD.feet, 124, 30);
     const tex = commanderTexture();
     if (tex) {
       heroShadow(under, CMD.x, CMD.feet - 4, CMD.height * 0.6);
@@ -531,7 +530,7 @@ export class BattleView extends Container {
     if (next === null) return;
     const per = C.summonsPerCell;
     const k = this.boost;
-    over.roundRect(CMD.x - 56 * k, CMD.feet - CMD.height - 22 - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x0a1320, alpha: 0.7 });
+    over.roundRect(CMD.x - 56 * k, CMD.feet - CMD.height - 22 - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x6e4c2f, alpha: 0.85 });
     this.cmdNext.text = tr('commanderNext', { n: per - next, total: per });
   }
 
@@ -549,15 +548,10 @@ export class BattleView extends Container {
       g.rect(F.left, 0, F.right - F.left, WALL_TOP).fill(COLORS.field);
       for (let y = 120; y < WALL_TOP; y += 160) g.rect(F.left, y, F.right - F.left, 4).fill({ color: 0xffffff, alpha: 0.04 });
     }
-    // the workshop floor, and the wall's inner face with a groove for the health bar
-    const base = baseTexture();
-    if (base) {
-      const s = new Sprite(base);
-      s.width = DESIGN_W;
-      s.height = (base.height * DESIGN_W) / base.width;
-      s.y = BASE_TOP;
-      this.addChildAt(s, this.getChildIndex(g));
-      g.roundRect(F.left - 8, BAR_Y - 8, F.right - F.left + 16, BAR_H + 16, (BAR_H + 16) / 2).fill(STONE.shadow).stroke({ width: 4, color: STONE.line });
+    // the wall's inner face with the health bar's tube set into it, and the workshop floor
+    if (bg) {
+      innerFace(g, DESIGN_W, WALL_BOTTOM, FLOOR_Y, { x: F.left, y: BAR_Y, w: F.right - F.left, h: BAR_H });
+      workshopFloor(g, DESIGN_W, FLOOR_Y, DESIGN_H + 40);
       return;
     }
     // without the art: a stone band with towers at both ends, the bottom row of cells set into it
