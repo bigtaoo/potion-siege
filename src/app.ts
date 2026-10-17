@@ -157,6 +157,9 @@ class Game {
   private ended = false;
   /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
   private offered = { revive: false, double: false };
+  /** A rewarded ad was watched since the battle ended (the ×2): the portal wants no midgame ad
+   *  chained after it in the same break. */
+  private rewardedSinceEnd = false;
   /** The day the login panel last opened by itself. */
   private loginShown = '';
   private readonly autoplay: boolean;
@@ -409,7 +412,9 @@ class Game {
   private async watch(): Promise<boolean> {
     this.overlay.interactiveChildren = false; // no second tap while the ad plays
     try {
-      return await this.platform.rewarded(() => this.mute(true));
+      const ok = await this.platform.rewarded(() => this.mute(true));
+      if (ok) this.rewardedSinceEnd = true;
+      return ok;
     } finally {
       this.overlay.interactiveChildren = true;
       this.mute(false);
@@ -428,6 +433,7 @@ class Game {
 
   private finish(b: Battle): void {
     this.ended = true;
+    this.rewardedSinceEnd = false;
     if (this.challenge) {
       this.finishChallenge(b, this.challenge);
       return;
@@ -729,8 +735,8 @@ class Game {
   private async again(tab?: HomeTab): Promise<void> {
     this.overlay.hide();
     if (tab) this.tab = tab;
-    // never an ad after the very first battle
-    if (this.save.runs > 1) {
+    // never an ad after the very first battle, nor right after a rewarded one
+    if (this.save.runs > 1 && !this.rewardedSinceEnd) {
       await this.platform.midgame(() => this.mute(true));
       this.analytics.track('ad_midgame', { run: this.save.runs });
     }
