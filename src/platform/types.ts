@@ -31,6 +31,9 @@ export interface Platform {
   readonly store?: Store | null;
   /** Google's ad privacy options in the settings panel (iOS in the EEA/UK). */
   readonly adPrivacy?: AdPrivacy;
+  /** Opens a web page outside the game, from a tap (the privacy policy in settings); absent
+   *  where the host allows no outside links (CrazyGames, whose own policy covers its players). */
+  readonly openUrl?: (url: string) => void;
 }
 
 /**

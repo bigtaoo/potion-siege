@@ -763,6 +763,7 @@ class Game {
       buyAdFree: () => void this.buyAdFree(),
       restoreAdFree: () => void this.restoreAdFree(),
       adPrivacy: () => this.platform.adPrivacy?.open(),
+      privacyPolicy: () => this.platform.openUrl?.(t('sound.policyPage')),
       play: () => {
         if (this.hintOnButton) this.hintDone(false);
         this.analytics.track('battle_start_tap', { stage: this.save.stage, from: 'home', run: this.save.runs + 1 });
@@ -777,12 +778,14 @@ class Game {
     this.hintHand = hint ? this.menu.getChildByLabel('hintHand', true) : null;
   }
 
-  /** The ad-free card and the privacy options, where the host has them (iOS). */
+  /** The ad-free card and the ad privacy options, where the host has them (iOS), and the link to
+   *  our privacy policy (everywhere but CrazyGames). */
   private extras(): HomeExtras {
     const store = this.platform.store;
     return {
       adFree: store ? { price: store.price(), owned: store.owned(), note: this.storeNote } : undefined,
       privacy: this.platform.adPrivacy?.offered() ?? false,
+      policy: !!this.platform.openUrl,
     };
   }
 

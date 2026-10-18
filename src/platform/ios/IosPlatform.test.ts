@@ -83,6 +83,13 @@ describe('IosPlatform', () => {
     expect(s.platform.languages()).toEqual(['de-DE', 'en']);
   });
 
+  it('opens outside pages through the shell, which hands them to Safari', () => {
+    const opened: string[] = [];
+    const native: Partial<PSNative> = { openUrl: (url) => opened.push(url) };
+    new IosPlatform(native, fakeDoc().doc).openUrl('https://p.gamestao.com/privacy');
+    expect(opened).toEqual(['https://p.gamestao.com/privacy']);
+  });
+
   it('gives the canvas the screen inside the safe area', () => {
     const s = shell(null, null);
     expect(s.appended).toHaveLength(1);

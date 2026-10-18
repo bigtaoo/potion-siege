@@ -61,6 +61,13 @@ export class IosPlatform extends WebPlatform implements Platform {
     if (!this.storeKit.owned()) await this.admob.midgame(onStart);
   }
 
+  /** Safari, through the shell (it opens only http(s) pages); a new tab without the bridge. */
+  override readonly openUrl = (url: string): void => {
+    const open = this.native?.openUrl;
+    if (open) open.call(this.native, url);
+    else window.open(url, '_blank', 'noopener');
+  };
+
   /** Why ads last failed to load, if they did: no fill and a wrong unit look alike otherwise. */
   adError(): string | null {
     return this.admob.error();
