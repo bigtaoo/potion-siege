@@ -1,13 +1,26 @@
 // Retention / funnel report from collector NDJSON.  npm run report -- telemetry/events.ndjson
+//   [--src <tag>]...    also a Basic Launch daily scorecard for that playtest source (repeatable)
+//   [--bench <name>]    the category whose CG benchmarks score it (scripts/cgBenchmarks.mjs; default strategy)
 //
 // D1/D7 here = share of players whose `session_start` shows up on calendar day 1 / 7 after their
 // first one (the classic "came back that day" definition), counted only for cohorts old enough.
 
 import { readFileSync } from 'node:fs';
 import { perfSummary, printPerf } from './perfSummary.mjs';
+import { BENCHMARKS, CATEGORY } from './cgBenchmarks.mjs';
+import { dailyRows, printDaily } from './dailyScorecard.mjs';
 import { feedbackLines, playtestRows, printPlaytest } from './playtestMetrics.mjs';
 
-const file = process.argv[2] || 'telemetry/events.ndjson';
+const args = process.argv.slice(2);
+const sources = [];
+let category = CATEGORY;
+let file = 'telemetry/events.ndjson';
+for (let i = 0; i < args.length; i++) {
+  if (args[i] === '--src') sources.push(args[++i]);
+  else if (args[i] === '--bench') category = args[++i];
+  else file = args[i];
+}
+if (!BENCHMARKS[category]) throw new Error(`--bench: one of ${Object.keys(BENCHMARKS).join(', ')}`);
 const events = readFileSync(file, 'utf8')
   .split('\n')
   .filter(Boolean)
@@ -195,3 +208,7 @@ if (said.length) {
   console.log(`\n== Feedback (${said.length}, newest first) ==`);
   for (const line of said) console.log(line);
 }
+
+// --- Basic Launch: each day's CG score on the portal, and the same view for a chosen playtest source ---
+printDaily(dailyRows(events, { host: 'crazygames' }, category), 'host crazygames', console.log, category);
+for (const src of sources) printDaily(dailyRows(events, { src }, category), `source ${src}`, console.log, category);

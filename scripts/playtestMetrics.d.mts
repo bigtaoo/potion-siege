@@ -29,6 +29,22 @@ export interface PlaytestRow {
 
 type Event = { name: string; ts: number; uid?: string; sid?: string; session?: number; day?: number; build?: string; src?: string; props?: Record<string, unknown>; [k: string]: unknown };
 
+export function deviceOf(props: Record<string, unknown>): 'desktop' | 'touch';
+export function sessionSpans(events: Event[], keep?: (e: Event) => boolean): Map<string, { uid: string; first: number; last: number; secs: number }>;
+export function sessionSecs(s: { first: number; last: number; secs: number }): number;
+export interface Run {
+  uid: string;
+  sid: string;
+  run: number;
+  stage: number | null;
+  cause: string | null;
+  start: number;
+  last: number;
+  lastWave: number;
+  final: Record<string, unknown> | null;
+}
+export function runsOf(events: Event[], keep?: (e: Event) => boolean): Map<string, Run>;
+export function battleSecs(r: Run): number;
 export function playtestRows(events: Event[]): PlaytestRow[];
 export function printPlaytest(rows: PlaytestRow[], log?: (line: string) => void): void;
 export function feedbackLines(events: Event[]): string[];
