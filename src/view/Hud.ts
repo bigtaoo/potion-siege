@@ -13,6 +13,11 @@ import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
 const HINT_SECONDS = 25;
+/** The wave banner's height; a boss wave's goes down the field, out of the way of the boss
+ *  coming in at the top, with the boss card under it. */
+const BANNER_Y = 270;
+const BOSS_BANNER_Y = 620;
+const BOSS_CARD_Y = 850;
 const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
 
 export class Hud extends Container {
@@ -59,7 +64,7 @@ export class Hud extends Container {
     this.hintBox.position.set(DESIGN_W / 2, 118);
     this.hintBox.addChild(this.hintPlate, this.hintText);
     // high on the field, above where the enemies walk in, so it does not hide them
-    this.banner.position.set(DESIGN_W / 2, 270);
+    this.banner.position.set(DESIGN_W / 2, BANNER_Y);
     this.banner.alpha = 0;
     this.newcomer.position.set(DESIGN_W / 2, 370);
     this.newcomer.alpha = 0;
@@ -124,8 +129,10 @@ export class Hud extends Container {
 
   react(events: BattleEvent[]): void {
     for (const ev of events) {
+      // the merge hint has done its job once the player merges
+      if (ev.type === 'merge') this.hint = false;
       if (ev.type !== 'wave') continue;
-      this.show(ev.boss ? t('bossWave') : this.waveLabel(ev.wave));
+      this.show(ev.boss ? t('bossWave') : this.waveLabel(ev.wave), ev.boss ? BOSS_BANNER_Y : BANNER_Y);
       const stage = this.battle?.setup.stage;
       // endless mode brings in every other chapter's boss in turn: each gets its card on its first lap
       const visitor = this.battle?.setup.endless && ev.boss ? endlessBoss(ev.wave) : undefined;
@@ -172,7 +179,7 @@ export class Hud extends Container {
       c.addChild(l);
     });
     // under the BOSS WAVE banner
-    c.position.set(DESIGN_W / 2, 500);
+    c.position.set(DESIGN_W / 2, BOSS_CARD_Y);
   }
 
   update(dt: number): void {
@@ -227,8 +234,9 @@ export class Hud extends Container {
     this.show(text);
   }
 
-  private show(text: string): void {
+  private show(text: string, y = BANNER_Y): void {
     this.banner.text = text;
+    this.banner.y = y;
     this.bannerTime = 2;
   }
 }

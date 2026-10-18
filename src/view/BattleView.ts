@@ -166,7 +166,7 @@ export class BattleView extends Container {
     this.addChild(this.ground, this.wall, this.under, this.fxGround, this.enemyArt, this.world, this.shotArt, this.fx, this.grid, this.heroArt, this.potions, this.heroOver, this.fxTop, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.cmdNext.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.cmdNext, this.children.indexOf(this.wallText));
-    this.castTap.position.set(BADGE.x, BADGE.y - BADGE.r - 34);
+    this.castTap.position.set(CMD.x, CMD.feet - CMD.height - 22);
     this.addChildAt(this.castTap, this.children.indexOf(this.wallText));
     this.drawGround();
     this.eventMode = 'static';
@@ -706,12 +706,23 @@ export class BattleView extends Container {
       drawHero(over, 'arcane', CMD.x, CMD.feet - CMD.height / 2 - lift * 24, 80 * pop);
     }
     this.drawCharge(over, b, full);
-    const next = b.summonsToNextCell();
-    this.cmdNext.visible = next !== null;
-    if (next === null) return;
-    const per = C.summonsPerCell;
     const k = this.boost;
-    over.roundRect(CMD.x - 56 * k, CMD.feet - CMD.height - 22 - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x6e4c2f, alpha: 0.85 });
+    const head = CMD.feet - CMD.height - 22;
+    // once full, the call to tap takes the cell count's place over its head, on the skill's colour
+    const tap = full && !b.paused;
+    this.castTap.visible = tap;
+    if (tap) {
+      if (this.castTap.text !== tr('castTap')) this.castTap.text = tr('castTap');
+      const w = this.castTap.width + 36 * k;
+      // left of the badge (at its biggest pulse) when the words grow on a small board
+      this.castTap.x = Math.min(CMD.x, BADGE.x - (BADGE.r * 1.12 + 9) * k - 6 - w / 2);
+      over.roundRect(this.castTap.x - w / 2, head - 22 * k, w, 44 * k, 22 * k).fill({ color: b.nextCast === 'bomb' ? BOMB_COLOR : BREW_COLOR, alpha: 0.9 });
+    }
+    const next = b.summonsToNextCell();
+    this.cmdNext.visible = next !== null && !tap;
+    if (next === null || tap) return;
+    const per = C.summonsPerCell;
+    over.roundRect(CMD.x - 56 * k, head - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x6e4c2f, alpha: 0.85 });
     this.cmdNext.text = tr('commanderNext', { n: per - next, total: per });
   }
 
@@ -741,8 +752,6 @@ export class BattleView extends Container {
       g.circle(x - 11 * k, y - 18 * k, 4 * k).fill(ink);
       g.circle(x + 10 * k, y - 22 * k, 3 * k).fill(ink);
     }
-    this.castTap.visible = full && !b.paused;
-    if (this.castTap.visible && this.castTap.text !== tr('castTap')) this.castTap.text = tr('castTap');
   }
 
   /** The commander's flasks in the air, arcing from its hand onto their mark, spinning. */
