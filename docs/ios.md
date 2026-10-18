@@ -105,7 +105,7 @@ The web layer (`dist-ios`) can change without App Review:
 
 `.github/workflows/release-ios.yml`, on GitHub's macOS runner (the only place Swift compiles):
 
-- **compile**: every push to main that touches the shell; an unsigned simulator build.
+- **compile**: every push to main or pull request that touches the shell; an unsigned simulator build.
 - **release**: a tag `ios-v*` or a manual run: archive, sign (manual, `Apple Distribution`),
   export and upload to TestFlight. The build number is the run number; destination `none` stops
   at the IPA.

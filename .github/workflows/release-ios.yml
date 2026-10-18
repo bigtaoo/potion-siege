@@ -4,8 +4,8 @@ name: ios
 # compiles on macOS, so this runner is the only place the native side is ever built. From D:\standing's
 # release-ios.yml (after D:\funny's), with the paths at the repo root.
 #
-#   compile  every push to main that touches the shell: an unsigned simulator build, no secrets,
-#            to catch a Swift or project error the Windows machine cannot see.
+#   compile  every push to main or pull request that touches the shell: an unsigned simulator
+#            build, no secrets, to catch a Swift or project error the Windows machine cannot see.
 #   release  a tag ios-v* (e.g. ios-v1.0.0) or a manual run: archive, sign, export, upload to
 #            App Store Connect (TestFlight). destination 'none' stops after the IPA, spending no
 #            build number. The build number is the run number.
@@ -32,6 +32,15 @@ on:
       - 'vite.ios.config.js'
       - 'package.json'
       - '.github/workflows/release-ios.yml'
+  pull_request:
+    paths:
+      - 'ios/**'
+      - 'capacitor.config.ts'
+      - 'src/platform/ios/**'
+      - 'src/main.ios.ts'
+      - 'vite.ios.config.js'
+      - 'package.json'
+      - '.github/workflows/release-ios.yml'
   workflow_dispatch:
     inputs:
       destination:
@@ -46,7 +55,7 @@ env:
 
 jobs:
   compile:
-    if: github.event_name == 'push' && github.ref_type == 'branch'
+    if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch')
     runs-on: macos-26
     steps:
       - uses: actions/checkout@v5
