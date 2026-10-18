@@ -132,8 +132,12 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 
 - `PrivacyInfo.xcprivacy`: `UserDefaults` (`CA92.1`), and the updater's file timestamps and disk
   space (`C617.1`, `E174.1`); no tracking.
-- A privacy policy page is still to be written (`p.gamestao.com/privacy`): our play telemetry,
-  AdMob (non-personalised, UMP), Apple's purchases.
+- Privacy policy: **https://p.gamestao.com/privacy** (`public/privacy.html`, part of the web build;
+  English, then Simplified Chinese at `#zh`). It covers our play telemetry (install id, events to
+  ps.gamestao.com, the id-less load counts), AdMob (non-personalised, UMP in the EEA/UK/CH, the
+  "Ad privacy choices" button, Google's vendor-scoped device id), the ad-free card through Apple
+  (ownership only) and CrazyGames. It goes in the listing's Privacy Policy URL. Keep it in step
+  with any new event, storage key or SDK.
 - Privacy label: identifiers (install id; AdMob's device id), usage data, diagnostics; nothing
   linked to a person, nothing used for tracking.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
@@ -148,6 +152,7 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 | 2.1 | Reviewer cannot find the purchase | Shop tab open from the first home screen; the review notes name it |
 | 4.2 | "Just a website" | A full offline game, no web navigation |
 | 5.1.1 | Privacy policy missing | The page above, linked in the listing |
+| 5.1.1 | Policy not reachable inside the app | Open: settings has no link to it yet (`openUrl`) |
 
 ## Order of work
 
