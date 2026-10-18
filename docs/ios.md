@@ -29,6 +29,7 @@ Potion Siege on the App Store: the web game in a Capacitor shell, built the way 
     sits under the notch or the home indicator;
   - the phone's languages (WKWebView's own `navigator.languages` only lists the app's);
   - ads through `admob.ts`, the card through `storeKit.ts`, `adPrivacy` for the settings button;
+  - `openUrl` through the bridge, so the settings link to the privacy policy opens in Safari;
   - audio session `ambient`: the silent switch mutes the game and the player's music keeps playing.
 - Without the bridge (the page opened in Safari) it behaves like the web host, reporting as ios.
 
@@ -140,6 +141,13 @@ card at once and which offers the privacy button. `?native=owned` starts with th
   "Ad privacy choices" button, Google's vendor-scoped device id), the ad-free card through Apple
   (ownership only) and CrazyGames. It goes in the listing's Privacy Policy URL. Keep it in step
   with any new event, storage key or SDK.
+- Settings links to it ("Privacy policy", the `#zh` half in Chinese) on every host that has
+  `Platform.openUrl`: the web and iOS. CrazyGames has none, since the portal allows no links out
+  and its own policy covers its players.
+- Open in the policy, the owner's call: telemetry runs on legitimate interest with no consent
+  gate in the EEA (Holy Kicker asks first); "as long as we need them" is the only retention, and
+  the collector deletes nothing yet; the install id §9 asks for is shown nowhere in the game.
+  None of these blocks App Review, which checks that the policy exists and is reachable.
 - Privacy label: identifiers (install id; AdMob's device id), usage data, diagnostics; nothing
   linked to a person, nothing used for tracking.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
@@ -160,7 +168,7 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 | 2.1 | Reviewer cannot find the purchase | Shop tab open from the first home screen; the review notes name it |
 | 4.2 | "Just a website" | A full offline game, no web navigation |
 | 5.1.1 | Privacy policy missing | The page above, linked in the listing |
-| 5.1.1 | Policy not reachable inside the app | Open: settings has no link to it yet (`openUrl`) |
+| 5.1.1 | Policy not reachable inside the app | "Privacy policy" in settings, opened in Safari |
 
 ## Order of work
 

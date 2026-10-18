@@ -104,13 +104,17 @@ export interface HomeActions {
   restoreAdFree(): void;
   /** Google's ad privacy options form. */
   adPrivacy(): void;
+  /** Our privacy policy, in the browser. */
+  privacyPolicy(): void;
 }
 
-/** What only some hosts have: the ad-free card for sale (iOS) and Google's ad privacy options. */
+/** What only some hosts have: the ad-free card for sale (iOS), Google's ad privacy options and
+ *  a link out to our privacy policy (not on CrazyGames). */
 export interface HomeExtras {
   /** `price` null while the store cannot sell; `note` how the last buy or restore went. */
   adFree?: { price: string | null; owned: boolean; note: string | null };
   privacy?: boolean;
+  policy?: boolean;
 }
 
 /** The part of the page a tab fills. */
@@ -166,7 +170,7 @@ export function buildHome(
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
-  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -1310,20 +1314,25 @@ function bonusRow(m: MetaSave, act: HomeActions): Container {
   return r;
 }
 
-/** The settings: the music and sound effects toggles. */
-function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean): Container {
-  const h = privacy ? 720 : 560;
+/** The settings: the music and sound effects toggles, then a button each for Google's consent
+ *  form again where it applies (iOS in the EEA/UK) and our privacy policy where the host allows
+ *  a link out (App Review 5.1.1 wants it inside the app). */
+function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean): Container {
+  const buttons: [string, () => void][] = [];
+  if (privacy) buttons.push([t('sound.privacy'), act.adPrivacy]);
+  if (policy) buttons.push([t('sound.policy'), act.privacyPolicy]);
+  const extra = buttons.length ? 30 + buttons.length * 130 : 0;
+  const h = 560 + extra;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
-  if (privacy) {
-    // Google's consent form again, where it applies (iOS in the EEA/UK)
-    const b = new PillButton(t('sound.privacy'), 600, 100, 'brass', act.adPrivacy, 40);
-    b.y = h / 2 - 100;
+  buttons.forEach(([text, tap], i) => {
+    const b = new PillButton(text, 600, 100, 'brass', tap, 40);
+    b.y = h / 2 - 100 - (buttons.length - 1 - i) * 130;
     box.addChild(b);
-  }
+  });
   (['music', 'sfx'] as const).forEach((which, i) => {
     const on = m.sound[which];
     const r = tappable(new Container(), () => act.sound(which));
-    r.position.set(0, (privacy ? -170 : -80) + i * 190);
+    r.position.set(0, -80 - (extra ? extra / 2 + 10 : 0) + i * 190);
     const icon = new Container();
     icon.position.set(-330, 0);
     icon.addChild(medal(56, on ? 0x3c9a4a : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));

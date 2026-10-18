@@ -20,6 +20,8 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
   /** 'web' when the SDK says `local` (a developer's own machine), so tests there never count
    *  as CrazyGames players. */
   override readonly name: string;
+  /** CrazyGames allows no links out of the game, and its own privacy policy covers its players. */
+  override readonly openUrl = undefined;
   private playing = false;
   private adblock = false;
   /** loadingStop has gone out; until then a gameplayStart only waits for it. */

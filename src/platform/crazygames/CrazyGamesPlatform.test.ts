@@ -70,4 +70,8 @@ describe('CrazyGamesPlatform', () => {
     expect((await platform('local')).p.name).toBe('web');
     expect((await platform('crazygames')).p.name).toBe('crazygames');
   });
+
+  it('offers no links out of the game, as the portal requires', async () => {
+    expect((await platform('crazygames')).p.openUrl).toBeUndefined();
+  });
 });
