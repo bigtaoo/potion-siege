@@ -421,6 +421,24 @@ describe('commander skills', () => {
     expect(b.charge).toBe(C.charge);
   });
 
+  it('comes back from the revive with the wall whole and the bomb ready', () => {
+    const b = new Battle(5);
+    (b as unknown as { pending: Spawn[] }).pending = [];
+    const boss = grunt(2, 500, 400, 1e6);
+    boss.kind = 'boss';
+    b.enemies = [grunt(1, 300, 1900, 1e6), boss]; // the grunt at the wall
+    b.charge = 3;
+    b.wall = 1;
+    for (let i = 0; i < 2000 && !b.result; i++) b.step();
+    expect(b.result).toBe('lost');
+    expect(b.revive()).toBe(true);
+    expect(b.result).toBeNull();
+    expect(b.wall).toBe(b.wallMax);
+    expect(b.enemies.map((e) => e.kind)).toEqual(['boss']);
+    expect(b.charge).toBe(C.charge);
+    expect(b.canCast()).toBe(true);
+  });
+
   it('throws the flask into the thick of them, then brews, in turn', () => {
     const b = charged();
     b.slots[W] = { id: 100, kind: 'arcane', star: 2, slot: W, cooldown: 1e9 };

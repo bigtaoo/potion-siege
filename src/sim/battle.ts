@@ -503,10 +503,14 @@ export class Battle {
     return dps;
   }
 
+  /** The wall comes back whole and the alchemist full, so the bomb is ready for the next wave:
+   *  with half a wall and no charge a revive saved far fewer early runs than the plain attack did. */
   private doRevive(): boolean {
     if (this.result !== 'lost') return false;
-    this.wall = Math.trunc(this.wallMax / 2);
+    this.wall = this.wallMax;
     this.enemies = this.enemies.filter((e) => isBoss(e.kind));
+    this.charge = C.charge;
+    this.chargedFor = 0;
     this.result = null;
     return true;
   }

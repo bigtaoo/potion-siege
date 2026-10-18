@@ -306,7 +306,8 @@ class Game {
     this.resultAt = 0;
     this.tutorial = null;
     this.tutLog = null;
-    this.hud.hint = true;
+    // the merge hint, until the player has merged once
+    this.hud.hint = this.save.achievements.stats.merges === 0;
     this.loop = new FixedStep();
     this.view.attach(this.battle);
     this.hud.attach(this.battle);
@@ -402,7 +403,7 @@ class Game {
     if (!tut) return;
     this.analytics.track('tutorial_end', { step: skipped ? (tut.step ?? 'done') : 'done', skipped });
     this.tutorial = null;
-    this.hud.hint = true;
+    this.hud.hint = this.save.achievements.stats.merges === 0;
     this.save.tutorial = true;
     this.store();
   }
