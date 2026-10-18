@@ -177,3 +177,56 @@ npm run report -- telemetry/events.ndjson
 打开信标会发；`localhost` 本身不发）。收到了带 `new: true, src: "test"` 的 `open_desktop` 和 `loaded_*` 信标、
 带 `src` 的全部事件、第 3 局后的 `feedback_shown`、`feedback`（5 星 + 留言）和 `feedback_skip`（点了「以后再说」），
 `npm run report` 的试玩表和评分列表都对得上。手机尺寸（375×667）下评分条不挡结果页的「继续」按钮。
+
+## 十一、Basic Launch 每日检查（提交 CG 之后，每天早上一次）
+
+Basic Launch 一般只看头 7 天（Holy Kicker 第 6 天就过了 500 次游玩），所以**每天看前一天的分，当天修、当天传**。
+试玩期间也用同一张表看某个来源：`--src reddit`。
+
+1. **拉数据**（收集器按 UTC 日期一天一个文件）：
+
+   ```bash
+   ssh blightbloom 'cat /home/deploy/potion-siege/data/events-*.ndjson' > telemetry/events.ndjson
+   ```
+
+2. **跑报表**，看最后的 `== Basic Launch daily ==`：
+
+   ```bash
+   npm run report -- telemetry/events.ndjson
+   npm run report -- telemetry/events.ndjson --src reddit --bench action
+   ```
+
+   每行是「UTC 日期 × 设备」：`opens` 打开信标（≈ CG 的 plays）、`new` 当天新玩家、`conv` 当天战斗满 60 秒的
+   会话 ÷ 打开、`play` 新玩家安装当天的平均分钟、`D1`（当天所有新玩家都满 2 天才显示，之前是 `wait (n)`）、
+   `plays` 会话数、`score/15` 按 CG 打分换算的总分和 9/15 的结论（`pass` / `fail` / `?`）、`build` 当天主要版本。
+   方括号里是 CG 的 0–5 分，`[3-5]` 表示分界线还不知道。`~` = 这台设备当天打开不足 30 次，波动 ±15 个点，
+   **不要据此改东西**；`*` = 还没过完的一天。最后两行是「最近 7 个完整天」，就是 CG 结束时打分的窗口。
+   `action` 一列是用 Holy Kicker 的 Action 类分界线算的参考分。
+
+   分界线都在 `scripts/cgBenchmarks.mjs`。**Strategy 类目前只知道一个点**（移动转化 27.6% = 2 分），
+   所以默认的 strategy 分大多是范围。游戏一进 Basic Launch，就把开发者后台「Basic Launch Results」上每个
+   「x for n」提示抄进去（`kind: 'min'`），每天的实际得分也抄进去（`kind: 'seen'`），范围会一天天收窄。
+
+3. **什么时候发修复版**（只看 opens ≥ 30 的行；两台设备分开看）：
+
+   | 情况 | 动作 |
+   |---|---|
+   | 某台设备 7 天窗口的分数上限 < 9（`fail`） | 当天就修，修完立刻传：剩下的天数越少，新版本占窗口的比重越小 |
+   | 桌面转化连续 2 天 < 55%，或移动转化 < 25% | 看第一分钟（`== First session ==`、`quits` 里的 `s1w1`），修完上传 |
+   | 平均时长 < 8 分钟 | 看 `stage` 和退出的关卡、波次，降那一关的难度 |
+   | 新版本上线后某个数掉了 5 个点以上 | 回滚到上一个版本 |
+   | `load` 远少于 `opens`（顶部 `== Loading ==`） | 包体或崩溃问题，优先级最高 |
+
+   中间地带（`?`）不急着动：先等那台设备再积累一天的数据。一天最多传一个版本，否则每天的数据混着两个版本，
+   看不出哪个改动起了作用（`build` 列出现 `+1` 就是混了）。
+
+4. **容易踩的坑**
+   - **只看最近 7 天**。CG 判的是最后 7 天，不是累计；早期的差日子会滑出窗口，但只有 Basic Launch 还没结束才有用。
+   - **500 次游玩 + 满 7 天就结束**。HK 第 6 天过了 500，所以实际就是头 7 天。报表最后一行 `opens so far` 是累计打开数，
+     接近 500 时修复版已经来不及进窗口太多，**第 1–3 天的修复最值钱**。
+   - **CG 的移动转化远低于我们自己算的**。HK 我们的数据里移动玩家近一半打满 60 秒，CG 只记了 16–21%。
+     看移动转化时以 CG 后台为准，我们的表只用来看「改了之后有没有变化」。
+   - **按设备时间 `ts` 排序和分天，不要按服务器时间**。一批事件在收集器里共用同一个 `received`（HK 的库里叫 `at`，
+     设备时间叫 `t`），按服务器时间排会把会话切错、把跨午夜的会话放到第二天。打开信标只有服务器时间，这个没办法。
+   - CG 的日期是 UTC，我们的表也按 UTC 分天；D1 用的是玩家本地日历的第 1 天（事件里的 `day`）。
+   - 被拒之后不能自己重跑 Basic Launch，只能发邮件求人，所以宁可多等一轮试玩数据再提交。

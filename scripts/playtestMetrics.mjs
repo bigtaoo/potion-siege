@@ -34,7 +34,50 @@ const median = (xs) => {
 };
 
 /** desktop or touch for a session_start (`device` since the playtest build, `touch` before). */
-const deviceOf = (props) => (props.device === 'touch' || props.device === 'desktop' ? props.device : props.touch ? 'touch' : 'desktop');
+export const deviceOf = (props) => (props.device === 'touch' || props.device === 'desktop' ? props.device : props.touch ? 'touch' : 'desktop');
+
+/** Sessions of the events `keep` lets through: sid -> { uid, first, last, secs } (device time, `session_end`'s secs). */
+export function sessionSpans(events, keep = () => true) {
+  const sessions = new Map();
+  for (const e of events) {
+    if (!e.sid || !keep(e)) continue;
+    const s = sessions.get(e.sid) ?? { uid: e.uid, first: e.ts, last: e.ts, secs: 0 };
+    s.first = Math.min(s.first, e.ts);
+    s.last = Math.max(s.last, e.ts);
+    if (e.name === 'session_end') s.secs = Math.max(s.secs, Number(e.props?.secs) || 0);
+    sessions.set(e.sid, s);
+  }
+  return sessions;
+}
+
+/** A session's length in seconds: the longer of `session_end`'s secs and its first-to-last event span. */
+export const sessionSecs = (s) => Math.max(s.secs, (s.last - s.first) / 1000);
+
+/**
+ * Runs of the events `keep` lets through, keyed by session and run number (a run left unfinished
+ * is numbered again next session): sid:run -> { uid, sid, run, stage, cause, start, last, lastWave, final }.
+ */
+export function runsOf(events, keep = () => true) {
+  const runs = new Map();
+  for (const e of events) {
+    if (!RUN_EVENTS.has(e.name) || !keep(e) || typeof e.props?.run !== 'number') continue;
+    const key = `${e.sid}:${e.props.run}`;
+    const r = runs.get(key) ?? { uid: e.uid, sid: e.sid, run: e.props.run, stage: null, cause: null, start: e.ts, last: e.ts, lastWave: 1, final: null };
+    if (e.name === 'run_start') {
+      r.stage = e.props.stage ?? null;
+      r.cause = e.props.cause ?? null;
+      r.start = e.ts;
+    }
+    if (e.name === 'wave_start') r.lastWave = Math.max(r.lastWave, e.props.wave ?? 1);
+    if (e.name === 'run_end' || e.name === 'run_quit') r.final = e.props; // a revived run reports twice: the last wins
+    r.last = Math.max(r.last, e.ts);
+    runs.set(key, r);
+  }
+  return runs;
+}
+
+/** A run's battle seconds: what its end reported, or up to its last event when the end never came. */
+export const battleSecs = (r) => (r.final ? Number(r.final.secs) || 0 : Math.max(0, (r.last - r.start) / 1000));
 
 /**
  * One row per first build x source x device, plus an '(all)' source row per build and device.
@@ -51,44 +94,19 @@ export function playtestRows(events) {
   }
   for (const e of events) if (e.name === 'session_start' && players.has(e.uid)) players.get(e.uid).days.add(e.day);
 
-  // sessions: span and reported length
-  const sessions = new Map(); // sid -> { uid, first, last, secs }
-  for (const e of events) {
-    if (!e.sid || !players.has(e.uid)) continue;
-    const s = sessions.get(e.sid) ?? { uid: e.uid, first: e.ts, last: e.ts, secs: 0 };
-    s.first = Math.min(s.first, e.ts);
-    s.last = Math.max(s.last, e.ts);
-    if (e.name === 'session_end') s.secs = Math.max(s.secs, Number(e.props?.secs) || 0);
-    sessions.set(e.sid, s);
-  }
+  const sessions = sessionSpans(events, (e) => players.has(e.uid));
   const playSecs = new Map(); // uid -> seconds over all sessions
-  for (const s of sessions.values()) playSecs.set(s.uid, (playSecs.get(s.uid) ?? 0) + Math.max(s.secs, (s.last - s.first) / 1000));
+  for (const s of sessions.values()) playSecs.set(s.uid, (playSecs.get(s.uid) ?? 0) + sessionSecs(s));
 
-  // runs, keyed by session and run number (a run left unfinished is numbered again next session)
-  const runs = new Map(); // sid:run -> { uid, sid, stage, cause, start, last, lastWave, final }
-  for (const e of events) {
-    if (!RUN_EVENTS.has(e.name) || !players.has(e.uid) || typeof e.props?.run !== 'number') continue;
-    const key = `${e.sid}:${e.props.run}`;
-    const r = runs.get(key) ?? { uid: e.uid, sid: e.sid, run: e.props.run, stage: null, cause: null, start: e.ts, last: e.ts, lastWave: 1, final: null };
-    if (e.name === 'run_start') {
-      r.stage = e.props.stage ?? null;
-      r.cause = e.props.cause ?? null;
-      r.start = e.ts;
-    }
-    if (e.name === 'wave_start') r.lastWave = Math.max(r.lastWave, e.props.wave ?? 1);
-    if (e.name === 'run_end' || e.name === 'run_quit') r.final = e.props; // a revived run reports twice: the last wins
-    r.last = Math.max(r.last, e.ts);
-    runs.set(key, r);
-  }
-  const battleSecs = (r) => (r.final ? Number(r.final.secs) || 0 : Math.max(0, (r.last - r.start) / 1000));
+  const runs = runsOf(events, (e) => players.has(e.uid));
 
   const firstSessionBattle = new Map(); // uid -> battle seconds in session 1
   const stage = new Map(); // uid -> highest campaign stage started
-  const runsOf = new Map(); // uid -> runs
+  const runsByUid = new Map(); // uid -> runs
   for (const r of runs.values()) {
     if (players.get(r.uid).sid === r.sid) firstSessionBattle.set(r.uid, (firstSessionBattle.get(r.uid) ?? 0) + battleSecs(r));
     if (CAMPAIGN.has(r.cause) && r.stage != null) stage.set(r.uid, Math.max(stage.get(r.uid) ?? 0, r.stage));
-    runsOf.set(r.uid, [...(runsOf.get(r.uid) ?? []), r]);
+    runsByUid.set(r.uid, [...(runsByUid.get(r.uid) ?? []), r]);
   }
 
   const did = (pred) => new Set(events.filter((e) => players.has(e.uid) && pred(e)).map((e) => e.uid));
@@ -128,7 +146,7 @@ export function playtestRows(events) {
   for (const c of cells.values()) {
     const count = (set) => c.uids.filter((u) => set.has(u)).length;
     const eligible = c.uids.filter((u) => newest - players.get(u).installTs >= 2 * DAY);
-    const cellRuns = c.uids.flatMap((u) => runsOf.get(u) ?? []);
+    const cellRuns = c.uids.flatMap((u) => runsByUid.get(u) ?? []);
     const quitRuns = cellRuns.filter((r) => !r.final || r.final.result === 'quit');
     const where = new Map();
     for (const r of quitRuns) {
