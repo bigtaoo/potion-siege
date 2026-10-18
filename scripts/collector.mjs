@@ -39,7 +39,7 @@ const sizeOf = (file) => {
 };
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
-const HOSTS = ['crazygames', 'web'];
+const HOSTS = ['crazygames', 'web', 'ios'];
 
 /** The line a checkpoint request writes, or null when it is not one. */
 function beaconLine(url, received) {

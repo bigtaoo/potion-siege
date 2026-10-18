@@ -8,14 +8,15 @@
 // state. Besides the device kind they carry `n` (1 when this browser has no player record yet:
 // a new player's launch) and `r`, the acquisition source: the one in the player record, or for a
 // new player the same rule as src/analytics/source.ts sourceOf, written out in plain ES5 here
-// (source.test.ts runs both on the same cases). A local preview counts nothing.
+// (source.test.ts runs both on the same cases). A local preview counts nothing; the iOS app, whose
+// page is capacitor://localhost, does count.
 
-/** The inline script for `host` ('crazygames' or 'web'); `defaultSrc` is the build's own source tag. */
+/** The inline script for `host` ('crazygames', 'web' or 'ios'); `defaultSrc` is the build's own source tag. */
 export function openBeacon(collector, build, host = 'crazygames', defaultSrc = '') {
   const base = `${collector}/b?h=${host}&b=${encodeURIComponent(build)}&s=open_`;
   return (
     '<script>(function(){try{' +
-    "var h=location.hostname;if(h==='localhost'||h==='[::1]'||h.indexOf('127.')===0)return;" +
+    "var h=location.hostname;if(location.protocol!=='capacitor:'&&(h==='localhost'||h==='[::1]'||h.indexOf('127.')===0))return;" +
     "var t=matchMedia('(pointer: coarse)').matches?'touch':'desktop';" +
     "var c=function(s){return String(s==null?'':s).toLowerCase().replace(/[^a-z0-9._-]/g,'').slice(0,40)};" +
     "var n='1',r='';" +

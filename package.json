@@ -8,13 +8,15 @@
     "dev:crazygames": "vite --config vite.crazygames.config.js",
     "build": "tsc --noEmit && vite build",
     "build:crazygames": "tsc --noEmit && vite build --config vite.crazygames.config.js",
+    "dev:ios": "vite --config vite.ios.config.js",
+    "build:ios": "tsc --noEmit && vite build --config vite.ios.config.js",
     "preview:crazygames": "vite preview --config vite.crazygames.config.js --port 4174 --strictPort",
     "build:itch": "tsc --noEmit && node scripts/build-zip.mjs itch",
     "build:newgrounds": "tsc --noEmit && node scripts/build-zip.mjs newgrounds",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "vitest run --config scripts/vitest.balance.config.js",
-    "check": "npm run typecheck && npm run test && npm run build:crazygames",
+    "check": "npm run typecheck && npm run test && npm run build:crazygames && npm run build:ios",
     "collector": "node scripts/collector.mjs",
     "report": "node scripts/report.mjs",
     "early": "vitest run --config scripts/vitest.early.config.js",
@@ -25,9 +27,13 @@
     "chapters": "vitest run --config scripts/vitest.chapters.config.js"
   },
   "dependencies": {
+    "@capacitor/core": "^8.5.3",
+    "@capacitor/ios": "^8.5.3",
+    "@capgo/capacitor-updater": "8.52.1",
     "pixi.js": "^8.6.6"
   },
   "devDependencies": {
+    "@capacitor/cli": "^8.5.3",
     "typescript": "^5.9.3",
     "vite": "^6.4.1",
     "vitest": "^4.1.10"

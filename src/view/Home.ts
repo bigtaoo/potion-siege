@@ -99,6 +99,18 @@ export interface HomeActions {
   endless(): void;
   /** Flips the music or the sound effects toggle. */
   sound(which: 'music' | 'sfx'): void;
+  /** The ad-free card: Apple's purchase sheet, and Restore. */
+  buyAdFree(): void;
+  restoreAdFree(): void;
+  /** Google's ad privacy options form. */
+  adPrivacy(): void;
+}
+
+/** What only some hosts have: the ad-free card for sale (iOS) and Google's ad privacy options. */
+export interface HomeExtras {
+  /** `price` null while the store cannot sell; `note` how the last buy or restore went. */
+  adFree?: { price: string | null; owned: boolean; note: string | null };
+  privacy?: boolean;
 }
 
 /** The part of the page a tab fills. */
@@ -128,6 +140,7 @@ export function buildHome(
   picked: HeroKind | null = null,
   ads = false,
   hint: HeroKind | null = null,
+  extras: HomeExtras = {},
 ): Container {
   const root = new Container();
   const { w, h, wide } = fit;
@@ -139,7 +152,7 @@ export function buildHome(
   else if (tab === 'potions') potionsTab(root, m, act, area, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier));
-  else shopTab(root, m, act, area, today, ads);
+  else shopTab(root, m, act, area, today, ads, extras.adFree ?? null);
   topBar(root, m, act, today, left, w, wide);
   // a dot only where something can be claimed or bought right now, and not on the tab already open
   const dots: Partial<Record<HomeTab, boolean>> = {
@@ -153,7 +166,7 @@ export function buildHome(
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
-  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -829,10 +842,16 @@ function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): v
 }
 
 /** The shop: the free daily chest and the rewarded ad for crystals, then the potions, the
- *  locked ones for sale. Stacked on a portrait page, side by side on a landscape one. */
-function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, ads: boolean): void {
-  const top = a.y + 60;
+ *  locked ones for sale. Stacked on a portrait page, side by side on a landscape one. Where the
+ *  ad-free card is sold (iOS) a strip for it goes on top. */
+function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, ads: boolean, adFree: HomeExtras['adFree'] | null): void {
+  let top = a.y + 60;
   const bottom = a.y + a.h - 40;
+  if (adFree) {
+    const sw = Math.min(a.wide ? 1500 : 960, a.w - 80);
+    adFreeStrip(root, act, adFree, a.x + a.w / 2, top + STRIP_H / 2, sw);
+    top += STRIP_H + 30;
+  }
   if (a.wide) {
     const gap = 40;
     const dw = Math.min(780, (a.w - 3 * gap) * 0.46);
@@ -849,6 +868,59 @@ function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today:
     dailyPanel(root, m, act, today, ads, a.x + a.w / 2, top + dh / 2, pw, dh);
     unlockPanel(root, m, act, a.x + a.w / 2, bottom - uh / 2, pw, uh, HERO_KINDS.length);
   }
+}
+
+const STRIP_H = 200;
+
+/** The ad-free card: what it does, its price (or owned) and Restore, in one strip. */
+function adFreeStrip(root: Container, act: HomeActions, info: NonNullable<HomeExtras['adFree']>, x: number, y: number, w: number): void {
+  const c = new Container();
+  c.position.set(x, y);
+  const left = -w / 2;
+  const icon = noAdsIcon();
+  icon.position.set(left + 100, 0);
+  const textX = left + 190;
+  const textW = w - 190 - 360;
+  const name = fitText(ink(t('store.adFree.name'), 44), textW);
+  name.anchor.set(0, 0.5);
+  name.position.set(textX, -50);
+  const line = info.note ?? t('store.adFree.desc');
+  const desc = fitText(ink(line, 28, { fill: info.note ? P.brassDark : P.inkSoft }), textW);
+  desc.anchor.set(0, 0.5);
+  desc.position.set(textX, 4);
+  c.addChild(lightPanel(w, STRIP_H), icon, name, desc);
+  const bx = w / 2 - 190;
+  if (info.owned) {
+    const tk = tick(30);
+    tk.position.set(bx - 70, 0);
+    const owned = ink(t('store.owned'), 40, { fill: 0x2b7c36 });
+    owned.anchor.set(0, 0.5);
+    owned.position.set(bx - 26, -2);
+    c.addChild(tk, owned);
+  } else {
+    const buy = new PillButton(info.price ?? '…', 300, 100, 'green', act.buyAdFree, 46).setEnabled(info.price !== null);
+    buy.x = bx;
+    // Restore, as a link under the line: App Review wants it where the purchase is
+    const restore = tappable(fitText(ink(t('store.adFree.restore'), 28, { fill: P.brassDark }), textW), act.restoreAdFree);
+    restore.anchor.set(0, 0.5);
+    restore.position.set(textX, 56);
+    c.addChild(buy, restore);
+  }
+  root.addChild(c);
+}
+
+/** The ad icon's screen with a red bar across it. */
+function noAdsIcon(): Container {
+  const c = new Container();
+  const bar = new Graphics()
+    .circle(0, 0, 66)
+    .stroke({ width: 12, color: P.red })
+    .moveTo(-46, -46)
+    .lineTo(46, 46)
+    .stroke({ width: 12, color: P.red, cap: 'round' });
+  c.addChild(new Graphics().circle(0, 0, 70).fill({ color: P.brass, alpha: 0.18 }), adIcon(), bar);
+  c.scale.set(0.9);
+  return c;
 }
 
 /** Today's free chest and the ad for crystals, as two cards side by side. */
@@ -1239,13 +1311,19 @@ function bonusRow(m: MetaSave, act: HomeActions): Container {
 }
 
 /** The settings: the music and sound effects toggles. */
-function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const h = 560;
+function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean): Container {
+  const h = privacy ? 720 : 560;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
+  if (privacy) {
+    // Google's consent form again, where it applies (iOS in the EEA/UK)
+    const b = new PillButton(t('sound.privacy'), 600, 100, 'brass', act.adPrivacy, 40);
+    b.y = h / 2 - 100;
+    box.addChild(b);
+  }
   (['music', 'sfx'] as const).forEach((which, i) => {
     const on = m.sound[which];
     const r = tappable(new Container(), () => act.sound(which));
-    r.position.set(0, -80 + i * 190);
+    r.position.set(0, (privacy ? -170 : -80) + i * 190);
     const icon = new Container();
     icon.position.set(-330, 0);
     icon.addChild(medal(56, on ? 0x3c9a4a : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));
