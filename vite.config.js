@@ -1,8 +1,25 @@
-import { defineConfig } from 'vite';
-import { buildDefine } from './scripts/buildId.mjs';
+import { defineConfig, loadEnv } from 'vite';
+import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
+import { openBeacon } from './scripts/openBeacon.mjs';
+
+/** A build gets the anonymous `open_*` load checkpoint (scripts/openBeacon.mjs) as the first
+ *  thing in <head>, so the web's launches count like the portal's. */
+const webBeacon = () => {
+  let beacon = '';
+  return {
+    name: 'web-open-beacon',
+    configResolved(config) {
+      // the collector is VITE_ANALYTICS_URL (.env.production) without its /e
+      const url = loadEnv(config.mode, process.cwd(), 'VITE_').VITE_ANALYTICS_URL;
+      if (config.command === 'build' && url) beacon = openBeacon(url.replace(/\/e$/, ''), buildId(), 'web', defaultSource());
+    },
+    transformIndexHtml: (html) => (beacon ? html.replace('<head>', `<head>\n    ${beacon}`) : html),
+  };
+};
 
 export default defineConfig({
   define: buildDefine(),
+  plugins: [webBeacon()],
   server: { port: 5180, host: true },
   build: { target: 'es2020', outDir: 'dist' },
   test: { include: ['src/**/*.test.ts'] },

@@ -20,5 +20,9 @@ export function buildId() {
   return `${version}+${sha}${git('status --porcelain --untracked-files=no') ? '-dirty' : ''}`;
 }
 
-/** Vite's `define` for it: `__PS_BUILD__` in the client. */
-export const buildDefine = () => ({ __PS_BUILD__: JSON.stringify(buildId()) });
+/** The acquisition source a build tags new players with when their link has no `?src=`: set by
+ *  scripts/build-zip.mjs (PS_DEFAULT_SRC) for a portal that hosts its own copy, '' otherwise. */
+export const defaultSource = () => (process.env.PS_DEFAULT_SRC ?? '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 40);
+
+/** Vite's `define` for them: `__PS_BUILD__` and `__PS_DEFAULT_SRC__` in the client. */
+export const buildDefine = () => ({ __PS_BUILD__: JSON.stringify(buildId()), __PS_DEFAULT_SRC__: JSON.stringify(defaultSource()) });

@@ -1,6 +1,9 @@
 node_modules/
 dist/
 dist-crazygames/
+dist-itch/
+dist-newgrounds/
+potion-siege-*.zip
 telemetry/
 *.local
 ref/

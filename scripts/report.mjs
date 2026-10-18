@@ -5,6 +5,7 @@
 
 import { readFileSync } from 'node:fs';
 import { perfSummary, printPerf } from './perfSummary.mjs';
+import { feedbackLines, playtestRows, printPlaytest } from './playtestMetrics.mjs';
 
 const file = process.argv[2] || 'telemetry/events.ndjson';
 const events = readFileSync(file, 'utf8')
@@ -186,3 +187,11 @@ const adOk = events.filter((e) => e.name === 'ad_result' && e.props.ok).length;
 console.log(`\n== Ads ==\nrevive offered ${adOffers}, watched ${adOk} (${pct(adOk, adOffers)}), midgame ${events.filter((e) => e.name === 'ad_midgame').length}`);
 
 printPerf(perfSummary(events));
+
+// --- the playtest: new players by build, source and device, as CrazyGames scores them ---
+printPlaytest(playtestRows(events));
+const said = feedbackLines(events);
+if (said.length) {
+  console.log(`\n== Feedback (${said.length}, newest first) ==`);
+  for (const line of said) console.log(line);
+}
