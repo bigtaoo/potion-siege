@@ -47,6 +47,25 @@ describe('CrazyGamesPlatform', () => {
     expect(calls).toEqual(['loadingStart', 'loadingStop']);
   });
 
+  it('follows the portal mute: the current state at once, then every change', async () => {
+    let change: ((settings: unknown) => void) | undefined;
+    const global: CgGlobal = {
+      CrazyGames: {
+        SDK: {
+          environment: 'crazygames',
+          game: { settings: { muteAudio: true }, addSettingsChangeListener: (l) => void (change = l) },
+        },
+      },
+    };
+    const p = await CrazyGamesPlatform.create(new CrazyGamesSdk(global));
+    const muted: boolean[] = [];
+    p.onHostMute((m) => muted.push(m));
+    await flush();
+    change?.({ muteAudio: false });
+    change?.({ muteAudio: true });
+    expect(muted).toEqual([true, false, true]);
+  });
+
   it('reports a local SDK as the web, the portal as crazygames', async () => {
     expect((await platform('local')).p.name).toBe('web');
     expect((await platform('crazygames')).p.name).toBe('crazygames');

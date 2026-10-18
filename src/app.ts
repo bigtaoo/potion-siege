@@ -362,6 +362,8 @@ class Game {
       this.view.react(events);
       this.audio.battle(events);
       this.hud.react(events);
+      // an offer made on the tick's last step (or by the bot's own upgrade) would otherwise open the overlay
+      if (this.autoplay && b.choices) botAct(b);
       if (b.choices) this.showSkills(b);
       else if (b.result) this.finish(b);
     }
