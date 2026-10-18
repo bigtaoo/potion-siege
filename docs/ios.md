@@ -108,7 +108,9 @@ The web layer (`dist-ios`) can change without App Review:
 - **compile**: every push to main or pull request that touches the shell; an unsigned simulator build.
 - **release**: a tag `ios-v*` or a manual run: archive, sign (manual, `Apple Distribution`),
   export and upload to TestFlight. The build number is the run number; destination `none` stops
-  at the IPA.
+  at the IPA. A manual run can build any branch
+  (`gh workflow run release-ios.yml --ref <branch> -f destination=testflight`), so a change can be
+  tried on a phone before its PR is merged (the icon went out that way as 1.0 (4)).
 
 Secrets (Settings → Secrets and variables → Actions):
 
@@ -138,6 +140,12 @@ card at once and which offers the privacy button. `?native=owned` starts with th
   linked to a person, nothing used for tracking.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
 - Age rating: cartoon violence, ads. Screenshots at 1179×2556, English and Simplified Chinese.
+- Icon: `art/store/ios/app_icon_1024.png`, the same file as the asset catalog's
+  `AppIcon-512@2x.png` (1024², RGB, no alpha). It is the fire potion bottle on purple, draft A of
+  three in `art/icon/` (prompts `art/prompts/icon_*_gen.txt`), cropped 640 px around the bottle so it
+  fills the rounded square: one big character on a flat, saturated ground is what still reads at
+  60 pt. The first icon, the crowned cauldron over the blurred battlefield, was small and muddy
+  there.
 
 ## Review risks
 
@@ -154,6 +162,6 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 | Step | What | Done when |
 |---|---|---|
 | 0 | Owner setup (`D:\cloud\ios\apps\potionsiege.md`) | App ID, ASC record, profile, secrets |
-| 1 | Shell, ads, card, hot updates, workflows (this branch) | Simulator build green on the runner |
-| 2 | First TestFlight build | Plays a run on a phone, test ads, sandbox purchase and restore |
+| 1 | Shell, ads, card, hot updates, workflows | Done: merged 4bbf338, simulator build green |
+| 2 | First TestFlight build | 1.0 (3), then 1.0 (4) with the new icon, plays on a phone; test ads and sandbox purchase + restore still to check |
 | 3 | Listing: our AdMob ids (`live`), privacy policy, label, screenshots, rating; submit | In review |
