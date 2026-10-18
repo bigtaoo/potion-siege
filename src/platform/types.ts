@@ -25,6 +25,35 @@ export interface Platform {
   midgame(onStart: () => void): Promise<void>;
   /** Called with the host's mute state now and whenever it changes. */
   onHostMute(listener: (muted: boolean) => void): void;
+  /** The element the canvas fills (iOS: the screen inside its safe area); the window when absent. */
+  readonly mount?: HTMLElement;
+  /** The ad-free card for sale in the shop (iOS); absent where nothing is sold. */
+  readonly store?: Store | null;
+  /** Google's ad privacy options in the settings panel (iOS in the EEA/UK). */
+  readonly adPrivacy?: AdPrivacy;
+}
+
+/**
+ * The one purchase, the ad-free card (docs/ios.md "The ad-free card"): with it, rewarded offers
+ * pay at once with no ad and no interstitial plays. Ownership is the store's; the last answer is
+ * kept, so an offline launch already knows.
+ */
+export interface Store {
+  /** The card's price as the storefront writes it ('US$3.99', '3,99 €'); null while the store
+   *  has not answered, or cannot sell it (offline, purchases blocked). */
+  price(): string | null;
+  owned(): boolean;
+  /** Apple's purchase sheet, from a tap; 'pending' while Ask to Buy waits for a parent. */
+  buy(): Promise<'owned' | 'cancelled' | 'pending' | 'failed'>;
+  /** Restore purchases, from a tap: whether the card was found. */
+  restore(): Promise<'owned' | 'none' | 'cancelled' | 'failed'>;
+}
+
+/** A privacy options form the ad host requires a way back to (Google's UMP in the EEA/UK). */
+export interface AdPrivacy {
+  /** Whether settings should show the button. */
+  offered(): boolean;
+  open(): void;
 }
 
 /** Storage that never throws: falls back to memory when the real one does. */

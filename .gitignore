@@ -3,7 +3,9 @@ dist/
 dist-crazygames/
 dist-itch/
 dist-newgrounds/
+dist-ios/
 potion-siege-*.zip
 telemetry/
 *.local
 ref/
+dist-ota/

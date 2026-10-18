@@ -34,11 +34,11 @@ describe('sourceOf', () => {
 });
 
 /** Runs the inline open beacon in a pretend page and returns the URL it fetched, or null. */
-function runBeacon(script: string, page: { search: string; referrer: string; host?: string; player?: string | null; coarse?: boolean }): string | null {
+function runBeacon(script: string, page: { search: string; referrer: string; host?: string; protocol?: string; player?: string | null; coarse?: boolean }): string | null {
   const body = script.replace(/^<script>/, '').replace(/<\/script>$/, '');
   let fetched: string | null = null;
   const env = {
-    location: { hostname: page.host ?? OWN, search: page.search },
+    location: { hostname: page.host ?? OWN, protocol: page.protocol ?? 'https:', search: page.search },
     document: { referrer: page.referrer },
     localStorage: { getItem: (k: string) => (k === 'mb.player' ? (page.player ?? null) : null) },
     matchMedia: () => ({ matches: !!page.coarse }),
@@ -74,6 +74,8 @@ describe('the inline open beacon', () => {
   it('counts nothing on a local preview', () => {
     expect(runBeacon(openBeacon('https://c.example', 'b'), { search: '', referrer: '', host: 'localhost' })).toBeNull();
     expect(runBeacon(openBeacon('https://c.example', 'b'), { search: '', referrer: '', host: '127.0.0.1' })).toBeNull();
+    // the iOS app's page is capacitor://localhost, and counts
+    expect(new URL(runBeacon(openBeacon('https://c.example', 'b', 'ios'), { search: '', referrer: '', host: 'localhost', protocol: 'capacitor:' })!).searchParams.get('h')).toBe('ios');
   });
 });
 

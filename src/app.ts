@@ -29,7 +29,7 @@ import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/type
 import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
-import { buildHome, type HomePanel, type HomeTab } from './view/Home';
+import { buildHome, type HomeExtras, type HomePanel, type HomeTab } from './view/Home';
 import { FEEDBACK_RUN, FeedbackAsk } from './view/feedback';
 import { loginPops, offersNext, upgradeHintKind } from './view/nudges';
 import { uiSound, workshopWall } from './view/kit';
@@ -48,7 +48,13 @@ const SAVE_KEY = 'mb.save';
 const BUILD = __PS_BUILD__;
 
 
-export async function boot(platform: Platform): Promise<void> {
+/** What a host's entry can do with the game once it is up. */
+export interface GameHandle {
+  /** Draws the home screen again if it is up: the store or the ads changed (iOS). */
+  refresh(): void;
+}
+
+export async function boot(platform: Platform): Promise<GameHandle> {
   const params = new URLSearchParams(location.search);
   const lang = setLocale([params.get('lang'), ...platform.languages()]);
   document.title = t('title');
@@ -56,13 +62,13 @@ export async function boot(platform: Platform): Promise<void> {
   const app = new Application();
   await app.init({
     background: COLORS.bg,
-    resizeTo: window,
+    resizeTo: platform.mount ?? window,
     resolution: Math.min(window.devicePixelRatio || 1, 2),
     autoDensity: true,
     antialias: true,
     preference: 'webgl',
   });
-  document.body.appendChild(app.canvas);
+  (platform.mount ?? document.body).appendChild(app.canvas);
   await loadArt();
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -111,6 +117,7 @@ export async function boot(platform: Platform): Promise<void> {
   game.start();
   // the first battle frame is on screen two animation frames later: the `loaded` checkpoint
   requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name, analytics)));
+  return { refresh: () => game.refresh() };
 }
 
 /** 'touch' on a coarse pointer (a phone or tablet), else 'desktop': the beacons' device split. */
@@ -127,9 +134,10 @@ function pointerKind(): 'touch' | 'desktop' {
 function loadedBeacon(host: string, analytics: Analytics): void {
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (!url || new URLSearchParams(location.search).has('autoplay')) return;
-  // a local preview of a production build counts nothing, like the open beacon
+  // a local preview of a production build counts nothing, like the open beacon (the iOS app's
+  // page is capacitor://localhost, and does count)
   const h = location.hostname;
-  if (h === 'localhost' || h === '[::1]' || h.startsWith('127.')) return;
+  if (location.protocol !== 'capacitor:' && (h === 'localhost' || h === '[::1]' || h.startsWith('127.'))) return;
   try {
     const n = analytics.sessions === 1 ? 1 : 0;
     const q = `h=${encodeURIComponent(host)}&b=${encodeURIComponent(BUILD)}&s=loaded_${pointerKind()}&ms=${Math.round(performance.now())}&n=${n}&r=${encodeURIComponent(analytics.source)}`;
@@ -194,6 +202,8 @@ class Game {
   private menuFit: MenuFit | null = null;
   private tab: HomeTab = 'battle';
   private panel: HomePanel = null;
+  /** How the last buy or restore of the ad-free card went, on its strip until the tab changes. */
+  private storeNote: string | null = null;
   private battle: Battle | null = null;
   private run: RunTracker | null = null;
   private save: MetaSave;
@@ -681,6 +691,7 @@ class Game {
         if (this.hintOnButton && tab !== 'potions') this.hintDone(false);
         this.tab = tab;
         this.picked = null;
+        this.storeNote = null;
         this.analytics.track('home_view', { tab, from: 'tab', run: this.save.runs });
         this.home();
       },
@@ -749,6 +760,9 @@ class Game {
         this.store();
         this.home('settings');
       },
+      buyAdFree: () => void this.buyAdFree(),
+      restoreAdFree: () => void this.restoreAdFree(),
+      adPrivacy: () => this.platform.adPrivacy?.open(),
       play: () => {
         if (this.hintOnButton) this.hintDone(false);
         this.analytics.track('battle_start_tap', { stage: this.save.stage, from: 'home', run: this.save.runs + 1 });
@@ -759,8 +773,55 @@ class Game {
         this.root.visible = true;
         this.platform.gameplayStart();
       },
-    }, this.tab, panel, today, fit, this.picked, !this.autoplay && this.platform.rewardedAvailable(), hint));
+    }, this.tab, panel, today, fit, this.picked, !this.autoplay && this.platform.rewardedAvailable(), hint, this.extras()));
     this.hintHand = hint ? this.menu.getChildByLabel('hintHand', true) : null;
+  }
+
+  /** The ad-free card and the privacy options, where the host has them (iOS). */
+  private extras(): HomeExtras {
+    const store = this.platform.store;
+    return {
+      adFree: store ? { price: store.price(), owned: store.owned(), note: this.storeNote } : undefined,
+      privacy: this.platform.adPrivacy?.offered() ?? false,
+    };
+  }
+
+  /** The home screen again with what the host now says (a purchase, a refund, an ad loaded). */
+  refresh(): void {
+    if (this.menu.visible) this.home(this.panel);
+  }
+
+  /** Apple's purchase sheet for the ad-free card. The menu takes no taps while it is up. */
+  private async buyAdFree(): Promise<void> {
+    const store = this.platform.store;
+    if (!store) return;
+    this.menu.interactiveChildren = false;
+    let outcome: Awaited<ReturnType<typeof store.buy>> = 'failed';
+    try {
+      outcome = await store.buy();
+    } finally {
+      this.menu.interactiveChildren = true;
+    }
+    this.analytics.track('iap', { op: 'buy', outcome, run: this.save.runs });
+    this.storeNote = outcome === 'pending' ? t('store.adFree.pending') : outcome === 'failed' ? t('store.adFree.failed') : null;
+    if (outcome === 'owned') this.platform.celebrate();
+    this.refresh();
+  }
+
+  /** Restore purchases: the strip says what it found. */
+  private async restoreAdFree(): Promise<void> {
+    const store = this.platform.store;
+    if (!store) return;
+    this.menu.interactiveChildren = false;
+    let outcome: Awaited<ReturnType<typeof store.restore>> = 'failed';
+    try {
+      outcome = await store.restore();
+    } finally {
+      this.menu.interactiveChildren = true;
+    }
+    this.analytics.track('iap', { op: 'restore', outcome, run: this.save.runs });
+    this.storeNote = outcome === 'owned' ? t('store.adFree.restored') : outcome === 'none' ? t('store.adFree.nothing') : outcome === 'failed' ? t('store.adFree.failed') : null;
+    this.refresh();
   }
 
   /** The pointer at a potion upgrade is over: the player bought one, or saw the button and moved on. */

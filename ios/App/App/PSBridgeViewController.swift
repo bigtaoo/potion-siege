@@ -1,0 +1,159 @@
+import UIKit
+import Capacitor
+import WebKit
+
+// The root view controller: Capacitor's web view plus `window.PSNative`, the bridge the game reads
+// through src/platform/ios/bridge.ts (contract in docs/ios.md). Ported from D:\standing's
+// HKBridgeViewController, without Game Center. It is no Capacitor plugin (the only ones are
+// SystemBars and the hot-update plugin, capacitor.config.ts): one WKScriptMessageHandler named
+// "ps" and one script injected at document start. SceneDelegate makes this the window's root.
+//
+// Calls from JS are messages `{ op, ... }`. Answers are pushed back into the page rather than
+// settled by id: AdMob's and the store's states go to `PSNative._adState` and `_store` whenever
+// they change and when the page asks (a reloaded page asks again); an ad's progress goes to `_adEvent`, how a buy or a restore went to `_storeResult`. Every member
+// the page reads is feature-detected there, so a newer web bundle on an older shell falls back to
+// the browser's behaviour.
+final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
+
+    static let handlerName = "ps"
+    /// Raised whenever the contract gains calls (PSNative.v in bridge.ts).
+    static let bridgeVersion = 1
+
+    private let keyStore = KeyStore()
+    private let adMob = AdMob()
+    private let store = Store()
+
+    override func capacitorDidLoad() {
+        guard let webView = webView else { return }
+        let ucc = webView.configuration.userContentController
+        ucc.add(self, name: Self.handlerName)
+        ucc.addUserScript(WKUserScript(source: bridgeScript(), injectionTime: .atDocumentStart, forMainFrameOnly: true))
+        webView.scrollView.bounces = false
+        adMob.presenter = self
+        adMob.onChange = { [weak self] state in self?.push("_adState", state.json) }
+        adMob.onEvent = { [weak self] kind, event, ok in
+            self?.push("_adEvent", ["kind": kind.rawValue, "event": event, "ok": ok])
+        }
+        store.onChange = { [weak self] state in self?.push("_store", state.json) }
+        store.onResult = { [weak self] op, outcome in self?.push("_storeResult", ["op": op, "outcome": outcome]) }
+        store.start()
+        #if DEBUG
+        // Safari's Web Inspector, for the day a Mac is at hand (release builds stay closed)
+        if #available(iOS 16.4, *) { webView.isInspectable = true }
+        #endif
+    }
+
+    private var adsStarted = false
+
+    // Google's consent form needs a presenter that is in the window, so ads start here, once
+    override func viewDidAppear(_ animated: Bool) {
+        super.viewDidAppear(animated)
+        guard !adsStarted else { return }
+        adsStarted = true
+        adMob.start()
+    }
+
+    // A drag of a potion that reaches the bottom edge must not send the game home: the first
+    // swipe there only shows the home indicator, which stays hidden while playing (that one is
+    // SystemBars' `hidden` in capacitor.config.ts; Capacitor's own extension answers it).
+    override var preferredScreenEdgesDeferringSystemGestures: UIRectEdge { .bottom }
+
+    // MARK: WKScriptMessageHandler
+
+    func userContentController(_ userContentController: WKUserContentController, didReceive message: WKScriptMessage) {
+        guard message.name == Self.handlerName, let body = message.body as? [String: Any] else { return }
+        switch body["op"] as? String {
+        case "save":
+            guard let key = body["key"] as? String, let value = body["value"] as? String else { return }
+            keyStore.set(key, value)
+        case "openUrl":
+            // only web pages (the privacy policy); never our own scheme or another app's
+            guard let text = body["url"] as? String, let url = URL(string: text),
+                  url.scheme == "https" || url.scheme == "http" else { return }
+            UIApplication.shared.open(url)
+        case "adState":
+            push("_adState", adMob.state.json)
+        case "showAd":
+            guard let kind = (body["kind"] as? String).flatMap(AdMob.Kind.init(rawValue:)) else { return }
+            adMob.show(kind)
+        case "adPrivacy":
+            adMob.showPrivacyOptions()
+        case "store":
+            if let state = store.state { push("_store", state.json) }
+        case "buy":
+            guard let id = body["id"] as? String else { return }
+            store.buy(id)
+        case "restore":
+            store.restore()
+        default:
+            return
+        }
+    }
+
+    /// Hands a state or an event to the page: `PSNative[receiver](value)` in the injected script.
+    private func push(_ receiver: String, _ value: [String: Any]) {
+        guard let data = try? JSONSerialization.data(withJSONObject: value),
+              let json = String(data: data, encoding: .utf8) else { return }
+        webView?.evaluateJavaScript("window.PSNative && window.PSNative.\(receiver) && window.PSNative.\(receiver)(\(json))")
+    }
+
+    // MARK: The injected script
+
+    private func bridgeScript() -> String {
+        let config: [String: Any] = [
+            "v": Self.bridgeVersion,
+            "saved": keyStore.all(),
+            "languages": Locale.preferredLanguages,
+            "device": Self.deviceLine(),
+        ]
+        let json = (try? JSONSerialization.data(withJSONObject: config)).flatMap { String(data: $0, encoding: .utf8) } ?? "{}"
+        return """
+        (function(){
+          if (window.PSNative) return;
+          var c = \(json);
+          function post(m){ try { window.webkit.messageHandlers.\(Self.handlerName).postMessage(m); } catch (e) {} }
+          // a value the shell pushes, kept for late readers, and who to tell
+          function feed(){
+            var last = null, cbs = [];
+            return {
+              get: function(){ return last; },
+              on: function(cb){ cbs.push(cb); },
+              push: function(v){ last = v; for (var i = 0; i < cbs.length; i++) { try { cbs[i](v); } catch (e) {} } }
+            };
+          }
+          var ad = feed(), adEvent = feed(), store = feed(), storeResult = feed();
+          window.PSNative = {
+            v: c.v, saved: c.saved || {}, languages: c.languages || [], device: c.device || '',
+            save: function(k, v){ post({ op: 'save', key: String(k), value: String(v) }); },
+            openUrl: function(u){ post({ op: 'openUrl', url: String(u) }); },
+            adState: ad.get,
+            onAdState: ad.on,
+            onAdEvent: adEvent.on,
+            showAd: function(kind){ post({ op: 'showAd', kind: String(kind) }); },
+            adPrivacy: function(){ post({ op: 'adPrivacy' }); },
+            store: store.get,
+            onStore: store.on,
+            onStoreResult: storeResult.on,
+            buy: function(id){ post({ op: 'buy', id: String(id) }); },
+            restore: function(){ post({ op: 'restore' }); },
+            _adState: ad.push,
+            _adEvent: adEvent.push,
+            _store: store.push,
+            _storeResult: storeResult.push
+          };
+          post({ op: 'adState' });
+          post({ op: 'store' });
+        })();
+        """
+    }
+
+    /// The model identifier and system for problem reports, e.g. "iPhone15,2 iOS 18.1".
+    private static func deviceLine() -> String {
+        var info = utsname()
+        uname(&info)
+        let model = withUnsafeBytes(of: info.machine) { raw in
+            String(decoding: raw.prefix(while: { $0 != 0 }), as: UTF8.self)
+        }
+        return "\(model) iOS \(UIDevice.current.systemVersion)"
+    }
+}

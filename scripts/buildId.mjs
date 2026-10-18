@@ -24,5 +24,16 @@ export function buildId() {
  *  scripts/build-zip.mjs (PS_DEFAULT_SRC) for a portal that hosts its own copy, '' otherwise. */
 export const defaultSource = () => (process.env.PS_DEFAULT_SRC ?? '').toLowerCase().replace(/[^a-z0-9._-]/g, '').slice(0, 40);
 
-/** Vite's `define` for them: `__PS_BUILD__` and `__PS_DEFAULT_SRC__` in the client. */
-export const buildDefine = () => ({ __PS_BUILD__: JSON.stringify(buildId()), __PS_DEFAULT_SRC__: JSON.stringify(defaultSource()) });
+/**
+ * The iOS web bundle's version (docs/ios.md "Hot updates"): `<MARKETING_VERSION>.<build>` for the
+ * one inside a shell, `<shell>.<n>` for a hot update, from PS_BUNDLE_VERSION, which only the iOS
+ * workflows set. 0.0.0 elsewhere, which turns the update check off.
+ */
+export const bundleVersion = () => process.env.PS_BUNDLE_VERSION || '0.0.0';
+
+/** Vite's `define` for them: `__PS_BUILD__`, `__PS_DEFAULT_SRC__` and `__PS_BUNDLE__` in the client. */
+export const buildDefine = () => ({
+  __PS_BUILD__: JSON.stringify(buildId()),
+  __PS_DEFAULT_SRC__: JSON.stringify(defaultSource()),
+  __PS_BUNDLE__: JSON.stringify(bundleVersion()),
+});

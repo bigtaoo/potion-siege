@@ -1,6 +1,6 @@
 import { SafeStore, type KeyValueStore, type Platform } from './types';
 
-function browserStorage(): KeyValueStore | null {
+export function browserStorage(): KeyValueStore | null {
   try {
     return window.localStorage;
   } catch {

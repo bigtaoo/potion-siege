@@ -57,7 +57,7 @@ const beacons = events.filter((e) => e.name === 'beacon');
 if (beacons.length) {
   console.log('\n== Loading (launches, anonymous) ==');
   console.log('host        device    opened  loaded  loaded/opened  median load ms');
-  for (const host of ['crazygames', 'web']) {
+  for (const host of ['crazygames', 'web', 'ios']) {
     for (const kind of ['desktop', 'touch']) {
       const opened = beacons.filter((e) => e.host === host && e.step === `open_${kind}`).length;
       const loaded = beacons.filter((e) => e.host === host && e.step === `loaded_${kind}`);
