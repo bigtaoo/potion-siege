@@ -9,10 +9,11 @@
 // With COLLECTOR_DIR set (the container does) it writes one file per UTC day instead,
 // <dir>/events-YYYY-MM-DD.ndjson. GET /health answers 200 for the container's healthcheck.
 //
-// GET /b?h=<host>&s=<step>&b=<build>[&ms=<n>] counts an anonymous load checkpoint, no id:
-// `open_*` from the CrazyGames page's inline script before anything else downloads
-// (vite.crazygames.config.js), `loaded_*` once the first battle frame is up (app.ts). It lands
-// in the same file as {name: 'beacon', step, host, build, ms}.
+// GET /b?h=<host>&s=<step>&b=<build>[&ms=<n>][&n=0|1][&r=<source>] counts an anonymous load
+// checkpoint, no id: `open_*` from the page's inline script before anything else downloads
+// (scripts/openBeacon.mjs), `loaded_*` once the first battle frame is up (app.ts). `n` says
+// whether it is a new player's launch, `r` is the acquisition source tag or referrer host. It
+// lands in the same file as {name: 'beacon', step, host, build, ms, new, src}.
 
 import { appendFileSync, mkdirSync, statSync } from 'node:fs';
 import { createServer } from 'node:http';
@@ -50,6 +51,10 @@ function beaconLine(url, received) {
   const ms = q.has('ms') ? Number(q.get('ms')) : NaN;
   const line = { name: 'beacon', step, host, build, ts: received, received };
   if (Number.isInteger(ms) && ms >= 0 && ms < 3_600_000) line.ms = ms;
+  const n = q.get('n');
+  if (n === '0' || n === '1') line.new = n === '1';
+  const src = q.get('r');
+  if (src && /^[a-z0-9._-]{1,40}$/.test(src)) line.src = src;
   return line;
 }
 

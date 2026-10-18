@@ -9,6 +9,7 @@ import { deviceProps, PerfReport } from './analytics/perfReport';
 import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
 import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
+import { sourceOf } from './analytics/source';
 import { setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
@@ -29,6 +30,7 @@ import { loadArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomePanel, type HomeTab } from './view/Home';
+import { FEEDBACK_RUN, FeedbackAsk } from './view/feedback';
 import { loginPops, offersNext, upgradeHintKind } from './view/nudges';
 import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
@@ -77,6 +79,8 @@ export async function boot(platform: Platform): Promise<void> {
     w: window.innerWidth,
     h: window.innerHeight,
     touch: navigator.maxTouchPoints > 0,
+    // the beacons' test, so players and launches split the same way
+    device: pointerKind(),
     ...safeDevice(app),
   });
   // inside a portal's iframe the page can have no size yet at boot: the size once it has one
@@ -106,20 +110,29 @@ export async function boot(platform: Platform): Promise<void> {
   window.addEventListener('pagehide', () => game.leave());
   game.start();
   // the first battle frame is on screen two animation frames later: the `loaded` checkpoint
-  requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name)));
+  requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name, analytics)));
 }
 
-/** The anonymous `loaded` count beside the CrazyGames page's inline `open` one (see
- *  vite.crazygames.config.js): no id, sent whatever the privacy state, split by touch/desktop. */
-function loadedBeacon(host: string): void {
+/** 'touch' on a coarse pointer (a phone or tablet), else 'desktop': the beacons' device split. */
+function pointerKind(): 'touch' | 'desktop' {
+  try {
+    return matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop';
+  } catch {
+    return 'desktop';
+  }
+}
+
+/** The anonymous `loaded` count beside the page's inline `open` one (scripts/openBeacon.mjs):
+ *  no id, sent whatever the privacy state, split by touch/desktop, new player or not, and source. */
+function loadedBeacon(host: string, analytics: Analytics): void {
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (!url || new URLSearchParams(location.search).has('autoplay')) return;
   // a local preview of a production build counts nothing, like the open beacon
   const h = location.hostname;
   if (h === 'localhost' || h === '[::1]' || h.startsWith('127.')) return;
   try {
-    const kind = matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop';
-    const q = `h=${encodeURIComponent(host)}&b=${encodeURIComponent(BUILD)}&s=loaded_${kind}&ms=${Math.round(performance.now())}`;
+    const n = analytics.sessions === 1 ? 1 : 0;
+    const q = `h=${encodeURIComponent(host)}&b=${encodeURIComponent(BUILD)}&s=loaded_${pointerKind()}&ms=${Math.round(performance.now())}&n=${n}&r=${encodeURIComponent(analytics.source)}`;
     void fetch(`${url.replace(/\/e$/, '')}/b?${q}`, { mode: 'no-cors', keepalive: true }).catch(() => {});
   } catch {
     // a count lost, never the game
@@ -158,7 +171,8 @@ function createAnalytics(platform: Platform, params: URLSearchParams): Analytics
   if (params.has('track')) sinks.push(new ConsoleSink());
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (url && !params.has('autoplay')) sinks.push(new BeaconSink(url));
-  return new Analytics(platform.storage, sinks, BUILD, platform.name);
+  // a first visit records where the player came from (analytics/source.ts)
+  return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__));
 }
 
 class Game {
@@ -208,6 +222,8 @@ class Game {
   private tutLog: { step: TutorialStep; shownT: number | null; assisted: boolean } | null = null;
   /** When this battle's result screen first came up (ms), for `result_action`; 0 before. */
   private resultAt = 0;
+  /** The one-time rating question on the result screen after run 3 (web only), while it is up. */
+  private ask: FeedbackAsk | null = null;
   /** The home screen's one-time pointer is on the potion's button (so leaving the tab ends it). */
   private hintOnButton = false;
   private hintHand: Container | null = null;
@@ -839,6 +855,10 @@ class Game {
     if (!this.resultAt) {
       this.resultAt = performance.now();
       this.analytics.track('result_shown', { run: this.save.runs, stage: b.setup.stage, won, next, challenge: !!run });
+      // the playtest's question, once, well after the first minute and battles 1-3; the portal has its own ratings
+      if (this.save.runs >= FEEDBACK_RUN && this.platform.name === 'web' && !this.autoplay && this.analytics.first('feedback_shown', { run: this.save.runs })) {
+        this.ask = new FeedbackAsk((name, props) => this.analytics.track(name, props), this.save.runs);
+      }
     }
     if (run?.result) {
       const dealt = HERO_KINDS.flatMap((kind) => (b.dealt[kind] > 0 ? [{ kind, damage: Math.round(b.dealt[kind] / FP) }] : []));
@@ -880,6 +900,11 @@ class Game {
   private resultAction(action: 'next' | 'home' | 'tip' | 'revive' | 'double', tab?: HomeTab): void {
     const secs = Math.round((performance.now() - this.resultAt) / 1000);
     this.analytics.track('result_action', { action, tab: tab ?? null, secs, run: this.save.runs });
+    // leaving the result screen takes the question with it (the ×2 stays on it)
+    if (action !== 'double') {
+      this.ask?.close('left');
+      this.ask = null;
+    }
   }
 
   private leaveResult(action: 'home' | 'tip', tab?: HomeTab): void {

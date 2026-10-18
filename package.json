@@ -9,6 +9,8 @@
     "build": "tsc --noEmit && vite build",
     "build:crazygames": "tsc --noEmit && vite build --config vite.crazygames.config.js",
     "preview:crazygames": "vite preview --config vite.crazygames.config.js --port 4174 --strictPort",
+    "build:itch": "tsc --noEmit && node scripts/build-zip.mjs itch",
+    "build:newgrounds": "tsc --noEmit && node scripts/build-zip.mjs newgrounds",
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "balance": "vitest run --config scripts/vitest.balance.config.js",

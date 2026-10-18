@@ -95,6 +95,7 @@ export const zh: Table = {
     stage: { name: '换个关卡', desc: '回到简单的关卡攒晶石' },
   },
   continue: '继续',
+  feedback: { ask: '到目前为止，好玩吗？', note: '想对我们说点什么？（可选）', send: '发送', thanks: '谢谢！', skip: '以后再说' },
   nextStage: '下一关',
   back: '返回',
   shop: {

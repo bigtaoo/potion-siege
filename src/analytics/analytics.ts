@@ -3,6 +3,7 @@
 // personal data. Events go to pluggable sinks (console in dev, an HTTP collector when set).
 
 import type { KeyValueStore } from '../platform/types';
+import { UNKNOWN_SOURCE } from './source';
 
 const PLAYER_KEY = 'mb.player';
 const DAY_MS = 86_400_000;
@@ -23,6 +24,9 @@ export interface TrackedEvent {
   session: number;
   build: string;
   platform: string;
+  /** Where the player first came from (source.ts): a `?src=` tag, a referrer host, `direct`,
+   *  or `unknown` for a player from before sources were recorded. */
+  src: string;
   props: Props;
 }
 
@@ -39,6 +43,8 @@ interface PlayerRecord {
   sessions: number;
   /** One-time milestones already reported (first summon, first merge, ...). */
   firsts: string[];
+  /** Acquisition source, set on the first visit. */
+  src: string;
 }
 
 export interface Clock {
@@ -73,6 +79,8 @@ export class Analytics {
     private readonly build: string,
     private readonly platform: string,
     private readonly clock: Clock = systemClock,
+    /** The source to record when this is the player's first visit (source.ts sourceOf). */
+    private readonly newSource: () => string = () => 'direct',
   ) {
     this.player = this.loadPlayer();
     this.player.sessions++;
@@ -86,6 +94,10 @@ export class Analytics {
 
   get sessions(): number {
     return this.player.sessions;
+  }
+
+  get source(): string {
+    return this.player.src;
   }
 
   /** Seconds since this session started. */
@@ -103,6 +115,7 @@ export class Analytics {
       session: this.player.sessions,
       build: this.build,
       platform: this.platform,
+      src: this.player.src,
       props,
     };
     for (const s of this.sinks) {
@@ -114,12 +127,14 @@ export class Analytics {
     }
   }
 
-  /** Tracks `name` only the first time ever for this player (onboarding funnel steps). */
-  first(name: string, props: Props = {}): void {
-    if (this.player.firsts.includes(name)) return;
+  /** Tracks `name` only the first time ever for this player (onboarding funnel steps); true
+   *  when it did. */
+  first(name: string, props: Props = {}): boolean {
+    if (this.player.firsts.includes(name)) return false;
     this.player.firsts.push(name);
     this.savePlayer();
     this.track(name, props);
+    return true;
   }
 
   flush(): void {
@@ -141,12 +156,19 @@ export class Analytics {
           firstDay: raw.firstDay,
           sessions: Number(raw.sessions) || 0,
           firsts: Array.isArray(raw.firsts) ? raw.firsts.filter((f) => typeof f === 'string') : [],
+          src: typeof raw.src === 'string' && raw.src ? raw.src : UNKNOWN_SOURCE,
         };
       }
     } catch {
       /* start fresh */
     }
-    return { id: randomId(), firstDay: localDay(this.clock), sessions: 0, firsts: [] };
+    let src = 'direct';
+    try {
+      src = this.newSource() || 'direct';
+    } catch {
+      // no location or referrer to read
+    }
+    return { id: randomId(), firstDay: localDay(this.clock), sessions: 0, firsts: [], src };
   }
 
   private savePlayer(): void {

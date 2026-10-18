@@ -94,6 +94,7 @@ export const en = {
     stage: { name: 'Change stage', desc: 'Earn crystals on an easier stage' },
   },
   continue: 'Continue',
+  feedback: { ask: 'Enjoying Potion Siege so far?', note: 'Anything to tell us? (optional)', send: 'Send', thanks: 'Thank you!', skip: 'Not now' },
   nextStage: 'Next Stage',
   back: 'Home',
   shop: {
