@@ -226,9 +226,7 @@ describe('Battle', () => {
   });
 
   it('lets a simple bot get well into the run', () => {
-    // not seed 7: since the wave-1 horde that seed rolls four ice potions it never merges, and is the
-    // one in two hundred that falls by wave 3
-    const b = playOut(8);
+    const b = playOut(8); // not 7: since the horde, the one seed in 200 that falls by wave 3
     expect(b.wave).toBeGreaterThanOrEqual(6);
   });
 });

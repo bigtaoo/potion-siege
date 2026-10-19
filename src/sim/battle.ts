@@ -13,13 +13,15 @@
 // hold it to.
 
 import { resistOf } from './enemies';
-import { dist, dist2, FP, muldiv, perTick, TICK_RATE, ticks, toFp } from './math/fixed';
+import { dist, dist2, FP, muldiv, perTick, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
 import { pick } from './math/pick';
 import { Prng } from './math/prng';
 import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
+import { fixedMods, type Fixed } from './fixedMods';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type EnemyKind, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import { Shares } from './shares';
 import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -38,16 +40,6 @@ export function slotCenter(slot: number): { x: number; y: number } {
 export const WALL_ROW = B.grid.rows - 1;
 
 const C = B.commander;
-
-/** A multiplier or chance in permille, for configuration values. */
-export function pm(x: number): number {
-  return Math.round(x * 1000);
-}
-
-/** `v` times a permille multiplier, truncated. */
-function times(v: number, permille: number): number {
-  return muldiv(v, permille, 1000);
-}
 
 /** Seconds as thousandths of a tick, the unit of the shot cooldowns. */
 function cool(seconds: number): number {
@@ -77,51 +69,6 @@ const K = {
   weavePhase: Math.round((2.399 * BRAD_FULL) / (2 * Math.PI)),
   vortexPull: perTick(B.skills.vortexPull),
 };
-
-/** The skill and perk multipliers in integer form, worked out again on every pick. */
-interface Fixed {
-  /** The shot damage of each kind at each level, in FP. */
-  damage: Record<HeroKind, number[]>;
-  /** The poison a corrosion hit leaves at each level, in FP a second. */
-  poison: number[];
-  /** Thousandths of a tick off the cooldown per tick: every hero, and a wind hero. */
-  speed: number;
-  windSpeed: number;
-  crit: number;
-  fireRadius: number;
-  burn: number;
-  mark: number;
-  freezeChance: number;
-  freezeTime: number;
-  static: number;
-  plasmaBurn: number;
-  rustStep: number;
-  push: number;
-}
-
-function fixedMods(m: Mods, setup: BattleSetup): Fixed {
-  const damage = {} as Record<HeroKind, number[]>;
-  for (const [k, h] of Object.entries(B.heroes) as [HeroKind, { damage: number }][]) {
-    damage[k] = B.starDamage.map((s) => Math.round(h.damage * s * m.damage(k) * setup.heroDamage[k] * FP));
-  }
-  const speed = pm(m.speed);
-  return {
-    damage,
-    poison: B.starDamage.map((s) => Math.round(B.heroes.poison.poisonDps * s * m.damage('poison') * setup.heroDamage.poison * FP)),
-    speed,
-    windSpeed: times(speed, pm(m.windSpeed)),
-    crit: pm(m.crit + (setup.modifiers?.crit ?? 0)),
-    fireRadius: Math.round(B.heroes.fire.splash * m.fireRadius * FP),
-    burn: pm(m.burn),
-    mark: pm(m.mark),
-    freezeChance: pm(m.freezeChance),
-    freezeTime: pm(m.freezeTime),
-    static: pm(m.static),
-    plasmaBurn: pm(Math.max(m.burn, B.skills.plasmaBurn)),
-    rustStep: pm(m.rustStep),
-    push: pm(m.push),
-  };
-}
 
 /** A player command. Every change the player makes goes through Battle.apply as one of these,
  *  so a battle is its seed, its setup and its commands (replay.ts). */
@@ -165,14 +112,8 @@ export class Battle {
   charge = 0;
   /** Ticks the charge has been full. */
   chargedFor = 0;
-  /** Thousandths of a charge earned towards the next: one of the horde gives a share of one,
-   *  `horde.charge` times its heft, so the wave fills the commander as the 25 of it used to. */
-  private chargeOwed = 0;
-  /** Thousandths of kill gold earned towards the next coin, from the horde. */
-  private goldOwed = 0;
-  /** Thousandths towards the next on-kill burst of each skill: a horde death sets one off only
-   *  once its share adds up to a whole (see proc). */
-  private owed = { fireChain: 0, melt: 0, split: 0, vortex: 0 };
+  /** What the horde's deaths have earned towards the next charge, coin and burst. */
+  private shares = new Shares();
   /** Skills cast so far: they go in turn, the flask first. */
   casts = 0;
   /** Ticks of the brew left: every potion throws faster while it lasts. */
@@ -999,7 +940,7 @@ export class Battle {
   private windHit(e: Enemy, p: Projectile, direct: boolean): void {
     const S = B.skills;
     this.push(e, p.star);
-    if (this.mods.vortex && direct && e.hp <= 0 && this.proc('vortex', e)) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
+    if (this.mods.vortex && direct && e.hp <= 0 && this.shares.proc('vortex', e.heft)) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
     if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
       // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
       // everything close by
@@ -1068,7 +1009,7 @@ export class Battle {
       }
       this.events.push({ type: 'hit', kind: 'fire', x: target.x / FP, y: target.y / FP, radius: S.burstBoltRadius });
     }
-    if (this.mods.splitBolts && !p.split && target.hp <= 0 && this.proc('split', target)) {
+    if (this.mods.splitBolts && !p.split && target.hp <= 0 && this.shares.proc('split', target.heft)) {
       // the bolt that killed splits towards the nearest enemies left
       const skip = new Set([target.id]);
       for (let i = 0; i < S.splitBolts; i++) {
@@ -1238,32 +1179,19 @@ export class Battle {
     all.length = n;
     for (const e of dead) {
       const def = B.enemies[e.kind];
-      const pay = (def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold;
-      let gold = Math.round(pay / 1000);
-      if (e.heft < 1000) {
-        // one of the horde pays its share exactly, carried over to the next, so fifty-odd small
-        // ones do not round up to more than the wave was worth
-        this.goldOwed += Math.round(pay);
-        gold = Math.trunc(this.goldOwed / 1000);
-        this.goldOwed %= 1000;
-      }
+      const gold = this.shares.gold((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold, e.heft);
       this.gold += gold;
       this.kills++;
-      if (isBoss(e.kind)) this.charge = Math.min(C.charge, this.charge + C.bossCharge);
-      else {
-        this.chargeOwed += e.heft < 1000 ? Math.round(e.heft * BALANCE.waves.horde.charge) : 1000;
-        this.charge = Math.min(C.charge, this.charge + Math.trunc(this.chargeOwed / 1000));
-        this.chargeOwed %= 1000;
-      }
+      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : this.shares.charge(e.heft)));
       this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
-      if (this.mods.fireChain && e.scorchTime > 0 && this.proc('fireChain', e)) {
+      if (this.mods.fireChain && e.scorchTime > 0 && this.shares.proc('fireChain', e.heft)) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)
         const radius = times(this.fixed.fireRadius, pm(B.skills.fireChainRadius));
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.harm(o, times(times(e.scorch, pm(B.skills.fireChain)), this.splash(o)), e.scorchBy);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x / FP, y: e.y / FP, radius: radius / FP });
       }
-      if (this.mods.melt && e.rust > 0 && this.proc('melt', e)) {
+      if (this.mods.melt && e.rust > 0 && this.shares.proc('melt', e.heft)) {
         // died rusted: it falls apart and its rust eats into what stands around it
         const radius = toFp(B.skills.meltRadius);
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.corrode(o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);
@@ -1281,18 +1209,6 @@ export class Battle {
       }
     }
     dead.length = 0;
-  }
-
-  /** Whether the on-kill burst `skill` goes off for `e`'s death: always for a whole enemy; one of
-   *  the horde adds its heft towards the next, so a quarter-weight crowd sets off one burst in
-   *  four deaths, as strong as ever (shatter needs none of this, its shards scale with the maxHp
-   *  of what died). Counted, not rolled, so it takes no dice. */
-  private proc(skill: keyof Battle['owed'], e: Enemy): boolean {
-    if (e.heft >= 1000) return true;
-    this.owed[skill] += e.heft;
-    if (this.owed[skill] < 1000) return false;
-    this.owed[skill] -= 1000;
-    return true;
   }
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */

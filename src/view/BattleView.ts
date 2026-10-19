@@ -8,12 +8,12 @@ import { stageField } from '../sim/chapters';
 import { endlessChapter, isHordeWave } from '../sim/waves';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
-import { BRAD_FULL } from '../sim/math/trig';
 import { BALANCE, type BattleEvent, type CommanderSkill, type Enemy, type HeroKind } from '../sim/types';
 import { SpriteLayer, commanderTexture, enemyTexture, fieldTexture, figureTexture, loadField, potionLook, ultimateTexture } from './art';
 import { HIT_TIME, chainBolt, gearBurst, glassShards, stunStars, gustWave, hitEffect, iceShell, pushLines, rewindWave, vortexSwirl } from './effects';
 import { INK, PotionLayer, popScale, recoil, throwingHand } from './potion';
 import { healthTube, innerFace, slab, summonCircle, wallTop, workshopFloor, type WallColumn } from './stone';
+import { poseEnemy } from './enemyPose';
 import { ENEMY_ART, drawEnemy, drawHero, drawProjectile, heroShadow } from './shapes';
 import { COLORS, label } from './ui';
 import { lerpX, lerpY } from './fixedStep';
@@ -420,47 +420,7 @@ export class BattleView extends Container {
         drawEnemy(u, e, 'under');
         drawEnemy(w, e, 'over');
       }
-      // waddle: hop and sway, out of step with each other, faster walkers taking quicker steps
-      const step = t * 9 * Math.sqrt(BALANCE.enemies[e.kind].speed / BALANCE.enemies.grunt.speed) + e.id * 1.7;
-      const feet = e.y + e.radius * ENEMY_ART.feet;
-      let s: Sprite;
-      if (e.kind === 'flyer') {
-        // up in the air over its shadow: it bobs with the wingbeat and leans into its swing
-        const beat = Math.sin(t * 14 + e.id * 1.7);
-        s = this.enemyArt.put(tex, e.x, feet - e.radius * ENEMY_ART.lift - beat * 6, e.radius * ENEMY_ART.height);
-        s.scale.y *= 0.97 + beat * 0.03;
-        s.rotation = e.atWall ? 0 : Math.cos((((e.phase ?? 0) / BRAD_FULL) * 2 * Math.PI) + b.seconds * BALANCE.flyer.weaveRate) * 0.14;
-      } else if (e.kind === 'winder') {
-        // eight legs: a quick low scuttle, and a jolt each time it winds the others back
-        const jolt = Math.max(0, (e.windTime ?? 0) / TICK_RATE - (BALANCE.winder.every - 0.3)) / 0.3;
-        const hop = Math.abs(Math.sin(step * 2)) * 0.35;
-        s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height * (1 + jolt * 0.12));
-        s.rotation = Math.sin(step * 2) * 0.03;
-      } else if (e.kind === 'anvil') {
-        // on its spring: it crouches before a leap, sails up in an arc, and squashes as it lands
-        const A = BALANCE.bosses.anvil;
-        const flight = ticks(A.leapTime);
-        const up = e.leapTime ? Math.sin(Math.PI * (1 - e.leapTime / flight)) : 0;
-        const crouch = !e.leapTime && !e.atWall && e.hopTime !== undefined && e.hopTime < 8 ? 1 - e.hopTime / 8 : 0;
-        const bob = Math.abs(Math.sin(step * 1.5)) * 0.4;
-        s = this.enemyArt.put(tex, e.x, feet - up * 130 - bob * 6, e.radius * ENEMY_ART.height);
-        s.scale.y *= 1 - crouch * 0.18 + up * 0.1;
-        s.scale.x *= 1 + crouch * 0.1 - up * 0.05;
-        s.rotation = 0;
-      } else if (e.kind === 'gear') {
-        // the cog rolls from side to side; the bare core scurries on its legs
-        const core = !!e.core;
-        const hop = Math.abs(Math.sin(step * (core ? 2 : 1)));
-        s = this.enemyArt.put(tex, e.x, feet - hop * (core ? 10 : 4), e.radius * ENEMY_ART.height * (core ? 0.8 : 1));
-        s.rotation = core ? Math.sin(step * 2) * 0.06 : Math.sin(step * 0.8) * 0.12;
-      } else {
-        // the tank rolls on tracks: no steps, only a rumble
-        const tracks = e.kind === 'boss';
-        const hop = tracks ? Math.abs(Math.sin(step * 3)) * 0.3 : Math.abs(Math.sin(step));
-        s = this.enemyArt.put(tex, e.x, feet - hop * 8, e.radius * ENEMY_ART.height);
-        s.rotation = tracks ? 0 : Math.cos(step) * 0.07;
-        s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
-      }
+      const s = poseEnemy(this.enemyArt, tex, e, t, b.seconds);
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
       s.alpha = fade;
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
