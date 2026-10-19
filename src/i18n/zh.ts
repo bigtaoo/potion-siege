@@ -8,6 +8,7 @@ export const zh: Table = {
   waveEndless: '第 {n} 波',
   endlessChapter: '战场转移：{name}',
   bossWave: 'BOSS 来袭！',
+  hordeWave: '大军来袭！',
   bossNew: '新 BOSS 登场',
   bossWeak: '弱点：{weak}',
   newEnemy: '新敌人：{name}\n弱点：{weak}',

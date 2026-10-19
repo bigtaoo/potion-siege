@@ -13,13 +13,15 @@
 // hold it to.
 
 import { resistOf } from './enemies';
-import { dist, dist2, FP, muldiv, perTick, TICK_RATE, ticks, toFp } from './math/fixed';
+import { dist, dist2, FP, muldiv, perTick, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
 import { pick } from './math/pick';
 import { Prng } from './math/prng';
 import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
+import { fixedMods, type Fixed } from './fixedMods';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type EnemyKind, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import { laneSpan, Shares } from './horde';
 import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -38,16 +40,6 @@ export function slotCenter(slot: number): { x: number; y: number } {
 export const WALL_ROW = B.grid.rows - 1;
 
 const C = B.commander;
-
-/** A multiplier or chance in permille, for configuration values. */
-export function pm(x: number): number {
-  return Math.round(x * 1000);
-}
-
-/** `v` times a permille multiplier, truncated. */
-function times(v: number, permille: number): number {
-  return muldiv(v, permille, 1000);
-}
 
 /** Seconds as thousandths of a tick, the unit of the shot cooldowns. */
 function cool(seconds: number): number {
@@ -77,51 +69,6 @@ const K = {
   weavePhase: Math.round((2.399 * BRAD_FULL) / (2 * Math.PI)),
   vortexPull: perTick(B.skills.vortexPull),
 };
-
-/** The skill and perk multipliers in integer form, worked out again on every pick. */
-interface Fixed {
-  /** The shot damage of each kind at each level, in FP. */
-  damage: Record<HeroKind, number[]>;
-  /** The poison a corrosion hit leaves at each level, in FP a second. */
-  poison: number[];
-  /** Thousandths of a tick off the cooldown per tick: every hero, and a wind hero. */
-  speed: number;
-  windSpeed: number;
-  crit: number;
-  fireRadius: number;
-  burn: number;
-  mark: number;
-  freezeChance: number;
-  freezeTime: number;
-  static: number;
-  plasmaBurn: number;
-  rustStep: number;
-  push: number;
-}
-
-function fixedMods(m: Mods, setup: BattleSetup): Fixed {
-  const damage = {} as Record<HeroKind, number[]>;
-  for (const [k, h] of Object.entries(B.heroes) as [HeroKind, { damage: number }][]) {
-    damage[k] = B.starDamage.map((s) => Math.round(h.damage * s * m.damage(k) * setup.heroDamage[k] * FP));
-  }
-  const speed = pm(m.speed);
-  return {
-    damage,
-    poison: B.starDamage.map((s) => Math.round(B.heroes.poison.poisonDps * s * m.damage('poison') * setup.heroDamage.poison * FP)),
-    speed,
-    windSpeed: times(speed, pm(m.windSpeed)),
-    crit: pm(m.crit + (setup.modifiers?.crit ?? 0)),
-    fireRadius: Math.round(B.heroes.fire.splash * m.fireRadius * FP),
-    burn: pm(m.burn),
-    mark: pm(m.mark),
-    freezeChance: pm(m.freezeChance),
-    freezeTime: pm(m.freezeTime),
-    static: pm(m.static),
-    plasmaBurn: pm(Math.max(m.burn, B.skills.plasmaBurn)),
-    rustStep: pm(m.rustStep),
-    push: pm(m.push),
-  };
-}
 
 /** A player command. Every change the player makes goes through Battle.apply as one of these,
  *  so a battle is its seed, its setup and its commands (replay.ts). */
@@ -165,6 +112,8 @@ export class Battle {
   charge = 0;
   /** Ticks the charge has been full. */
   chargedFor = 0;
+  /** What the horde's deaths have earned towards the next charge, coin and burst. */
+  private shares = new Shares();
   /** Skills cast so far: they go in turn, the flask first. */
   casts = 0;
   /** Ticks of the brew left: every potion throws faster while it lasts. */
@@ -573,14 +522,15 @@ export class Battle {
     }
   }
 
-  /** Brings `s` onto the field: at the top at a random x, or at `at` (FP) when something on the
-   *  field let it out. */
+  /** Brings `s` onto the field: at the top at a random x (within its lane, a rank behind the
+   *  edge, for one of a rush), or at `at` (FP) when something on the field let it out. */
   private spawn(s: Spawn, at?: { x: number; y: number }): void {
     const def = B.enemies[s.kind];
-    const radius = toFp(s.elite ? def.radius * B.elite.radius : def.radius);
+    const radius = toFp(((s.elite ? def.radius * B.elite.radius : def.radius) * (s.size ?? 1000)) / 1000);
     const id = this.nextId;
-    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
-    const y = at ? at.y : K.top - radius;
+    const [lo, hi] = laneSpan(s, K.left + radius, K.right - radius);
+    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(lo, hi);
+    const y = at ? at.y : K.top - radius - toFp(s.lane?.back ?? 0);
     const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm((this.setup.modifiers?.enemySpeed ?? 1) * (this.setup.endless ? endlessSpeed(this.wave) : 1)));
     const e: Enemy = {
       id: this.nextId++,
@@ -612,6 +562,7 @@ export class Battle {
       pushTime: 0,
       atWall: false,
       gold: s.gold ?? 1000,
+      heft: s.heft ?? 1000,
     };
     if (s.elite) e.elite = true;
     if (s.kind === 'flyer') {
@@ -767,7 +718,7 @@ export class Battle {
           e.hopTime = ticks(B.bosses.anvil.slamFirst);
         }
         e.atWall = true;
-        this.wall -= K.wallDps[e.kind];
+        this.wall -= times(K.wallDps[e.kind], e.heft);
         hitWall = true;
         if (e.kind === 'anvil' && --e.hopTime! <= 0) {
           e.hopTime = ticks(B.bosses.anvil.slamEvery);
@@ -988,7 +939,7 @@ export class Battle {
   private windHit(e: Enemy, p: Projectile, direct: boolean): void {
     const S = B.skills;
     this.push(e, p.star);
-    if (this.mods.vortex && direct && e.hp <= 0) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
+    if (this.mods.vortex && direct && e.hp <= 0 && this.shares.proc('vortex', e.heft)) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
     if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
       // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
       // everything close by
@@ -1020,7 +971,8 @@ export class Battle {
     let weight = W.weight[e.kind];
     if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = W.weight.grunt;
     const d = times(times(times(toFp(W.push), pm(W.pushStar[star - 1])), this.fixed.push), pm(weight));
-    const top = K.top - e.radius;
+    // one of a rush still behind the top edge is not pushed forward onto it
+    const top = Math.min(e.y, K.top - e.radius);
     if (d <= 0) return;
     e.pushTime = ticks(W.pushTime);
     this.events.push({ type: 'push', x: e.x / FP, y: e.y / FP, id: e.id });
@@ -1056,7 +1008,7 @@ export class Battle {
       }
       this.events.push({ type: 'hit', kind: 'fire', x: target.x / FP, y: target.y / FP, radius: S.burstBoltRadius });
     }
-    if (this.mods.splitBolts && !p.split && target.hp <= 0) {
+    if (this.mods.splitBolts && !p.split && target.hp <= 0 && this.shares.proc('split', target.heft)) {
       // the bolt that killed splits towards the nearest enemies left
       const skip = new Set([target.id]);
       for (let i = 0; i < S.splitBolts; i++) {
@@ -1226,19 +1178,19 @@ export class Battle {
     all.length = n;
     for (const e of dead) {
       const def = B.enemies[e.kind];
-      const gold = Math.round(((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold) / 1000);
+      const gold = this.shares.gold((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold, e.heft);
       this.gold += gold;
       this.kills++;
-      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : 1));
+      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : this.shares.charge(e.heft)));
       this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
-      if (this.mods.fireChain && e.scorchTime > 0) {
+      if (this.mods.fireChain && e.scorchTime > 0 && this.shares.proc('fireChain', e.heft)) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)
         const radius = times(this.fixed.fireRadius, pm(B.skills.fireChainRadius));
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.harm(o, times(times(e.scorch, pm(B.skills.fireChain)), this.splash(o)), e.scorchBy);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x / FP, y: e.y / FP, radius: radius / FP });
       }
-      if (this.mods.melt && e.rust > 0) {
+      if (this.mods.melt && e.rust > 0 && this.shares.proc('melt', e.heft)) {
         // died rusted: it falls apart and its rust eats into what stands around it
         const radius = toFp(B.skills.meltRadius);
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.corrode(o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);

@@ -9,6 +9,7 @@ import { resists } from '../sim/enemies';
 import { mergeablePair } from '../sim/tutorial';
 import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
+import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
@@ -161,7 +162,7 @@ export class Hud extends Container {
       // the merge hint has done its job once the player merges
       if (ev.type === 'merge') this.hint = false;
       if (ev.type !== 'wave') continue;
-      this.show(ev.boss ? t('bossWave') : this.waveLabel(ev.wave), ev.boss ? BOSS_BANNER_Y : BANNER_Y);
+      this.show(ev.boss ? t('bossWave') : isHordeWave(ev.wave) ? t('hordeWave') : this.waveLabel(ev.wave), ev.boss ? BOSS_BANNER_Y : BANNER_Y);
       const stage = this.battle?.setup.stage;
       // endless mode brings in every other chapter's boss in turn: each gets its card on its first lap
       const visitor = this.battle?.setup.endless && ev.boss ? endlessBoss(ev.wave) : undefined;

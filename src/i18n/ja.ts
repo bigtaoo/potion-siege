@@ -9,6 +9,7 @@ export const ja: Table = {
   waveEndless: 'ウェーブ {n}',
   endlessChapter: '戦場は{name}へ',
   bossWave: 'ボス襲来！',
+  hordeWave: '大軍襲来！',
   bossNew: '新ボス登場',
   bossWeak: '弱点：{weak}',
   newEnemy: '新たな敵：{name}\n弱点：{weak}',

@@ -93,6 +93,8 @@ export interface Enemy {
   atWall: boolean;
   /** Permille of the usual kill gold (see Spawn.gold). */
   gold: number;
+  /** Permille of the usual wall bite, commander charge and on-kill bursts (see Spawn.heft). */
+  heft: number;
   /** The gold-trimmed variant of an elite stage (see Spawn.elite). */
   elite?: boolean;
   /** A flyer weaves from side to side about this x, at this point of its swing (brads). */

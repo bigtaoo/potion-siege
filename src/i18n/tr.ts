@@ -9,6 +9,7 @@ export const tr: Table = {
   waveEndless: 'Dalga {n}',
   endlessChapter: 'Yeni cephe: {name}',
   bossWave: 'PATRON DALGASI!',
+  hordeWave: 'ORDU GELİYOR!',
   bossNew: 'Yeni patron',
   bossWeak: 'Zaafı: {weak}',
   newEnemy: 'Yeni düşman: {name}\nZaafı: {weak}',

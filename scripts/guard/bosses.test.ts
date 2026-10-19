@@ -1,6 +1,8 @@
 // Balance guard for the chapter bosses (`npm run check:balance:slow`, a CI step of its own):
 // `npm run bosses` on three stages a chapter, each boss against the steam tank in its place,
-// pinned to a344dc7.
+// pinned to a344dc7 and re-pinned for the wave-1 horde: its rushes reroll every seed's enemies,
+// so these twenty seeds play other battles, while on 480 seeds the clock held (43.0% -> 42.4%
+// won, the tank in its place 43.5% -> 44.4%).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { battleSetup } from '../../src/sim/meta';
@@ -30,10 +32,10 @@ describe('chapter bosses', () => {
       delta[`${kind} - tank`] = 100 * (mean(own) - mean(tank));
     }
     expectNear('boss win % and its edge over the tank (20 seeds, 3 stages)', delta, {
-      'clock win %': 56.7, 'clock - tank': 15,
-      'tripod win %': 31.7, 'tripod - tank': -15,
-      'anvil win %': 41.7, 'anvil - tank': 3.3,
-      'gear win %': 36.7, 'gear - tank': 10,
+      'clock win %': 43.3, 'clock - tank': -8.3,
+      'tripod win %': 48.3, 'tripod - tank': -8.3,
+      'anvil win %': 35, 'anvil - tank': 1.7,
+      'gear win %': 35, 'gear - tank': -3.3,
     }, 15);
   }, 300_000);
 });

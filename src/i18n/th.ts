@@ -9,6 +9,7 @@ export const th: Table = {
   waveEndless: 'เวฟ {n}',
   endlessChapter: 'มุ่งหน้าสู่ {name}',
   bossWave: 'เวฟบอส!',
+  hordeWave: 'กองทัพบุก!',
   bossNew: 'บอสใหม่',
   bossWeak: 'แพ้ทาง {weak}',
   newEnemy: 'ศัตรูใหม่: {name}\nแพ้ทาง {weak}',

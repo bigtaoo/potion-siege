@@ -9,6 +9,7 @@ export const it: Table = {
   waveEndless: 'Ondata {n}',
   endlessChapter: 'Nuovo fronte: {name}',
   bossWave: 'ONDATA BOSS!',
+  hordeWave: "ARRIVA L'ORDA!",
   bossNew: 'Nuovo boss',
   bossWeak: 'Debole contro {weak}',
   newEnemy: 'Nuovo nemico: {name}\nDebole contro {weak}',

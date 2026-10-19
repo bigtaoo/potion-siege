@@ -9,6 +9,7 @@ export const pt: Table = {
   waveEndless: 'Onda {n}',
   endlessChapter: 'Próxima parada: {name}',
   bossWave: 'ONDA DO CHEFE!',
+  hordeWave: 'A HORDA ESTÁ CHEGANDO!',
   bossNew: 'Novo chefe',
   bossWeak: 'Fraco contra {weak}',
   newEnemy: 'Novo inimigo: {name}\nFraco contra {weak}',

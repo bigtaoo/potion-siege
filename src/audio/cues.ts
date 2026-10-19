@@ -1,6 +1,7 @@
 // Which sound each battle event makes.
 
 import type { BattleEvent } from '../sim/types';
+import { isHordeWave } from '../sim/horde';
 import type { SfxId } from './sfx';
 
 export interface Cue {
@@ -58,7 +59,7 @@ export function battleCues(events: readonly BattleEvent[]): Cue[] {
         out.push({ id: 'crystal' });
         break;
       case 'wave':
-        out.push({ id: ev.boss ? 'boss' : 'wave' });
+        out.push({ id: ev.boss ? 'boss' : isHordeWave(ev.wave) ? 'horde' : 'wave' });
         break;
       case 'wallHit':
         out.push({ id: 'wallHit' });

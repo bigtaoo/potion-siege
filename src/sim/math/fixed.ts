@@ -32,6 +32,16 @@ export function muldiv(a: number, b: number, d: number): number {
   return Math.trunc((a * b) / d);
 }
 
+/** A multiplier or chance in permille, for configuration values. */
+export function pm(x: number): number {
+  return Math.round(x * 1000);
+}
+
+/** `v` times a permille multiplier, truncated. */
+export function times(v: number, permille: number): number {
+  return muldiv(v, permille, 1000);
+}
+
 /**
  * floor(sqrt(n)) for a non-negative safe integer. Math.sqrt only gives the first guess; the
  * two corrections make the result exact whatever the engine's last bit, so it is

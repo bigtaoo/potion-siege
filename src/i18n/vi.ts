@@ -9,6 +9,7 @@ export const vi: Table = {
   waveEndless: 'Đợt {n}',
   endlessChapter: 'Tiến về {name}',
   bossWave: 'ĐỢT BOSS!',
+  hordeWave: 'ĐẠI QUÂN TẤN CÔNG!',
   bossNew: 'Boss mới',
   bossWeak: 'Điểm yếu: {weak}',
   newEnemy: 'Kẻ địch mới: {name}\nĐiểm yếu: {weak}',

@@ -9,6 +9,7 @@ export const id: Table = {
   waveEndless: 'Gelombang {n}',
   endlessChapter: 'Maju ke {name}',
   bossWave: 'GELOMBANG BOS!',
+  hordeWave: 'GEROMBOLAN DATANG!',
   bossNew: 'Bos baru',
   bossWeak: 'Lemah terhadap {weak}',
   newEnemy: 'Musuh baru: {name}\nLemah terhadap {weak}',

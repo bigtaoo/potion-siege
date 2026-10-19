@@ -2,6 +2,7 @@
 
 import { FP, ticks } from './math/fixed';
 import type { Prng } from './math/prng';
+import { isHordeWave, joinHorde, rankAndFile } from './horde';
 import { BALANCE, BOSS_KINDS, isBoss, type BossKind, type EnemyKind } from './types';
 
 export interface Spawn {
@@ -14,6 +15,14 @@ export interface Spawn {
   gold?: number;
   /** The gold-trimmed variant of an elite stage: tougher, bigger and worth more. */
   elite?: boolean;
+  /** Permille of a usual enemy's wall bite, commander charge and on-kill bursts: one of the
+   *  opening horde counts for a share of one (see `horde`). */
+  heft?: number;
+  /** Permille of its kind's radius, for its body on the field and in the hits (the horde's 0.8). */
+  size?: number;
+  /** Where it walks in, in world units: its x somewhere from x0 to x1, and `back` behind the top
+   *  edge, so one of a rush comes down in rank and file instead of on its own at a random x. */
+  lane?: { x0: number; x1: number; back: number };
 }
 
 /** What a stage (its chapter's theme and twists) or the daily challenge changes in the wave
@@ -181,7 +190,8 @@ function withTheme(mods: WaveMods, wave: number): WaveMods {
  *  `endless`: past the stage's last wave the waves keep coming, `endless.hpGrowth` tougher each,
  *  the crowd capped at `endless.maxCount` (what it would have had over the cap goes into hit
  *  points), more brutes, flyers and winders in the mix, and a boss every `endless.bossEvery`; every
- *  `endless.chapterEvery` waves the mix takes the next chapter's theme (`endlessTheme`). */
+ *  `endless.chapterEvery` waves the mix takes the next chapter's theme (`endlessTheme`).
+ *  The first wave is the horde (`isHordeWave`): its bigger crowd comes in rushes (`rankAndFile`). */
 export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}, endless = false): Spawn[] {
   if (endless) mods = withTheme(mods, wave);
   const w = BALANCE.waves;
@@ -194,6 +204,13 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
   // but more of them on the road (permille)
   const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  // the first wave is the horde: some fifty of them in three rushes, smaller, and each a share
+  // of one at the wall, for the commander and for the on-kill skills as it is in gold, so the
+  // wave weighs what a plain one of `baseCount` would. Its hit points are `horde.hp` of that:
+  // fifty-odd bodies coming in twelve seconds want a shot each, and at full weight the potions
+  // of a weak save need two for each by stage 4, fall behind and lose by wave 3
+  const horde = isHordeWave(wave);
+  const heft = Math.round(1_000_000 / crowd);
   // and on the first chapter's stages (up to `earlyHpTo`) tougher in all than the growth alone
   // would make them, so three potions left alone fall behind before the first boss; `earlyHpGold`
   // of the extra comes back as kill gold, so a player who keeps up is not set back. Later stages
@@ -224,8 +241,9 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
     const spawn: Spawn = { at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) };
     if (crowd !== 1000) {
       spawn.hp = Math.round((spawn.hp * 1000) / crowd);
-      spawn.gold = Math.round(1_000_000 / crowd);
+      spawn.gold = heft;
     }
+    if (horde) joinHorde(spawn, heft);
     if (tough !== 1000) {
       spawn.hp = Math.round((spawn.hp * tough) / 1000);
       spawn.gold = Math.round(((spawn.gold ?? 1000) * toughGold) / 1000);
@@ -238,6 +256,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
     }
     spawns.push(spawn);
   }
+  if (horde) rankAndFile(spawns);
   if (boss) {
     const kind = endless ? endlessBoss(wave) : bossForStage(stage);
     spawns.unshift({ at: 0, kind, hp: hpOf(kind) });
