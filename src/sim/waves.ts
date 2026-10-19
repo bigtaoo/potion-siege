@@ -194,6 +194,13 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
   // but more of them on the road (permille)
   const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  // and on the first chapter's stages (up to `earlyHpTo`) tougher in all than the growth alone
+  // would make them, so three potions left alone fall behind before the first boss; `earlyHpGold`
+  // of the extra comes back as kill gold, so a player who keeps up is not set back. Later stages
+  // already press an idle player by then and plan as before. Permille; the boss and the winders
+  // keep their own.
+  const tough = stage <= w.earlyHpTo ? Math.round((w.earlyHp[wave - 1] ?? 1) * 1000) : 1000;
+  const toughGold = 1000 + Math.round(w.earlyHpGold * (tough - 1000));
   const count = Math.round((crowdCount * (boss ? 0.5 : 1) * crowd) / 1000);
   // the rolls are in permille
   const flyers = flyerShare(stage) + (mods.flyers ?? 0);
@@ -218,6 +225,10 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
     if (crowd !== 1000) {
       spawn.hp = Math.round((spawn.hp * 1000) / crowd);
       spawn.gold = Math.round(1_000_000 / crowd);
+    }
+    if (tough !== 1000) {
+      spawn.hp = Math.round((spawn.hp * tough) / 1000);
+      spawn.gold = Math.round(((spawn.gold ?? 1000) * toughGold) / 1000);
     }
     // only an elite stage takes this second roll, so the rest plan exactly as before elites
     if (elite > 0 && rng.int(1000) < elite) {

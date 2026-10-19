@@ -3,7 +3,7 @@ import { enemyStats, RESIST, resist, resistLabel, resists } from './enemies';
 import { heroUnlocked, newMeta, stageHp } from './meta';
 import { FP } from './math/fixed';
 import { Prng } from './math/prng';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from './types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP } from './types';
 import { FIRST_STAGE, FIRST_WAVE, flyerShare, planWave, waveKinds } from './waves';
 
 describe('enemy resistances', () => {
@@ -103,6 +103,38 @@ describe('the new kinds in the wave plan', () => {
     expect(rest).toEqual(planWave(W.wave, new Prng(3), W.stage - 1));
     const plan = planWave(5, new Prng(3), W.stage);
     expect(plan.map((s) => s.at)).toEqual([...plan.map((s) => s.at)].sort((a, b) => a - b));
+  });
+});
+
+describe('the tougher first waves', () => {
+  const W = BALANCE.waves;
+  const plain = (wave: number, seed: number, stage: number) => {
+    const keep = W.earlyHp;
+    W.earlyHp = keep.map(() => 1);
+    try {
+      return planWave(wave, new Prng(seed), stage);
+    } finally {
+      W.earlyHp = keep;
+    }
+  };
+
+  it('keeps the first wave and every roll, and raises hit points and kill gold on the first chapter', () => {
+    expect(W.earlyHp[0]).toBe(1);
+    for (const stage of [1, 5, W.earlyHpTo]) {
+      for (let wave = 1; wave <= 5; wave++) {
+        const tough = planWave(wave, new Prng(9), stage);
+        const before = plain(wave, 9, stage);
+        expect(tough.map((s) => [s.kind, s.at, s.elite])).toEqual(before.map((s) => [s.kind, s.at, s.elite]));
+        const hp = (p: typeof tough) => p.filter((s) => !isBoss(s.kind) && s.kind !== 'winder').reduce((a, s) => a + s.hp, 0);
+        const ratio = hp(tough) / hp(before);
+        expect(ratio).toBeCloseTo(W.earlyHp[wave - 1], 1);
+        if (W.earlyHp[wave - 1] > 1) expect(tough.some((s, i) => (s.gold ?? 1000) > (before[i].gold ?? 1000))).toBe(true);
+      }
+    }
+  });
+
+  it('plans the later chapters as before', () => {
+    for (let wave = 1; wave <= 5; wave++) expect(planWave(wave, new Prng(9), W.earlyHpTo + 1)).toEqual(plain(wave, 9, W.earlyHpTo + 1));
   });
 });
 
