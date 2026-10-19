@@ -1,6 +1,6 @@
 name: ci
 
-# Every push and pull request runs `npm run check` (typecheck, tests, the quick half of the
+# Every push and pull request runs `npm run check` (typecheck, file length, tests, the quick half of the
 # balance guard in scripts/guard/, the CrazyGames and iOS builds), then the slow half of the guard
 # (`npm run check:balance:slow`: the early, chapter and boss curves; scripts/vitest.guard.config.js). A
 # push to main that passes then ships the telemetry collector to blightbloom (ps.gamestao.com,
