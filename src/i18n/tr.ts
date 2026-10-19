@@ -217,7 +217,7 @@ export const tr: Table = {
     wind: 'Rüzgâr İksiri',
   },
   codex: {
-    page: { book: 'Kodeks', feats: 'Başarımlar' },
+    page: { potions: 'İksirler', enemies: 'Düşmanlar', feats: 'Başarımlar' },
     heroes: 'İksirler',
     monsters: 'Kurmalı Ordu',
     locked: 'Kilitli',
@@ -234,6 +234,7 @@ export const tr: Table = {
       anvil: 'Sıçrar: her 8 sn ileri atılır, yavaşlatılmışken atlayamaz; sura çarpıp iksirleri sersemletir',
       gear: 'İki evre: canı yarıya inince çember parçalanır, taçlı çekirdek hücuma geçer, zaaflar tersine döner',
     },
+    tag: { grunt: 'Sıradan', runner: 'Hızlı', brute: 'Dayanıklı', flyer: 'Uçar', winder: 'Diğerlerini kurar', boss: 'Patron' },
     speed: 'Hız {n}',
     wallDps: 'Kuşatma {n}/sn',
     resist: 'Alınan hasar',

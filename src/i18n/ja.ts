@@ -217,7 +217,7 @@ export const ja: Table = {
     wind: '疾風ポーション',
   },
   codex: {
-    page: { book: '図鑑', feats: '実績' },
+    page: { potions: 'ポーション', enemies: '敵', feats: '実績' },
     heroes: 'ポーション',
     monsters: 'ゼンマイ軍団',
     locked: '未解放',
@@ -234,6 +234,7 @@ export const ja: Table = {
       anvil: '跳躍：8秒ごとに前へ跳ぶ（減速中は不可）、城壁に激突してポーションをスタン',
       gear: '2段階：HPが半分で外輪が砕け、王冠のコアが突進、弱点が逆転',
     },
+    tag: { grunt: '普通', runner: '素早い', brute: 'タフ', flyer: '飛ぶ', winder: '仲間を巻き直す', boss: 'ボス' },
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
     resist: '被ダメージ',

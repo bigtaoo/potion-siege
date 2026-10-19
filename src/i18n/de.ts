@@ -217,7 +217,7 @@ export const de: Table = {
     wind: 'Windtrank',
   },
   codex: {
-    page: { book: 'Kodex', feats: 'Erfolge' },
+    page: { potions: 'Tränke', enemies: 'Gegner', feats: 'Erfolge' },
     heroes: 'Tränke',
     monsters: 'Uhrwerk-Armee',
     locked: 'Gesperrt',
@@ -234,6 +234,7 @@ export const de: Table = {
       anvil: 'Springt: hüpft alle 8 s nach vorn, nicht wenn verlangsamt; kracht auf die Mauer und betäubt Tränke',
       gear: 'Zwei Phasen: Bei halben LP zerbricht der Ring, der gekrönte Kern stürmt los, Schwächen kehren sich um',
     },
+    tag: { grunt: 'Einfach', runner: 'Schnell', brute: 'Robust', flyer: 'Fliegt', winder: 'Zieht andere auf', boss: 'Boss' },
     speed: 'Tempo {n}',
     wallDps: 'Belagerung {n}/s',
     resist: 'Erlittener Schaden',

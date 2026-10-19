@@ -22,7 +22,6 @@ const BASELINE = {
   'src/view/kit.ts': 778,
   'src/sim/skills.test.ts': 777,
   'src/view/Overlay.ts': 693,
-  'src/view/Codex.ts': 570,
   'src/app.test.ts': 511,
   'src/sim/battle.test.ts': 507,
 };

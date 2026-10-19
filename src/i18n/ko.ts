@@ -217,7 +217,7 @@ export const ko: Table = {
     wind: '질풍 토닉',
   },
   codex: {
-    page: { book: '도감', feats: '업적' },
+    page: { potions: '포션', enemies: '적', feats: '업적' },
     heroes: '포션',
     monsters: '태엽 군단',
     locked: '잠김',
@@ -234,6 +234,7 @@ export const ko: Table = {
       anvil: '도약: 8초마다 앞으로 뛰어오름, 감속 중엔 못 뜀; 성벽을 내리찍어 포션을 기절시킴',
       gear: '2페이즈: 체력이 절반이 되면 테두리가 부서지고 왕관 코어가 돌진, 약점이 뒤바뀜',
     },
+    tag: { grunt: '기본', runner: '빠름', brute: '튼튼함', flyer: '비행', winder: '아군 태엽 감기', boss: '보스' },
     speed: '속도 {n}',
     wallDps: '공성 {n}/초',
     resist: '받는 피해',

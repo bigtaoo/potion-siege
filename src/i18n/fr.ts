@@ -217,7 +217,7 @@ export const fr: Table = {
     wind: 'Élixir de vent',
   },
   codex: {
-    page: { book: 'Codex', feats: 'Succès' },
+    page: { potions: 'Potions', enemies: 'Ennemis', feats: 'Succès' },
     heroes: 'Potions',
     monsters: 'Armée mécanique',
     locked: 'Verrouillé',
@@ -234,6 +234,7 @@ export const fr: Table = {
       anvil: 'Bondit : saute en avant toutes les 8s, sauf s’il est ralenti ; frappe le mur et étourdit les potions',
       gear: 'Deux phases : à mi-vie, l’anneau éclate et le cœur couronné charge, les faiblesses s’inversent',
     },
+    tag: { grunt: 'Basique', runner: 'Rapide', brute: 'Coriace', flyer: 'Vole', winder: 'Remonte les autres', boss: 'Boss' },
     speed: 'Vitesse {n}',
     wallDps: 'Siège {n}/s',
     resist: 'Dégâts subis',

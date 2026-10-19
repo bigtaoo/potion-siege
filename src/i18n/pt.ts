@@ -217,7 +217,7 @@ export const pt: Table = {
     wind: 'Tônico de Vento',
   },
   codex: {
-    page: { book: 'Códice', feats: 'Conquistas' },
+    page: { potions: 'Poções', enemies: 'Inimigos', feats: 'Conquistas' },
     heroes: 'Poções',
     monsters: 'Exército Mecânico',
     locked: 'Bloqueado',
@@ -234,6 +234,7 @@ export const pt: Table = {
       anvil: 'Salta: pula para a frente a cada 8s, exceto se estiver lento; atinge a muralha e atordoa poções',
       gear: 'Duas fases: com metade da vida o aro se parte e o núcleo coroado avança, as fraquezas se invertem',
     },
+    tag: { grunt: 'Básico', runner: 'Rápido', brute: 'Resistente', flyer: 'Voa', winder: 'Dá corda aos outros', boss: 'Chefe' },
     speed: 'Velocidade {n}',
     wallDps: 'Cerco {n}/s',
     resist: 'Dano recebido',

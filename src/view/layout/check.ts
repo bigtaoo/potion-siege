@@ -1,7 +1,8 @@
 /** Finds words that stick out of the panel, card, tile or button they sit on. A Text's box is
  *  the smallest Graphics drawn before it - an earlier sibling of the Text or of one of its
  *  ancestors, the nearest level that has one - whose bounds hold the Text's centre; a Text over
- *  no Graphics at all must stay on the page, and every Text must stay on the page anyway. */
+ *  no Graphics at all must stay on the page, and every Text must stay on the page anyway. Only
+ *  the part a mask lets through counts. */
 import { Container, Graphics, Text } from 'pixi.js';
 
 export interface Overflow {
@@ -54,6 +55,24 @@ function boxOf(t: Text, page: Rect, root: Container): { box: Rect; level: Contai
   return { box: page, level: root };
 }
 
+/** The part of `r` the masks over `c` let through (a scrolled list's window), or null when they
+ *  hide all of it. */
+function unmasked(c: Container, r: Rect): Rect | null {
+  let { x, y, width, height } = r;
+  for (let n: Container | null = c; n; n = n.parent) {
+    if (!(n.mask instanceof Container)) continue;
+    const m = n.mask.getBounds();
+    const x2 = Math.min(x + width, m.x + m.width);
+    const y2 = Math.min(y + height, m.y + m.height);
+    x = Math.max(x, m.x);
+    y = Math.max(y, m.y);
+    width = x2 - x;
+    height = y2 - y;
+    if (width < 1 || height < 1) return null;
+  }
+  return { x, y, width, height };
+}
+
 function inside(c: Container, outer: Container): boolean {
   for (let n: Container | null = c; n; n = n.parent) if (n === outer) return true;
   return false;
@@ -74,7 +93,9 @@ export function overflows(root: Container, page: Rect, buttons: readonly (abstra
     if (!c.visible || c.alpha <= 0) return;
     if (c instanceof Text) {
       if (c.text.trim() && shown(c)) {
-        const tb = c.getBounds();
+        // a list's row scrolled out of its window is not on the page
+        const tb = unmasked(c, c.getBounds());
+        if (!tb) return;
         // the stroke pads a Text's bounds by half its width on each side, past the glyphs, and
         // the line box runs past the ink above and below: accents and descenders take ~0.1 em
         const k = Math.hypot(c.worldTransform.a, c.worldTransform.b);
