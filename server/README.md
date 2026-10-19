@@ -8,8 +8,9 @@ network. Two containers: `ps-collector` (128 MB, no published port) and `ps-tunn
 Tunnel: `ps-tunnel` dials out to Cloudflare, which serves https://ps.gamestao.com and passes the
 requests down to `http://collector:8787`.
 
-Events land in `/home/deploy/potion-siege/data/events-YYYY-MM-DD.ndjson` (UTC days). To look at
-them:
+Events land in `/home/deploy/potion-siege/data/events-YYYY-MM-DD.ndjson` (UTC days). The
+collector deletes the day files older than 14 months itself (`KEEP_MONTHS`, the period the
+privacy policy §8 states), so the box needs no cron for it. To look at them:
 
 ```bash
 ssh blightbloom 'cat /home/deploy/potion-siege/data/events-*.ndjson' > telemetry/events.ndjson

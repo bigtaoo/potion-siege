@@ -7,7 +7,9 @@
 //   npm run report -- telemetry/events.ndjson
 //
 // With COLLECTOR_DIR set (the container does) it writes one file per UTC day instead,
-// <dir>/events-YYYY-MM-DD.ndjson. GET /health answers 200 for the container's healthcheck.
+// <dir>/events-YYYY-MM-DD.ndjson, and deletes the day files older than 14 months (the period
+// public/privacy.html §8 promises), checked on the first request of each UTC day, so the
+// container's healthcheck alone keeps it going. GET /health answers 200 for that healthcheck.
 //
 // GET /b?h=<host>&s=<step>&b=<build>[&ms=<n>][&n=0|1][&r=<source>] counts an anonymous load
 // checkpoint, no id: `open_*` from the page's inline script before anything else downloads
@@ -15,7 +17,7 @@
 // whether it is a new player's launch, `r` is the acquisition source tag or referrer host. It
 // lands in the same file as {name: 'beacon', step, host, build, ms, new, src}.
 
-import { appendFileSync, mkdirSync, statSync } from 'node:fs';
+import { appendFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 
@@ -27,6 +29,8 @@ const MAX_BODY = 256 * 1024;
 const MAX_FILE = 512 * 1024 * 1024;
 /** Requests per client address per minute; a client sends one every 15 s, and players can share an address. */
 const PER_MINUTE = 240;
+/** Day files are kept this many months (privacy policy §8). */
+const KEEP_MONTHS = 14;
 mkdirSync(dir ?? dirname(single), { recursive: true });
 
 const fileFor = (now) => (dir ? join(dir, `events-${new Date(now).toISOString().slice(0, 10)}.ndjson`) : single);
@@ -37,6 +41,28 @@ const sizeOf = (file) => {
     return 0;
   }
 };
+
+let prunedOn = '';
+/** Deletes the day files from before the retention window, once per UTC day. */
+function prune(now) {
+  const today = new Date(now).toISOString().slice(0, 10);
+  if (!dir || today === prunedOn) return;
+  prunedOn = today;
+  const cutoff = new Date(now);
+  cutoff.setUTCMonth(cutoff.getUTCMonth() - KEEP_MONTHS);
+  const oldest = cutoff.toISOString().slice(0, 10);
+  for (const name of readdirSync(dir)) {
+    const day = /^events-(\d{4}-\d{2}-\d{2})\.ndjson$/.exec(name)?.[1];
+    if (!day || day >= oldest) continue;
+    try {
+      unlinkSync(join(dir, name));
+      console.log(`collector: deleted ${name} (older than ${KEEP_MONTHS} months)`);
+    } catch (err) {
+      console.log(`collector: could not delete ${name}: ${err}`);
+    }
+  }
+}
+prune(Date.now());
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
 const HOSTS = ['crazygames', 'web', 'ios'];
@@ -80,6 +106,7 @@ const limited = (req) => {
 };
 
 createServer((req, res) => {
+  prune(Date.now());
   if (req.method === 'GET' && req.url === '/health') return res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
   if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
   if (req.method === 'GET' && req.url?.startsWith('/b?')) {

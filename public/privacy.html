@@ -116,11 +116,10 @@
   <p>Cloudflare and Hetzner process the data for us under data processing agreements. Where data is processed outside the EEA, this happens under the European Commission's standard contractual clauses.</p>
 
   <h2>8. How long we keep it</h2>
-  <!-- TODO(owner): pick a retention period (for example 14 months) and add a cron on the
-       Hetzner box that deletes /home/deploy/potion-siege/data/events-*.ndjson older than that,
-       then replace the "nothing deletes them automatically" sentences here and in the Chinese §8
-       with the period. Also check what Cloudflare logs for ps.gamestao.com on this plan. -->
-  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>At present nothing deletes these files automatically:</strong> they are kept until we delete them or you ask us to delete yours (§9). We will set a fixed period and state it here. The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
+  <!-- The 14 months are KEEP_MONTHS in scripts/collector.mjs, which deletes the older day files
+       itself; change both together. TODO(owner): check what Cloudflare logs for ps.gamestao.com
+       on this plan. -->
+  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>Each day's file is deleted automatically after 14 months</strong>, sooner if you ask us to delete yours (§9). The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
 
   <h2>9. Your rights</h2>
   <p>You can ask for access to your data, correction, deletion, restriction and a portable copy, and you can object to processing based on our legitimate interest at any time. Consent you gave by allowing play statistics or by sending feedback can be withdrawn at any time, without affecting what was sent before.</p>
@@ -219,7 +218,7 @@
   <p>Cloudflare 和 Hetzner 依据数据处理协议代我们处理数据。若在欧洲经济区以外处理数据，则依据欧盟委员会的标准合同条款进行。</p>
 
   <h2>8. 保存多久</h2>
-  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>目前没有任何程序会自动删除这些文件：</strong>它们会一直保留，直到我们删除，或你要求删除你的数据（见第 9 节）。我们会定下固定的保存期限并在这里写明。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
+  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>每天的文件保存 14 个月后自动删除</strong>；你要求删除你的数据时会更早删除（见第 9 节）。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
 
   <h2>9. 你的权利</h2>
   <p>你可以要求查阅、更正、删除、限制处理你的数据，或获取一份可携带的副本，也可以随时反对基于我们正当利益的处理。你通过允许游戏统计或发送反馈给出的同意可以随时撤回，撤回不影响之前已发送的数据。</p>

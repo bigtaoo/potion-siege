@@ -38,6 +38,13 @@ vi.mock('node:fs', () => ({
     const key = file.replace(/\\/g, '/');
     state.files.set(key, (state.files.get(key) ?? '') + text);
   },
+  readdirSync: (dir: string) => {
+    const prefix = `${dir.replace(/\\/g, '/')}/`;
+    return [...state.files.keys()].filter((f) => f.startsWith(prefix)).map((f) => f.slice(prefix.length));
+  },
+  unlinkSync: (file: string) => {
+    state.files.delete(file.replace(/\\/g, '/'));
+  },
   statSync: (file: string) => {
     if (state.sizeOverride !== null) return { size: state.sizeOverride };
     const text = state.files.get(file.replace(/\\/g, '/'));
@@ -162,6 +169,36 @@ describe('collector setup', () => {
     expect(state.dirs).toEqual(['out']);
     request(custom, 'POST', '/e', JSON.stringify([{ name: 'a', uid: 'u' }]));
     expect(lines('out/x.ndjson')).toHaveLength(1);
+  });
+});
+
+describe('collector retention', () => {
+  const day = (iso: string) => state.files.set(dayFile(iso), '{}\n');
+
+  it('deletes day files older than 14 months at start and on the first request of each day', async () => {
+    for (const d of ['2025-08-17', '2025-08-18', '2025-08-19', '2026-10-17']) day(d);
+    state.files.set(`${DIR}/notes.txt`, 'keep');
+    state.files.set(`${DIR}/events-2020-01-01.ndjson.bak`, 'keep');
+    const handler = await load();
+    expect([...state.files.keys()].sort()).toEqual([
+      `${DIR}/events-2020-01-01.ndjson.bak`,
+      dayFile('2025-08-18'),
+      dayFile('2025-08-19'),
+      dayFile('2026-10-17'),
+      `${DIR}/notes.txt`,
+    ]);
+
+    // the next day's first request, even the healthcheck, takes the next file
+    vi.setSystemTime(NOON + 86_400_000);
+    request(handler, 'GET', '/health');
+    expect(state.files.has(dayFile('2025-08-18'))).toBe(false);
+    expect(state.files.has(dayFile('2025-08-19'))).toBe(true);
+  });
+
+  it('keeps everything in single-file mode', async () => {
+    state.files.set('telemetry/events-2000-01-01.ndjson', '{}\n');
+    await load({});
+    expect(state.files.has('telemetry/events-2000-01-01.ndjson')).toBe(true);
   });
 });
 
