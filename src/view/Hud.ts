@@ -44,6 +44,8 @@ export class Hud extends Container {
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
   private bannerTime = 0;
+  /** The banner's size before its pop: small enough that a long line stays on the board at the pop's peak. */
+  private bannerFit = 1;
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
   private newcomerTime = 0;
@@ -245,7 +247,7 @@ export class Hud extends Container {
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);
-    this.banner.scale.set(1 + Math.max(0, this.bannerTime - 1.7) * 0.6);
+    this.banner.scale.set(this.bannerFit * (1 + Math.max(0, this.bannerTime - 1.7) * 0.6));
     this.newcomerTime = b.paused ? this.newcomerTime : Math.max(0, this.newcomerTime - dt);
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
     this.bossCard.alpha = this.newcomer.alpha;
@@ -319,6 +321,8 @@ export class Hud extends Container {
   private show(text: string, y = BANNER_Y): void {
     this.banner.text = text;
     this.banner.y = y;
+    this.banner.scale.set(1);
+    this.bannerFit = Math.min(1, (DESIGN_W - 40) / (this.banner.width * 1.18));
     this.bannerTime = 2;
   }
 }
