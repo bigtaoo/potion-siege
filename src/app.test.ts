@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { Container, Text, type Application } from 'pixi.js';
 import { Analytics } from './analytics/analytics';
 import { MemorySink } from './analytics/sinks';
+import { PrivacyChoice } from './analytics/privacy';
 import { loadLocale, setLocale, t } from './i18n';
 import { SafeStore, type Platform, type Store } from './platform/types';
 import { AD_CRYSTALS, ADS_PER_DAY, adsLeft, doublesLeft, newMeta, type MetaSave } from './sim/meta';
@@ -114,7 +115,7 @@ function world(save: MetaSave = veteran(), setup: (h: Host) => void = () => {}):
   const app = { stage, ticker: { add() {} }, screen: { width: 1080, height: 1920 }, renderer: {} } as unknown as Application;
   const sink = new MemorySink();
   const analytics = new Analytics(host.storage, [sink], 'test', host.name);
-  const game = new Game(app, host, new URLSearchParams('speed=200'), analytics);
+  const game = new Game(app, host, new URLSearchParams('speed=200'), analytics, new PrivacyChoice(host.storage, 'notice'));
   game.start();
   return {
     game,
