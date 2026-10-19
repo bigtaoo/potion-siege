@@ -27,7 +27,7 @@ import { mergeablePair, Tutorial, type TutorialStep } from './sim/tutorial';
 import { openChapterChest } from './sim/chapters';
 import { FP } from './sim/math/fixed';
 import { BALANCE, HERO_KINDS, type BattleEvent, type HeroKind } from './sim/types';
-import { loadArt } from './view/art';
+import { loadArt, restOfArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomeExtras, type HomePanel, type HomeTab } from './view/Home';
@@ -62,8 +62,9 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   // ?lang= (testing) over the player's pick over the device's language; a table that cannot be
   // fetched (offline) leaves English
   const want = detectLocale([params.get('lang'), platform.storage.getItem(LANG_KEY), ...platform.languages()]);
-  await loadLocale(want);
-  const lang = showLocale(setLocale(want));
+  // the language's table and the first battle's art come in while the renderer starts
+  const table = loadLocale(want);
+  const art = loadArt();
 
   const app = new Application();
   await app.init({
@@ -76,7 +77,9 @@ export async function boot(platform: Platform): Promise<GameHandle> {
     preference: 'webgl',
   });
   (platform.mount ?? document.body).appendChild(app.canvas);
-  await loadArt();
+  await table;
+  const lang = showLocale(setLocale(want));
+  await art;
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
   // players in the EEA, the UK and Switzerland are asked before play statistics go out
@@ -124,8 +127,16 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   });
   window.addEventListener('pagehide', () => game.leave());
   game.start();
-  // the first battle frame is on screen two animation frames later: the `loaded` checkpoint
-  requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name, analytics)));
+  // the art the first frame did not wait for: screens built without it are built again
+  void restOfArt().then(() => game.artIn());
+  // the first battle frame is on screen two animation frames later: the `loaded` checkpoint, and
+  // the mark scripts/firstFrame.mjs times
+  requestAnimationFrame(() =>
+    requestAnimationFrame(() => {
+      performance.mark('first_frame');
+      loadedBeacon(platform.name, analytics);
+    }),
+  );
   return { refresh: () => game.refresh() };
 }
 
@@ -860,6 +871,13 @@ export class Game {
   /** The home screen again with what the host now says (a purchase, a refund, an ad loaded). */
   refresh(): void {
     if (this.menu.visible) this.home(this.panel);
+  }
+
+  /** The rest of the art is in (view/art.ts): the screens that show it as pictures rather than
+   *  frame by frame, the home and the panel over the battle (the skill cards), are built again. */
+  artIn(): void {
+    this.refresh();
+    this.overlay.rebuild();
   }
 
   /** Apple's purchase sheet for the ad-free card. The menu takes no taps while it is up. */

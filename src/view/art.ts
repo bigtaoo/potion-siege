@@ -1,51 +1,51 @@
 // Finished art from public/art/. Anything without a texture yet keeps its placeholder shape.
 
 import { Assets, Container, Sprite, type Texture } from 'pixi.js';
-import type { EnemyKind, HeroKind } from '../sim/types';
+import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
 import type { SkillId } from '../sim/skills';
 import type { PotionLook } from './potion';
 
-const FILES = [
-  'potion_arcane_body',
-  'potion_arcane_ult',
-  'enemy_grunt',
+/** What the first battle shows from its first frame: the field, the commander, the tutorial's
+ *  glove, the starting four potions and the first wave's grunts. The first frame waits for these
+ *  only (about a sixth of the art). */
+const FIRST = ['bg_field.jpg', 'commander', 'tutorial_hand', 'enemy_grunt', ...LINEUP.map((k) => `potion_${k}_body`)];
+/** Fetched right after: what the first battle comes to next (the skill cards show the
+ *  ultimates and icons, runners and brutes walk in from waves 2 and 4) and the other potions. */
+const SOON = [
+  ...LINEUP.map((k) => `potion_${k}_ult`),
+  'icon_allDamage',
+  'icon_allSpeed',
+  'icon_gold',
+  'icon_wallRepair',
+  'icon_crit',
   'enemy_runner',
   'enemy_brute',
-  'enemy_boss',
+  ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_body`),
+];
+/** Then the rest: the later stages' enemies, the bosses and the other ultimates. */
+const LATER = [
+  ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_ult`),
   'enemy_flyer',
   'enemy_winder',
+  'enemy_boss',
   'enemy_clock',
   'enemy_tripod',
   'enemy_tripod_bare',
   'enemy_anvil',
   'enemy_gear',
   'enemy_gear_core',
-  'icon_crit',
-  'commander',
-  'potion_fire_body',
-  'potion_fire_ult',
-  'potion_ice_body',
-  'potion_lightning_body',
-  'potion_ice_ult',
-  'potion_lightning_ult',
-  'potion_poison_body',
-  'potion_poison_ult',
-  'potion_wind_body',
-  'potion_wind_ult',
-  'icon_allDamage',
-  'icon_allSpeed',
-  'icon_gold',
-  'icon_wallRepair',
-  'tutorial_hand',
-  'bg_field.jpg',
-] as const;
+];
+
+/** The three in fetch order, for art.test.ts (every file in public/art once). */
+export const ART_TIERS = { FIRST, SOON, LATER } as const;
 
 const textures = new Map<string, Texture>();
+let rest: Promise<void> = Promise.resolve();
 
-export async function loadArt(): Promise<void> {
+function load(files: readonly string[]): Promise<void> {
   const base = import.meta.env.BASE_URL;
-  await Promise.all(
-    FILES.map(async (f) => {
+  return Promise.all(
+    files.map(async (f) => {
       try {
         const file = f.includes('.') ? f : `${f}.png`;
         textures.set(f.replace(/\.\w+$/, ''), await Assets.load<Texture>(`${base}art/${file}`));
@@ -53,7 +53,20 @@ export async function loadArt(): Promise<void> {
         console.warn(`art: ${f} failed to load, keeping the placeholder`, err);
       }
     }),
-  );
+  ).then(() => {});
+}
+
+/** Fetches the first battle's art and resolves once it is in; the rest follows on its own (see
+ *  restOfArt). Anything that fails keeps its placeholder. */
+export async function loadArt(): Promise<void> {
+  await load(FIRST);
+  rest = load(SOON).then(() => load(LATER));
+}
+
+/** Resolves once the art loadArt did not wait for is in too (or failed). Until then a texture
+ *  getter can come back empty, as for art that never loaded. */
+export function restOfArt(): Promise<void> {
+  return rest;
 }
 
 /** The small figure a cell shows one to three of, for levels 1-3. */

@@ -59,6 +59,11 @@ export class Overlay extends Container {
     this.redo?.();
   }
 
+  /** The panel that is up, built again as it is (the rest of the art came in). */
+  rebuild(): void {
+    this.redo?.();
+  }
+
   hide(): void {
     this.visible = false;
     this.redo = null;
