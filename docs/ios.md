@@ -154,13 +154,19 @@ card at once and which offers the privacy button. `?native=owned` starts with th
   uses): the home screen after run 1 opens the question once a session, and until "Allow" events
   wait in memory and no install id is stored. Everyone has the "Share stats" switch and the Player
   ID with Copy in Settings, which §9 points to. UMP covers only Google's ads, so the app runs both.
-- Open in the policy, the owner's call: the collector deletes nothing yet, and §8 says so with a
-  TODO comment to pick a period and add the cron. It does not block App Review, which checks that
-  the policy exists and is reachable.
-- Privacy label: identifiers (install id; AdMob's device id), usage data, diagnostics; nothing
-  linked to a person, nothing used for tracking.
+- Retention: the collector deletes day files older than 14 months itself (`KEEP_MONTHS`), the
+  period §8 states.
+- Privacy label (published 2026-10-19): coarse location (Google, from the IP), device ID (install
+  id; AdMob's vendor id), purchase history (the ad-free buy event), product interaction,
+  advertising data, crash, performance and other diagnostics. Purposes: analytics, plus
+  third-party advertising for what Google's SDK takes. All marked linked to the user, since
+  Apple counts GDPR personal data as linked and the install id is that; none used for tracking.
+  Update it with any new event, SDK or identifier.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
-- Age rating: cartoon violence, ads. Screenshots at 1179×2556, English and Simplified Chinese.
+- Listing (filled 2026-10-19 through the API from `store/<lang>/app-store/*.txt`, 15 locales):
+  Games / Strategy + Casual; age rating cartoon violence (frequent) and ads; free in 174
+  territories, not mainland China (games there need a licence); 6.9" shots 1290×2796 from
+  `ref/store-shots/<lang>/`, five per locale; review contact and notes on the version.
 - Icon: `art/store/ios/app_icon_1024.png`, the same file as the asset catalog's
   `AppIcon-512@2x.png` (1024², RGB, no alpha). It is the fire potion bottle on purple, draft A of
   three in `art/icon/` (prompts `art/prompts/icon_*_gen.txt`), cropped 640 px around the bottle so it
