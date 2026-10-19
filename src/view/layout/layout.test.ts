@@ -13,7 +13,7 @@ import { ENEMY_KINDS, HERO_KINDS } from '../../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../../sim/waves';
 import { Battle } from '../../sim/battle';
 import { buildHome, HOME_TABS, type HomeActions, type HomePanel } from '../Home';
-import { CODEX_PAGES, setCodexPage } from '../Codex';
+import { CODEX_PAGES, scrollFeats, setCodexPage } from '../codex';
 import { Overlay } from '../Overlay';
 import { Hud } from '../Hud';
 import { PillButton } from '../kit';
@@ -65,8 +65,11 @@ function homeScreens(): Screen[] {
       for (const tab of HOME_TABS) if (tab !== 'codex') out.push({ name: `${at}/${tab}`, w: fit.w, h: fit.h, build: home(tab, null) });
       for (const page of CODEX_PAGES) {
         const build = home('codex', null);
-        out.push({ name: `${at}/codex ${page}`, w: fit.w, h: fit.h, build: () => (setCodexPage(page), build()) });
+        out.push({ name: `${at}/codex ${page}`, w: fit.w, h: fit.h, build: () => (setCodexPage(page), scrollFeats(), build()) });
       }
+      // the achievements list scrolled to its far end
+      const feats = home('codex', null);
+      out.push({ name: `${at}/codex feats end`, w: fit.w, h: fit.h, build: () => (setCodexPage('feats'), scrollFeats(1e6), feats()) });
       for (const panel of ['settings', 'language', 'tasks', 'login', 'challenge', 'chapters', ...HERO_KINDS, ...ENEMY_KINDS] as HomePanel[]) {
         out.push({ name: `${at}/${panel}`, w: fit.w, h: fit.h, build: home('potions', panel) });
       }

@@ -1,11 +1,11 @@
 // The codex's taps: a tab turns the page (and the page stays turned for the next build), and an
 // enemy card asks for that enemy's panel. What fits where is layout.test.ts's job.
-import './layout/measure';
+import '../layout/measure';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Container } from 'pixi.js';
-import { newMeta } from '../sim/meta';
-import { ENEMY_KINDS, type EnemyKind } from '../sim/types';
-import { buildCodex, isEnemy, setCodexPage } from './Codex';
+import { newMeta } from '../../sim/meta';
+import { ENEMY_KINDS, type EnemyKind } from '../../sim/types';
+import { buildCodex, isEnemy, setCodexPage } from '.';
 
 const AREA = { x: 0, y: 150, w: 1080, h: 1978, wide: false };
 

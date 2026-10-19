@@ -1,6 +1,6 @@
 // The home screen between battles, in the alchemist's-workshop look: a top bar with the daily
 // login, the daily tasks and the crystals, five tabs (potions, workshop, battle, codex, shop;
-// the codex is built in Codex.ts)
+// the codex is built in codex/)
 // and the daily login reward, the daily tasks and a hero's milestones as panels over it.
 // Laid out on the whole screen: a portrait page with the tabs along the bottom, or on a wide
 // (desktop) screen a landscape page with the tabs down the left side. Built afresh after every
@@ -24,7 +24,7 @@ import {
 } from '../sim/meta';
 import type { EnemyKind, HeroKind } from '../sim/types';
 import { commanderTexture } from './art';
-import { buildCodex, enemyPanel, isEnemy } from './Codex';
+import { buildCodex, enemyPanel, isEnemy } from './codex';
 import {
   bookIcon,
   bossTag,
