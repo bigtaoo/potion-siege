@@ -139,7 +139,9 @@ export const zh: Table = {
   tasks: '每日任务',
   allDone: '全部完成奖励',
   allDoneCount: '已领取 {n}/{total}',
-  sound: { settings: '设置', music: '音乐', sfx: '音效', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
+  /** The language's own name, for the picker. */
+  lang: { name: '简体中文' },
+  sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
   task: {
     play: '完成 {n} 局战斗',
     win: '赢得 {n} 场战斗',

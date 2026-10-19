@@ -1,4 +1,5 @@
 import { Container, Graphics, Text, type TextStyleOptions } from 'pixi.js';
+import { getLocale, type Locale } from '../i18n';
 
 export const COLORS = {
   bg: 0x0e1a2b,
@@ -26,11 +27,20 @@ export const HERO_COLORS = {
   wind: 0x8fe3c8,
 } as const;
 
+/** The system fonts: Chinese, Japanese and Korean each want their own CJK font first (the
+ *  same characters are drawn differently), and Thai one that has its script on Windows. */
+const FONT = 'system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif';
+const LOCAL_FONT: Partial<Record<Locale, string>> = {
+  ja: '"Hiragino Sans", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, "Noto Sans CJK JP", system-ui, sans-serif',
+  ko: '"Apple SD Gothic Neo", "Malgun Gothic", "Noto Sans CJK KR", system-ui, sans-serif',
+  th: 'system-ui, "Segoe UI", "Leelawadee UI", Thonburi, "Noto Sans Thai", Tahoma, sans-serif',
+};
+
 export function label(text: string, size: number, style: TextStyleOptions = {}): Text {
   const out = new Text({
     text,
     style: {
-      fontFamily: 'system-ui, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif',
+      fontFamily: LOCAL_FONT[getLocale()] ?? FONT,
       fontSize: size,
       fontWeight: '800',
       fill: COLORS.text,

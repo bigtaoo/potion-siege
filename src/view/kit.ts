@@ -6,6 +6,7 @@ import { CanvasTextMetrics, Container, Graphics, Sprite, type Text, type TextSty
 import { enemyTexture, ultimateTexture } from './art';
 import { COLORS, gem, HERO_COLORS, label } from './ui';
 import { slab } from './stone';
+import { getLocale, type Locale } from '../i18n';
 import type { ModifierId } from '../sim/challenge';
 import type { EnemyKind, HeroKind } from '../sim/types';
 
@@ -43,17 +44,31 @@ export function ink(text: string, size: number, style: TextStyleOptions = {}): T
 /** Closing punctuation stays at the end of a line instead of starting the next one. */
 const NO_START = /^[，。、；：！？）」』%,.;:!?)]/;
 
-/** The browser's word breaker where there is one (not in the ES2020 typings). */
+/** The browser's word breaker where there is one (not in the ES2020 typings), one per language:
+ *  Chinese, Japanese and Thai write words without spaces between them. */
 type WordSegmenter = { segment(text: string): Iterable<{ segment: string }> };
 const Segmenter = (Intl as unknown as { Segmenter?: new (locale: string, o: { granularity: 'word' }) => WordSegmenter }).Segmenter;
-const zhWords: WordSegmenter | null = Segmenter ? new Segmenter('zh', { granularity: 'word' }) : null;
-const LATIN = /^[A-Za-z0-9+%.×-]+$/;
+const segmenters = new Map<Locale, WordSegmenter>();
+function words(): WordSegmenter | null {
+  if (!Segmenter) return null;
+  const l = getLocale();
+  let s = segmenters.get(l);
+  if (!s) segmenters.set(l, (s = new Segmenter(l, { granularity: 'word' })));
+  return s;
+}
+/** A word or number that stays whole, in any script that puts spaces between its words. */
+const WORD = /^[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Hangul}\p{Script=Thai}\p{M}0-9+%.×'’-]+$/u;
+const CLOSE = /^[»›"”“)\]!?:;,.…，。！？：；、]+$/u;
+const OPEN = /^[«‹„"“(\[¿¡]+$/u;
 
-/** The pieces a line may break between: Latin words and numbers whole (+12% too), Chinese
- *  words whole where the browser can tell them (双倍, 攻速), and a short bracketed part such
- *  as （需冰霜药剂在场） or 「奥术印记」 as one piece. */
+/** The pieces a line may break between: words and numbers whole (+12% too), Chinese and
+ *  Japanese words whole where the browser can tell them (双倍, 攻速), and a short bracketed part
+ *  such as （需冰霜药剂在场） or 「奥术印记」 as one piece. */
 function wrapTokens(text: string): string[] {
-  const raw = zhWords ? [...zhWords.segment(text)].map((s) => s.segment) : (text.match(/[A-Za-z0-9+%.×-]+|\s+|./gu) ?? []);
+  const seg = words();
+  const raw = seg
+    ? [...seg.segment(text)].map((s) => s.segment)
+    : (text.match(/[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Hangul}\p{Script=Thai}\p{M}0-9+%.×'’-]+|\s+|./gu) ?? []);
   const out: string[] = [];
   let group: string | null = null;
   for (const tok of raw) {
@@ -70,16 +85,25 @@ function wrapTokens(text: string): string[] {
       continue;
     }
     const last = out[out.length - 1];
+    // a quote or stop never starts a line nor an opening quote ends one («Цепной взрыв», „Kette“, ¡Hola!)
+    if (last !== undefined && !/\s$/.test(last) && CLOSE.test(tok)) {
+      out[out.length - 1] = last + tok;
+      continue;
+    }
+    if (last !== undefined && OPEN.test(last) && !/^\s/.test(tok)) {
+      out[out.length - 1] = last + tok;
+      continue;
+    }
     // a number keeps its unit (3 秒) and a word its one-character suffix (魔法弹)
     const glue = last !== undefined && ((/^[秒次颗层倍波关级瓶个]$/.test(tok) && /\d\s?$/.test(last)) || (/^[弹剂]$/.test(tok) && /\p{Script=Han}$/u.test(last)));
-    if (last !== undefined && ((LATIN.test(tok) && LATIN.test(last)) || glue)) out[out.length - 1] = last + tok;
+    if (last !== undefined && ((WORD.test(tok) && WORD.test(last)) || glue)) out[out.length - 1] = last + tok;
     else out.push(tok);
   }
   if (group !== null) out.push(group);
   return out;
 }
 
-/** Ink text wrapped to `width`: Latin words and numbers stay whole, Chinese breaks between
+/** Ink text wrapped to `width`: words and numbers stay whole, Chinese breaks between
  *  words (or characters, without a word breaker) but never before closing punctuation, which
  *  Pixi's own wrap does. */
 export function inkWrapped(text: string, size: number, width: number, style: TextStyleOptions = {}): Text {

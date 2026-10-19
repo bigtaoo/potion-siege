@@ -10,7 +10,7 @@ import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
 import { BeaconSink, ConsoleSink, MemorySink } from './analytics/sinks';
 import { sourceOf } from './analytics/source';
-import { setLocale, t } from './i18n';
+import { detectLocale, getLocale, loadLocale, setLocale, t, type Locale } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle, slotCenter } from './sim/battle';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge, type Challenge, type ChallengeResult } from './sim/challenge';
@@ -44,6 +44,8 @@ import { gpuName, QualityRuntime } from './view/qualityRuntime';
 import { DESIGN_H, DESIGN_W, fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 
 const SAVE_KEY = 'mb.save';
+/** The language picked in the settings, if any; the device's own language otherwise. */
+const LANG_KEY = 'mb.lang';
 /** `version+commit`, stamped at build time (scripts/buildId.mjs), e.g. 0.0.1+61b33eb. */
 const BUILD = __PS_BUILD__;
 
@@ -56,8 +58,11 @@ export interface GameHandle {
 
 export async function boot(platform: Platform): Promise<GameHandle> {
   const params = new URLSearchParams(location.search);
-  const lang = setLocale([params.get('lang'), ...platform.languages()]);
-  document.title = t('title');
+  // ?lang= (testing) over the player's pick over the device's language; a table that cannot be
+  // fetched (offline) leaves English
+  const want = detectLocale([params.get('lang'), platform.storage.getItem(LANG_KEY), ...platform.languages()]);
+  await loadLocale(want);
+  const lang = showLocale(setLocale(want));
 
   const app = new Application();
   await app.init({
@@ -119,6 +124,14 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   // the first battle frame is on screen two animation frames later: the `loaded` checkpoint
   requestAnimationFrame(() => requestAnimationFrame(() => loadedBeacon(platform.name, analytics)));
   return { refresh: () => game.refresh() };
+}
+
+/** The page follows the language: its title, and its `lang`, which the browser reads to pick
+ *  the right glyphs for Chinese, Japanese and Korean text on the canvas. */
+function showLocale(l: Locale): Locale {
+  document.documentElement.lang = l;
+  document.title = t('title');
+  return l;
 }
 
 /** 'touch' on a coarse pointer (a phone or tablet), else 'desktop': the beacons' device split. */
@@ -661,6 +674,18 @@ class Game {
     else if (this.menu.visible) this.home();
   }
 
+  /** Switches the language for good: fetched first (nothing changes if that fails, offline),
+   *  then the home screen drawn again in it. */
+  private async language(l: Locale): Promise<void> {
+    const from = getLocale();
+    if (l !== from && (await loadLocale(l))) {
+      showLocale(setLocale(l));
+      this.platform.storage.setItem(LANG_KEY, l);
+      this.analytics.track('language', { lang: l, from });
+    }
+    if (this.menu.visible) this.home('settings');
+  }
+
   private store(): void {
     this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
   }
@@ -765,6 +790,7 @@ class Game {
         this.store();
         this.home('settings');
       },
+      language: (l) => void this.language(l),
       buyAdFree: () => void this.buyAdFree(),
       restoreAdFree: () => void this.restoreAdFree(),
       adPrivacy: () => this.platform.adPrivacy?.open(),

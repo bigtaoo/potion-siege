@@ -7,7 +7,7 @@
 // purchase, claim or resize.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
-import { t, type TextKey } from '../i18n';
+import { getLocale, LOCALES, localeName, t, type Locale, type TextKey } from '../i18n';
 import {
   bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge,
 } from '../sim/challenge';
@@ -65,7 +65,7 @@ import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'tasks' | 'settings' | 'challenge' | 'chapters' | HeroKind | null;
+export type HomePanel = 'login' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | HeroKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -99,6 +99,8 @@ export interface HomeActions {
   endless(): void;
   /** Flips the music or the sound effects toggle. */
   sound(which: 'music' | 'sfx'): void;
+  /** A language picked on the language panel. */
+  language(locale: Locale): void;
   /** The ad-free card: Apple's purchase sheet, and Restore. */
   buyAdFree(): void;
   restoreAdFree(): void;
@@ -171,6 +173,7 @@ export function buildHome(
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
   else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy));
+  else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
@@ -1314,7 +1317,7 @@ function bonusRow(m: MetaSave, act: HomeActions): Container {
   return r;
 }
 
-/** The settings: the music and sound effects toggles, then a button each for Google's consent
+/** The settings: the music and sound effects toggles and the language, then a button each for Google's consent
  *  form again where it applies (iOS in the EEA/UK) and our privacy policy where the host allows
  *  a link out (App Review 5.1.1 wants it inside the app). */
 function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean): Container {
@@ -1322,8 +1325,9 @@ function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boo
   if (privacy) buttons.push([t('sound.privacy'), act.adPrivacy]);
   if (policy) buttons.push([t('sound.policy'), act.privacyPolicy]);
   const extra = buttons.length ? 30 + buttons.length * 130 : 0;
-  const h = 560 + extra;
+  const h = 750 + extra;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
+  const top = -175 - (extra ? extra / 2 + 10 : 0);
   buttons.forEach(([text, tap], i) => {
     const b = new PillButton(text, 600, 100, 'brass', tap, 40);
     b.y = h / 2 - 100 - (buttons.length - 1 - i) * 130;
@@ -1332,7 +1336,7 @@ function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boo
   (['music', 'sfx'] as const).forEach((which, i) => {
     const on = m.sound[which];
     const r = tappable(new Container(), () => act.sound(which));
-    r.position.set(0, -80 - (extra ? extra / 2 + 10 : 0) + i * 190);
+    r.position.set(0, top + i * 190);
     const icon = new Container();
     icon.position.set(-330, 0);
     icon.addChild(medal(56, on ? 0x3c9a4a : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));
@@ -1345,7 +1349,53 @@ function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boo
     r.addChild(lightTile(860, 160), icon, name, sw);
     box.addChild(r);
   });
+  // the language: its own name on a button that opens the picker
+  const r = tappable(new Container(), () => act.panel('language'));
+  r.position.set(0, top + 2 * 190);
+  const icon = new Container();
+  icon.position.set(-330, 0);
+  icon.addChild(medal(56, P.wood), globeIcon());
+  const name = ink(t('sound.language'), 50);
+  name.anchor.set(0, 0.5);
+  name.position.set(-245, -4);
+  fitText(name, 300);
+  const pick = new PillButton(localeName(getLocale()), 300, 96, 'brass', () => act.panel('language'), 40);
+  pick.position.set(255, -4);
+  r.addChild(lightTile(860, 160), icon, name, pick);
+  box.addChild(r);
   return panel;
+}
+
+/** Every language by its own name, two to a row, the one in use green; a pick closes it. */
+function languagePanel(act: HomeActions, fit: MenuFit): Container {
+  const rows = Math.ceil(LOCALES.length / 2);
+  const h = rows * 124 + 150;
+  const { panel, box } = frame(act, t('sound.language'), h, fit);
+  LOCALES.forEach((l, i) => {
+    const b = new PillButton(localeName(l), 400, 100, l === getLocale() ? 'green' : 'brass', () => act.language(l), 42);
+    b.position.set(i % 2 ? 210 : -210, -h / 2 + 140 + Math.floor(i / 2) * 124);
+    box.addChild(b);
+  });
+  return panel;
+}
+
+/** A globe: the rim, the equator and two meridians. */
+function globeIcon(): Graphics {
+  return new Graphics()
+    .circle(0, 0, 30)
+    .fill(0x6fb7d8)
+    .stroke({ width: 4, color: P.line })
+    .ellipse(0, 0, 13, 30)
+    .stroke({ width: 4, color: P.cream })
+    .moveTo(-30, 0)
+    .lineTo(30, 0)
+    .moveTo(-26, -14)
+    .lineTo(26, -14)
+    .moveTo(-26, 14)
+    .lineTo(26, 14)
+    .stroke({ width: 4, color: P.cream })
+    .circle(0, 0, 30)
+    .stroke({ width: 4, color: P.line });
 }
 
 /** An on/off switch: a green track with the knob on the right, or a grey one with it on the left. */
@@ -1418,7 +1468,7 @@ function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit):
   const level = ink(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56);
   level.anchor.set(0, 0.5);
   level.position.set(-150, top + 210);
-  const dmg = ink(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.inkSoft });
+  const dmg = fitText(ink(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.inkSoft }), 570);
   dmg.anchor.set(0, 0.5);
   dmg.position.set(-150, top + 290);
   box.addChild(level, dmg);

@@ -138,7 +138,9 @@ export const en = {
   tasks: 'Daily Tasks',
   allDone: 'All Tasks Bonus',
   allDoneCount: '{n}/{total} claimed',
-  sound: { settings: 'Settings', music: 'Music', sfx: 'Sound', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
+  /** The language's own name, for the picker. */
+  lang: { name: 'English' },
+  sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
   task: {
     play: 'Finish {n} battles',
     win: 'Win {n} battle',
