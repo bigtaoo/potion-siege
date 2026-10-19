@@ -4,8 +4,8 @@ import { describe, expect, it } from 'vitest';
 // result can differ between JS engines or between runs, and nothing from the host. Comments
 // and strings are blanked before scanning, so prose quoting a rule does not trip it. The
 // allowlist carries a reason per entry and must stay minimal: an exception that stops being
-// needed fails the test. Only the files a battle runs through are scanned; the meta, daily and
-// challenge rules work out the setup, which a replay records.
+// needed fails the test. Every non-test file under src/sim is scanned, so a new module cannot
+// slip past it; the few setup rules that may use the host or pow are allowlisted by rule.
 
 const BANNED: readonly { pattern: RegExp; why: string }[] = [
   { pattern: /\bMath\.random\s*\(/, why: 'use the battle Prng' },
@@ -20,9 +20,10 @@ const BANNED: readonly { pattern: RegExp; why: string }[] = [
 
 const ALLOWED: readonly { file: string; pattern: RegExp; why: string }[] = [
   { file: 'math/fixed.ts', pattern: /\bMath\.sqrt\s*\(/, why: 'first guess of isqrt, corrected to the exact integer root' },
+  { file: 'meta.ts', pattern: /\*\*/, why: 'stage hit points and shop prices: worked out before the battle, the replay records the setup' },
+  { file: 'daily.ts', pattern: /\bDate\b/, why: "the day's key picks the daily before the battle, the replay records its setup" },
+  { file: 'challenge.ts', pattern: /\bDate\b/, why: "the challenge's day and the countdown to the next one, outside the battle" },
 ];
-
-const BATTLE = /^(battle|bosses|bot|commander|damage|enemies|enemyTick|field|hash|hits|kills|replay|shots|skills|spawn|targets|types|waves|math\/(?!.*\.test\.ts$).*)\.ts$/;
 
 /** Blanks comments and string literals, keeping line breaks so line numbers stay true. */
 export function strip(src: string): string {
@@ -52,13 +53,13 @@ export function strip(src: string): string {
 const sources = import.meta.glob<string>('./**/*.ts', { query: '?raw', import: 'default', eager: true });
 const files = Object.entries(sources)
   .map(([path, text]) => ({ rel: path.slice(2), text }))
-  .filter((f) => BATTLE.test(f.rel) && !f.rel.endsWith('.test.ts'))
+  .filter((f) => !f.rel.endsWith('.test.ts'))
   .map((f) => ({ ...f, code: strip(f.text) }));
 
 describe('determinism lint', () => {
-  it('scans the battle sources', () => {
+  it('scans every sim source, tests aside', () => {
     const rels = files.map((f) => f.rel);
-    for (const f of ['battle.ts', 'waves.ts', 'skills.ts', 'math/fixed.ts', 'math/trig.ts']) expect(rels).toContain(f);
+    for (const f of ['battle.ts', 'waves.ts', 'skills.ts', 'horde.ts', 'fixedMods.ts', 'rng.ts', 'math/fixed.ts', 'math/trig.ts']) expect(rels).toContain(f);
   });
 
   it('finds no banned call outside the allowlist', () => {
