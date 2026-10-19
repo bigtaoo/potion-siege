@@ -198,7 +198,8 @@ function createAnalytics(platform: Platform, params: URLSearchParams): Analytics
   return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__));
 }
 
-class Game {
+/** Exported for the ad-flow tests (app.test.ts), which drive it over a stand-in Pixi app. */
+export class Game {
   private readonly root = new Container();
   private readonly view = new BattleView();
   private readonly hud: Hud;
@@ -529,13 +530,16 @@ class Game {
     if (b.choices && this.overlay.visible) this.showSkills(b);
   }
 
-  /** Plays a rewarded ad over the overlay that is up, which takes no taps until it is over. */
+  /** Plays a rewarded ad over the overlay that is up, which takes no taps until it is over; an
+   *  ad that broke counts as not watched. */
   private async watch(): Promise<boolean> {
     this.overlay.interactiveChildren = false; // no second tap while the ad plays
     try {
       const ok = await this.platform.rewarded(() => this.mute(true));
       if (ok) this.rewardedSinceEnd = true;
       return ok;
+    } catch {
+      return false;
     } finally {
       this.overlay.interactiveChildren = true;
       this.mute(false);
@@ -833,6 +837,8 @@ class Game {
     let outcome: Awaited<ReturnType<typeof store.buy>> = 'failed';
     try {
       outcome = await store.buy();
+    } catch {
+      // a store that broke: said as failed
     } finally {
       this.menu.interactiveChildren = true;
     }
@@ -850,6 +856,8 @@ class Game {
     let outcome: Awaited<ReturnType<typeof store.restore>> = 'failed';
     try {
       outcome = await store.restore();
+    } catch {
+      // a store that broke: said as failed
     } finally {
       this.menu.interactiveChildren = true;
     }

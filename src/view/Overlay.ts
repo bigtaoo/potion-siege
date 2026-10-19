@@ -612,7 +612,8 @@ function skillCard(id: SkillId, level: number): Container {
     desc.destroy();
     desc = balanced(t(`skill.${id}.desc`), ds, w - 36, { align: 'center', lineHeight: Math.round(ds * 1.28) });
   }
-  if (desc.height > room) desc.scale.set(room / desc.height);
+  // a line with no break in it (a long Thai word) can still run wider than the wrap
+  desc.scale.set(Math.min(1, room / desc.height, (w - 20) / desc.width));
   desc.anchor.set(0.5, 0);
   desc.position.set(0, dy);
   card.addChild(desc);

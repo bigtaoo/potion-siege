@@ -7,7 +7,7 @@ beforeAll(() => {
 });
 
 /** A platform over a stub SDK in `environment`, logging the game hooks it receives. */
-async function platform(environment: string): Promise<{ p: CrazyGamesPlatform; calls: string[] }> {
+async function platform(environment: string, ad?: NonNullable<NonNullable<CgGlobal['CrazyGames']>['SDK']>['ad']): Promise<{ p: CrazyGamesPlatform; calls: string[] }> {
   const calls: string[] = [];
   const hook = (name: string) => () => void calls.push(name);
   const global: CgGlobal = {
@@ -15,6 +15,7 @@ async function platform(environment: string): Promise<{ p: CrazyGamesPlatform; c
       SDK: {
         environment,
         game: { loadingStart: hook('loadingStart'), loadingStop: hook('loadingStop'), gameplayStart: hook('gameplayStart'), gameplayStop: hook('gameplayStop') },
+        ad,
       },
     },
   };
@@ -73,5 +74,69 @@ describe('CrazyGamesPlatform', () => {
 
   it('offers no links out of the game, as the portal requires', async () => {
     expect((await platform('crazygames')).p.openUrl).toBeUndefined();
+  });
+});
+
+/** An ad module that answers every request the way `answer` says, logging what was asked. */
+function ads(answer: 'finished' | 'error' | 'throws', opts: { adblock?: boolean; basicLaunch?: boolean } = {}) {
+  const asked: string[] = [];
+  return {
+    asked,
+    ad: {
+      requestAd: (type: string, cb: { adStarted?: () => void; adFinished?: () => void; adError?: (e: unknown) => void }) => {
+        asked.push(type);
+        if (answer === 'throws') throw new Error('sdk broke');
+        if (answer === 'error') return void cb.adError?.({ code: 'unfilled' });
+        cb.adStarted?.();
+        cb.adFinished?.();
+      },
+      hasAdblock: async () => opts.adblock === true,
+      prefetchAd: () => {
+        if (opts.basicLaunch) throw Object.assign(new Error('basic launch'), { code: 'adsDisabledBasicLaunch' });
+      },
+    },
+  };
+}
+
+describe('CrazyGamesPlatform ads', () => {
+  it('pays a rewarded ad that finished, after telling the game it started', async () => {
+    const { ad, asked } = ads('finished');
+    const { p } = await platform('crazygames', ad);
+    let started = 0;
+    expect(p.rewardedAvailable()).toBe(true);
+    expect(await p.rewarded(() => started++)).toBe(true);
+    expect(started).toBe(1);
+    expect(asked).toEqual(['rewarded']);
+  });
+
+  it('pays nothing for an unfilled ad or an SDK that threw', async () => {
+    for (const answer of ['error', 'throws'] as const) {
+      const { p } = await platform('crazygames', ads(answer).ad);
+      let started = 0;
+      expect(await p.rewarded(() => started++), answer).toBe(false);
+      expect(started, answer).toBe(0);
+    }
+  });
+
+  it('grants the reward without an ad in Basic Launch, and plays no midgame there', async () => {
+    const { ad, asked } = ads('error', { basicLaunch: true });
+    const { p } = await platform('crazygames', ad);
+    expect(await p.rewarded(() => {})).toBe(true);
+    await p.midgame(() => {});
+    expect(asked).toEqual([]);
+  });
+
+  it('hides rewarded ads under an adblocker and off the portal', async () => {
+    expect((await platform('crazygames', ads('finished', { adblock: true }).ad)).p.rewardedAvailable()).toBe(false);
+    expect((await platform('disabled', ads('finished').ad)).p.rewardedAvailable()).toBe(false);
+  });
+
+  it('plays a midgame ad on the portal', async () => {
+    const { ad, asked } = ads('finished');
+    const { p } = await platform('crazygames', ad);
+    let started = 0;
+    await p.midgame(() => started++);
+    expect(started).toBe(1);
+    expect(asked).toEqual(['midgame']);
   });
 });
