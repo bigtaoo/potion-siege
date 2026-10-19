@@ -4,6 +4,5 @@
 
 - No file under `src/`, `scripts/` or `server/` goes over **500 lines**, test files included.
 - New code goes into a new module, split by what it does, not into whichever file is nearest.
-- Files already over the limit (the BASELINE in scripts/checkFileLength.mjs: Home.ts, battle.ts, app.ts, BattleView.ts, kit.ts, Overlay.ts, skills.test.ts, app.test.ts, battle.test.ts) must not grow. A change that touches one either moves its own code out to a new file or leaves it no longer than it was, until a dedicated refactor brings them all under 500.
 - A test file splits along the modules it tests.
-- CI enforces this: `npm run check:filelength` (scripts/checkFileLength.mjs, part of `npm run check`). Its BASELINE holds the older files at their current counts; a change that shortens one lowers its number there, and a file at 500 or under leaves the list.
+- CI enforces this: `npm run check:filelength` (scripts/checkFileLength.mjs, part of `npm run check`). Every file is at 500 or under, so its BASELINE is empty.

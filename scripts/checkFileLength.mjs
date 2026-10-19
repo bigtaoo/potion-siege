@@ -1,9 +1,9 @@
 // Fails if any file under src/, scripts/ or server/ is over MAX_LINES, test files included
 // (CLAUDE.md "File size"). Split long files by what they do instead of raising the limit.
-// Same check as D:\standing's build/checkFileLength.mjs, plus a baseline for the files that were
-// already over the limit when the rule came in: each may shrink but never grow, and its number
-// here goes down with every change that shortens it, so the room it gave up cannot be refilled.
-// A file that gets to MAX_LINES or under leaves the list.
+// Same check as D:\standing's build/checkFileLength.mjs, plus a baseline that can hold a file
+// over the limit at its count while it waits to be split: such a file may shrink but never grow,
+// its number goes down with every change that shortens it, and it leaves the list at MAX_LINES
+// or under.
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -13,10 +13,8 @@ const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIRS = ['src', 'scripts', 'server'];
 const EXTS = ['.ts', '.mts', '.mjs', '.js', '.py', '.sh', '.css', '.html'];
 
-// line counts on 2026-10-19 (782f2fe); only ever lowered, until the refactor empties it
-const BASELINE = {
-  'src/sim/skills.test.ts': 777,
-};
+// empty since 2026-10-19, when the files that were over the limit as the rule came in were split
+const BASELINE = {};
 
 function* walk(dir) {
   for (const name of readdirSync(dir)) {
