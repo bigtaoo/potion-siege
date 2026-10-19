@@ -28,7 +28,7 @@ export const de: Table = {
     skip: 'Überspringen',
     summon: 'Tippe auf Brauen für einen neuen Trank',
     merge: 'Zwei gleiche Tränke! Zieh einen auf den anderen, dann mischen sie sich zu einem stärkeren',
-    upgrade: 'Genug Gold zum Aufwerten: Tippe drauf und lerne eine Fähigkeit',
+    upgrade: 'Genug Gold: Tippe auf Aufwerten und lerne eine Fähigkeit',
     pick: 'Wähle eine der drei Fähigkeitskarten. Sie gilt den ganzen Kampf, und wählst du sie erneut, steigt sie auf',
     helped: { summon: 'Hab dir einen gebraut', merge: 'Für dich gemischt', upgrade: 'Für dich aufgewertet' },
   },
@@ -181,7 +181,7 @@ export const de: Table = {
     next: 'Nächste in {time}',
     wave: 'Welle {n}',
     reached: 'Welle {n} erreicht',
-    streak: '{n}-Tage-Serie',
+    streak: 'Tage in Folge: {n}',
     streakBonus: '{n} Tage in Folge!',
     mod: {
       swift: { name: 'Eile', desc: 'Feinde 30% schneller' },
