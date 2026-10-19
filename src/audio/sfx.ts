@@ -6,7 +6,7 @@ import { master, midi, noise, pluck, rng, tone } from './dsp';
 export const SFX_IDS = [
   'tap', 'summon', 'merge', 'levelup',
   'hitArcane', 'hitFire', 'hitIce', 'hitLightning', 'hitPoison', 'hitWind',
-  'kill', 'boss', 'wallHit', 'wave', 'win', 'lose', 'crystal', 'chest',
+  'kill', 'boss', 'wallHit', 'wave', 'horde', 'win', 'lose', 'crystal', 'chest',
 ] as const;
 export type SfxId = (typeof SFX_IDS)[number];
 
@@ -165,6 +165,23 @@ export const SFX: Record<SfxId, SfxSpec> = {
       horn(0.2, 72, 0.7);
       horn(0.2, 64, 0.7);
       bell(o, sr, 0, 84, 0.12, 0.9);
+    },
+  },
+  // the horde of the first wave: war drums under two low horn calls, the second one higher
+  horde: {
+    len: 2, gain: 0.55, limit: 1, gap: 1, vary: 0,
+    draw(o, sr) {
+      const drum = (at: number, g: number, seed: number) => {
+        tone(o, sr, { at, dur: 0.3, freq: 92, to: 46, gain: g, attack: 0.002, decay: 0.09 });
+        noise(o, sr, { at, dur: 0.1, gain: g * 0.45, decay: 0.025, band: [260], mode: 'lp', seed });
+      };
+      [[0, 0.7], [0.25, 0.45], [0.5, 0.7], [0.62, 0.4], [0.75, 0.55], [1.1, 0.75], [1.35, 0.5], [1.6, 0.8]].forEach(([at, g], i) => drum(at, g, 60 + i));
+      const horn = (at: number, n: number, dur: number, g: number) =>
+        tone(o, sr, { at, dur, freq: midi(n), wave: 'saw', gain: g, attack: 0.08, decay: 0.9, cutoff: [700, 1800], vib: [5, 0.006] });
+      horn(0.05, 43, 0.75, 0.22);
+      horn(0.05, 50, 0.75, 0.14);
+      horn(0.9, 48, 1.0, 0.24);
+      horn(0.9, 55, 1.0, 0.16);
     },
   },
   // victory: a little brass fanfare and bells

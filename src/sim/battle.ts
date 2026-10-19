@@ -165,6 +165,14 @@ export class Battle {
   charge = 0;
   /** Ticks the charge has been full. */
   chargedFor = 0;
+  /** Thousandths of a charge earned towards the next: one of the horde gives a share of one,
+   *  `horde.charge` times its heft, so the wave fills the commander as the 25 of it used to. */
+  private chargeOwed = 0;
+  /** Thousandths of kill gold earned towards the next coin, from the horde. */
+  private goldOwed = 0;
+  /** Thousandths towards the next on-kill burst of each skill: a horde death sets one off only
+   *  once its share adds up to a whole (see proc). */
+  private owed = { fireChain: 0, melt: 0, split: 0, vortex: 0 };
   /** Skills cast so far: they go in turn, the flask first. */
   casts = 0;
   /** Ticks of the brew left: every potion throws faster while it lasts. */
@@ -573,14 +581,16 @@ export class Battle {
     }
   }
 
-  /** Brings `s` onto the field: at the top at a random x, or at `at` (FP) when something on the
-   *  field let it out. */
+  /** Brings `s` onto the field: at the top at a random x (within its lane, a rank behind the
+   *  edge, for one of a rush), or at `at` (FP) when something on the field let it out. */
   private spawn(s: Spawn, at?: { x: number; y: number }): void {
     const def = B.enemies[s.kind];
-    const radius = toFp(s.elite ? def.radius * B.elite.radius : def.radius);
+    const radius = toFp(((s.elite ? def.radius * B.elite.radius : def.radius) * (s.size ?? 1000)) / 1000);
     const id = this.nextId;
-    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(K.left + radius, K.right - radius);
-    const y = at ? at.y : K.top - radius;
+    const lo = s.lane ? Math.max(K.left + radius, toFp(s.lane.x0)) : K.left + radius;
+    const hi = s.lane ? Math.max(lo, Math.min(K.right - radius, toFp(s.lane.x1))) : K.right - radius;
+    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(lo, hi);
+    const y = at ? at.y : K.top - radius - toFp(s.lane?.back ?? 0);
     const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm((this.setup.modifiers?.enemySpeed ?? 1) * (this.setup.endless ? endlessSpeed(this.wave) : 1)));
     const e: Enemy = {
       id: this.nextId++,
@@ -612,6 +622,7 @@ export class Battle {
       pushTime: 0,
       atWall: false,
       gold: s.gold ?? 1000,
+      heft: s.heft ?? 1000,
     };
     if (s.elite) e.elite = true;
     if (s.kind === 'flyer') {
@@ -767,7 +778,7 @@ export class Battle {
           e.hopTime = ticks(B.bosses.anvil.slamFirst);
         }
         e.atWall = true;
-        this.wall -= K.wallDps[e.kind];
+        this.wall -= times(K.wallDps[e.kind], e.heft);
         hitWall = true;
         if (e.kind === 'anvil' && --e.hopTime! <= 0) {
           e.hopTime = ticks(B.bosses.anvil.slamEvery);
@@ -988,7 +999,7 @@ export class Battle {
   private windHit(e: Enemy, p: Projectile, direct: boolean): void {
     const S = B.skills;
     this.push(e, p.star);
-    if (this.mods.vortex && direct && e.hp <= 0) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
+    if (this.mods.vortex && direct && e.hp <= 0 && this.proc('vortex', e)) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
     if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
       // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
       // everything close by
@@ -1020,7 +1031,8 @@ export class Battle {
     let weight = W.weight[e.kind];
     if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = W.weight.grunt;
     const d = times(times(times(toFp(W.push), pm(W.pushStar[star - 1])), this.fixed.push), pm(weight));
-    const top = K.top - e.radius;
+    // one of a rush still behind the top edge is not pushed forward onto it
+    const top = Math.min(e.y, K.top - e.radius);
     if (d <= 0) return;
     e.pushTime = ticks(W.pushTime);
     this.events.push({ type: 'push', x: e.x / FP, y: e.y / FP, id: e.id });
@@ -1056,7 +1068,7 @@ export class Battle {
       }
       this.events.push({ type: 'hit', kind: 'fire', x: target.x / FP, y: target.y / FP, radius: S.burstBoltRadius });
     }
-    if (this.mods.splitBolts && !p.split && target.hp <= 0) {
+    if (this.mods.splitBolts && !p.split && target.hp <= 0 && this.proc('split', target)) {
       // the bolt that killed splits towards the nearest enemies left
       const skip = new Set([target.id]);
       for (let i = 0; i < S.splitBolts; i++) {
@@ -1226,19 +1238,32 @@ export class Battle {
     all.length = n;
     for (const e of dead) {
       const def = B.enemies[e.kind];
-      const gold = Math.round(((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold) / 1000);
+      const pay = (def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold;
+      let gold = Math.round(pay / 1000);
+      if (e.heft < 1000) {
+        // one of the horde pays its share exactly, carried over to the next, so fifty-odd small
+        // ones do not round up to more than the wave was worth
+        this.goldOwed += Math.round(pay);
+        gold = Math.trunc(this.goldOwed / 1000);
+        this.goldOwed %= 1000;
+      }
       this.gold += gold;
       this.kills++;
-      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : 1));
+      if (isBoss(e.kind)) this.charge = Math.min(C.charge, this.charge + C.bossCharge);
+      else {
+        this.chargeOwed += e.heft < 1000 ? Math.round(e.heft * BALANCE.waves.horde.charge) : 1000;
+        this.charge = Math.min(C.charge, this.charge + Math.trunc(this.chargeOwed / 1000));
+        this.chargeOwed %= 1000;
+      }
       this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
-      if (this.mods.fireChain && e.scorchTime > 0) {
+      if (this.mods.fireChain && e.scorchTime > 0 && this.proc('fireChain', e)) {
         // burnt to death: it bursts once more (the blast itself does not count as fire, so it
         // cannot set off an endless chain)
         const radius = times(this.fixed.fireRadius, pm(B.skills.fireChainRadius));
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.harm(o, times(times(e.scorch, pm(B.skills.fireChain)), this.splash(o)), e.scorchBy);
         this.events.push({ type: 'hit', kind: 'fire', x: e.x / FP, y: e.y / FP, radius: radius / FP });
       }
-      if (this.mods.melt && e.rust > 0) {
+      if (this.mods.melt && e.rust > 0 && this.proc('melt', e)) {
         // died rusted: it falls apart and its rust eats into what stands around it
         const radius = toFp(B.skills.meltRadius);
         for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.corrode(o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);
@@ -1256,6 +1281,18 @@ export class Battle {
       }
     }
     dead.length = 0;
+  }
+
+  /** Whether the on-kill burst `skill` goes off for `e`'s death: always for a whole enemy; one of
+   *  the horde adds its heft towards the next, so a quarter-weight crowd sets off one burst in
+   *  four deaths, as strong as ever (shatter needs none of this, its shards scale with the maxHp
+   *  of what died). Counted, not rolled, so it takes no dice. */
+  private proc(skill: keyof Battle['owed'], e: Enemy): boolean {
+    if (e.heft >= 1000) return true;
+    this.owed[skill] += e.heft;
+    if (this.owed[skill] < 1000) return false;
+    this.owed[skill] -= 1000;
+    return true;
   }
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */

@@ -7,6 +7,7 @@ export const en = {
   waveEndless: 'Wave {n}',
   endlessChapter: 'Onward to the {name}',
   bossWave: 'BOSS WAVE!',
+  hordeWave: 'THE HORDE IS COMING!',
   bossNew: 'New boss',
   bossWeak: 'Weak to {weak}',
   newEnemy: 'New enemy: {name}\nWeak to {weak}',

@@ -16,15 +16,17 @@ function runs(stage: number, seeds: number, heroLevel = 1, workshop = 0) {
 const winRate = (bs: ReturnType<typeof runs>) => bs.filter((b) => b.result === 'won').length / bs.length;
 
 describe('balance targets', () => {
-  const fresh1 = runs(1, 20);
+  // sixty seeds, not twenty: the horde's rushes turn over the enemy rolls of every seed, and on
+  // twenty a stage-3 win rate swings by a fifth from one reshuffle to the next
+  const fresh1 = runs(1, 60);
 
   it('lets a fresh save win stage 1 most of the time', () => {
     expect(winRate(fresh1)).toBeGreaterThanOrEqual(0.7);
   });
 
   it('makes stage 3 clearly harder than stage 1 on a fresh save', () => {
-    // the epsilon: 0.85 - 0.2 is 0.6499... in floating point, and 13 / 20 has to pass
-    expect(winRate(runs(3, 20))).toBeLessThanOrEqual(winRate(fresh1) - 0.2 + 1e-9);
+    // the epsilon: 0.85 - 0.2 is 0.6499... in floating point, and 39 / 60 has to pass
+    expect(winRate(runs(3, 60))).toBeLessThanOrEqual(winRate(fresh1) - 0.2 + 1e-9);
   });
 
   it('lets a late save beat stage 1 every time', () => {

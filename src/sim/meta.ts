@@ -226,10 +226,12 @@ export function buyWorkshop(m: MetaSave, id: WorkshopId): boolean {
  *  two summons are a fire pair side by side on the wall (cells 18 and 19, just right of the
  *  middle), so the tutorial's merge is one short drag on the first potions the art shows off; the
  *  third is a lightning one in the middle cell, so there is one pair to point at; wave 1 comes
- *  down both halves of the field evenly (12 / 13 of 25); and the bot wins with the wall untouched
- *  whether it acts every tick or only every 0.5, 1 or 2 s. Summons roll on their own stream, so
- *  this opening holds however long the player waits between taps. A change to what the battle
- *  rolls its dice for, or in what order, changes what this seed plays: run the script again
+ *  down both halves of the field evenly (12 / 13 of 25; as the horde, 27 / 29 of 56, rescored
+ *  and kept, as none of the seeds that split it 28 / 28 lays out the potions this way); and the
+ *  bot wins with the wall untouched whether it acts every tick or only every 0.5, 1 or 2 s.
+ *  Summons roll on their own stream, so this opening holds however long the player waits between
+ *  taps. A change to what the battle rolls its dice for, or in what order, changes what this
+ *  seed plays: run the script again
  *  (SEEDS=2000 npx vitest run --config scripts/vitest.seed.config.js) and repick. */
 export const FIRST_SEED = 609;
 

@@ -9,6 +9,7 @@ export const de: Table = {
   waveEndless: 'Welle {n}',
   endlessChapter: 'Weiter geht’s: {name}',
   bossWave: 'BOSSWELLE!',
+  hordeWave: 'DIE HORDE KOMMT!',
   bossNew: 'Neuer Boss',
   bossWeak: 'Schwach gegen {weak}',
   newEnemy: 'Neuer Feind: {name}\nSchwach gegen {weak}',

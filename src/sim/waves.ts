@@ -14,6 +14,14 @@ export interface Spawn {
   gold?: number;
   /** The gold-trimmed variant of an elite stage: tougher, bigger and worth more. */
   elite?: boolean;
+  /** Permille of a usual enemy's wall bite, commander charge and on-kill bursts: one of the
+   *  opening horde counts for a share of one (see `horde`). */
+  heft?: number;
+  /** Permille of its kind's radius, for its body on the field and in the hits (the horde's 0.8). */
+  size?: number;
+  /** Where it walks in, in world units: its x somewhere from x0 to x1, and `back` behind the top
+   *  edge, so one of a rush comes down in rank and file instead of on its own at a random x. */
+  lane?: { x0: number; x1: number; back: number };
 }
 
 /** What a stage (its chapter's theme and twists) or the daily challenge changes in the wave
@@ -174,6 +182,41 @@ function withTheme(mods: WaveMods, wave: number): WaveMods {
   return out;
 }
 
+/** Whether `wave` opens with the horde: the first wave of every stage (and of an endless run). */
+export function isHordeWave(wave: number): boolean {
+  return wave === 1;
+}
+
+/** Lays the crowd of the horde wave out as `horde.rushes`: the n-th spawn joins rush
+ *  floor(n * rushes / count), all of a rush come in on the same tick, in rows of up to
+ *  `horde.cols` across the field's width, each row `horde.rowGap` further behind the top edge
+ *  than the one before and every other one shifted by a quarter of a lane, so a rush marches in
+ *  as a block. Only the times and lanes change: the kinds are rolled as before, and each spawn
+ *  still draws its x (within its lane now) and its speed, so the horde takes no extra dice. */
+function rankAndFile(spawns: Spawn[]): void {
+  const H = BALANCE.waves.horde;
+  const F = BALANCE.field;
+  const width = F.right - F.left;
+  const rushes = H.rushes.length;
+  const count = spawns.length;
+  for (let r = 0; r < rushes; r++) {
+    const from = Math.ceil((count * r) / rushes);
+    const to = Math.ceil((count * (r + 1)) / rushes);
+    const n = to - from;
+    const rows = Math.ceil(n / H.cols);
+    for (let j = 0; j < n; j++) {
+      const row = Math.floor(j / H.cols);
+      const across = row < rows - 1 ? H.cols : n - H.cols * (rows - 1);
+      const lane = width / across;
+      const shift = across === H.cols ? (row % 2 === 0 ? -lane / 4 : lane / 4) : 0;
+      const x0 = F.left + lane * (j % H.cols) + shift;
+      const spawn = spawns[from + j];
+      spawn.at = ticks(H.rushes[r]);
+      spawn.lane = { x0: Math.round(x0), x1: Math.round(x0 + lane), back: row * H.rowGap };
+    }
+  }
+}
+
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top.
@@ -181,7 +224,8 @@ function withTheme(mods: WaveMods, wave: number): WaveMods {
  *  `endless`: past the stage's last wave the waves keep coming, `endless.hpGrowth` tougher each,
  *  the crowd capped at `endless.maxCount` (what it would have had over the cap goes into hit
  *  points), more brutes, flyers and winders in the mix, and a boss every `endless.bossEvery`; every
- *  `endless.chapterEvery` waves the mix takes the next chapter's theme (`endlessTheme`). */
+ *  `endless.chapterEvery` waves the mix takes the next chapter's theme (`endlessTheme`).
+ *  The first wave is the horde (`isHordeWave`): its bigger crowd comes in rushes (`rankAndFile`). */
 export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}, endless = false): Spawn[] {
   if (endless) mods = withTheme(mods, wave);
   const w = BALANCE.waves;
@@ -194,6 +238,15 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
   // but more of them on the road (permille)
   const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  // the first wave is the horde: some fifty of them in three rushes, smaller, and each a share
+  // of one at the wall, for the commander and for the on-kill skills as it is in gold, so the
+  // wave weighs what a plain one of `baseCount` would. Its hit points are `horde.hp` of that:
+  // fifty-odd bodies coming in twelve seconds want a shot each, and at full weight the potions
+  // of a weak save need two for each by stage 4, fall behind and lose by wave 3
+  const horde = isHordeWave(wave);
+  const heft = Math.round(1_000_000 / crowd);
+  const size = Math.round(w.horde.size * 1000);
+  const hordeHp = Math.round(w.horde.hp * 1000);
   // and on the first chapter's stages (up to `earlyHpTo`) tougher in all than the growth alone
   // would make them, so three potions left alone fall behind before the first boss; `earlyHpGold`
   // of the extra comes back as kill gold, so a player who keeps up is not set back. Later stages
@@ -224,7 +277,12 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
     const spawn: Spawn = { at: Math.trunc((span * i) / count), kind, hp: hpOf(kind) };
     if (crowd !== 1000) {
       spawn.hp = Math.round((spawn.hp * 1000) / crowd);
-      spawn.gold = Math.round(1_000_000 / crowd);
+      spawn.gold = heft;
+    }
+    if (horde) {
+      spawn.hp = Math.round((spawn.hp * hordeHp) / 1000);
+      spawn.heft = heft;
+      spawn.size = size;
     }
     if (tough !== 1000) {
       spawn.hp = Math.round((spawn.hp * tough) / 1000);
@@ -238,6 +296,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
     }
     spawns.push(spawn);
   }
+  if (horde) rankAndFile(spawns);
   if (boss) {
     const kind = endless ? endlessBoss(wave) : bossForStage(stage);
     spawns.unshift({ at: 0, kind, hp: hpOf(kind) });

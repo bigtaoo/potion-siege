@@ -9,6 +9,7 @@ export const ko: Table = {
   waveEndless: '웨이브 {n}',
   endlessChapter: '다음 전장: {name}',
   bossWave: '보스 웨이브!',
+  hordeWave: '대군 습격!',
   bossNew: '새 보스 등장',
   bossWeak: '약점: {weak}',
   newEnemy: '새로운 적: {name}\n약점: {weak}',

@@ -5,7 +5,7 @@ import { Container, Graphics, Rectangle, Sprite, type FederatedPointerEvent, typ
 import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { stageField } from '../sim/chapters';
-import { endlessChapter } from '../sim/waves';
+import { endlessChapter, isHordeWave } from '../sim/waves';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE, ticks, toFp } from '../sim/math/fixed';
 import { BRAD_FULL } from '../sim/math/trig';
@@ -157,6 +157,8 @@ export class BattleView extends Container {
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
   private shake = 0;
+  /** Rushes of the horde (the first wave) met so far with a cloud of dust at the top edge. */
+  private rushes = 0;
   /** The field art under the battle, when there is art. */
   private field: Sprite | null = null;
   /** The field the battle is on now, and the next one fading in over it (endless mode moves on a
@@ -217,6 +219,7 @@ export class BattleView extends Container {
     for (const ev of events) {
       switch (ev.type) {
         case 'wave':
+          this.rushes = 0;
           if (this.battle?.setup.endless) {
             if (fieldOf(this.battle, ev.wave) !== this.fieldKey) this.showField(fieldOf(this.battle, ev.wave), true);
             // the next band's field, so it is in by the time the battle gets there
@@ -252,7 +255,7 @@ export class BattleView extends Container {
         }
         case 'kill':
           this.effect(ev.boss ? 0.9 : 0.6, (g, life) => gearBurst(g, ev.x, ev.y, ev.boss, 1 - life));
-          this.floater(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
+          if (ev.gold > 0) this.floater(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
           if (ev.boss) this.shake = 0.5;
           break;
         case 'summon': {
@@ -365,6 +368,14 @@ export class BattleView extends Container {
   update(dt: number, alpha = 1): void {
     const b = this.battle;
     if (!b) return;
+    if (isHordeWave(b.wave)) {
+      const rushes = BALANCE.waves.horde.rushes;
+      while (this.rushes < rushes.length && b.waveTime >= ticks(rushes[this.rushes])) {
+        // only a rush that just came in (not one long past when the view caught up)
+        if (b.waveTime - ticks(rushes[this.rushes]) < TICK_RATE) this.hordeDust();
+        this.rushes++;
+      }
+    }
     this.shake = Math.max(0, this.shake - dt);
     this.position.set((Math.random() - 0.5) * this.shake * 40, (Math.random() - 0.5) * this.shake * 40);
 
@@ -396,13 +407,19 @@ export class BattleView extends Container {
     }
     depth.sort(byDepth);
     for (const e of depth) {
+      // the ranks of a rush behind the top edge come out of the haze over the HUD's band, one
+      // rank deep, and get their shadow and bar once they are on the field
+      const fade = Math.min(1, 1 - (BALANCE.field.top - e.radius - e.y) / BALANCE.waves.horde.rowGap);
+      if (fade <= 0) continue;
       const tex = enemyTexture(e.kind, e);
       if (!tex) {
         drawEnemy(w, e);
         continue;
       }
-      drawEnemy(u, e, 'under');
-      drawEnemy(w, e, 'over');
+      if (fade >= 1) {
+        drawEnemy(u, e, 'under');
+        drawEnemy(w, e, 'over');
+      }
       // waddle: hop and sway, out of step with each other, faster walkers taking quicker steps
       const step = t * 9 * Math.sqrt(BALANCE.enemies[e.kind].speed / BALANCE.enemies.grunt.speed) + e.id * 1.7;
       const feet = e.y + e.radius * ENEMY_ART.feet;
@@ -445,6 +462,7 @@ export class BattleView extends Container {
         s.scale.y *= tracks ? 1 : 0.96 + hop * 0.06;
       }
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
+      s.alpha = fade;
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }
     depth.length = 0;
@@ -952,6 +970,20 @@ export class BattleView extends Container {
 
   private effect(ttl: number, draw: Effect['draw'], ground = false): void {
     this.fxList.push({ ttl, max: ttl, draw, ground });
+  }
+
+  /** A rush of the horde comes over the top edge: dust kicked up all along it, the board trembling. */
+  private hordeDust(): void {
+    const { top, left, right } = BALANCE.field;
+    this.shake = Math.max(this.shake, 0.15);
+    this.effect(1.1, (g, life) => {
+      const k = 1 - life;
+      for (let i = 0; i < 9; i++) {
+        const x = left + ((right - left) * (i + 0.5)) / 9 + Math.sin(i * 2.3) * 30;
+        const r = (46 + (i % 3) * 14) * (0.6 + k * 0.8);
+        g.circle(x, top - 10 - k * 30 - (i % 2) * 12, r).fill({ color: 0xb59a76, alpha: life * 0.4 });
+      }
+    }, true);
   }
 
   private burst(x: number, y: number, r: number, color: number, ttl: number): void {
