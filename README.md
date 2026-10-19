@@ -68,7 +68,8 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
 | `npm run dev:crazygames` | Same game with the CrazyGames SDK, port 5181 (local test ads) |
 | `npm test` | Unit tests (sim, meta, audio, viewport, analytics) |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run check` | Typecheck, tests, the quick half of the balance guard and the CrazyGames and iOS builds |
+| `npm run check` | Typecheck, the file length check, tests, the quick half of the balance guard and the CrazyGames and iOS builds |
+| `npm run check:filelength` | Fails on any file under `src/`, `scripts/` or `server/` over 500 lines, tests included (`scripts/checkFileLength.mjs`) |
 | `npm run check:balance` | The balance guard (`scripts/guard/`): the main curves of the balance tools below on fewer seeds, each pinned to a band; about 30 s. `:quick` (idle wall, endless; in `check`) and `:slow` (early, chapter and boss curves; a CI step of its own) run its halves |
 | `npm run build` | Typecheck, then the web build in `dist/` |
 | `npm run build:crazygames` | Typecheck, then the CrazyGames build in `dist-crazygames/` (relative paths) |
@@ -132,16 +133,18 @@ In dev, `window.__game` exposes the running game.
 
 ## Layout
 
-- `src/sim/`: the pure, seeded simulation: `Battle`, skills, waves, enemies, the bot, the tutorial, chapters (`chapters.ts`), endless mode (`endless.ts`), and `meta.ts` (save, crystals, levels, stages, shop), plus the daily challenge and daily tasks. All the numbers live in `balance.json`.
+- `src/sim/`: the pure, seeded simulation: `Battle` (`battle.ts`, with its waves, spawning, enemy ticks, bosses, shots, hits, damage, kills, the commander and targeting in their own modules), skills, the opening horde (`horde.ts`), the bot, the tutorial, chapters (`chapters.ts`), endless mode (`endless.ts`), and `meta.ts` (save, crystals, levels, stages, shop), plus the daily challenge and daily tasks. All the numbers live in `balance.json`.
 - `src/view/`: the Pixi drawing.
-  - `BattleView`: the field, the wall cells, drag and merge
+  - `BattleView`: drag and merge; its layers (field, wall, enemies, shots, effects, figures, the commander) are in `battleView/`, the horde's banner and dust in `hordeFx.ts`
   - `Hud`
-  - `Overlay`: skill cards and the result screen
-  - `Home`
-  - `Codex`
+  - `Overlay`: skill cards and the result screen, with their parts in `overlay/`
+  - `Home`: the five tabs, with each tab, panel, the top bar and the nav in `home/`
+  - `codex/`: the potions, enemies and achievements pages
+  - `kit/`: the palette, text fitting, panels, buttons and icons every screen uses
   - `SideInfo`: the side boards
   - `Tutorial`
   - `viewport.ts`: fitting the board and the menus to the screen
+- `src/game/`: what `app.ts` drives: boot, the tutorial flow, a battle's end, the result and home screens and their taps, the modes.
 - `src/audio/`: the synthesized sound effects and music.
 - `src/analytics/`: the events, the run tracker, and the perf meter.
 - `src/platform/`: `WebPlatform` and `CrazyGamesPlatform`, which uses SDK v3 for:
