@@ -42,6 +42,10 @@ export interface PotionPose {
   pop: number;
   /** Fixed tilt in radians instead of the idle sway (pouring into another potion). */
   tilt?: number;
+  /** Squash and stretch on top of the breathing: above 0 flattens it, below 0 stretches it up. */
+  squash?: number;
+  /** Extra turn in radians on top of the sway (wobbling as a merge lands in it). */
+  spin?: number;
 }
 
 /** Scale of something appearing `pop` seconds ago: grows from nothing, overshoots, settles. */
@@ -104,8 +108,9 @@ class PotionFigure extends Container {
     const jiggle = pose.pop < 0.4 ? 1 + 0.1 * (1 - pose.pop / 0.4) * Math.sin(pose.pop * 40) : 1;
     // a little hop as it throws
     this.position.set(pose.x, pose.feet - r * bh * 0.14);
-    this.scale.set(grow * jiggle * (1 - breath * 0.025 + w * 0.16 - r * 0.08), (grow / jiggle) * (1 + breath * 0.03 - w * 0.2 + r * 0.16));
-    this.rotation = pose.tilt ?? Math.sin(t * 1.7) * 0.04 - w * 0.22 + r * 0.1;
+    const sq = pose.squash ?? 0;
+    this.scale.set(grow * jiggle * (1 + sq) * (1 - breath * 0.025 + w * 0.16 - r * 0.08), (grow / jiggle) * (1 - sq) * (1 + breath * 0.03 - w * 0.2 + r * 0.16));
+    this.rotation = (pose.tilt ?? Math.sin(t * 1.7) * 0.04 - w * 0.22 + r * 0.1) + (pose.spin ?? 0);
     this.alpha = pose.alpha;
     this.tint = pose.dim ? 0x5a5a5a : 0xffffff;
 

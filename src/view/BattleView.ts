@@ -68,8 +68,10 @@ const ULTIMATE_HEIGHT = 150;
 const ULTIMATE_WIDTH = 155;
 /** Seconds without touching the grid before a mergeable pair starts hopping. */
 const HINT_AFTER = 5;
-/** Seconds a merge spends pouring one potion into the other before the result pops out. */
-const POUR = 0.35;
+/** Seconds a dropped potion takes to leap from the finger and dive head first into the other. */
+const FLY = 0.15;
+/** Seconds from the drop until the result pops out: after the dive the two swirl together. */
+const FUSE = 0.3;
 /** Seconds before a throw that the arm starts drawing back. */
 const WIND_UP = 0.25;
 /** Seconds a thrown vial takes to drift from the hand onto its true path. */
@@ -83,6 +85,11 @@ interface FigureAnim {
   wind: number;
   since: number;
   pop: number;
+  /** Diving into another potion: a fixed tilt, mark out. */
+  tilt?: number;
+  /** Squash (above 0) or stretch (below 0), and an extra turn, as a merge lands in it. */
+  squash?: number;
+  spin?: number;
 }
 const STILL: FigureAnim = { wind: 0, since: Infinity, pop: Infinity };
 
@@ -125,8 +132,9 @@ export class BattleView extends Container {
   private cellAnims: (CellAnim | null)[] = [];
   /** Thrown vials still leaving the hand: how far the hand was from where the sim spawned them. */
   private launches = new Map<number, { dx: number; dy: number; at: number }>();
-  /** Merges still pouring: the potion poured, into which slot, when it started. */
-  private pours: { slot: number; kind: HeroKind; star: number; start: number }[] = [];
+  /** Merges the player dropped, still fusing: the potion dropped (the one it lands on is the
+   *  same), into which slot, where the finger let go, when, and whether it has landed yet. */
+  private merges: { slot: number; kind: HeroKind; star: number; from: { x: number; y: number }; start: number; landed: boolean }[] = [];
   private readonly drag = new Graphics();
   private readonly wallText: Text;
   private readonly cmdNext = label('', 34, { stroke: { color: 0x3e3128, width: 5 } });
@@ -192,7 +200,7 @@ export class BattleView extends Container {
     this.thrown = [];
     this.cellAnims = [];
     this.launches.clear();
-    this.pours = [];
+    this.merges = [];
     for (const f of this.floaters.children) f.visible = false;
   }
 
@@ -247,15 +255,18 @@ export class BattleView extends Container {
           this.floater(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
           if (ev.boss) this.shake = 0.5;
           break;
-        case 'summon':
-        case 'merge': {
+        case 'summon': {
           const c = slotCenter(ev.slot);
           // the commander nods its flask at each summon
-          if (ev.type === 'summon') this.cmdNod = this.time;
-          // a poured merge bursts when the pour ends, see drawPours()
-          if (!this.pours.some((p) => p.slot === ev.slot)) this.burst(c.x, c.y, ev.type === 'merge' ? 110 : 80, COLORS.gold, 0.35);
+          this.cmdNod = this.time;
+          this.burst(c.x, c.y, 80, COLORS.gold, 0.35);
           break;
         }
+        case 'merge':
+          // a dropped merge flashes once its potions have swirled together, see drawMerges();
+          // one the player did not drop (the bot's) flashes at once
+          if (!this.merges.some((m) => m.slot === ev.slot)) this.fused(ev.slot);
+          break;
         case 'cast': {
           // the commander draws back and flings a flask, or raises the brew over the wall
           const bomb = ev.skill === 'bomb';
@@ -531,8 +542,8 @@ export class BattleView extends Container {
       }
       let a = this.cellAnims[s];
       if (!a || a.id !== h.id) {
-        const pour = this.pours.find((p) => p.slot === s);
-        a = this.cellAnims[s] = { id: h.id, shots: 0, lastShot: -99, born: pour ? pour.start + POUR : t };
+        const merge = this.merges.find((m) => m.slot === s);
+        a = this.cellAnims[s] = { id: h.id, shots: 0, lastShot: -99, born: merge ? merge.start + FUSE : t };
       }
       // the figures of a cell take turns to throw; the next one draws back just before
       const cell = a;
@@ -550,7 +561,7 @@ export class BattleView extends Container {
       this.hero(g, ho, this.heroArt, this.potions, h.kind, h.star, c.x, c.y - 10 - hop, 1, s === from ? 0.35 : 1, s, dim, anim);
       if (h.stunTime) stunStars(ho, c.x, c.y - G.cellH / 2 - 6, t);
     }
-    this.drawPours(ho);
+    this.drawMerges(g, ho);
     this.drawCommander(g, ho, b, dt);
     this.heroArt.end();
     this.potions.end();
@@ -560,6 +571,7 @@ export class BattleView extends Container {
     this.dragPotions.begin();
     const held = from !== null ? b.slots[from] : null;
     if (held) this.hero(d, d, this.dragArt, this.dragPotions, held.kind, held.star, this.dragPos.x, this.dragPos.y, 1.15, 1, 0);
+    this.drawDives(d);
     this.dragArt.end();
     this.dragPotions.end();
   }
@@ -584,7 +596,7 @@ export class BattleView extends Container {
     const look = potionLook(kind);
     spots.forEach(([dx, dy], i) => {
       const a = anim(i);
-      // still being poured in
+      // still fusing
       if (a.pop < 0) return;
       const fx = x + dx * size;
       const ff = feet + dy * size;
@@ -597,39 +609,124 @@ export class BattleView extends Container {
     });
   }
 
-  /** A merge pours the dragged potion into the target, then the result pops out with a splash. */
-  private drawPours(over: Graphics): void {
-    const t = this.time;
-    for (const p of this.pours) {
-      const look = potionLook(p.kind);
-      const k = (t - p.start) / POUR;
-      if (!look || k >= 1) continue;
-      const c = slotCenter(p.slot);
-      // the potion it lands on waits underneath until the pour is done
-      this.hero(this.grid, over, this.heroArt, this.potions, p.kind, p.star, c.x, c.y - 10, 1, 1, p.slot);
-      // the poured one swoops in above the cell and tips over, its neck pointing down into it
-      const h = FIGURES[0].height;
-      const tip = Math.min(1, k * 3.5);
-      const tilt = tip * 2.0;
-      const reach = h * 1.05;
-      const mouthX = c.x - 6;
-      const mouthY = c.y - 100 - (1 - tip) * 40;
-      const px = mouthX - Math.sin(tilt) * reach;
-      const py = mouthY + Math.cos(tilt) * reach;
-      this.potions.put(look, { x: px, feet: py, height: h, alpha: 1, dim: false, phase: 0, time: t, wind: 0, since: Infinity, pop: Infinity, tilt });
-      if (tip >= 1) {
-        const wob = Math.sin(t * 40) * 3;
-        for (const [width, color] of [[16, 0x0e0c12], [9, look.lid]]) {
-          over.moveTo(mouthX, mouthY).quadraticCurveTo(mouthX + wob, mouthY + 30, c.x + wob, c.y - 62).stroke({ width, color, cap: 'round' });
-        }
+  /** A dropped potion leaps up from the finger, tips over and dives head first into the one it
+   *  merges with, shrinking into its neck, with drops trailing behind; drawn over the grid. */
+  private drawDives(over: Graphics): void {
+    for (const m of this.merges) {
+      const f = (this.time - m.start) / FLY;
+      if (f >= 1) continue;
+      const c = slotCenter(m.slot);
+      // it speeds up as it dives, on an arc rising above both ends, and ends with its necks over
+      // the mouths of the ones below
+      const side = m.from.x <= c.x ? 1 : -1;
+      const x2 = c.x - side * 34;
+      const y2 = c.y - 118;
+      const x1 = (m.from.x + x2) / 2;
+      const y1 = Math.min(m.from.y, y2) - 170;
+      const at = (k: number): [number, number] => {
+        const e = k * k;
+        return [(1 - e) ** 2 * m.from.x + 2 * (1 - e) * e * x1 + e * e * x2, (1 - e) ** 2 * m.from.y + 2 * (1 - e) * e * y1 + e * e * y2];
+      };
+      const color = potionLook(m.kind)?.lid ?? COLORS.gold;
+      for (let j = 1; j <= 3; j++) {
+        const [dx, dy] = at(Math.max(0, f - j * 0.12));
+        over.circle(dx, dy + 30, 10 - j * 2).fill(color).stroke({ width: 3, color: INK });
       }
+      // head over heels, stretched by the speed, gone as it goes in
+      const [x, y] = at(f);
+      const tilt = side * 2.3 * Math.min(1, f * 1.5);
+      const anim = (): FigureAnim => ({ ...STILL, tilt, squash: -0.18 * Math.sin(f * Math.PI) });
+      this.hero(over, over, this.dragArt, this.dragPotions, m.kind, m.star, x, y, 1.15 - 0.6 * f * f, Math.min(1, (1 - f) * 4), 0, false, anim);
     }
-    for (const p of this.pours.filter((q) => t - q.start >= POUR)) {
-      const c = slotCenter(p.slot);
-      this.burst(c.x, c.y, 110, COLORS.gold, 0.35);
-      this.splash(c.x, c.y + 10, potionLook(p.kind)?.lid ?? COLORS.gold);
+  }
+
+  /** Under the dive, the potion it lands on stretches up to meet it, flattens as it lands, then
+   *  wobbles and shrinks as the two liquids swirl round it and it glows white; then the flash, and
+   *  the result pops out (its pop is held back until FUSE). */
+  private drawMerges(under: Graphics, over: Graphics): void {
+    const t = this.time;
+    for (const m of this.merges) {
+      const k = t - m.start;
+      if (k >= FUSE) continue;
+      const c = slotCenter(m.slot);
+      const look = potionLook(m.kind);
+      const color = look?.lid ?? COLORS.gold;
+      if (!m.landed && k >= FLY) {
+        m.landed = true;
+        this.ripple(c.x, c.y - 62, color);
+      }
+      // 0 until the dive lands, then 0-1 through the swirl
+      const e = Math.max(0, (k - FLY) / (FUSE - FLY));
+      const squash = k < FLY ? -0.1 * (k / FLY) : 0.32 * Math.cos(e * Math.PI * 3) * (1 - e);
+      const spin = 0.2 * Math.sin(e * Math.PI * 4) * (1 - e);
+      const anim = (i: number): FigureAnim => ({ ...STILL, squash, spin: i % 2 ? -spin : spin });
+      this.hero(under, over, this.heroArt, this.potions, m.kind, m.star, c.x, c.y - 10, 1 - 0.4 * e * e, 1, m.slot, false, anim);
+      if (e <= 0) continue;
+      // three ribbons of liquid spiralling in round it, and a white glow swelling over it
+      const cy = c.y - 20;
+      const r = 96 * (1 - 0.5 * e);
+      const ribbons = [color, look?.glow[1] ?? COLORS.gold, 0xfff3c0];
+      ribbons.forEach((rc, i) => {
+        const a0 = e * Math.PI * 3.4 + (i * Math.PI * 2) / 3;
+        const pts: number[] = [];
+        for (let j = 0; j <= 8; j++) {
+          const a = a0 + (j / 8) * 1.5;
+          const rr = r * (1 - 0.25 * (j / 8));
+          pts.push(c.x + Math.cos(a) * rr, cy + Math.sin(a) * rr * 0.7);
+        }
+        over.poly(pts, false).stroke({ width: 15, color: INK, cap: 'round', join: 'round' });
+        over.poly(pts, false).stroke({ width: 8, color: rc, cap: 'round', join: 'round' });
+      });
+      over.circle(c.x, cy - 10, 40 + 50 * e).fill({ color: 0xffffff, alpha: 0.5 * e * e });
     }
-    this.pours = this.pours.filter((q) => t - q.start < POUR);
+    for (const m of this.merges) if (t - m.start >= FUSE) this.fused(m.slot);
+    this.merges = this.merges.filter((m) => t - m.start < FUSE);
+  }
+
+  /** A merge is done: a white flash with golden rays, and a splash in the new potion's colour. */
+  private fused(slot: number): void {
+    const c = slotCenter(slot);
+    const h = this.battle?.slots[slot];
+    const color = (h && potionLook(h.kind)?.lid) ?? COLORS.gold;
+    const x = c.x;
+    const y = c.y - 20;
+    const ttl = 0.25;
+    this.fxList.push({
+      ttl,
+      max: ttl,
+      top: true,
+      draw: (g, life) => {
+        const s = 1 - life;
+        // the disc is gone in a few frames so the new potion is seen popping out; the ring runs on
+        g.circle(x, y, 50 + 90 * s).fill({ color: 0xffffff, alpha: 0.9 * life ** 4 });
+        g.circle(x, y, 60 + 130 * s).stroke({ width: 14 * life, color: 0xffffff, alpha: life });
+        for (let i = 0; i < 8; i++) {
+          const a = (i * Math.PI) / 4 + 0.2;
+          const r0 = 70 + 90 * s;
+          const r1 = r0 + 40 * life;
+          g.moveTo(x + Math.cos(a) * r0, y + Math.sin(a) * r0).lineTo(x + Math.cos(a) * r1, y + Math.sin(a) * r1).stroke({ width: 10 * life + 2, color: COLORS.gold, cap: 'round' });
+        }
+      },
+    });
+    this.burst(c.x, c.y, 110, COLORS.gold, 0.35);
+    this.splash(c.x, c.y + 10, color);
+  }
+
+  /** A ring of liquid spreading where a dive lands, with a few drops kicked up. */
+  private ripple(x: number, y: number, color: number): void {
+    const ttl = 0.22;
+    this.fxList.push({
+      ttl,
+      max: ttl,
+      top: true,
+      draw: (g, life) => {
+        const s = 1 - life;
+        g.ellipse(x, y, 26 + 80 * s, 10 + 26 * s).stroke({ width: 4 + 8 * life, color, alpha: life });
+        for (let i = 0; i < 4; i++) {
+          g.circle(x + (i - 1.5) * 40 * s, y - 160 * s + 300 * s * s, 7 * life + 2).fill(color).stroke({ width: 2, color: INK });
+        }
+      },
+    });
   }
 
   /** Droplets flying out in arcs and puffs of coloured smoke rising. */
@@ -645,8 +742,9 @@ export class BattleView extends Container {
         const s = (1 - life) * ttl;
         for (const p of puffs) g.circle(x + p.dx, y - 20 - s * 140, p.r * (1 + s * 2)).fill({ color, alpha: life * 0.35 });
         for (const d of drops) {
-          const dx = x + Math.cos(d.a) * d.v * s;
-          const dy = y + Math.sin(d.a) * d.v * s + 900 * s * s;
+          // from a rim round the new potion, so they do not hide its face as it pops out
+          const dx = x + Math.cos(d.a) * (45 + d.v * s);
+          const dy = y + Math.sin(d.a) * (45 + d.v * s) + 900 * s * s;
           g.circle(dx, dy, 6 * life + 2).fill(color).stroke({ width: 2, color: 0x0e0c12 });
         }
       },
@@ -669,8 +767,10 @@ export class BattleView extends Container {
     // breathes; squashes as it draws back, stretches as it throws, pops in when it appears
     const r = recoil(anim.since);
     const grow = popScale(anim.pop);
-    s.scale.x *= grow * (1 + anim.wind * 0.06 - r * 0.06);
-    s.scale.y *= grow * (1 + Math.sin(this.time * 3 + phase) * 0.025 - anim.wind * 0.08 + r * 0.1);
+    const sq = anim.squash ?? 0;
+    s.scale.x *= grow * (1 + sq) * (1 + anim.wind * 0.06 - r * 0.06);
+    s.scale.y *= grow * (1 - sq) * (1 + Math.sin(this.time * 3 + phase) * 0.025 - anim.wind * 0.08 + r * 0.1);
+    s.rotation = (anim.tilt ?? 0) + (anim.spin ?? 0);
   }
 
   /** The commander under the wall: how far it is through the summons that build the next cell,
@@ -912,7 +1012,11 @@ export class BattleView extends Container {
     const b = this.battle;
     if (to !== null && b) {
       const held = b.slots[this.dragFrom];
-      if (held && b.canMerge(this.dragFrom, to) && potionLook(held.kind)) this.pours.push({ slot: to, kind: held.kind, star: held.star, start: this.time });
+      if (held && b.canMerge(this.dragFrom, to)) {
+        const from = this.dragFrom;
+        this.merges = this.merges.filter((m) => m.slot !== to && m.slot !== from);
+        this.merges.push({ slot: to, kind: held.kind, star: held.star, from: { ...this.dragPos }, start: this.time, landed: false });
+      }
       b.move(this.dragFrom, to);
     }
     this.dragFrom = null;
