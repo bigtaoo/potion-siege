@@ -19,7 +19,6 @@ const BASELINE = {
   'src/sim/battle.ts': 1229,
   'src/app.ts': 1143,
   'src/view/BattleView.ts': 996,
-  'src/view/kit.ts': 778,
   'src/sim/skills.test.ts': 777,
   'src/view/Overlay.ts': 693,
   'src/app.test.ts': 511,
