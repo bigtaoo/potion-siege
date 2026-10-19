@@ -6,7 +6,7 @@ import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../../i18n';
 import { AD_CRYSTALS, adsLeft, ADS_PER_DAY, CHEST_CRYSTALS, chestReady, heroUnlocked, unlockPrice, unlockStage, type MetaSave } from '../../sim/meta';
 import { HERO_KINDS, type HeroKind } from '../../sim/types';
-import type { HomeActions, HomeExtras } from '../Home';
+import type { HomeActions, HomeExtras } from './types';
 import { bottle, chestIcon, fit as fitText, ink, inkWrapped, LIGHT, lightPanel, lightTile, lock, P, PillButton, plate, tappable } from '../kit';
 import { gem, HERO_COLORS } from '../ui';
 import { adIcon, priced, tick, type Area } from './shared';

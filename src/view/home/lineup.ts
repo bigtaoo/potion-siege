@@ -5,7 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { benched, heroUnlocked, swapLineup, type MetaSave } from '../../sim/meta';
 import { HERO_KINDS, type HeroKind } from '../../sim/types';
-import type { HomeActions } from '../Home';
+import type { HomeActions } from './types';
 import { bottle, fit as fitText, ink, LIGHT, lightPanel, lightTile, P, tappable } from '../kit';
 import { HERO_COLORS } from '../ui';
 import { tick } from './shared';

@@ -15,7 +15,6 @@ const EXTS = ['.ts', '.mts', '.mjs', '.js', '.py', '.sh', '.css', '.html'];
 
 // line counts on 2026-10-19 (782f2fe); only ever lowered, until the refactor empties it
 const BASELINE = {
-  'src/view/Home.ts': 1084,
   'src/sim/battle.ts': 1229,
   'src/app.ts': 1143,
   'src/view/BattleView.ts': 996,
