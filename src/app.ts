@@ -5,6 +5,7 @@
 import { Application, Container, Graphics, Text } from 'pixi.js';
 import { Analytics, type Sink } from './analytics/analytics';
 import { memProbe } from './analytics/memProbe';
+import { CONSENT_AFTER_RUNS, deviceTimeZone, PrivacyChoice, privacyRegion } from './analytics/privacy';
 import { deviceProps, PerfReport } from './analytics/perfReport';
 import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
@@ -78,8 +79,10 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   await loadArt();
   app.canvas.addEventListener('contextmenu', (e) => e.preventDefault());
 
-  const analytics = createAnalytics(platform, params);
-  const game = new Game(app, platform, params, analytics);
+  // players in the EEA, the UK and Switzerland are asked before play statistics go out
+  const privacy = new PrivacyChoice(platform.storage, privacyRegion(platform.country?.() ?? null, deviceTimeZone()));
+  const analytics = createAnalytics(platform, params, privacy);
+  const game = new Game(app, platform, params, analytics, privacy);
   // our own frame loop from here on: a frame rate and resolution the device keeps up with
   const mode = params.get('quality') as QualityMode;
   new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm());
@@ -188,14 +191,14 @@ function safeDevice(app: Application): ReturnType<typeof deviceProps> {
 }
 
 /** Console with `?track`, an in-memory log in dev, and the collector when VITE_ANALYTICS_URL is set. */
-function createAnalytics(platform: Platform, params: URLSearchParams): Analytics {
+function createAnalytics(platform: Platform, params: URLSearchParams, privacy: PrivacyChoice): Analytics {
   const sinks: Sink[] = [];
   if (import.meta.env.DEV) sinks.push(new MemorySink());
   if (params.has('track')) sinks.push(new ConsoleSink());
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (url && !params.has('autoplay')) sinks.push(new BeaconSink(url));
   // a first visit records where the player came from (analytics/source.ts)
-  return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__));
+  return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__), privacy.sharing());
 }
 
 class Game {
@@ -242,6 +245,10 @@ class Game {
   private rewardedSinceEnd = false;
   /** The day the login panel last opened by itself. */
   private loginShown = '';
+  /** The consent panel opened by itself this session (once is enough; the settings have the switch). */
+  private consentShown = false;
+  /** How the last copy of the player ID went, shown on its button until the settings close. */
+  private idNote: 'copied' | 'failed' | null = null;
   /** The tutorial step on screen for `tutorial_step`: when it first showed (battle seconds) and
    *  whether the assist did it. */
   private tutLog: { step: TutorialStep; shownT: number | null; assisted: boolean } | null = null;
@@ -266,6 +273,7 @@ class Game {
     private readonly platform: Platform,
     params: URLSearchParams,
     readonly analytics: Analytics,
+    private readonly privacy: PrivacyChoice,
   ) {
     this.save = parseMeta(platform.storage.getItem(SAVE_KEY));
     this.autoplay = params.has('autoplay');
@@ -696,6 +704,12 @@ class Game {
     const today = dayOf(new Date());
     rollDay(this.save, today);
     const entering = !this.menu.visible;
+    // the play statistics question, from the first home screen on (never in the first battle,
+    // which starts live), ahead of the login reward
+    if (panel === null && this.privacy.asking() && this.save.runs >= CONSENT_AFTER_RUNS && !this.autoplay && !this.consentShown) {
+      panel = 'privacy';
+      this.consentShown = true;
+    }
     // not between the first battles: once a few runs are in, the first time each day
     if (panel === null && loginPops(this.save) && canClaimLogin(this.save, today) && this.loginShown !== today) {
       panel = 'login';
@@ -795,6 +809,22 @@ class Game {
       restoreAdFree: () => void this.restoreAdFree(),
       adPrivacy: () => this.platform.adPrivacy?.open(),
       privacyPolicy: () => this.platform.openUrl?.(t('sound.policyPage')),
+      shareData: (on) => {
+        const asked = panel === 'privacy';
+        this.privacy.set(on);
+        this.analytics.setSharing(this.privacy.sharing());
+        // sent only if they said yes: the answer itself goes nowhere otherwise
+        this.analytics.track('privacy', { on, from: asked ? 'ask' : 'settings', run: this.save.runs });
+        this.home(asked ? null : 'settings');
+      },
+      copyId: () => {
+        const id = this.analytics.playerId;
+        if (!id || !this.platform.copyText) return;
+        void this.platform.copyText(id).then((ok) => {
+          this.idNote = ok ? 'copied' : 'failed';
+          if (this.menu.visible && this.panel === 'settings') this.home('settings');
+        });
+      },
       play: () => {
         if (this.hintOnButton) this.hintDone(false);
         this.analytics.track('battle_start_tap', { stage: this.save.stage, from: 'home', run: this.save.runs + 1 });
@@ -809,14 +839,17 @@ class Game {
     this.hintHand = hint ? this.menu.getChildByLabel('hintHand', true) : null;
   }
 
-  /** The ad-free card and the ad privacy options, where the host has them (iOS), and the link to
-   *  our privacy policy (everywhere but CrazyGames). */
+  /** The ad-free card and the ad privacy options, where the host has them (iOS), the link to
+   *  our privacy policy (everywhere but CrazyGames), and the play statistics switch with the
+   *  player ID. */
   private extras(): HomeExtras {
     const store = this.platform.store;
+    if (this.panel !== 'settings') this.idNote = null;
     return {
       adFree: store ? { price: store.price(), owned: store.owned(), note: this.storeNote } : undefined,
       privacy: this.platform.adPrivacy?.offered() ?? false,
       policy: !!this.platform.openUrl,
+      data: { sending: this.analytics.sending, id: this.analytics.playerId, copy: !!this.platform.copyText, note: this.idNote },
     };
   }
 
@@ -954,7 +987,7 @@ class Game {
       this.resultAt = performance.now();
       this.analytics.track('result_shown', { run: this.save.runs, stage: b.setup.stage, won, next, challenge: !!run });
       // the playtest's question, once, well after the first minute and battles 1-3; the portal has its own ratings
-      if (this.save.runs >= FEEDBACK_RUN && this.platform.name === 'web' && !this.autoplay && this.analytics.first('feedback_shown', { run: this.save.runs })) {
+      if (this.save.runs >= FEEDBACK_RUN && this.platform.name === 'web' && !this.autoplay && this.analytics.sending && this.analytics.first('feedback_shown', { run: this.save.runs })) {
         this.ask = new FeedbackAsk((name, props) => this.analytics.track(name, props), this.save.runs);
       }
     }

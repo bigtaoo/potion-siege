@@ -49,6 +49,11 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     return locale ? [locale] : super.languages();
   }
 
+  /** The portal's country, which decides whether the game asks before sending play statistics. */
+  country(): string | null {
+    return this.sdk.countryCode();
+  }
+
   override loaded(): void {
     if (this.loadingDone) return;
     this.loadingDone = true;

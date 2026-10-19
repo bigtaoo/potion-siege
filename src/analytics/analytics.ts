@@ -1,12 +1,17 @@
 // Gameplay telemetry for tuning retention: who comes back on which day, where first sessions
 // stop, how far runs get. Anonymous: a random player id kept in the game's own storage, no
-// personal data. Events go to pluggable sinks (console in dev, an HTTP collector when set).
+// personal data. Events go to pluggable sinks (console in dev, an HTTP collector when set), once
+// the player's privacy answer lets them (privacy.ts): until then they wait in memory, and no id
+// is stored.
 
 import type { KeyValueStore } from '../platform/types';
+import type { Sharing } from './privacy';
 import { UNKNOWN_SOURCE } from './source';
 
 const PLAYER_KEY = 'mb.player';
 const DAY_MS = 86_400_000;
+/** Events kept in memory while the player has not answered; later ones are dropped. */
+const HOLD_MAX = 1000;
 
 export type Props = Record<string, string | number | boolean | string[] | number[] | null>;
 
@@ -37,6 +42,7 @@ export interface Sink {
 }
 
 interface PlayerRecord {
+  /** '' until the player's events may be sent (privacy.ts): no id is stored before. */
   id: string;
   /** Local calendar day number of the first session. */
   firstDay: number;
@@ -72,6 +78,8 @@ export class Analytics {
   readonly sessionId = randomId();
   private readonly player: PlayerRecord;
   private readonly startedAt: number;
+  /** Events waiting for the player's answer. */
+  private held: TrackedEvent[] = [];
 
   constructor(
     private readonly store: KeyValueStore,
@@ -81,8 +89,10 @@ export class Analytics {
     private readonly clock: Clock = systemClock,
     /** The source to record when this is the player's first visit (source.ts sourceOf). */
     private readonly newSource: () => string = () => 'direct',
+    private sharing: Sharing = 'send',
   ) {
     this.player = this.loadPlayer();
+    if (sharing === 'send' && !this.player.id) this.player.id = randomId();
     this.player.sessions++;
     this.savePlayer();
     this.startedAt = clock.now();
@@ -98,6 +108,35 @@ export class Analytics {
 
   get source(): string {
     return this.player.src;
+  }
+
+  /** The install id a request to see or delete data names; null while none is stored. */
+  get playerId(): string | null {
+    return this.player.id || null;
+  }
+
+  /** Whether events go out now. */
+  get sending(): boolean {
+    return this.sharing === 'send';
+  }
+
+  /**
+   * The player answered (or changed their mind in the settings). `send` stores an id if there is
+   * none yet and sends what waited; `off` drops what waited. An id already stored stays, so the
+   * settings can still show it for a deletion request.
+   */
+  setSharing(sharing: Sharing): void {
+    this.sharing = sharing;
+    if (sharing === 'off') this.held = [];
+    if (sharing !== 'send') return;
+    if (!this.player.id) {
+      this.player.id = randomId();
+      this.savePlayer();
+    }
+    const held = this.held;
+    this.held = [];
+    for (const ev of held) ev.uid ||= this.player.id;
+    if (held.length) this.deliver(held);
   }
 
   /** Seconds since this session started. */
@@ -118,9 +157,14 @@ export class Analytics {
       src: this.player.src,
       props,
     };
+    if (this.sharing === 'send') this.deliver([ev]);
+    else if (this.sharing === 'hold' && this.held.length < HOLD_MAX) this.held.push(ev);
+  }
+
+  private deliver(events: TrackedEvent[]): void {
     for (const s of this.sinks) {
       try {
-        s.send([ev]);
+        s.send(events);
       } catch {
         /* telemetry must never break the game */
       }
@@ -168,7 +212,8 @@ export class Analytics {
     } catch {
       // no location or referrer to read
     }
-    return { id: randomId(), firstDay: localDay(this.clock), sessions: 0, firsts: [], src };
+    // the id comes with the first send (constructor, setSharing)
+    return { id: '', firstDay: localDay(this.clock), sessions: 0, firsts: [], src };
   }
 
   private savePlayer(): void {

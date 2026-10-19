@@ -141,6 +141,20 @@ export const en = {
   /** The language's own name, for the picker. */
   lang: { name: 'English' },
   sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
+  /** The consent panel and the play statistics part of the settings (analytics/privacy.ts). */
+  privacy: {
+    title: 'Play statistics',
+    ask: 'May we count how you play? The game sends anonymous play data (the wave you reach, how long battles last, your merges) with a random player ID, so we can balance it. No name, no ad profile. You can change this in Settings at any time.',
+    allow: 'Allow',
+    decline: 'No thanks',
+    setting: 'Share stats',
+    id: 'Player ID: {id}',
+    noId: 'No player ID: nothing has been sent from this device.',
+    idHelp: 'To see or delete your data, email this ID to support@gamestao.com.',
+    copy: 'Copy',
+    copied: 'Copied',
+    copyFailed: 'Copy failed',
+  },
   task: {
     play: 'Finish {n} battles',
     win: 'Win {n} battle',

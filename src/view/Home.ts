@@ -65,7 +65,7 @@ import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | HeroKind | null;
+export type HomePanel = 'login' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | HeroKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -108,6 +108,10 @@ export interface HomeActions {
   adPrivacy(): void;
   /** Our privacy policy, in the browser. */
   privacyPolicy(): void;
+  /** The player's answer on sending play statistics: the consent panel, or the settings switch. */
+  shareData(on: boolean): void;
+  /** Puts the player ID on the clipboard. */
+  copyId(): void;
 }
 
 /** What only some hosts have: the ad-free card for sale (iOS), Google's ad privacy options and
@@ -117,6 +121,19 @@ export interface HomeExtras {
   adFree?: { price: string | null; owned: boolean; note: string | null };
   privacy?: boolean;
   policy?: boolean;
+  /** Play statistics: the settings switch and the player ID. */
+  data?: PlayData;
+}
+
+/** What the settings show of the play statistics (analytics/privacy.ts). */
+export interface PlayData {
+  sending: boolean;
+  /** The install id a request to see or delete data names; null while none is stored. */
+  id: string | null;
+  /** Whether the host has a clipboard to copy it to. */
+  copy: boolean;
+  /** How the last copy went. */
+  note: 'copied' | 'failed' | null;
 }
 
 /** The part of the page a tab fills. */
@@ -172,7 +189,8 @@ export function buildHome(
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
-  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy, extras.data ?? null));
+  else if (panel === 'privacy') root.addChild(consentPanel(act, fit, !!extras.policy));
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
@@ -1317,17 +1335,22 @@ function bonusRow(m: MetaSave, act: HomeActions): Container {
   return r;
 }
 
-/** The settings: the music and sound effects toggles and the language, then a button each for Google's consent
- *  form again where it applies (iOS in the EEA/UK) and our privacy policy where the host allows
- *  a link out (App Review 5.1.1 wants it inside the app). */
-function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean): Container {
+/** The player ID tile's height under the play data switch. */
+const ID_H = 190;
+
+/** The settings: the music and sound effects toggles, the language and the play data switch with
+ *  the player ID, then a button each for Google's consent form again where it applies (iOS in
+ *  the EEA/UK) and our privacy policy where the host allows a link out (App Review 5.1.1 wants
+ *  it inside the app). */
+function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean, data: PlayData | null): Container {
   const buttons: [string, () => void][] = [];
   if (privacy) buttons.push([t('sound.privacy'), act.adPrivacy]);
   if (policy) buttons.push([t('sound.policy'), act.privacyPolicy]);
   const extra = buttons.length ? 30 + buttons.length * 130 : 0;
-  const h = 750 + extra;
+  const rows = data ? 190 + ID_H + 20 : 0;
+  const h = 750 + extra + rows;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
-  const top = -175 - (extra ? extra / 2 + 10 : 0);
+  const top = -h / 2 + 200 - (extra ? 10 : 0);
   buttons.forEach(([text, tap], i) => {
     const b = new PillButton(text, 600, 100, 'brass', tap, 40);
     b.y = h / 2 - 100 - (buttons.length - 1 - i) * 130;
@@ -1363,7 +1386,93 @@ function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boo
   pick.position.set(255, -4);
   r.addChild(lightTile(860, 160), icon, name, pick);
   box.addChild(r);
+  if (data) playDataRows(box, act, data, top + 3 * 190);
   return panel;
+}
+
+/** The play statistics switch at `y`, and under it the player ID with how to use it and, where
+ *  the host has a clipboard, a button that copies it. */
+function playDataRows(box: Container, act: HomeActions, data: PlayData, y: number): void {
+  const r = tappable(new Container(), () => act.shareData(!data.sending));
+  r.position.set(0, y);
+  const icon = new Container();
+  icon.position.set(-330, 0);
+  icon.addChild(medal(56, data.sending ? 0x3c9a4a : P.wood), chartIcon());
+  const name = ink(t('privacy.setting'), 50);
+  name.anchor.set(0, 0.5);
+  name.position.set(-245, -4);
+  fitText(name, 300);
+  const sw = toggle(data.sending);
+  sw.position.set(255, -4);
+  r.addChild(lightTile(860, 160), icon, name, sw);
+  box.addChild(r);
+
+  const tile = new Container();
+  tile.position.set(0, y + 80 + 20 + ID_H / 2);
+  tile.addChild(lightTile(860, ID_H));
+  const copy = data.id && data.copy;
+  const textW = copy ? 560 : 800;
+  if (!data.id) {
+    // nothing sent yet: just say so, in the middle of the tile
+    const none = inkWrapped(t('privacy.noId'), 32, 780);
+    none.anchor.set(0.5);
+    tile.addChild(none);
+  } else {
+    const id = ink(t('privacy.id', { id: data.id }), 32);
+    id.anchor.set(0, 0.5);
+    id.position.set(-400, -ID_H / 2 + 42);
+    fitText(id, textW);
+    tile.addChild(id);
+    const help = inkWrapped(t('privacy.idHelp'), 26, textW, { fill: P.inkSoft, align: 'left' });
+    help.anchor.set(0, 0);
+    help.position.set(-400, -ID_H / 2 + 72);
+    tile.addChild(help);
+  }
+  if (copy) {
+    const done = data.note === 'copied';
+    const caption = done ? t('privacy.copied') : data.note === 'failed' ? t('privacy.copyFailed') : t('privacy.copy');
+    const b = new PillButton(caption, 230, 96, done ? 'green' : 'brass', act.copyId, 36);
+    b.position.set(295, 0);
+    tile.addChild(b);
+  }
+  box.addChild(tile);
+}
+
+/** The question to a player in the EEA, the UK or Switzerland, once per session from the first
+ *  home screen on: send play statistics or not. Closing it (the ✕, a tap beside it) answers
+ *  nothing, and nothing is sent. */
+function consentPanel(act: HomeActions, fit: MenuFit, policy: boolean): Container {
+  const text = inkWrapped(t('privacy.ask'), 40, 820);
+  const h = 110 + text.height + 60 + 120 + (policy ? 120 : 0) + 50;
+  const { panel, box } = frame(act, t('privacy.title'), h, fit);
+  text.anchor.set(0.5, 0);
+  text.y = -h / 2 + 110;
+  box.addChild(text);
+  const row = text.y + text.height + 60 + 60;
+  const allow = new PillButton(t('privacy.allow'), 380, 120, 'green', () => act.shareData(true), 48);
+  allow.position.set(-205, row);
+  const decline = new PillButton(t('privacy.decline'), 380, 120, 'brass', () => act.shareData(false), 44);
+  decline.position.set(205, row);
+  box.addChild(allow, decline);
+  if (policy) {
+    const link = tappable(new Container(), act.privacyPolicy);
+    const word = ink(t('sound.policy'), 36, { fill: P.brassDark });
+    const line = new Graphics().rect(-word.width / 2, 22, word.width, 3).fill(P.brassDark);
+    link.addChild(word, line);
+    link.position.set(0, row + 125);
+    box.addChild(link);
+  }
+  return panel;
+}
+
+/** Three rising bars: play statistics. */
+function chartIcon(): Graphics {
+  return new Graphics()
+    .roundRect(-26, 2, 14, 22, 3)
+    .roundRect(-7, -10, 14, 34, 3)
+    .roundRect(12, -24, 14, 48, 3)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line });
 }
 
 /** Every language by its own name, two to a row, the one in use green; a pick closes it. */
