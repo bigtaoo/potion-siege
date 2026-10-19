@@ -22,8 +22,13 @@ export const LEVELS: readonly LevelSettings[] = [
   { name: 'saver', resolution: 1.5, fps: 30 },
   { name: 'low', resolution: 1.5, fps: 60 },
   { name: 'high', resolution: 2, fps: 60 },
+  // a 3x screen (every iPhone since the X) at its own pixels: at 2 the 1080-wide board is
+  // drawn on ~790 pixels of a ~1180 wide screen and looks soft
+  { name: 'max', resolution: 3, fps: 60 },
 ];
-const TOP = LEVELS.length - 1;
+/** The top level on screens of 2x and under, where `max` would draw nothing sharper. */
+const HIGH = 2;
+const MAX = 3;
 
 /** Frame rate cap off the battlefield (home, title, results, skill picks): those screens
  *  barely move, and a phone that never gets hot never steps its level down for the battery. */
@@ -40,6 +45,8 @@ export interface DeviceInfo {
   memoryGB: number;
   /** WebGL renderer string, '' when hidden. */
   gpu: string;
+  /** window.devicePixelRatio. */
+  dpr: number;
 }
 
 export interface LevelRange {
@@ -52,15 +59,30 @@ export interface LevelRange {
 export const SOFTWARE_GPU = /swiftshader|llvmpipe|software|basic render/i;
 export const WEAK_GPU = /mali-[t4]|mali-g(31|51|52|57)\b|adreno\D*[2-5]\d\d\b|powervr|sgx/i;
 
-/** Level a device starts on in auto mode: the top one (main's resolution) unless it looks weak. */
+/** WebKit (Safari, the iOS app's web view) reports this for every Apple GPU. It also hides the
+ *  memory and gives no more than a few cores, so on an iPhone those say nothing. */
+export const APPLE_GPU = /apple/i;
+
+/** The best level a device's screen and GPU get: `max` only on a screen sharper than 2x, and
+ *  of phones only iPhones for now (Android phones at 3x keep the 2x they always had). */
+function topLevel(d: DeviceInfo): number {
+  return d.dpr > 2 && (!d.mobile || APPLE_GPU.test(d.gpu)) ? MAX : HIGH;
+}
+
+/** Level a device starts on in auto mode: the top one unless it looks weak. */
 export function startLevel(d: DeviceInfo): number {
-  if (!d.mobile) return SOFTWARE_GPU.test(d.gpu) ? TOP - 1 : TOP;
-  const hints = [d.memoryGB > 0 && d.memoryGB <= 3, d.cores > 0 && d.cores <= 4, WEAK_GPU.test(d.gpu) || SOFTWARE_GPU.test(d.gpu)].filter(Boolean).length;
-  return Math.max(0, TOP - hints);
+  const top = topLevel(d);
+  if (!d.mobile) return SOFTWARE_GPU.test(d.gpu) ? HIGH - 1 : top;
+  const apple = APPLE_GPU.test(d.gpu);
+  const hints = [d.memoryGB > 0 && d.memoryGB <= 3, !apple && d.cores > 0 && d.cores <= 4, WEAK_GPU.test(d.gpu) || SOFTWARE_GPU.test(d.gpu)].filter(Boolean).length;
+  return hints ? Math.max(0, HIGH - hints) : top;
 }
 
 export function levelRange(mode: QualityMode, d: DeviceInfo): LevelRange {
-  if (mode === 'high') return { start: TOP, min: TOP, max: TOP };
+  if (mode === 'high') {
+    const top = topLevel(d);
+    return { start: top, min: top, max: top };
+  }
   if (mode === 'saver') return { start: 0, min: 0, max: 0 };
   const start = startLevel(d);
   return { start, min: 0, max: start };
