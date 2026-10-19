@@ -21,6 +21,7 @@
     "report": "node scripts/report.mjs",
     "early": "vitest run --config scripts/vitest.early.config.js",
     "late": "vitest run --config scripts/vitest.late.config.js",
+    "lazy": "vitest run --config scripts/vitest.lazy.config.js",
     "bosses": "vitest run --config scripts/vitest.bosses.config.js",
     "endless": "vitest run --config scripts/vitest.endless.config.js",
     "economy": "node scripts/economy.mjs",
