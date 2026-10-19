@@ -1149,7 +1149,7 @@ function frame(act: HomeActions, title: string, h: number, fit: MenuFit): { pane
   box.scale.set(Math.min(1, (fit.h - 80) / (h + 60)));
   const bg = lightPanel(940, h);
   bg.eventMode = 'static'; // taps on the panel itself do not close it
-  const head = plate(title, 54, 420);
+  const head = plate(title, 54, 420, 'brass', 760);
   head.y = -h / 2 + 6;
   const close = tappable(new Container(), () => act.panel(null));
   close.position.set(440, -h / 2 + 10);

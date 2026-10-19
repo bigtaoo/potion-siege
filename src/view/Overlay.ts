@@ -89,7 +89,7 @@ export class Overlay extends Container {
   showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null): void {
     this.open(0.7, () => this.showSkills(choices, levels, title, onPick, onReroll));
     const box = this.box(SKILL_BOX.w, SKILL_BOX.h);
-    const head = plate(title, 54, 520);
+    const head = plate(title, 54, 520, 'brass', SKILL_BOX.w - 120);
     head.y = -450;
     box.addChild(head);
     const gap = 340;
@@ -215,7 +215,7 @@ function header(won: boolean, ch?: ChallengeEnd): Section {
   const good = ch ? ch.result.tier > 0 : won;
   const crest = good ? stars(ch ? ch.result.tier : 3) : brokenWall();
   crest.y = -30;
-  const head = plate(ch ? t('challenge.result') : won ? t('won') : t('lost'), 72, 560, good ? 'brass' : 'red');
+  const head = plate(ch ? t('challenge.result') : won ? t('won') : t('lost'), 72, 560, good ? 'brass' : 'red', 860);
   head.y = 80;
   c.addChild(crest, head);
   return { c, h: 200 };
@@ -231,7 +231,7 @@ function endlessHeader(en: EndlessEnd): Section {
   ring.scale.set(0.9);
   loop.addChild(medal(64), ring);
   loop.y = en.result.record ? -40 : -30;
-  const head = plate(t('endless.result'), 72, 560, 'brass');
+  const head = plate(t('endless.result'), 72, 560, 'brass', 860);
   head.y = 80;
   c.addChild(crest, loop, head);
   return { c, h: 200 };

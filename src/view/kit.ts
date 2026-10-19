@@ -259,11 +259,12 @@ const PLATE = {
   red: [0xc9463d, 0x7e2421, 0xf08a7a],
 } as const;
 
-/** A brass (or red) name plate with ribbon tails, its text in cream. */
-export function plate(text: string, size = 56, minW = 360, tone: keyof typeof PLATE = 'brass'): Container {
+/** A brass (or red) name plate with ribbon tails, its text in cream. The plate is at most
+ *  `maxW` wide (the tails reach 44 further each side); a longer text shrinks to fit. */
+export function plate(text: string, size = 56, minW = 360, tone: keyof typeof PLATE = 'brass', maxW = Infinity): Container {
   const [body, dark, light] = PLATE[tone];
   const c = new Container();
-  const t = label(text, size, { fill: P.cream, stroke: { color: P.line, width: Math.max(5, size / 8) } });
+  const t = fit(label(text, size, { fill: P.cream, stroke: { color: P.line, width: Math.max(5, size / 8) } }), maxW - 120);
   const w = Math.max(minW, t.width + 120);
   const h = size + 44;
   const g = new Graphics();

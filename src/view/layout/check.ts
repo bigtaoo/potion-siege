@@ -1,7 +1,7 @@
 /** Finds words that stick out of the panel, card, tile or button they sit on. A Text's box is
  *  the smallest Graphics drawn before it - an earlier sibling of the Text or of one of its
  *  ancestors, the nearest level that has one - whose bounds hold the Text's centre; a Text over
- *  no Graphics at all must stay on the page. */
+ *  no Graphics at all must stay on the page, and every Text must stay on the page anyway. */
 import { Container, Graphics, Text } from 'pixi.js';
 
 export interface Overflow {
@@ -82,15 +82,18 @@ export function overflows(root: Container, page: Rect, buttons: readonly (abstra
         const pad = (stroke / 2) * k + slack;
         const vpad = pad + c.style.fontSize * 0.1 * k;
         const { box, level } = boxOf(c, page, root);
-        const sides = {
-          left: box.x - (tb.x + pad),
-          right: tb.x + tb.width - pad - (box.x + box.width),
-          top: box.y - (tb.y + vpad),
-          bottom: tb.y + tb.height - vpad - (box.y + box.height),
-        };
         let worst: Overflow | null = null;
-        for (const [side, by] of Object.entries(sides) as [Overflow['side'], number][]) {
-          if (by >= 1 && (!worst || by > worst.by)) worst = { text: c.text, by: Math.round(by), side };
+        // its box, and the page too: a plate that grows with its words can run off the screen
+        for (const r of [box, page]) {
+          const sides = {
+            left: r.x - (tb.x + pad),
+            right: tb.x + tb.width - pad - (r.x + r.width),
+            top: r.y - (tb.y + vpad),
+            bottom: tb.y + tb.height - vpad - (r.y + r.height),
+          };
+          for (const [side, by] of Object.entries(sides) as [Overflow['side'], number][]) {
+            if (by >= 1 && (!worst || by > worst.by)) worst = { text: c.text, by: Math.round(by), side };
+          }
         }
         if (worst) out.push(worst);
         else {
