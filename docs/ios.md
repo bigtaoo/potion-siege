@@ -32,6 +32,11 @@ Potion Siege on the App Store: the web game in a Capacitor shell, built the way 
   - `openUrl` through the bridge, so the settings link to the privacy policy opens in Safari;
   - audio session `ambient`: the silent switch mutes the game and the player's music keeps playing.
 - Without the bridge (the page opened in Safari) it behaves like the web host, reporting as ios.
+- Sharpness: WebKit says "Apple GPU", hides the memory and admits to only a few cores, so the
+  quality levels (`src/view/quality.ts`) ignore the cores on an Apple GPU, and a 3x iPhone
+  starts on `max` (render resolution 3, its own pixels). Before that it started on `low` (1.5)
+  and the 1080-wide board was drawn on ~590 of its ~1180 pixels. The governor still steps it
+  down when frames slow. JS only: a hot update carries it.
 
 ### The bridge (`window.PSNative`, injected at document start)
 

@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { CALM_FPS, FrameGate, FrameGovernor, LEVELS, levelRange, startLevel, targetFps, type DeviceInfo } from './quality';
 
-const PC: DeviceInfo = { mobile: false, cores: 8, memoryGB: 8, gpu: 'ANGLE (Intel, Intel(R) Arc(TM) Graphics)' };
-const PHONE: DeviceInfo = { mobile: true, cores: 8, memoryGB: 8, gpu: 'Adreno (TM) 740' };
+const PC: DeviceInfo = { mobile: false, cores: 8, memoryGB: 8, gpu: 'ANGLE (Intel, Intel(R) Arc(TM) Graphics)', dpr: 1 };
+const PHONE: DeviceInfo = { mobile: true, cores: 8, memoryGB: 8, gpu: 'Adreno (TM) 740', dpr: 2 };
+/** What WebKit tells the iOS app's web view on an iPhone 15: no memory, few cores, a masked GPU. */
+const IPHONE: DeviceInfo = { mobile: true, cores: 4, memoryGB: 0, gpu: 'Apple GPU', dpr: 3 };
 const TOP = LEVELS.length - 1;
+const HIGH = LEVELS.findIndex((l) => l.name === 'high');
 
 /** Feeds `seconds` of frames at `fps`; returns the levels the governor passed through. */
 function run(g: FrameGovernor, fps: number, seconds: number): number[] {
@@ -13,15 +16,30 @@ function run(g: FrameGovernor, fps: number, seconds: number): number[] {
 }
 
 describe('startLevel', () => {
-  it('puts desktops and strong phones on the top level, the resolution the game always had', () => {
+  it('puts desktops and strong phones on high, the resolution the game always had', () => {
     expect(LEVELS[startLevel(PC)]).toMatchObject({ name: 'high', resolution: 2, fps: 60 });
-    expect(startLevel(PHONE)).toBe(TOP);
+    expect(startLevel(PHONE)).toBe(HIGH);
+    expect(startLevel({ ...PHONE, dpr: 3 })).toBe(HIGH);
+  });
+
+  it('draws an iPhone at its own 3x pixels, whatever cores WebKit admits to', () => {
+    expect(LEVELS[startLevel(IPHONE)]).toMatchObject({ name: 'max', resolution: 3, fps: 60 });
+    expect(startLevel(IPHONE)).toBe(TOP);
+    expect(startLevel({ ...IPHONE, cores: 2 })).toBe(TOP);
+    // a 2x iPhone (SE, 11) is already sharp on high
+    expect(startLevel({ ...IPHONE, dpr: 2 })).toBe(HIGH);
+  });
+
+  it('gives max to sharp desktop screens, not to a software renderer', () => {
+    expect(startLevel({ ...PC, dpr: 2.5 })).toBe(TOP);
+    expect(startLevel({ ...PC, dpr: 3, gpu: 'Google SwiftShader' })).toBe(HIGH - 1);
   });
 
   it('starts weak devices lower', () => {
     expect(startLevel({ ...PC, gpu: 'Google SwiftShader' })).toBeLessThan(startLevel(PC));
     const weak = startLevel({ ...PHONE, gpu: 'Mali-G52' });
-    expect(weak).toBe(TOP - 1);
+    expect(weak).toBe(HIGH - 1);
+    expect(startLevel({ ...PHONE, gpu: 'Mali-G52', dpr: 3 })).toBe(weak);
     expect(startLevel({ ...PHONE, gpu: 'Mali-G52', memoryGB: 3 })).toBe(weak - 1);
     expect(startLevel({ ...PHONE, gpu: 'Mali-G52', memoryGB: 3, cores: 4 })).toBe(0);
   });
@@ -30,7 +48,9 @@ describe('startLevel', () => {
 describe('levelRange', () => {
   it('locks forced modes and lets auto range below the start', () => {
     expect(levelRange('saver', PC)).toEqual({ start: 0, min: 0, max: 0 });
-    expect(levelRange('high', PHONE).min).toBe(TOP);
+    expect(levelRange('high', PHONE)).toEqual({ start: HIGH, min: HIGH, max: HIGH });
+    expect(levelRange('high', { ...IPHONE, memoryGB: 2 })).toEqual({ start: TOP, min: TOP, max: TOP });
+    expect(levelRange('auto', IPHONE)).toEqual({ start: TOP, min: 0, max: TOP });
     expect(levelRange('auto', PHONE)).toEqual({ start: startLevel(PHONE), min: 0, max: startLevel(PHONE) });
   });
 });

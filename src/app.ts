@@ -63,7 +63,8 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   await app.init({
     background: COLORS.bg,
     resizeTo: platform.mount ?? window,
-    resolution: Math.min(window.devicePixelRatio || 1, 2),
+    // the quality levels lower it (view/quality.ts); 3 is a 3x phone's own pixels
+    resolution: Math.min(window.devicePixelRatio || 1, 3),
     autoDensity: true,
     antialias: true,
     preference: 'webgl',
@@ -161,6 +162,7 @@ function device(app: Application): DeviceInfo {
     cores: nav.hardwareConcurrency || 0,
     memoryGB: nav.deviceMemory || 0,
     gpu,
+    dpr: window.devicePixelRatio || 1,
   };
 }
 
