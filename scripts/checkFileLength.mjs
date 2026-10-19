@@ -15,11 +15,9 @@ const EXTS = ['.ts', '.mts', '.mjs', '.js', '.py', '.sh', '.css', '.html'];
 
 // line counts on 2026-10-19 (782f2fe); only ever lowered, until the refactor empties it
 const BASELINE = {
-  'src/sim/battle.ts': 1229,
   'src/app.ts': 1143,
   'src/sim/skills.test.ts': 777,
   'src/app.test.ts': 511,
-  'src/sim/battle.test.ts': 507,
 };
 
 function* walk(dir) {

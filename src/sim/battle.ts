@@ -11,64 +11,36 @@
 // however long the player waits for it. The same seed, setup and commands at the same ticks play
 // the same battle on every engine (replay.ts), which determinismLint.test.ts and replay.test.ts
 // hold it to.
+//
+// This file holds the state, the player's commands and the order of a tick; what happens in a
+// tick lives in its own modules, each a set of functions on the battle: spawn.ts (the waves
+// coming in), enemyTick.ts (the enemies moving and at the wall), bosses.ts, shots.ts (the
+// potions firing), hits.ts (what each potion's hit does), damage.ts (damage and the statuses),
+// kills.ts, commander.ts, targets.ts (finding enemies) and field.ts (the grid and the units).
 
-import { resistOf } from './enemies';
-import { dist, dist2, FP, muldiv, perTick, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
+import { doCast, stepCommander, stepFlasks } from './commander';
+import { stepEnemies } from './enemyTick';
+import { K, SLOT_COUNT, WALL_ROW } from './field';
+import { fixedMods, type Fixed } from './fixedMods';
+import { Shares } from './horde';
+import { reapDead } from './kills';
+import { pm, TICK_RATE, times, toFp } from './math/fixed';
 import { pick } from './math/pick';
 import { Prng } from './math/prng';
-import { BRAD_FULL, sinB, TRIG_ONE } from './math/trig';
 import { BASE_SETUP, type BattleSetup } from './meta';
-import { fixedMods, type Fixed } from './fixedMods';
+import { stepHeroes, stepProjectiles } from './shots';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
-import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type EnemyKind, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
-import { laneSpan, Shares } from './horde';
-import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
+import { startWave, stepWaves } from './spawn';
+import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import type { Spawn } from './waves';
+
+export { SLOT_COUNT, slotCenter, WALL_ROW } from './field';
 
 const B = BALANCE;
 /** Mixed into the seed for each stream but the enemies' (Prng hashes its seed, so the streams
  *  are unrelated). */
 const STREAM = { summon: 0x5bd1e995, shot: 0x27d4eb2f, card: 0x165667b1 } as const;
-export const SLOT_COUNT = B.grid.cols * B.grid.rows;
-
-/** A slot's centre in world units. */
-export function slotCenter(slot: number): { x: number; y: number } {
-  const g = B.grid;
-  return { x: g.x0 + g.cellW * ((slot % g.cols) + 0.5), y: g.y0 + g.cellH * (Math.floor(slot / g.cols) + 0.5) };
-}
-
-/** The bottom row of the grid is the wall itself; the rows above are built onto it. */
-export const WALL_ROW = B.grid.rows - 1;
-
 const C = B.commander;
-
-/** Seconds as thousandths of a tick, the unit of the shot cooldowns. */
-function cool(seconds: number): number {
-  return Math.round(seconds * TICK_RATE * 1000);
-}
-
-/** World units to FP of the configuration, worked out once. */
-const K = {
-  reach: perTick(B.projectileSpeed),
-  left: toFp(B.field.left),
-  right: toFp(B.field.right),
-  top: toFp(B.field.top),
-  x0: toFp(B.grid.x0),
-  cellW: toFp(B.grid.cellW),
-  summonCooldown: cool(0.2),
-  idleCooldown: cool(0.07),
-  bombRadius: toFp(C.bomb.radius),
-  bombMin: toFp(C.bomb.min),
-  /** The brew's quickening in permille of the potions' own speed. */
-  brew: 1000 + pm(C.brew.speed),
-  /** Each hero kind's shot interval at each level. */
-  interval: Object.fromEntries(Object.entries(B.heroes).map(([k, h]) => [k, B.starSpeed.map((s) => Math.round((h.interval * TICK_RATE * 1000) / s))])) as Record<HeroKind, number[]>,
-  wallDps: Object.fromEntries(Object.entries(B.enemies).map(([k, e]) => [k, perTick(e.wallDps)])) as Record<EnemyKind, number>,
-  weave: toFp(B.flyer.weave),
-  /** The flyer's swing in brads a second, and the start of it per enemy id (2.399 radians). */
-  weaveRate: Math.round((B.flyer.weaveRate * BRAD_FULL) / (2 * Math.PI)),
-  weavePhase: Math.round((2.399 * BRAD_FULL) / (2 * Math.PI)),
-  vortexPull: perTick(B.skills.vortexPull),
-};
 
 /** A player command. Every change the player makes goes through Battle.apply as one of these,
  *  so a battle is its seed, its setup and its commands (replay.ts). */
@@ -112,8 +84,9 @@ export class Battle {
   charge = 0;
   /** Ticks the charge has been full. */
   chargedFor = 0;
-  /** What the horde's deaths have earned towards the next charge, coin and burst. */
-  private shares = new Shares();
+  /** What the horde's deaths have earned towards the next charge, coin and burst; the battle's
+   *  own, like the fields after `commands`. */
+  readonly shares = new Shares();
   /** Skills cast so far: they go in turn, the flask first. */
   casts = 0;
   /** Ticks of the brew left: every potion throws faster while it lasts. */
@@ -144,19 +117,21 @@ export class Battle {
   readonly perks: ReadonlySet<PerkId>;
   /** Every command applied, with its tick: with the seed and the setup, the replay. */
   readonly commands: Stamped[] = [];
-  private mods: Mods;
-  private fixed: Fixed;
+  // The battle's own from here on: open to the modules that step it (spawn.ts, hits.ts and the
+  // rest), not to be touched from outside the sim; the view reads the events through drain().
+  mods: Mods;
+  fixed: Fixed;
   /** Shots per hero id, for the lightning sky strike and the wind gust. */
-  private shotCount = new Map<number, number>();
-  private pending: Spawn[] = [];
+  readonly shotCount = new Map<number, number>();
+  pending: Spawn[] = [];
   /** Enemies let out on the field this tick, brought on after the enemies have moved. */
-  private hatch: { s: Spawn; x: number; y: number }[] = [];
-  private events: BattleEvent[] = [];
+  readonly hatch: { s: Spawn; x: number; y: number }[] = [];
+  events: BattleEvent[] = [];
   /** The array drain() handed out last time, refilled after the next drain. */
   private drained: BattleEvent[] = [];
   /** The enemies reapDead() takes out, reused every step. */
-  private readonly dead: Enemy[] = [];
-  private nextId = 1;
+  readonly dead: Enemy[] = [];
+  nextId = 1;
   private offerFocus: HeroKind | undefined;
 
   /** The stage and the upgrades bought between battles. */
@@ -173,7 +148,7 @@ export class Battle {
     this.fixed = fixedMods(this.mods, setup);
     this.gold = setup.startGold;
     this.wallMax = this.wall = toFp(setup.wallHp);
-    this.startWave(1);
+    startWave(this, 1);
   }
 
   get paused(): boolean {
@@ -295,7 +270,7 @@ export class Battle {
         done = this.doRevive();
         break;
       case 'cast':
-        done = this.doCast();
+        done = doCast(this);
         break;
     }
     if (done || this.dice() !== dice) this.commands.push({ ...cmd, tick: this.time });
@@ -404,54 +379,6 @@ export class Battle {
     return true;
   }
 
-  private doCast(): boolean {
-    if (!this.canCast()) return false;
-    const skill = this.nextCast;
-    if (skill === 'bomb') {
-      const target = this.thickest();
-      // nothing on the field to throw at: the charge waits
-      if (!target) return false;
-      const flight = ticks(C.bomb.flight);
-      this.flasks.push({ x: target.x, y: target.y, time: flight, damage: Math.max(K.bombMin, muldiv(this.boardDps(), Math.round(C.bomb.seconds * 1000), 1000)) });
-      this.events.push({ type: 'cast', skill, x: target.x / FP, y: target.y / FP, flight: C.bomb.flight });
-    } else {
-      this.brewTime = ticks(C.brew.time);
-      this.events.push({ type: 'cast', skill, x: 0, y: 0, flight: 0 });
-    }
-    this.charge = 0;
-    this.chargedFor = 0;
-    this.casts++;
-    return true;
-  }
-
-  /** The enemy with the most others within the flask's reach, the one nearer the wall on a tie. */
-  private thickest(): Enemy | null {
-    let best: Enemy | null = null;
-    let most = 0;
-    for (const e of this.enemies) {
-      if (e.hp <= 0) continue;
-      let n = 0;
-      for (const o of this.enemies) if (o.hp > 0 && this.within(o, e.x, e.y, K.bombRadius)) n++;
-      if (n > most || (n === most && best && e.y > best.y)) {
-        best = e;
-        most = n;
-      }
-    }
-    return best;
-  }
-
-  /** What the potions on the wall deal a second between them, in FP: their shots' damage over
-   *  their intervals, with the skills and perks picked. */
-  private boardDps(): number {
-    let dps = 0;
-    for (const h of this.slots) {
-      if (!h) continue;
-      const speed = h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
-      dps += muldiv(this.fixed.damage[h.kind][h.star - 1], TICK_RATE * speed, K.interval[h.kind][h.star - 1]);
-    }
-    return dps;
-  }
-
   /** The wall comes back whole and the alchemist full, so the bomb is ready for the next wave:
    *  with half a wall and no charge a revive saved far fewer early runs than the plain attack did. */
   private doRevive(): boolean {
@@ -486,13 +413,13 @@ export class Battle {
       p.px = p.x;
       p.py = p.y;
     }
-    this.stepWaves();
-    this.stepEnemies();
-    this.stepHeroes();
-    this.stepCommander();
-    this.stepFlasks();
-    this.stepProjectiles();
-    this.reapDead();
+    stepWaves(this);
+    stepEnemies(this);
+    stepHeroes(this);
+    stepCommander(this);
+    stepFlasks(this);
+    stepProjectiles(this);
+    reapDead(this);
     if (this.wall <= 0) this.end(false);
     else if (!this.setup.endless && this.wave === B.waves.count && this.pending.length === 0 && this.enemies.length === 0) this.end(true);
   }
@@ -500,714 +427,6 @@ export class Battle {
   private end(won: boolean): void {
     this.result = won ? 'won' : 'lost';
     this.events.push({ type: 'end', won });
-  }
-
-  private startWave(wave: number): void {
-    this.wave = wave;
-    this.waveTime = 0;
-    const bossWaves = this.setup.modifiers?.bossWaves;
-    const endless = this.setup.endless === true;
-    this.pending = planWave(wave, this.enemyRng, this.setup.stage, this.setup.modifiers, endless).map((s) => ({ ...s, hp: Math.round(s.hp * this.setup.enemyHp) }));
-    if (wave > 1) this.gold += Math.round(B.waves.waveBonusGold * (this.setup.modifiers?.waveGold ?? 1));
-    this.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves, endless) });
-  }
-
-  private stepWaves(): void {
-    this.waveTime++;
-    while (this.pending.length > 0 && this.pending[0].at <= this.waveTime) this.spawn(this.pending.shift()!);
-    const w = B.waves;
-    const bossAlive = this.enemies.some((e) => isBoss(e.kind));
-    if ((this.setup.endless || this.wave < w.count) && this.pending.length === 0 && this.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
-      this.startWave(this.wave + 1);
-    }
-  }
-
-  /** Brings `s` onto the field: at the top at a random x (within its lane, a rank behind the
-   *  edge, for one of a rush), or at `at` (FP) when something on the field let it out. */
-  private spawn(s: Spawn, at?: { x: number; y: number }): void {
-    const def = B.enemies[s.kind];
-    const radius = toFp(((s.elite ? def.radius * B.elite.radius : def.radius) * (s.size ?? 1000)) / 1000);
-    const id = this.nextId;
-    const [lo, hi] = laneSpan(s, K.left + radius, K.right - radius);
-    const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(lo, hi);
-    const y = at ? at.y : K.top - radius - toFp(s.lane?.back ?? 0);
-    const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm((this.setup.modifiers?.enemySpeed ?? 1) * (this.setup.endless ? endlessSpeed(this.wave) : 1)));
-    const e: Enemy = {
-      id: this.nextId++,
-      kind: s.kind,
-      x,
-      y,
-      px: x,
-      py: y,
-      hp: s.hp,
-      maxHp: s.hp,
-      speed,
-      radius,
-      slowFactor: 1000,
-      slowTime: 0,
-      freezeTime: 0,
-      poisonDps: 0,
-      poisonTime: 0,
-      rust: 0,
-      rustTime: 0,
-      burnDps: 0,
-      burnTime: 0,
-      scorch: 0,
-      scorchTime: 0,
-      markTime: 0,
-      chill: 0,
-      chillTime: 0,
-      charge: 0,
-      chargeTime: 0,
-      pushTime: 0,
-      atWall: false,
-      gold: s.gold ?? 1000,
-      heft: s.heft ?? 1000,
-    };
-    if (s.elite) e.elite = true;
-    if (s.kind === 'flyer') {
-      // its swing starts at a point set by its id, so the dice stay as they were before flyers
-      e.x0 = Math.min(K.right - radius - K.weave, Math.max(K.left + radius + K.weave, e.x));
-      e.phase = (id * K.weavePhase) % BRAD_FULL;
-    }
-    if (s.kind === 'winder') e.windTime = ticks(B.winder.every);
-    if (s.kind === 'clock') e.broodTime = ticks(B.bosses.clock.first);
-    if (s.kind === 'tripod') {
-      e.shield = e.shieldMax = times(s.hp, pm(B.bosses.tripod.shield));
-      e.shieldTime = 0;
-    }
-    if (s.kind === 'anvil') {
-      e.hopTime = ticks(B.bosses.anvil.every);
-      e.leapTime = 0;
-    }
-    this.enemies.push(e);
-  }
-
-  /** The clock boss opens its pendulum door and lets clockwork mice out at its feet, half as
-   *  tough and half the gold of the wave's own. They come out after the loop over the field,
-   *  so they start moving on the next tick. */
-  private brood(c: Enemy): void {
-    const P = B.bosses.clock;
-    const hp = Math.round(crowdOf(this.wave, this.setup.endless === true).hp * B.enemies.runner.hp * this.setup.enemyHp * P.hp * FP);
-    const spread = toFp(P.spread);
-    for (let i = 0; i < P.mice; i++) {
-      const side = P.mice === 1 ? 0 : muldiv(spread, 2 * i - (P.mice - 1), P.mice - 1);
-      this.hatch.push({ s: { at: 0, kind: 'runner', hp, gold: pm(P.gold) }, x: c.x + side, y: c.y + muldiv(c.radius, 1, 2) });
-    }
-    this.events.push({ type: 'brood', x: c.x / FP, y: c.y / FP });
-  }
-
-  /** How far an anvil on the way moves this tick, `step` walking: every so often it springs
-   *  forward a long way. Slowed, its spring cannot wind up, so the time to the next leap stands. */
-  private hop(e: Enemy, step: number): number {
-    const A = B.bosses.anvil;
-    if (e.leapTime! > 0) {
-      e.leapTime!--;
-      return Math.trunc(toFp(A.leap) / ticks(A.leapTime));
-    }
-    if (e.slowTime <= 0 && --e.hopTime! <= 0) {
-      e.hopTime = ticks(A.every);
-      e.leapTime = ticks(A.leapTime);
-      this.events.push({ type: 'leap', x: e.x / FP, y: e.y / FP });
-    }
-    return step;
-  }
-
-  /** An anvil at the wall slams down on it: a big bite out of the wall, and the potions in the
-   *  cells under it stand dazed for a while. */
-  private slam(e: Enemy): void {
-    const A = B.bosses.anvil;
-    this.wall -= K.wallDps.anvil * ticks(A.slam);
-    const reach = toFp(A.reach);
-    const slots: number[] = [];
-    for (const h of this.slots) {
-      if (!h || Math.abs(toFp(slotCenter(h.slot).x) - e.x) > reach) continue;
-      h.stunTime = Math.max(h.stunTime ?? 0, ticks(A.stun));
-      slots.push(h.slot);
-    }
-    this.events.push({ type: 'slam', x: e.x / FP, y: e.y / FP, slots });
-  }
-
-  /** The y of the frontmost enemy that is not a winder, or -Infinity with none on the field. */
-  private frontY(): number {
-    let y = -Infinity;
-    for (const e of this.enemies) if (e.kind !== 'winder' && e.hp > 0) y = Math.max(y, e.y);
-    return y;
-  }
-
-  /** Whether `o` is within `range` (FP) of (x, y), counting its own radius. */
-  private within(o: Enemy, x: number, y: number, range: number): boolean {
-    const r = range + o.radius;
-    return dist2(o.x - x, o.y - y) <= r * r;
-  }
-
-  /** A winder winds back the enemies around it: a share of their hit points back, and no more
-   *  frost or slow on them (rust stays). The boss is too big for it. */
-  private rewind(w: Enemy): void {
-    const R = B.winder;
-    for (const o of this.enemies) {
-      if (o === w || o.hp <= 0 || isBoss(o.kind) || !this.within(o, w.x, w.y, toFp(R.range))) continue;
-      o.hp = Math.min(o.maxHp, o.hp + times(o.maxHp, pm(R.heal)));
-      o.freezeTime = 0;
-      o.slowTime = 0;
-      o.chill = 0;
-      o.chillTime = 0;
-    }
-    this.events.push({ type: 'rewind', x: w.x / FP, y: w.y / FP, radius: R.range });
-  }
-
-  private stepEnemies(): void {
-    let hitWall = false;
-    const front = this.frontY();
-    for (const v of this.vortices) v.time--;
-    this.vortices = this.vortices.filter((v) => v.time > 0);
-    for (const e of this.enemies) {
-      if (e.poisonTime > 0) {
-        this.harm(e, Math.trunc(e.poisonDps / TICK_RATE), 'poison');
-        if (--e.poisonTime <= 0) e.poisonDps = 0;
-      }
-      if (e.burnTime > 0) {
-        this.harm(e, Math.trunc(e.burnDps / TICK_RATE), e.burnBy);
-        if (--e.burnTime <= 0) e.burnDps = 0;
-      }
-      e.scorchTime = Math.max(0, e.scorchTime - 1);
-      e.markTime = Math.max(0, e.markTime - 1);
-      e.rustTime = Math.max(0, e.rustTime - 1);
-      if (e.rustTime <= 0) e.rust = 0;
-      e.chargeTime = Math.max(0, e.chargeTime - 1);
-      if (e.chargeTime <= 0) e.charge = 0;
-      e.chillTime = Math.max(0, e.chillTime - 1);
-      if (e.chillTime <= 0) e.chill = 0;
-      e.slowTime = Math.max(0, e.slowTime - 1);
-      e.pushTime = Math.max(0, e.pushTime - 1);
-      if (e.freezeTime > 0) {
-        e.freezeTime--;
-        continue;
-      }
-      if (e.kind === 'flyer' && !e.atWall) {
-        // weaves from side to side on the way down; at the wall it hovers where it stopped
-        e.x = e.x0! + muldiv(K.weave, sinB(e.phase! + muldiv(this.time, K.weaveRate, TICK_RATE)), TRIG_ONE);
-      }
-      if (!isBoss(e.kind)) for (const v of this.vortices) this.pull(e, v);
-      if (e.kind === 'winder' && !e.atWall) {
-        if (--e.windTime! <= 0) {
-          e.windTime = ticks(B.winder.every);
-          this.rewind(e);
-        }
-      }
-      if (e.kind === 'clock' && --e.broodTime! <= 0) {
-        e.broodTime = ticks(B.bosses.clock.every);
-        this.brood(e);
-      }
-      if (e.kind === 'tripod' && e.shield! <= 0 && --e.shieldTime! <= 0) {
-        e.shield = e.shieldMax;
-        this.events.push({ type: 'jar', x: e.x / FP, y: e.y / FP, up: true });
-      }
-      if (e.guardTime) e.guardTime--;
-      const wall = this.wallFront(e.x) - e.radius;
-      // a winder keeps behind the crowd it winds, and waits for it
-      const stop = e.kind === 'winder' && front > -Infinity ? Math.min(wall, Math.max(e.y, front - toFp(B.winder.gap))) : wall;
-      if (e.y < stop) {
-        const step = e.slowTime > 0 ? times(e.speed, e.slowFactor) : e.speed;
-        e.y = Math.min(stop, e.y + (e.kind === 'anvil' ? this.hop(e, step) : step));
-      } else if (e.y >= wall) {
-        // a cell just built under it pushes it back to the new front
-        e.y = wall;
-        if (!e.atWall && e.kind === 'anvil') {
-          e.leapTime = 0;
-          e.hopTime = ticks(B.bosses.anvil.slamFirst);
-        }
-        e.atWall = true;
-        this.wall -= times(K.wallDps[e.kind], e.heft);
-        hitWall = true;
-        if (e.kind === 'anvil' && --e.hopTime! <= 0) {
-          e.hopTime = ticks(B.bosses.anvil.slamEvery);
-          this.slam(e);
-        }
-      }
-    }
-    if (hitWall) this.events.push({ type: 'wallHit' });
-    for (const h of this.hatch) this.spawn(h.s, h);
-    this.hatch.length = 0;
-  }
-
-  /** Alive enemies, front (closest to the wall) first. */
-  private targets(): Enemy[] {
-    return this.enemies.filter((e) => e.hp > 0).sort((a, b) => b.y - a.y);
-  }
-
-  private stepHeroes(): void {
-    let targets: Enemy[] | null = null;
-    for (const h of this.slots) {
-      if (!h) continue;
-      if (h.stunTime) {
-        h.stunTime--;
-        continue;
-      }
-      const speed = h.kind === 'wind' ? this.fixed.windSpeed : this.fixed.speed;
-      h.cooldown -= this.brewTime > 0 ? times(speed, K.brew) : speed;
-      if (h.cooldown > 0) continue;
-      targets ??= this.targets();
-      if (targets.length === 0) {
-        // waiting: a small offset per hero, so the first enemy is not met by one big volley
-        h.cooldown = (h.id % 5) * K.idleCooldown;
-        continue;
-      }
-      h.cooldown += K.interval[h.kind][h.star - 1];
-      if (h.kind === 'wind') {
-        // the wind goes for what it can catch: the flying ornithopter and the winder's big key
-        this.fire(h, targets.find((e) => e.kind === 'flyer' || e.kind === 'winder') ?? targets[0]);
-        continue;
-      }
-      const shots = h.kind === 'arcane' ? 1 + this.mods.extraArrows : 1;
-      // the extra bolts of the arcane multishot go to the enemies behind, weaker
-      for (let i = 0; i < shots && i < targets.length; i++) this.fire(h, targets[i], i === 0 ? 1000 : pm(B.skills.multiBolt));
-    }
-  }
-
-  /** The brew wears off; a charge left full too long is cast by the commander itself. */
-  private stepCommander(): void {
-    if (this.brewTime > 0) this.brewTime--;
-    if (this.charge < C.charge) return;
-    if (++this.chargedFor >= ticks(C.autoCast)) this.doCast();
-  }
-
-  /** The commander's flasks fly on; a landed one bursts on everything within its reach and slows
-   *  what lives through it. It is no potion, so no resistance takes from it. */
-  private stepFlasks(): void {
-    if (this.flasks.length === 0) return;
-    const R = C.bomb;
-    this.flasks = this.flasks.filter((f) => {
-      if (--f.time > 0) return true;
-      for (const e of this.enemies) {
-        if (e.hp <= 0 || !this.within(e, f.x, f.y, K.bombRadius)) continue;
-        this.harm(e, times(f.damage, this.splash(e)), undefined);
-        this.discharge(e);
-        if (e.hp > 0) this.slow(e, R.slow, ticks(R.slowTime));
-      }
-      this.events.push({ type: 'flask', x: f.x / FP, y: f.y / FP, radius: R.radius });
-      return false;
-    });
-  }
-
-  /** A hero's shot at `target`, `scale` permille of its damage. */
-  private fire(h: Hero, target: Enemy, scale = 1000): void {
-    const from = slotCenter(h.slot);
-    this.events.push({ type: 'shot', slot: h.slot, projectile: this.nextId });
-    let strike = false;
-    let gust = false;
-    if ((h.kind === 'lightning' && this.mods.thunder) || (h.kind === 'wind' && this.mods.gust)) {
-      const n = (this.shotCount.get(h.id) ?? 0) + 1;
-      this.shotCount.set(h.id, n);
-      if (h.kind === 'lightning') strike = n % B.skills.thunderEvery === 0;
-      else gust = n % B.skills.gustEvery === 0;
-    }
-    const base = times(this.fixed.damage[h.kind][h.star - 1], scale);
-    this.shoot(h.kind, h.star, toFp(from.x), toFp(from.y - 40), target, base, strike ? { strike } : gust ? { gust } : {});
-  }
-
-  private shoot(kind: HeroKind, star: number, x: number, y: number, target: Enemy, base: number, extra: Partial<Projectile> = {}): void {
-    const crit = this.shotRng.chance(this.fixed.crit, 1000);
-    this.projectiles.push({
-      ...extra,
-      id: this.nextId++,
-      kind,
-      star,
-      x,
-      y,
-      px: x,
-      py: y,
-      targetId: target.id,
-      tx: target.x,
-      ty: target.y,
-      damage: crit ? times(base, pm(B.critMultiplier)) : base,
-    });
-  }
-
-  private stepProjectiles(): void {
-    const reach = K.reach;
-    const live: Projectile[] = [];
-    for (const p of this.projectiles) {
-      const t = this.enemies.find((e) => e.id === p.targetId && e.hp > 0);
-      if (t) {
-        p.tx = t.x;
-        p.ty = t.y;
-      }
-      const dx = p.tx - p.x;
-      const dy = p.ty - p.y;
-      const d = dist(dx, dy);
-      if (d <= reach) {
-        this.impact(p, t ?? null);
-      } else {
-        p.x += muldiv(dx, reach, d);
-        p.y += muldiv(dy, reach, d);
-        live.push(p);
-      }
-    }
-    this.projectiles = live;
-  }
-
-  private impact(p: Projectile, target: Enemy | null): void {
-    const h = B.heroes;
-    const S = B.skills;
-    const by = p.kind;
-    switch (p.kind) {
-      case 'fire': {
-        const radius = this.fixed.fireRadius;
-        for (const e of this.enemies) {
-          if (!this.within(e, p.tx, p.ty, radius)) continue;
-          this.scorch(e, e.id === p.targetId ? p.damage : times(p.damage, this.splash(e)), by);
-          this.discharge(e);
-        }
-        this.events.push({ type: 'hit', kind: 'fire', x: p.tx / FP, y: p.ty / FP, radius: radius / FP });
-        return;
-      }
-      case 'lightning': {
-        if (!target) return;
-        const points = [{ x: p.x / FP, y: p.y / FP }];
-        const hit = new Set<number>();
-        let cur: Enemy | undefined = target;
-        let damage = p.damage;
-        for (let i = 0; cur && i <= h.lightning.chains + this.mods.extraChains; i++) {
-          this.shock(cur, damage);
-          hit.add(cur.id);
-          points.push({ x: cur.x / FP, y: cur.y / FP });
-          damage = times(damage, pm(h.lightning.chainFalloff));
-          cur = this.nearest(cur, toFp(h.lightning.chainRange), hit);
-        }
-        this.events.push({ type: 'chain', points });
-        if (p.strike) {
-          // the sky strike: a bolt from above onto the first target, hitting all around it
-          const radius = toFp(S.thunderRadius);
-          for (const e of this.enemies) {
-            if (e.hp > 0 && this.within(e, target.x, target.y, radius)) this.shock(e, times(p.damage, pm(S.thunderstrike)));
-          }
-          const x = target.x / FP;
-          const y = target.y / FP;
-          this.events.push({ type: 'chain', points: [{ x: x + 40, y: y - 700 }, { x: x - 20, y: y - 350 }, { x, y }] });
-          this.events.push({ type: 'hit', kind: 'lightning', x, y, radius: S.thunderRadius });
-        }
-        return;
-      }
-      case 'wind': {
-        if (!p.gust) break;
-        // the gust: a wall of wind across the whole field, as deep as the target's front and back
-        const depth = toFp(S.gustDepth);
-        for (const e of this.enemies) {
-          if (e.hp <= 0 || Math.abs(e.y - p.ty) > depth + e.radius) continue;
-          this.harm(e, times(p.damage, pm(S.gust)), by);
-          this.discharge(e);
-          this.windHit(e, p, e.id === p.targetId);
-        }
-        this.events.push({ type: 'gust', x: p.tx / FP, y: p.ty / FP, depth: S.gustDepth });
-        return;
-      }
-    }
-    if (!target) return;
-    this.harm(target, p.damage, by);
-    this.discharge(target);
-    if (p.kind === 'arcane') this.arcaneHit(p, target);
-    if (p.kind === 'ice') {
-      this.slow(target, h.ice.slow, ticks(h.ice.slowTime));
-      if (this.shotRng.chance(this.fixed.freezeChance, 1000)) this.freeze(target, S.iceFreezeTime, p.damage);
-      if (this.mods.frostbite && target.freezeTime <= 0) {
-        // no stacking while it is frozen anyway
-        target.chillTime = ticks(S.frostbiteTime);
-        if (++target.chill >= S.frostbiteStacks) {
-          target.chill = 0;
-          this.freeze(target, S.frostbiteFreeze, p.damage);
-        }
-      }
-    } else if (p.kind === 'poison') {
-      const dps = this.fixed.poison[p.star - 1];
-      this.corrode(target, dps);
-      if (this.mods.acidSplash) {
-        // the acid splashes: poison and rust on everything close to the target
-        const radius = toFp(S.acidRadius);
-        for (const e of this.enemies) {
-          if (e !== target && e.hp > 0 && this.within(e, target.x, target.y, radius)) this.corrode(e, times(dps, this.splash(e)));
-        }
-        this.events.push({ type: 'hit', kind: 'poison', x: target.x / FP, y: target.y / FP, radius: S.acidRadius });
-      }
-    }
-    if (p.kind === 'wind') this.windHit(target, p, true);
-    this.events.push({ type: 'hit', kind: p.kind, x: target.x / FP, y: target.y / FP, radius: 30 });
-  }
-
-  /** What a wind shot (or its gust) does to `e` after the damage: the knockback, and the wind
-   *  line's skills. `direct` is the one it was aimed at. */
-  private windHit(e: Enemy, p: Projectile, direct: boolean): void {
-    const S = B.skills;
-    this.push(e, p.star);
-    if (this.mods.vortex && direct && e.hp <= 0 && this.shares.proc('vortex', e.heft)) this.vortices.push({ x: e.x, y: e.y, time: ticks(S.vortexTime) });
-    if (this.mods.windFire && (e.burnTime > 0 || e.scorchTime > 0)) {
-      // the wind-and-fire recipe: the wind fans the flames on what it hits and blows them onto
-      // everything close by
-      const heat = Math.max(e.burnDps, times(e.scorch, pm(S.windFire)));
-      const radius = toFp(S.windFireRadius);
-      for (const o of this.enemies) {
-        if (o.hp <= 0 || !this.within(o, e.x, e.y, radius)) continue;
-        if (heat >= o.burnDps) {
-          o.burnDps = heat;
-          o.burnBy = 'wind';
-        }
-        o.burnTime = ticks(S.burnTime);
-      }
-      this.events.push({ type: 'hit', kind: 'fire', x: e.x / FP, y: e.y / FP, radius: S.windFireRadius });
-    }
-  }
-
-  /** Knocks `e` back up the field, off the wall if it was at it: lighter ones further, the boiler
-   *  golem half as far (all the way with the perk, or frozen stiff), the boss not at all (the
-   *  wind only slows it). Each one at most once every `pushTime`. A winder blown back also has
-   *  its key spun the wrong way: its rewind starts over. */
-  private push(e: Enemy, star: number): void {
-    const W = B.heroes.wind;
-    if (isBoss(e.kind)) {
-      this.slow(e, W.bossSlow, ticks(W.bossSlowTime));
-      return;
-    }
-    if (e.pushTime > 0 || e.hp <= 0) return;
-    let weight = W.weight[e.kind];
-    if (e.kind === 'brute' && (this.mods.pushHeavy || e.freezeTime > 0)) weight = W.weight.grunt;
-    const d = times(times(times(toFp(W.push), pm(W.pushStar[star - 1])), this.fixed.push), pm(weight));
-    // one of a rush still behind the top edge is not pushed forward onto it
-    const top = Math.min(e.y, K.top - e.radius);
-    if (d <= 0) return;
-    e.pushTime = ticks(W.pushTime);
-    this.events.push({ type: 'push', x: e.x / FP, y: e.y / FP, id: e.id });
-    e.y = Math.max(top, e.y - d);
-    e.atWall = false;
-    if (e.kind === 'winder') e.windTime = ticks(B.winder.every);
-  }
-
-  /** A whirlwind draws `e` towards its eye while it is within reach. */
-  private pull(e: Enemy, v: Vortex): void {
-    const dx = v.x - e.x;
-    const dy = v.y - e.y;
-    const d = dist(dx, dy);
-    if (d < FP || d > toFp(B.skills.vortexRadius) + e.radius) return;
-    const step = Math.min(d, K.vortexPull);
-    if (e.kind === 'flyer') e.x0! += muldiv(dx, step, d);
-    else e.x += muldiv(dx, step, d);
-    e.y += muldiv(dy, step, d);
-  }
-
-  /** What the arcane line adds to a hero's bolt that has just hit. */
-  private arcaneHit(p: Projectile, target: Enemy): void {
-    const S = B.skills;
-    if (this.fixed.mark > 0) target.markTime = ticks(S.markTime);
-    if (this.mods.frostBolts) this.slow(target, S.frostBoltSlow, ticks(S.frostBoltTime));
-    if (this.mods.burstBolts) {
-      // the fire-and-arcane recipe: the bolt bursts and singes what stands around its target
-      const radius = toFp(S.burstBoltRadius);
-      for (const e of this.enemies) {
-        if (e === target || e.hp <= 0 || !this.within(e, target.x, target.y, radius)) continue;
-        this.scorch(e, times(times(p.damage, pm(S.burstBolt)), this.splash(e)), 'arcane');
-        this.discharge(e);
-      }
-      this.events.push({ type: 'hit', kind: 'fire', x: target.x / FP, y: target.y / FP, radius: S.burstBoltRadius });
-    }
-    if (this.mods.splitBolts && !p.split && target.hp <= 0 && this.shares.proc('split', target.heft)) {
-      // the bolt that killed splits towards the nearest enemies left
-      const skip = new Set([target.id]);
-      for (let i = 0; i < S.splitBolts; i++) {
-        const next = this.nearest(target, toFp(S.splitRange), skip);
-        if (!next) break;
-        skip.add(next.id);
-        const { x, y } = target;
-        this.projectiles.push({ id: this.nextId++, kind: 'arcane', star: p.star, x, y, px: x, py: y, targetId: next.id, tx: next.x, ty: next.y, damage: times(p.damage, pm(S.splitBolt)), split: true });
-      }
-    }
-  }
-
-  /** What a blast aimed at something else does to `e`, in permille: a flyer is up in the air,
-   *  above most of it. */
-  private splash(e: Enemy): number {
-    return e.kind === 'flyer' ? pm(B.flyer.splash) : 1000;
-  }
-
-  /** Every bit of damage goes through here, for the enemy's resistance to the potion it came
-   *  from (`by`; the commander's flask has none), the arcane mark and the corrosion's rust (all
-   *  multiply), and for crediting that potion with what the enemy had left of it. */
-  private harm(e: Enemy, damage: number, by: HeroKind | undefined): void {
-    if (e.guardTime) return;
-    if (e.shield) {
-      // the tripod's bell jar takes it all: frost cracks the glass, the rest barely marks it
-      const T = B.bosses.tripod;
-      let into = times(damage, pm(by === 'ice' ? T.ice : T.other));
-      if (e.markTime > 0) into = times(into, 1000 + this.fixed.mark);
-      if (by) this.dealt[by] += Math.max(0, Math.min(e.shield, into));
-      e.shield -= into;
-      if (e.shield <= 0) {
-        e.shield = 0;
-        e.shieldTime = ticks(T.regrow);
-        this.events.push({ type: 'jar', x: e.x / FP, y: e.y / FP, up: false });
-      }
-      return;
-    }
-    let dealt = by ? times(damage, pm(resistOf(e, by))) : damage;
-    if (e.markTime > 0) dealt = times(dealt, 1000 + this.fixed.mark);
-    dealt = times(dealt, 1000 + this.fixed.rustStep * e.rust);
-    if (by) this.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
-    e.hp -= dealt;
-    if (e.kind === 'gear' && !e.core && e.hp <= times(e.maxHp, pm(B.bosses.gear.at))) this.crack(e);
-  }
-
-  /** The gear king's iron rim flies apart at half its health, whatever the hit: the crowned core
-   *  stands a moment, then runs on faster, weak where the rim was strong. */
-  private crack(e: Enemy): void {
-    const G = B.bosses.gear;
-    e.hp = times(e.maxHp, pm(G.at));
-    e.core = true;
-    e.guardTime = ticks(G.guard);
-    e.speed = times(e.speed, pm(G.speed));
-    this.events.push({ type: 'crack', x: e.x / FP, y: e.y / FP });
-  }
-
-  /** A hit by another potion sets off the static a lightning hit left. */
-  private discharge(e: Enemy): void {
-    if (e.charge <= 0) return;
-    const charge = e.charge;
-    e.charge = 0;
-    e.chargeTime = 0;
-    this.harm(e, charge, 'lightning');
-  }
-
-  /** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, and with
-   *  the fire recipe it counts as a fire hit that sets them alight. */
-  private shock(e: Enemy, damage: number): void {
-    const S = B.skills;
-    if (this.mods.superconduct && (e.slowTime > 0 || e.freezeTime > 0)) damage = times(damage, 1000 + pm(S.superconduct));
-    if (this.mods.plasma) this.scorch(e, damage, 'lightning', this.fixed.plasmaBurn);
-    else this.harm(e, damage, 'lightning');
-    if (this.mods.electrolysis) this.corrode(e);
-    if (this.fixed.static > 0) {
-      e.charge = Math.max(e.chargeTime > 0 ? e.charge : 0, times(damage, this.fixed.static));
-      e.chargeTime = ticks(S.staticTime);
-    }
-  }
-
-  /** Rusts by `stacks` and, with `dps` (FP a second), poisons: what a corrosion hit does. */
-  private corrode(e: Enemy, dps = 0, stacks = 1): void {
-    const P = B.heroes.poison;
-    if (dps > 0) {
-      e.poisonDps = Math.max(e.poisonDps, dps);
-      e.poisonTime = ticks(P.poisonTime);
-    }
-    e.rust = Math.min(this.mods.rustMax, e.rust + stacks);
-    e.rustTime = ticks(P.rustTime);
-  }
-
-  /** Slows by `amount` (a fraction) for `time` ticks. A weaker slow leaves a stronger one still
-   *  running alone (it must not stretch it); a stronger one replaces it with its own time; the
-   *  same one refreshes it. */
-  private slow(e: Enemy, amount: number, time: number): void {
-    const factor = 1000 - pm(amount);
-    if (e.slowTime > 0) {
-      if (factor > e.slowFactor) return;
-      if (factor === e.slowFactor) {
-        e.slowTime = Math.max(e.slowTime, time);
-        return;
-      }
-    }
-    e.slowFactor = factor;
-    e.slowTime = time;
-  }
-
-  /** Freezes for `seconds`, for `hit`, the damage of the ice hit that froze it. A boss is too
-   *  big to freeze: the frost slows it hard instead and, with shatter, chips shards off it. A
-   *  flyer cannot freeze either, its wings keep beating: it only slows. */
-  private freeze(e: Enemy, seconds: number, hit: number): void {
-    const S = B.skills;
-    const time = times(ticks(seconds), this.fixed.freezeTime);
-    if (!isBoss(e.kind) && e.kind !== 'flyer') {
-      e.freezeTime = Math.max(e.freezeTime, time);
-      return;
-    }
-    this.slow(e, S.bossFreezeSlow, time);
-    if (this.mods.shatter && isBoss(e.kind)) {
-      this.harm(e, times(hit, pm(S.bossShatter)), 'ice');
-      this.events.push({ type: 'hit', kind: 'ice', x: e.x / FP, y: e.y / FP, radius: e.radius / FP });
-    }
-  }
-
-  /** Fire damage: remembered for a while (a death soon after counts as burnt, for the chain
-   *  explosion) and, with the burn skill (permille of the hit a second), it keeps burning. */
-  private scorch(e: Enemy, damage: number, by: HeroKind | undefined, burn = this.fixed.burn): void {
-    this.harm(e, damage, by);
-    if (damage >= (e.scorchTime > 0 ? e.scorch : 0)) {
-      e.scorch = damage;
-      e.scorchBy = by;
-    }
-    e.scorchTime = ticks(B.skills.burnTime);
-    if (burn > 0) {
-      const dps = times(damage, burn);
-      if (dps >= e.burnDps) {
-        e.burnDps = dps;
-        e.burnBy = by;
-      }
-      e.burnTime = ticks(B.skills.burnTime);
-    }
-  }
-
-  private nearest(from: Enemy, range: number, skip: Set<number>): Enemy | undefined {
-    let best: Enemy | undefined;
-    let bestD = range * range;
-    for (const e of this.enemies) {
-      if (e.hp <= 0 || skip.has(e.id)) continue;
-      const d = dist2(e.x - from.x, e.y - from.y);
-      if (d <= bestD) {
-        best = e;
-        bestD = d;
-      }
-    }
-    return best;
-  }
-
-  private reapDead(): void {
-    if (!this.enemies.some((e) => e.hp <= 0)) return;
-    // the living move up in place, in order; the dead go to a reused list
-    const all = this.enemies;
-    const dead = this.dead;
-    let n = 0;
-    for (const e of all) {
-      if (e.hp > 0) all[n++] = e;
-      else dead.push(e);
-    }
-    all.length = n;
-    for (const e of dead) {
-      const def = B.enemies[e.kind];
-      const gold = this.shares.gold((def.gold + this.mods.goldPerKill) * (this.setup.modifiers?.killGold ?? 1) * e.gold, e.heft);
-      this.gold += gold;
-      this.kills++;
-      this.charge = Math.min(C.charge, this.charge + (isBoss(e.kind) ? C.bossCharge : this.shares.charge(e.heft)));
-      this.events.push({ type: 'kill', kind: e.kind, x: e.x / FP, y: e.y / FP, gold, boss: isBoss(e.kind) });
-      if (this.mods.fireChain && e.scorchTime > 0 && this.shares.proc('fireChain', e.heft)) {
-        // burnt to death: it bursts once more (the blast itself does not count as fire, so it
-        // cannot set off an endless chain)
-        const radius = times(this.fixed.fireRadius, pm(B.skills.fireChainRadius));
-        for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.harm(o, times(times(e.scorch, pm(B.skills.fireChain)), this.splash(o)), e.scorchBy);
-        this.events.push({ type: 'hit', kind: 'fire', x: e.x / FP, y: e.y / FP, radius: radius / FP });
-      }
-      if (this.mods.melt && e.rust > 0 && this.shares.proc('melt', e.heft)) {
-        // died rusted: it falls apart and its rust eats into what stands around it
-        const radius = toFp(B.skills.meltRadius);
-        for (const o of this.enemies) if (this.within(o, e.x, e.y, radius)) this.corrode(o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);
-        this.events.push({ type: 'hit', kind: 'poison', x: e.x / FP, y: e.y / FP, radius: B.skills.meltRadius });
-      }
-      if (this.mods.shatter && e.freezeTime > 0) {
-        // died frozen: it shatters into shards that cut and chill what stands around it
-        const radius = toFp(B.skills.shatterRadius);
-        for (const o of this.enemies) {
-          if (!this.within(o, e.x, e.y, radius)) continue;
-          this.harm(o, times(times(e.maxHp, pm(B.skills.shatter)), this.splash(o)), 'ice');
-          this.slow(o, B.heroes.ice.slow, ticks(B.heroes.ice.slowTime));
-        }
-        this.events.push({ type: 'hit', kind: 'ice', x: e.x / FP, y: e.y / FP, radius: B.skills.shatterRadius });
-      }
-    }
-    dead.length = 0;
   }
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */

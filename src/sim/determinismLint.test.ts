@@ -22,7 +22,7 @@ const ALLOWED: readonly { file: string; pattern: RegExp; why: string }[] = [
   { file: 'math/fixed.ts', pattern: /\bMath\.sqrt\s*\(/, why: 'first guess of isqrt, corrected to the exact integer root' },
 ];
 
-const BATTLE = /^(battle|bot|enemies|hash|replay|skills|types|waves|math\/(?!.*\.test\.ts$).*)\.ts$/;
+const BATTLE = /^(battle|bosses|bot|commander|damage|enemies|enemyTick|field|hash|hits|kills|replay|shots|skills|spawn|targets|types|waves|math\/(?!.*\.test\.ts$).*)\.ts$/;
 
 /** Blanks comments and string literals, keeping line breaks so line numbers stay true. */
 export function strip(src: string): string {

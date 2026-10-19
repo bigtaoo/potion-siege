@@ -1,10 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
+import { brood } from './bosses';
 import { playOut } from './bot';
 import { rollDay } from './daily';
 import { bookEndless, endlessOpen, endlessPay, endlessSetup, milestonesOf, nextMilestone, parseEndless } from './endless';
 import { newMeta, parseMeta, Purse, stageHp } from './meta';
 import { Prng } from './math/prng';
+import { startWave } from './spawn';
 import { BALANCE, BOSS_KINDS, HERO_KINDS, isBoss } from './types';
 import { bossForStage, crowdOf, endlessBoss, endlessBossesMet, endlessChapter, endlessSpeed, endlessTheme, isBossWave, planWave, waveKinds } from './waves';
 
@@ -87,12 +89,11 @@ describe('endless waves', () => {
 
   it('hatches the clock mice as tough as the endless crowd, not on the stage curve', () => {
     const b = new Battle(5, endlessSetup(cleared(BALANCE.meta.heroMax)));
-    const run = b as unknown as { startWave(w: number): void; hatch: { s: { kind: string; hp: number; gold?: number } }[]; brood(c: unknown): void; enemies: { kind: string }[] };
-    run.startWave(40);
+    startWave(b, 40);
     for (let i = 0; i < 30 && !b.enemies.some((e) => e.kind === 'clock'); i++) b.step();
-    run.hatch.length = 0;
-    run.brood(b.enemies.find((e) => e.kind === 'clock'));
-    const mouse = run.hatch[0].s;
+    b.hatch.length = 0;
+    brood(b, b.enemies.find((e) => e.kind === 'clock')!);
+    const mouse = b.hatch[0].s;
     const P = BALANCE.bosses.clock;
     expect(mouse.hp).toBe(Math.round(crowdOf(40, true).hp * BALANCE.enemies.runner.hp * b.setup.enemyHp * P.hp * 1000));
     expect(crowdOf(40, true).hp * 20).toBeLessThan(crowdOf(40).hp);
@@ -134,7 +135,7 @@ describe('endless chapters', () => {
   it('walks the rail yard faster than the snowfield', () => {
     const speedIn = (wave: number) => {
       const b = new Battle(7, endlessSetup(cleared(BALANCE.meta.heroMax)));
-      (b as unknown as { startWave(w: number): void }).startWave(wave);
+      startWave(b, wave);
       for (let i = 0; i < 200 && !b.enemies.some((e) => e.kind === 'grunt'); i++) b.step();
       const g = b.enemies.filter((e) => e.kind === 'grunt');
       return g.reduce((a, e) => a + e.speed, 0) / g.length;
