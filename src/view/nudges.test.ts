@@ -1,80 +1,151 @@
 import { describe, expect, it } from 'vitest';
-import { claimChest, heroCost, heroUnlocked, maxStage, newMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS } from '../sim/types';
+import { achievementsClaimable, claimTier, TRACK_IDS, trackReady } from '../sim/achievements';
+import { chapterStages } from '../sim/chapters';
+import { claimChest, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
 import {
-  canBuyUnlock, canUpgradePotion, canUpgradeWorkshop, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, LOGIN_AFTER_RUNS, loginPops, NEXT_UNTIL, offersNext, shopDot, upgradeHintKind,
+  anyChestWaiting, canUpgradeLineup, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, dotKeys, LOGIN_AFTER_RUNS, loginPops, markSeen, navDots, newOnTab, NEXT_UNTIL, offersNext,
+  upgradeHintKind,
 } from './nudges';
 
+const today = '2026-10-17';
 /** A new save's potions are all at level 1. */
 const cheapestHero = (): number => heroCost(1)!;
 const cheapestWorkshop = (): number => Math.min(...WORKSHOP_IDS.map((id) => workshopCost(id, 0) ?? Infinity));
+const cheapestUnlock = (): number => Math.min(...HERO_KINDS.map((k) => unlockPrice(k) ?? Infinity));
+const reserveKind = HERO_KINDS.find((k) => !LINEUP.includes(k))!;
 
 describe('potion dot', () => {
-  it('lights once a potion level is affordable, not a crystal before', () => {
+  it('stays lit while a fielded potion can level up, not a crystal before', () => {
     const m = newMeta();
     m.crystals = cheapestHero() - 1;
-    expect(canUpgradePotion(m)).toBe(false);
+    expect(canUpgradeLineup(m)).toBe(false);
+    expect(navDots(m, today).potions).toBe(false);
     m.crystals = cheapestHero();
-    expect(canUpgradePotion(m)).toBe(true);
+    expect(canUpgradeLineup(m)).toBe(true);
+    // the core loop: visiting the tab does not put it out
+    markSeen(m, 'potions', today);
+    expect(navDots(m, today).potions).toBe(true);
   });
 
-  it('ignores locked potions and maxed ones', () => {
+  it('ignores the reserve and maxed potions for levels', () => {
     const m = newMeta();
     m.crystals = 1e9;
-    for (const k of HERO_KINDS) m.heroes[k] = BALANCE.meta.heroMax;
-    expect(canUpgradePotion(m)).toBe(false);
-    // a locked potion at level 1 is not something to upgrade
-    const locked = HERO_KINDS.find((k) => !m.lineup.includes(k) && !m.unlocked.includes(k));
-    expect(locked).toBeDefined();
-    m.heroes[locked!] = 1;
-    expect(canUpgradePotion(m)).toBe(false);
-    m.unlocked.push(locked!);
-    expect(canUpgradePotion(m)).toBe(true);
+    for (const k of m.lineup) m.heroes[k] = BALANCE.meta.heroMax;
+    expect(canUpgradeLineup(m)).toBe(false);
+    unlockHero(m, reserveKind);
+    m.crystals = 1e9;
+    expect(canUpgradeLineup(m)).toBe(false);
+  });
+
+  it('lights once for a potion that joined the reserve, until the tab is open', () => {
+    const m = newMeta();
+    m.crystals = 0;
+    expect(newOnTab(m, 'potions', today)).toBe(false);
+    unlockHero(m, reserveKind);
+    m.crystals = 0;
+    expect(dotKeys(m, 'potions', today)).toEqual([`new:${reserveKind}`]);
+    expect(navDots(m, today).potions).toBe(true);
+    expect(markSeen(m, 'potions', today)).toBe(true);
+    expect(navDots(m, today).potions).toBe(false);
+    // nothing new: the save stays as it is
+    expect(markSeen(m, 'potions', today)).toBe(false);
   });
 });
 
 describe('workshop dot', () => {
-  it('lights once a workshop upgrade is affordable and stays off when all are maxed', () => {
+  it('lights once an upgrade level becomes affordable, and once more for the next level', () => {
     const m = newMeta();
     m.crystals = cheapestWorkshop() - 1;
-    expect(canUpgradeWorkshop(m)).toBe(false);
+    expect(navDots(m, today).workshop).toBe(false);
     m.crystals = cheapestWorkshop();
-    expect(canUpgradeWorkshop(m)).toBe(true);
+    expect(navDots(m, today).workshop).toBe(true);
+    markSeen(m, 'workshop', today);
+    expect(navDots(m, today).workshop).toBe(false);
+    // the same level stays seen with more crystals; the next one lights it again
+    const id = WORKSHOP_IDS.find((w) => workshopCost(w, 0) === cheapestWorkshop())!;
+    m.workshop[id] = 1;
+    m.crystals = workshopCost(id, 1)!;
+    expect(navDots(m, today).workshop).toBe(true);
+  });
+
+  it('stays off when all are maxed and drops the keys that can no longer come up', () => {
+    const m = newMeta();
     m.crystals = 1e9;
+    markSeen(m, 'workshop', today);
+    expect(m.seen.workshop!.length).toBeGreaterThan(0);
     for (const id of WORKSHOP_IDS) m.workshop[id] = BALANCE.meta.workshop[id].max;
-    expect(canUpgradeWorkshop(m)).toBe(false);
+    expect(navDots(m, today).workshop).toBe(false);
+    markSeen(m, 'workshop', today);
+    expect(m.seen.workshop).toEqual([]);
+  });
+});
+
+describe('codex dot', () => {
+  it('lights for a reached achievement tier until the codex is open, and for the next tier again', () => {
+    const m = newMeta();
+    expect(navDots(m, today).codex).toBe(achievementsClaimable(m));
+    m.cleared = 200;
+    m.stage = 1;
+    expect(achievementsClaimable(m)).toBe(true);
+    expect(navDots(m, today).codex).toBe(true);
+    markSeen(m, 'codex', today);
+    expect(navDots(m, today).codex).toBe(false);
+    const id = TRACK_IDS.find((k) => trackReady(m, k))!;
+    claimTier(m, id);
+    // 200 stages reach the track's next tier too, a new thing to claim
+    expect(trackReady(m, id)).toBe(true);
+    expect(navDots(m, today).codex).toBe(true);
   });
 });
 
 describe('shop dot', () => {
-  const today = '2026-10-17';
-  const cheapestUnlock = (): number => Math.min(...HERO_KINDS.map((k) => unlockPrice(k) ?? Infinity));
-
-  it("lights while today's chest is shut and goes out once it is opened", () => {
+  it("lights for today's chest until the shop is open or the chest is, and again the next day", () => {
     const m = newMeta();
     m.crystals = 0;
-    expect(shopDot(m, today)).toBe(true);
-    claimChest(m, today);
+    expect(navDots(m, today).shop).toBe(true);
+    markSeen(m, 'shop', today);
+    expect(navDots(m, today).shop).toBe(false);
+    expect(navDots(m, '2026-10-18').shop).toBe(true);
+    claimChest(m, '2026-10-18');
     m.crystals = 0;
-    expect(shopDot(m, today)).toBe(false);
-    // a new day brings a new chest
-    expect(shopDot(m, '2026-10-18')).toBe(true);
+    expect(navDots(m, '2026-10-18').shop).toBe(false);
   });
 
   it('lights for a locked potion the crystals can buy, not a crystal before, and not once it is owned', () => {
     const m = newMeta();
     claimChest(m, today);
     m.crystals = cheapestUnlock() - 1;
-    expect(canBuyUnlock(m)).toBe(false);
-    expect(shopDot(m, today)).toBe(false);
+    expect(navDots(m, today).shop).toBe(false);
     m.crystals = cheapestUnlock();
-    expect(canBuyUnlock(m)).toBe(true);
-    expect(shopDot(m, today)).toBe(true);
+    expect(navDots(m, today).shop).toBe(true);
     m.crystals = 1e9;
     for (const k of HERO_KINDS) if (unlockPrice(k) !== null) unlockHero(m, k);
-    expect(canBuyUnlock(m)).toBe(false);
-    expect(shopDot(m, today)).toBe(false);
+    expect(dotKeys(m, 'shop', today)).toEqual([]);
+  });
+});
+
+describe('battle dot', () => {
+  it('lights while a finished chapter keeps its chest', () => {
+    const m = newMeta();
+    expect(navDots(m, today).battle).toBe(false);
+    m.cleared = chapterStages(1)[1];
+    expect(anyChestWaiting(m)).toBe(true);
+    expect(navDots(m, today).battle).toBe(true);
+  });
+});
+
+describe('seen keys in the save', () => {
+  it('survive a round trip and drop what is not a list of strings', () => {
+    const m = newMeta();
+    m.seen = { shop: [`chest:${today}`], codex: ['stages:0'] };
+    expect(parseMeta(JSON.stringify(m)).seen).toEqual(m.seen);
+    const raw = JSON.parse(JSON.stringify(m));
+    raw.seen = { shop: 'x', codex: [1, 'stages:1'], bogus: ['a'] };
+    expect(parseMeta(JSON.stringify(raw)).seen).toEqual({ codex: ['stages:1'] });
+    delete raw.seen;
+    expect(parseMeta(JSON.stringify(raw)).seen).toEqual({});
   });
 });
 

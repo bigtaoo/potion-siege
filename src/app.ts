@@ -32,7 +32,7 @@ import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomeExtras, type HomePanel, type HomeTab } from './view/Home';
 import { FEEDBACK_RUN, FeedbackAsk } from './view/feedback';
-import { loginPops, offersNext, upgradeHintKind } from './view/nudges';
+import { loginPops, markSeen, offersNext, upgradeHintKind } from './view/nudges';
 import { uiSound, workshopWall } from './view/kit';
 import { Overlay, SKILL_BOX } from './view/Overlay';
 import { TutorialLayer, type Lesson, type Rect } from './view/Tutorial';
@@ -741,6 +741,8 @@ export class Game {
     this.menu.scale.set(fit.scale);
     this.menu.visible = true;
     this.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
+    // what the open tab offers puts its red dot out (view/nudges.ts)
+    if (this.tab !== 'battle' && markSeen(this.save, this.tab, today)) this.store();
     // the one-time pointer at a potion upgrade, until the player has seen its button
     const hint = this.autoplay || panel ? null : upgradeHintKind(this.save);
     if (hint) this.analytics.first(this.tab === 'potions' ? 'hint_upgrade_button' : 'hint_upgrade_tab', { run: this.save.runs });
@@ -946,7 +948,7 @@ export class Game {
     else if (this.menu.visible) this.home();
   }
 
-  /** A tap on the lineup row: a potion in the lineup swaps out for the reserve (the one picked,
+  /** A tap on the potions tab's lineup strip: a potion in the lineup swaps out for the reserve (the one picked,
    *  or the only one); a reserve potion is picked, or unpicked. */
   private lineup(kind: HeroKind): void {
     const m = this.save;
