@@ -17,7 +17,6 @@ const EXTS = ['.ts', '.mts', '.mjs', '.js', '.py', '.sh', '.css', '.html'];
 const BASELINE = {
   'src/sim/battle.ts': 1229,
   'src/app.ts': 1143,
-  'src/view/BattleView.ts': 996,
   'src/sim/skills.test.ts': 777,
   'src/app.test.ts': 511,
   'src/sim/battle.test.ts': 507,
