@@ -15,6 +15,11 @@ export const en = {
   upgradePick: 'Upgrade! Pick a skill',
   ultimatePick: 'Ultimate potion! Pick a bonus skill',
   cellOpen: 'New cell!',
+  full: {
+    merge: 'Cells full\nFuse a pair',
+    upgrade: 'Cells full\nUpgrade',
+    hint: 'No room left: drag two matching potions together to fuse them',
+  },
   wallDone: 'The wall is complete!',
   tutorial: {
     step: 'Tutorial {n}/{total}',

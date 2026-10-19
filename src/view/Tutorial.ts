@@ -237,7 +237,7 @@ function skipButton(onTap: () => void): Container {
 }
 
 /** The dragging arrow: a brown-edged brass arc with a head at the end. */
-function drawArc(g: Graphics, a: { x: number; y: number }, m: { x: number; y: number }, b: { x: number; y: number }): void {
+export function drawArc(g: Graphics, a: { x: number; y: number }, m: { x: number; y: number }, b: { x: number; y: number }): void {
   const end = quad(a, m, b, 0.86);
   for (const [width, color] of [[22, LIGHT.edge], [12, P.brassLight]] as const) {
     g.moveTo(a.x, a.y).quadraticCurveTo(m.x, m.y, end.x, end.y).stroke({ width, color, cap: 'round' });
@@ -250,7 +250,7 @@ function drawArc(g: Graphics, a: { x: number; y: number }, m: { x: number; y: nu
   g.poly([tip.x, tip.y, l.x, l.y, r.x, r.y]).fill(P.brassLight).stroke({ width: 5, color: LIGHT.edge, join: 'round' });
 }
 
-function quad(a: { x: number; y: number }, m: { x: number; y: number }, b: { x: number; y: number }, k: number): { x: number; y: number } {
+export function quad(a: { x: number; y: number }, m: { x: number; y: number }, b: { x: number; y: number }, k: number): { x: number; y: number } {
   const u = 1 - k;
   return { x: u * u * a.x + 2 * u * k * m.x + k * k * b.x, y: u * u * a.y + 2 * u * k * m.y + k * k * b.y };
 }

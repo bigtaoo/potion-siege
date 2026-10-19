@@ -43,7 +43,8 @@ export function label(text: string, size: number, style: TextStyleOptions = {}):
   return out;
 }
 
-/** A rounded button centred on its position; `setEnabled` greys it out. */
+/** A rounded button centred on its position; `setEnabled` greys it out. A tap on it while it is
+ *  grey goes to `onBlocked`, if given, so the screen can say why. */
 export class Button extends Container {
   private readonly bg = new Graphics();
   readonly text: Text;
@@ -56,6 +57,7 @@ export class Button extends Container {
     private readonly color: number,
     onTap: () => void,
     size = 56,
+    onBlocked?: () => void,
   ) {
     super();
     this.text = label(caption, size);
@@ -64,6 +66,7 @@ export class Button extends Container {
     this.cursor = 'pointer';
     this.on('pointertap', () => {
       if (this.enabled) onTap();
+      else onBlocked?.();
     });
     this.draw();
   }

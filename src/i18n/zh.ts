@@ -16,6 +16,11 @@ export const zh: Table = {
   upgradePick: '强化：选择一个技能',
   ultimatePick: '终极药剂！选择一个额外技能',
   cellOpen: '新格子！',
+  full: {
+    merge: '格子满了\n合成腾位',
+    upgrade: '格子满了\n去强化',
+    hint: '格子满了！\n把两瓶相同的药剂拖到一起合成',
+  },
   wallDone: '城墙全部建完了！',
   tutorial: {
     step: '新手教学 {n}/{total}',
