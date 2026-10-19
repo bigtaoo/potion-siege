@@ -22,9 +22,9 @@ import {
   AD_CRYSTALS, adsLeft, ADS_PER_DAY, benched, CHEST_CRYSTALS, chestReady, heroCost, heroDamage, heroUnlocked, maxStage, unlockPrice, unlockStage,
   WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId,
 } from '../sim/meta';
-import type { HeroKind } from '../sim/types';
+import type { EnemyKind, HeroKind } from '../sim/types';
 import { commanderTexture } from './art';
-import { buildCodex } from './Codex';
+import { buildCodex, enemyPanel, isEnemy } from './Codex';
 import {
   bookIcon,
   bossTag,
@@ -65,7 +65,7 @@ import type { MenuFit } from './viewport';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | HeroKind | null;
+export type HomePanel = 'login' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | HeroKind | EnemyKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -174,7 +174,7 @@ export function buildHome(
   if (tab === 'battle') battleTab(root, m, act, area, picked, today);
   else if (tab === 'potions') potionsTab(root, m, act, area, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
-  else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier));
+  else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier, act.panel));
   else shopTab(root, m, act, area, today, ads, extras.adFree ?? null);
   topBar(root, m, act, today, left, w, wide);
   // a dot only where something can be claimed or bought right now, and not on the tab already open
@@ -194,6 +194,7 @@ export function buildHome(
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
+  else if (isEnemy(panel)) root.addChild(enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)));
   else if (panel) root.addChild(heroPanel(m, act, panel, fit));
   return root;
 }

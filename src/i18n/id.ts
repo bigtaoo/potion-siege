@@ -216,7 +216,7 @@ export const id: Table = {
     wind: 'Tonik Angin',
   },
   codex: {
-    page: { book: 'Kodeks', feats: 'Pencapaian' },
+    page: { potions: 'Ramuan', enemies: 'Musuh', feats: 'Pencapaian' },
     heroes: 'Ramuan',
     monsters: 'Pasukan Mesin Jam',
     locked: 'Terkunci',
@@ -233,6 +233,7 @@ export const id: Table = {
       anvil: 'Melompat: menerjang maju tiap 8d, kecuali saat diperlambat; menghantam tembok dan membuat ramuan pingsan',
       gear: 'Dua fase: di separuh HP lingkarnya pecah dan inti bermahkota menyerbu, kelemahannya berbalik',
     },
+    tag: { grunt: 'Biasa', runner: 'Cepat', brute: 'Tangguh', flyer: 'Terbang', winder: 'Memutar yang lain', boss: 'Bos' },
     speed: 'Kecepatan {n}',
     wallDps: 'Gempur {n}/d',
     resist: 'Kerusakan diterima',

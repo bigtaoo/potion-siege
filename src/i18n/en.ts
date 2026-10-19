@@ -216,7 +216,7 @@ export const en = {
     wind: 'Gale Tonic',
   },
   codex: {
-    page: { book: 'Codex', feats: 'Achievements' },
+    page: { potions: 'Potions', enemies: 'Enemies', feats: 'Achievements' },
     heroes: 'Potions',
     monsters: 'Clockwork Army',
     locked: 'Locked',
@@ -233,6 +233,7 @@ export const en = {
       anvil: 'Leaps: springs forward every 8s, not while slowed; slams the wall and stuns potions',
       gear: 'Two phases: at half health the rim shatters and the crowned core charges, weaknesses flip',
     },
+    tag: { grunt: 'Basic', runner: 'Fast', brute: 'Tanky', flyer: 'Flies', winder: 'Winds others', boss: 'Boss' },
     speed: 'Speed {n}',
     wallDps: 'Siege {n}/s',
     resist: 'Damage taken',

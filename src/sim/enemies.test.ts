@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { enemyStats, RESIST, resist, resistLabel, resists } from './enemies';
+import { enemyStats, extremes, RESIST, resist, resistLabel, resists } from './enemies';
 import { heroUnlocked, newMeta, stageHp } from './meta';
 import { FP } from './math/fixed';
 import { Prng } from './math/prng';
@@ -45,6 +45,20 @@ describe('enemy resistances', () => {
     expect(resistLabel(1.25)).toBe('+25%');
     expect(resistLabel(0.75)).toBe('-25%');
     expect(resistLabel(1)).toBe('—');
+  });
+
+  it('picks the one element each kind fears most and the one it shrugs off most, first in hero order on a tie', () => {
+    expect(extremes('grunt')).toEqual({ weak: 'lightning', strong: null });
+    expect(extremes('runner')).toEqual({ weak: 'ice', strong: null });
+    expect(extremes('brute')).toEqual({ weak: 'ice', strong: 'fire' });
+    expect(extremes('winder')).toEqual({ weak: 'poison', strong: 'ice' });
+    expect(extremes('gear')).toEqual({ weak: 'poison', strong: 'fire' });
+    for (const kind of ENEMY_KINDS) {
+      const { weak, strong } = extremes(kind);
+      const all = HERO_KINDS.map((el) => resist(kind, el));
+      expect(weak ? resist(kind, weak) : 1).toBe(Math.max(1, ...all));
+      expect(strong ? resist(kind, strong) : 1).toBe(Math.min(1, ...all));
+    }
   });
 });
 

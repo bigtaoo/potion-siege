@@ -216,7 +216,7 @@ export const vi: Table = {
     wind: 'Bình Gió',
   },
   codex: {
-    page: { book: 'Đồ giám', feats: 'Thành tựu' },
+    page: { potions: 'Bình thuốc', enemies: 'Kẻ địch', feats: 'Thành tựu' },
     heroes: 'Bình thuốc',
     monsters: 'Quân đoàn Dây cót',
     locked: 'Đã khóa',
@@ -233,6 +233,7 @@ export const vi: Table = {
       anvil: 'Nhảy vồ: cứ 8s bật lên phía trước, trừ khi bị làm chậm; nện vào tường làm choáng các bình',
       gear: 'Hai giai đoạn: còn nửa máu thì vành vỡ tan, lõi đội vương miện lao lên, điểm yếu đảo ngược',
     },
+    tag: { grunt: 'Cơ bản', runner: 'Nhanh', brute: 'Trâu', flyer: 'Bay', winder: 'Lên dây cho đồng đội', boss: 'Boss' },
     speed: 'Tốc độ {n}',
     wallDps: 'Công thành {n}/s',
     resist: 'Sát thương nhận',

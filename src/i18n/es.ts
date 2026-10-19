@@ -216,7 +216,7 @@ export const es: Table = {
     wind: 'Tónico eólico',
   },
   codex: {
-    page: { book: 'Códice', feats: 'Logros' },
+    page: { potions: 'Pociones', enemies: 'Enemigos', feats: 'Logros' },
     heroes: 'Pociones',
     monsters: 'Ejército de relojería',
     locked: 'Bloqueado',
@@ -233,6 +233,7 @@ export const es: Table = {
       anvil: 'Salta: avanza de un brinco cada 8s, salvo si está ralentizado; golpea la muralla y aturde pociones',
       gear: 'Dos fases: a media vida el aro se rompe y el núcleo coronado embiste; las debilidades se invierten',
     },
+    tag: { grunt: 'Básico', runner: 'Rápido', brute: 'Resistente', flyer: 'Vuela', winder: 'Da cuerda a otros', boss: 'Jefe' },
     speed: 'Velocidad {n}',
     wallDps: 'Asedio {n}/s',
     resist: 'Daño recibido',

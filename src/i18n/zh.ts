@@ -216,7 +216,7 @@ export const zh: Table = {
     wind: '疾风药剂',
   },
   codex: {
-    page: { book: '图鉴', feats: '成就' },
+    page: { potions: '药剂', enemies: '敌人', feats: '成就' },
     heroes: '药剂',
     monsters: '发条军团',
     locked: '未解锁',
@@ -233,6 +233,7 @@ export const zh: Table = {
       anvil: '飞扑：每 8 秒往前一跳，减速时跳不起来；砸墙眩晕下面的药剂',
       gear: '两阶段：半血时铁圈崩碎，王冠核心加速冲锋，克制反转',
     },
+    tag: { grunt: '普通', runner: '快速', brute: '血厚', flyer: '飞行', winder: '给同伴上发条', boss: 'BOSS' },
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
     resist: '受到伤害',

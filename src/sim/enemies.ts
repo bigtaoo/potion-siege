@@ -56,6 +56,19 @@ export function resists(kind: EnemyKind): { element: HeroKind; value: number }[]
   return HERO_KINDS.map((element) => ({ element, value: resist(kind, element) }));
 }
 
+/** The element that hurts `kind` the most and the one it shrugs off the most, null where none is
+ *  above or below 1×; on a tie the first in hero order. A codex card shows just these two. */
+export function extremes(kind: EnemyKind): { weak: HeroKind | null; strong: HeroKind | null } {
+  let weak: HeroKind | null = null;
+  let strong: HeroKind | null = null;
+  for (const el of HERO_KINDS) {
+    const v = resist(kind, el);
+    if (v > (weak ? resist(kind, weak) : 1)) weak = el;
+    if (v < (strong ? resist(kind, strong) : 1)) strong = el;
+  }
+  return { weak, strong };
+}
+
 /** A multiplier as the codex writes it: 0.5 is "-50%", 1.25 "+25%", 1 a dash. */
 export function resistLabel(v: number): string {
   const pct = Math.round((v - 1) * 100);

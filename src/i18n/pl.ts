@@ -216,7 +216,7 @@ export const pl: Table = {
     wind: 'Wichrowy Eliksir',
   },
   codex: {
-    page: { book: 'Kodeks', feats: 'Osiągnięcia' },
+    page: { potions: 'Mikstury', enemies: 'Wrogowie', feats: 'Osiągnięcia' },
     heroes: 'Mikstury',
     monsters: 'Mechaniczna armia',
     locked: 'Zablokowane',
@@ -233,6 +233,7 @@ export const pl: Table = {
       anvil: 'Skacze: co 8 s skok do przodu, ale nie gdy spowolniony; uderza w mur i ogłusza mikstury',
       gear: 'Dwie fazy: przy połowie zdrowia obręcz pęka, a koronowany rdzeń szarżuje; słabości się odwracają',
     },
+    tag: { grunt: 'Zwykły', runner: 'Szybki', brute: 'Wytrzymały', flyer: 'Lata', winder: 'Nakręca innych', boss: 'Boss' },
     speed: 'Szybkość {n}',
     wallDps: 'Oblężenie {n}/s',
     resist: 'Otrzymywane obrażenia',

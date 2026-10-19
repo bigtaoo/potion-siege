@@ -216,7 +216,7 @@ export const it: Table = {
     wind: 'Tonico di Vento',
   },
   codex: {
-    page: { book: 'Codice', feats: 'Obiettivi' },
+    page: { potions: 'Pozioni', enemies: 'Nemici', feats: 'Obiettivi' },
     heroes: 'Pozioni',
     monsters: 'Armata a Molla',
     locked: 'Bloccato',
@@ -233,6 +233,7 @@ export const it: Table = {
       anvil: 'Balza: salta avanti ogni 8s, ma non se rallentato; colpisce le mura e stordisce le pozioni',
       gear: "Due fasi: a metà vita l'anello si frantuma e il nucleo coronato carica, le debolezze si invertono",
     },
+    tag: { grunt: 'Base', runner: 'Veloce', brute: 'Resistente', flyer: 'Vola', winder: 'Ricarica gli altri', boss: 'Boss' },
     speed: 'Velocità {n}',
     wallDps: 'Assedio {n}/s',
     resist: 'Danni subiti',
