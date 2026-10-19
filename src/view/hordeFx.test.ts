@@ -15,10 +15,11 @@ function playTo(b: Battle, seconds: number, each = () => {}): void {
 describe('the horde as drawn', () => {
   it('raises dust once for each rush as it comes in', () => {
     const b = new Battle(3);
+    const rushes = BALANCE.waves.horde.rushes;
     const watch = new RushWatch();
     let dust = 0;
-    playTo(b, BALANCE.waves.horde.rushes.at(-1)! + 1, () => void (watch.arrived(b) && dust++));
-    expect(dust).toBe(BALANCE.waves.horde.rushes.length);
+    playTo(b, rushes[rushes.length - 1] + 1, () => void (watch.arrived(b) && dust++));
+    expect(dust).toBe(rushes.length);
   });
 
   it('raises none for rushes long past when it first looks, and starts again with a new battle', () => {
