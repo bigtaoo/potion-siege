@@ -65,10 +65,11 @@ Windows compiles the Swift.
   (`AdMob.onChange`). `rewarded` resolves true only when the reward was earned, after the ad has
   closed; `midgame` plays the interstitial if one is loaded, never waits for one. The `started`
   callback mutes the game as on CrazyGames. An ad not on screen 10 s after the ask is given up.
-- **Ids.** `live = false` in `AdMob.swift` and Google's sample app id in `Info.plist` until our
-  own exist: Google's demo units serve test ads under any id, ours have no fill before the app is
-  on the store. Going live means our app id in `Info.plist` and both units in `AdMob.swift`, in
-  one change (`shell.test.ts` refuses one without the other). Never tap a live ad yourself.
+- **Ids.** Our app id is in `Info.plist` and our two units in `AdMob.swift` (created
+  2026-10-19), as Google advises for testing: the real app id, its demo units. `live = false`
+  serves the demo units, since ours have no fill before the app is on the store; going live is
+  flipping `live` for the build sent to review. `shell.test.ts` holds all three ids to one
+  publisher. Never tap a live ad yourself.
 - Settings gains an "Ad privacy choices" button where Google says the options are required.
 
 ## The ad-free card (StoreKit 2)

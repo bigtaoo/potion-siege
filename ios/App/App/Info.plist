@@ -66,12 +66,13 @@
 	<true/>
 	<key>ITSAppUsesNonExemptEncryption</key>
 	<false/>
-	<!-- AdMob (AdMob.swift): Google's sample app id until Potion Siege's own exists (the SDK stops the
-	     app at launch without a valid one); the account's publisher is the one holykicker uses. No NSUserTrackingUsageDescription on purpose: every request is non-personalised
+	<!-- AdMob (AdMob.swift): Potion Siege's own app id (the SDK stops the app at launch without a
+	     valid one), on the publisher holykicker uses; test ads come from the demo units while
+	     `live` is off. No NSUserTrackingUsageDescription on purpose: every request is non-personalised
 	     (npa=1) and the app never asks to track, as in funny. SKAdNetwork is not tracking in Apple's
 	     terms (aggregate install attribution); the list is Google's, copied from funny. -->
 	<key>GADApplicationIdentifier</key>
-	<string>ca-app-pub-3940256099942544~1458002511</string>
+	<string>ca-app-pub-5437693117291100~7889393959</string>
 	<key>SKAdNetworkItems</key>
 	<array>
 		<dict>

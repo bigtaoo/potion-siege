@@ -27,14 +27,14 @@ final class AdMob: NSObject, FullScreenContentDelegate {
         }
     }
 
-    /// Google's demo units until Potion Siege's own exist in AdMob (D:\cloud\iospps\potionsiege.md):
-    /// they serve test ads under any app id. Turn `live` on with our units for the listing, never
+    /// Our units (AdMob app "Potion Siege", created 2026-10-19) behind `live`; off, Google's demo
+    /// units serve test ads under our app id. Turn `live` on for the build sent to review, not
     /// before (ours have no fill before the app is on the store), and never tap a live ad yourself.
     private static let live = false
     private static func unit(_ kind: Kind) -> String {
         switch kind {
-        case .rewarded: return live ? "TODO-rewarded-unit" : "ca-app-pub-3940256099942544/1712485313"
-        case .interstitial: return live ? "TODO-interstitial-unit" : "ca-app-pub-3940256099942544/4411468910"
+        case .rewarded: return live ? "ca-app-pub-5437693117291100/7570004767" : "ca-app-pub-3940256099942544/1712485313"
+        case .interstitial: return live ? "ca-app-pub-5437693117291100/6256923091" : "ca-app-pub-3940256099942544/4411468910"
         }
     }
 

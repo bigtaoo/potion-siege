@@ -108,19 +108,16 @@ describe('iOS shell', () => {
     expect(bridge.split('override func viewDidAppear')[1]).toContain('adMob.start()');
   });
 
-  it("goes live with our own app id and units together, never one without the other", () => {
-    const live = adMob.match(/private static let live = (true|false)/)?.[1];
+  it("runs under our own app id, with our units behind the one live switch", () => {
+    // Google's advice: the real app id always, its demo units while testing (docs/ios.md "Ids")
+    expect(adMob).toMatch(/private static let live = (true|false)\n/);
     const appId = plist.match(/<key>GADApplicationIdentifier<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
-    if (live === 'false') {
-      // test ads until the listing exists (docs/ios.md "Owner setup")
-      expect(appId).toBe(SAMPLE_APP_ID);
-      return;
-    }
-    expect(live).toBe('true');
+    expect(appId).toMatch(/^ca-app-pub-\d+~\d+$/);
     expect(appId).not.toBe(SAMPLE_APP_ID);
     // our own units belong to the app id's publisher
     const publisher = appId?.match(/ca-app-pub-(\d+)~\d+/)?.[1];
-    expect(adMob.match(/live \? "ca-app-pub-(\d+)\//g)).toEqual([`live ? "ca-app-pub-${publisher}/`, `live ? "ca-app-pub-${publisher}/`]);
+    const units = [...adMob.matchAll(/live \? "ca-app-pub-(\d+)\/\d+"/g)].map((m) => m[1]);
+    expect(units).toEqual([publisher, publisher]);
   });
 
   it('is an iPhone game in portrait, full screen, without the status bar', () => {
