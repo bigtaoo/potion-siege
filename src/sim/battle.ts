@@ -21,7 +21,7 @@ import { BASE_SETUP, type BattleSetup } from './meta';
 import { fixedMods, type Fixed } from './fixedMods';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type EnemyKind, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
-import { Shares } from './shares';
+import { laneSpan, Shares } from './horde';
 import { crowdOf, endlessSpeed, isBossWave, planWave, type Spawn } from './waves';
 
 const B = BALANCE;
@@ -528,8 +528,7 @@ export class Battle {
     const def = B.enemies[s.kind];
     const radius = toFp(((s.elite ? def.radius * B.elite.radius : def.radius) * (s.size ?? 1000)) / 1000);
     const id = this.nextId;
-    const lo = s.lane ? Math.max(K.left + radius, toFp(s.lane.x0)) : K.left + radius;
-    const hi = s.lane ? Math.max(lo, Math.min(K.right - radius, toFp(s.lane.x1))) : K.right - radius;
+    const [lo, hi] = laneSpan(s, K.left + radius, K.right - radius);
     const x = at ? Math.min(K.right - radius, Math.max(K.left + radius, at.x)) : this.enemyRng.range(lo, hi);
     const y = at ? at.y : K.top - radius - toFp(s.lane?.back ?? 0);
     const speed = times(times(perTick(def.speed), this.enemyRng.range(900, 1100)), pm((this.setup.modifiers?.enemySpeed ?? 1) * (this.setup.endless ? endlessSpeed(this.wave) : 1)));

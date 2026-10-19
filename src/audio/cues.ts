@@ -1,7 +1,7 @@
 // Which sound each battle event makes.
 
 import type { BattleEvent } from '../sim/types';
-import { isHordeWave } from '../sim/waves';
+import { isHordeWave } from '../sim/horde';
 import type { SfxId } from './sfx';
 
 export interface Cue {

@@ -2,6 +2,7 @@
 
 import { FP, ticks } from './math/fixed';
 import type { Prng } from './math/prng';
+import { isHordeWave, joinHorde, rankAndFile } from './horde';
 import { BALANCE, BOSS_KINDS, isBoss, type BossKind, type EnemyKind } from './types';
 
 export interface Spawn {
@@ -182,41 +183,6 @@ function withTheme(mods: WaveMods, wave: number): WaveMods {
   return out;
 }
 
-/** Whether `wave` opens with the horde: the first wave of every stage (and of an endless run). */
-export function isHordeWave(wave: number): boolean {
-  return wave === 1;
-}
-
-/** Lays the crowd of the horde wave out as `horde.rushes`: the n-th spawn joins rush
- *  floor(n * rushes / count), all of a rush come in on the same tick, in rows of up to
- *  `horde.cols` across the field's width, each row `horde.rowGap` further behind the top edge
- *  than the one before and every other one shifted by a quarter of a lane, so a rush marches in
- *  as a block. Only the times and lanes change: the kinds are rolled as before, and each spawn
- *  still draws its x (within its lane now) and its speed, so the horde takes no extra dice. */
-function rankAndFile(spawns: Spawn[]): void {
-  const H = BALANCE.waves.horde;
-  const F = BALANCE.field;
-  const width = F.right - F.left;
-  const rushes = H.rushes.length;
-  const count = spawns.length;
-  for (let r = 0; r < rushes; r++) {
-    const from = Math.ceil((count * r) / rushes);
-    const to = Math.ceil((count * (r + 1)) / rushes);
-    const n = to - from;
-    const rows = Math.ceil(n / H.cols);
-    for (let j = 0; j < n; j++) {
-      const row = Math.floor(j / H.cols);
-      const across = row < rows - 1 ? H.cols : n - H.cols * (rows - 1);
-      const lane = width / across;
-      const shift = across === H.cols ? (row % 2 === 0 ? -lane / 4 : lane / 4) : 0;
-      const x0 = F.left + lane * (j % H.cols) + shift;
-      const spawn = spawns[from + j];
-      spawn.at = ticks(H.rushes[r]);
-      spawn.lane = { x0: Math.round(x0), x1: Math.round(x0 + lane), back: row * H.rowGap };
-    }
-  }
-}
-
 /** The spawns of one wave of `stage`, sorted by time. Boss waves add the chapter's boss at the start and
  *  half the crowd. Each spawn of the crowd takes one roll, flyers off its bottom end, so a stage
  *  without flyers plans exactly as before they came; winders come at fixed times on top.
@@ -245,8 +211,6 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   // of a weak save need two for each by stage 4, fall behind and lose by wave 3
   const horde = isHordeWave(wave);
   const heft = Math.round(1_000_000 / crowd);
-  const size = Math.round(w.horde.size * 1000);
-  const hordeHp = Math.round(w.horde.hp * 1000);
   // and on the first chapter's stages (up to `earlyHpTo`) tougher in all than the growth alone
   // would make them, so three potions left alone fall behind before the first boss; `earlyHpGold`
   // of the extra comes back as kill gold, so a player who keeps up is not set back. Later stages
@@ -279,11 +243,7 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
       spawn.hp = Math.round((spawn.hp * 1000) / crowd);
       spawn.gold = heft;
     }
-    if (horde) {
-      spawn.hp = Math.round((spawn.hp * hordeHp) / 1000);
-      spawn.heft = heft;
-      spawn.size = size;
-    }
+    if (horde) joinHorde(spawn, heft);
     if (tough !== 1000) {
       spawn.hp = Math.round((spawn.hp * tough) / 1000);
       spawn.gold = Math.round(((spawn.gold ?? 1000) * toughGold) / 1000);

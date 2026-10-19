@@ -3,7 +3,8 @@ import { Battle } from './battle';
 import { FP, ticks, toFp } from './math/fixed';
 import { Prng } from './math/prng';
 import { BALANCE, type Enemy, type HeroKind, type Projectile } from './types';
-import { isHordeWave, planWave, type Spawn } from './waves';
+import { isHordeWave } from './horde';
+import { planWave, type Spawn } from './waves';
 
 const H = BALANCE.waves.horde;
 const F = BALANCE.field;
