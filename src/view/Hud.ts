@@ -1,14 +1,17 @@
 // The battle's heads-up display: wave and gold at the top, the upgrade and summon buttons on
 // either side of the commander at the bottom.
 
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, Sprite } from 'pixi.js';
 import { t, type TextKey } from '../i18n';
-import type { Battle } from '../sim/battle';
+import { slotCenter, type Battle } from '../sim/battle';
 import type { ModifierId } from '../sim/challenge';
 import { resists } from '../sim/enemies';
+import { mergeablePair } from '../sim/tutorial';
 import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type HeroKind } from '../sim/types';
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
+import { handTexture } from './art';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
+import { drawArc, pointingHand, quad } from './Tutorial';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -19,6 +22,9 @@ const BANNER_Y = 270;
 const BOSS_BANNER_Y = 620;
 const BOSS_CARD_Y = 850;
 const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
+/** How long the grid stays full with a pair to fuse and gold for a summon before the board
+ *  points at the pair by itself. */
+const NUDGE_AFTER = 2;
 
 export class Hud extends Container {
   private readonly coin = new Graphics();
@@ -46,12 +52,26 @@ export class Hud extends Container {
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
   hint = true;
+  /** The full-grid pointer on the board; off while the tutorial points at things itself. */
+  nudge = true;
+  /** Around the two cells that could fuse while the grid is full: pulsing rings, the dragging
+   *  arc and the tutorial's hand. Takes no taps, so the drag reaches the board under it. */
+  private readonly nudgeRings = new Graphics();
+  private readonly nudgeArc = new Graphics();
+  private readonly nudgeHand = new Container();
+  /** Seconds the grid has been full with a pair and gold for a summon; the pointer shows past NUDGE_AFTER. */
+  private fullTime = 0;
+  /** The player tapped the grey summon button on a full grid: point at once until a cell frees up. */
+  private asked = false;
+  private nudgeTime = 0;
+  /** The summon button's shake after a tap on it while grey. */
+  private shake = 0;
 
   constructor(onSummon: () => void, onUpgrade: () => void) {
     super();
     this.upgradeButton = new Button('', BUTTON.w, BUTTON.h, 0x7a4fd0, onUpgrade, 46);
     this.upgradeButton.position.set(190, BUTTON.y);
-    this.summonButton = new Button('', BUTTON.w, BUTTON.h, COLORS.button, onSummon, 46);
+    this.summonButton = new Button('', BUTTON.w, BUTTON.h, COLORS.button, onSummon, 46, () => this.blocked());
     this.summonButton.position.set(DESIGN_W - 190, BUTTON.y);
     this.waveText.position.set(DESIGN_W / 2, 60);
     this.stageText.anchor.set(1, 0.5);
@@ -68,7 +88,11 @@ export class Hud extends Container {
     this.banner.alpha = 0;
     this.newcomer.position.set(DESIGN_W / 2, 370);
     this.newcomer.alpha = 0;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods, this.upgradeButton, this.summonButton);
+    for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
+    this.nudgeHand.addChild(pointingHand());
+    this.nudgeHand.rotation = Math.PI - 0.35;
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton);
   }
 
   attach(battle: Battle): void {
@@ -80,6 +104,9 @@ export class Hud extends Container {
     this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.fullTime = 0;
+    this.asked = false;
+    this.shake = 0;
   }
 
   /** Grows the small words for a small board; the hint wraps narrower to stay on it. */
@@ -187,8 +214,16 @@ export class Hud extends Container {
     if (!b) return;
     this.waveText.text = this.waveLabel(b.wave);
     this.goldText.text = `${b.gold}`;
-    this.summonButton.text.text = `${t('summon')}\n● ${b.summonCost()}`;
+    // a full grid says so on the button, and what to do about it, rather than just going grey
+    const full = !b.paused && !b.result && b.freeSlots().length === 0;
+    const pair = full ? mergeablePair(b) : null;
+    this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}\n● ${b.summonCost()}`;
     this.summonButton.setEnabled(b.canSummon());
+    this.shake = Math.max(0, this.shake - dt);
+    this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
+    if (!full) this.asked = false;
+    this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
+    this.pointAt(this.nudge && pair && (this.asked || this.fullTime >= NUDGE_AFTER) ? pair : null, dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
     for (const btn of [this.summonButton, this.upgradeButton]) {
@@ -198,10 +233,15 @@ export class Hud extends Container {
       const h = btn.text.height / raw;
       btn.text.scale.set(Math.min(this.boost, (BUTTON.w - 36) / w, (BUTTON.h - 12) / h));
     }
-    this.hintBox.visible = this.hint && b.seconds < HINT_SECONDS && this.mods.children.length === 0;
+    // the opening hint, or a word on what to do while the board points at a pair
+    const pointing = this.nudgeHand.visible;
+    const opening = this.hint && b.seconds < HINT_SECONDS;
+    this.hintBox.visible = (pointing || opening) && this.mods.children.length === 0;
+    const words = pointing ? t('full.hint') : t('hint');
+    if (this.hintText.text !== words) this.hintText.text = words;
     if (this.hintBox.visible) this.fitHint();
-    // it fades out over its last second
-    this.hintBox.alpha = Math.min(1, HINT_SECONDS - b.seconds);
+    // the opening one fades out over its last second
+    this.hintBox.alpha = pointing ? 1 : Math.min(1, HINT_SECONDS - b.seconds);
 
     this.bannerTime = b.paused ? 0 : Math.max(0, this.bannerTime - dt);
     this.banner.alpha = Math.min(1, this.bannerTime);
@@ -210,6 +250,48 @@ export class Hud extends Container {
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
     this.bossCard.alpha = this.newcomer.alpha;
     this.bossCard.scale.set(1 + Math.max(0, this.newcomerTime - 4.8) * 0.8);
+  }
+
+  /** A tap on the grey summon button: it shakes, and on a full grid the board points at a pair. */
+  private blocked(): void {
+    this.shake = 0.35;
+    const b = this.battle;
+    if (b && !b.paused && b.freeSlots().length === 0) this.asked = true;
+  }
+
+  /** The pointer over the two cells of `pair` (design units), or hidden when it is null: the
+   *  tutorial's merge look, its hand dragging along an arc from one to the other. */
+  private pointAt(pair: [number, number] | null, dt: number): void {
+    this.nudgeRings.visible = this.nudgeArc.visible = this.nudgeHand.visible = pair !== null;
+    if (!pair) {
+      this.nudgeTime = 0;
+      return;
+    }
+    // the painted glove once it has loaded
+    if (handTexture() && !(this.nudgeHand.children[0] instanceof Sprite)) {
+      this.nudgeHand.removeChildren().forEach((c) => c.destroy());
+      this.nudgeHand.addChild(pointingHand());
+    }
+    const s = (this.nudgeTime += dt);
+    const g = BALANCE.grid;
+    const [from, to] = pair.map((slot) => slotCenter(slot));
+    const pulse = 0.5 + 0.5 * Math.sin(s * 5);
+    const r = this.nudgeRings.clear();
+    for (const c of [from, to]) {
+      const x = c.x - g.cellW / 2 - 10;
+      const y = c.y - g.cellH / 2 - 10;
+      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 10, color: P.brassLight, alpha: 0.35 + 0.55 * pulse });
+      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 3, color: LIGHT.edge, alpha: 0.6 });
+    }
+    const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 60 - 0.25 * Math.hypot(to.x - from.x, to.y - from.y) };
+    drawArc(this.nudgeArc.clear(), from, mid, to);
+    // drags along the arc, then lifts and starts again
+    const cycle = (s % 1.8) / 1.8;
+    const k = Math.min(1, Math.max(0, (cycle - 0.15) / 0.65));
+    const p = quad(from, mid, to, k * k * (3 - 2 * k));
+    this.nudgeHand.position.set(p.x, p.y);
+    this.nudgeHand.alpha = cycle > 0.9 ? 1 - (cycle - 0.9) * 10 : Math.min(1, cycle * 10);
+    this.nudgeHand.scale.set(cycle < 0.15 ? 1.08 - cycle * 0.5 : 1);
   }
 
   /** The hint's plate around its words, drawn again when they wrap differently. */
