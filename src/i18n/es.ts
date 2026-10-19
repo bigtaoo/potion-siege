@@ -181,7 +181,7 @@ export const es: Table = {
     next: 'Siguiente en {time}',
     wave: 'Oleada {n}',
     reached: 'Llegaste a la oleada {n}',
-    streak: 'Racha de {n} días',
+    streak: 'Días seguidos: {n}',
     streakBonus: '¡{n} días seguidos!',
     mod: {
       swift: { name: 'Prisa', desc: 'Enemigos un 30% más rápidos' },
@@ -289,7 +289,7 @@ export const es: Table = {
     arcaneIce: { name: 'Saeta gélida', desc: 'Las saetas arcanas ralentizan un 30% durante 1.5s' },
     fireRadius: { name: 'Incendio', desc: 'Explosiones de fuego un 35% más amplias' },
     fireDamage: { name: 'Llamarada', desc: 'Tónicos ígneos +40% de daño' },
-    fireBurn: { name: 'Quemadura', desc: 'El fuego prende a los enemigos 3s: 15% del golpe por segundo' },
+    fireBurn: { name: 'Quemadura', desc: 'El fuego hace arder a los enemigos 3s: 15% del golpe por segundo' },
     fireChain: { name: 'Cadena explosiva', desc: 'Los enemigos que mueren quemados vuelven a explotar con un 50% de daño' },
     fireArcane: { name: 'Saeta explosiva', desc: 'Las saetas arcanas estallan al impactar: 120% de daño en área' },
     iceFreeze: { name: 'Ultracongelación', desc: 'Los golpes gélidos pueden congelar 1s; a los jefes los ralentizan un 70%' },
