@@ -194,8 +194,7 @@ export function buildHome(
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
-  else if (isEnemy(panel)) root.addChild(enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)));
-  else if (panel) root.addChild(heroPanel(m, act, panel, fit));
+  else if (panel) root.addChild(isEnemy(panel) ? enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)) : heroPanel(m, act, panel, fit));
   return root;
 }
 
