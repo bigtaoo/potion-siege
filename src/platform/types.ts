@@ -34,6 +34,11 @@ export interface Platform {
   /** Opens a web page outside the game, from a tap (the privacy policy in settings); absent
    *  where the host allows no outside links (CrazyGames, whose own policy covers its players). */
   readonly openUrl?: (url: string) => void;
+  /** The player's country as the host knows it ('DE'), which decides whether the game asks
+   *  before sending play statistics (analytics/privacy.ts); absent or null: the time zone decides. */
+  country?(): string | null;
+  /** Puts `text` on the clipboard, from a tap; false when the host refused. Absent where there is none. */
+  copyText?(text: string): Promise<boolean>;
 }
 
 /**

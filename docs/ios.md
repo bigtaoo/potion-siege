@@ -149,10 +149,13 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 - Settings links to it ("Privacy policy", the `#zh` half in Chinese) on every host that has
   `Platform.openUrl`: the web and iOS. CrazyGames has none, since the portal allows no links out
   and its own policy covers its players.
-- Open in the policy, the owner's call: telemetry runs on legitimate interest with no consent
-  gate in the EEA (Holy Kicker asks first); "as long as we need them" is the only retention, and
-  the collector deletes nothing yet; the install id §9 asks for is shown nowhere in the game.
-  None of these blocks App Review, which checks that the policy exists and is reachable.
+- Play statistics ask first in the EEA/UK/CH (src/analytics/privacy.ts, the rules Holy Kicker
+  uses): the home screen after run 1 opens the question once a session, and until "Allow" events
+  wait in memory and no install id is stored. Everyone has the "Share stats" switch and the Player
+  ID with Copy in Settings, which §9 points to. UMP covers only Google's ads, so the app runs both.
+- Open in the policy, the owner's call: the collector deletes nothing yet, and §8 says so with a
+  TODO comment to pick a period and add the cron. It does not block App Review, which checks that
+  the policy exists and is reachable.
 - Privacy label: identifiers (install id; AdMob's device id), usage data, diagnostics; nothing
   linked to a person, nothing used for tracking.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).

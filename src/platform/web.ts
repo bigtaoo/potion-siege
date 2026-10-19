@@ -16,6 +16,16 @@ export class WebPlatform implements Platform {
   /** A new tab; inside a portal's iframe too, since it comes from a tap. */
   readonly openUrl: ((url: string) => void) | undefined = (url) => void window.open(url, '_blank', 'noopener');
 
+  async copyText(text: string): Promise<boolean> {
+    try {
+      await navigator.clipboard.writeText(text);
+      return true;
+    } catch {
+      // a portal's iframe may withhold clipboard-write: the old way still works from a tap
+      return copyByCommand(text);
+    }
+  }
+
   languages(): string[] {
     return [...(navigator.languages ?? []), navigator.language];
   }
@@ -43,4 +53,22 @@ export class WebPlatform implements Platform {
   }
 
   onHostMute(_listener: (muted: boolean) => void): void {}
+}
+
+/** The pre-Clipboard-API copy: a hidden text box selected and copied. */
+function copyByCommand(text: string): boolean {
+  const box = document.createElement('textarea');
+  box.value = text;
+  box.readOnly = true;
+  box.style.cssText = 'position:fixed;left:-9999px;top:0;opacity:0';
+  document.body.appendChild(box);
+  try {
+    box.select();
+    box.setSelectionRange(0, text.length);
+    return document.execCommand('copy');
+  } catch {
+    return false;
+  } finally {
+    box.remove();
+  }
 }

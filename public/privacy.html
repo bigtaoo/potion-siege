@@ -37,12 +37,12 @@
 <main>
 <article id="en" lang="en">
   <h1>Privacy Policy</h1>
-  <p class="meta">Last updated: 2026-10-18 &nbsp;·&nbsp; Potion Siege &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#zh" lang="zh-Hans">中文</a></p>
+  <p class="meta">Last updated: 2026-10-19 &nbsp;·&nbsp; Potion Siege &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#zh" lang="zh-Hans">中文</a></p>
 
   <p>This policy explains what data the game Potion Siege collects, why, and what you can do about it. It applies wherever you play the game: on our own site (p.gamestao.com), on game sites such as CrazyGames, itch.io or Newgrounds, and in the iPhone app. We follow the EU General Data Protection Regulation (GDPR) and the applicable data protection law.</p>
 
   <div class="callout">
-    <strong>There is no account and no sign-up, and the game never asks who you are.</strong> Your progress and settings stay on your device (on CrazyGames, in the portal's own save). The game sends <strong>anonymous play statistics</strong> to our own server, linked to a random install ID rather than to you. Ads appear only on CrazyGames and in the iPhone app, and in the iPhone app they are never personalised.
+    <strong>There is no account and no sign-up, and the game never asks who you are.</strong> Your progress and settings stay on your device (on CrazyGames, in the portal's own save). The game sends <strong>anonymous play statistics</strong> to our own server, linked to a random install ID rather than to you; in the EEA, the UK and Switzerland only after you allow it, and everywhere you can switch them off in Settings. Ads appear only on CrazyGames and in the iPhone app, and in the iPhone app they are never personalised.
   </div>
 
   <h2>1. Who is responsible</h2>
@@ -55,7 +55,7 @@
       <td>Play statistics</td>
       <td data-h="Exactly">A fixed list of game events, sent to our server at <code>ps.gamestao.com</code>: the game starting (how long it took to load, your language, the screen size, whether the screen is a touch screen, and a rough description of the device: memory size class, number of processor cores, the graphics chip as one of "software", "weak", "other" or "hidden", pixel density and the renderer); a battle starting and ending (stage, mode, the potions you took and their levels, the wave reached, won or lost, time played); the tutorial's steps; your first summon, merge and win; skills picked, upgrades and crystals spent, daily rewards and tasks claimed; which menu screens you open; an optional ad offered and whether it was watched; in the iPhone app, buying or restoring the Ad-free card (only whether it went through, never any payment details); the frame rate and memory use when the game runs slowly; and error messages from the game's own code. Each event comes with the random install ID (§4), a random ID for that launch, the time, how many days since you first played and how many times you have played, the platform (web, CrazyGames or iPhone), the game version, and where you first came from: a short tag in the link you followed (such as <code>?src=…</code>) or the name of the site that linked to the game, never the full address. <strong>The list and its fields are fixed in the game's code.</strong></td>
       <td data-h="Why">Seeing which parts of the game are played, where new players get stuck and whether they come back, to balance and improve the game and fix crashes</td>
-      <td data-h="Legal basis">Our legitimate interest in improving the game (Art. 6(1)(f) GDPR)</td>
+      <td data-h="Legal basis">In the EEA, the UK and Switzerland: your consent (Art. 6(1)(a) GDPR). The game asks on the home screen after your first battle; until you tap <em>Allow</em>, nothing is sent and no install ID is stored, and if you never answer, nothing is ever sent. Everywhere else: our legitimate interest in improving the game (Art. 6(1)(f) GDPR). In both cases the <em>Share stats</em> switch in Settings turns it off.</td>
     </tr>
     <tr>
       <td>Load counts</td>
@@ -65,7 +65,7 @@
     </tr>
     <tr>
       <td>Feedback</td>
-      <td data-h="Exactly">Only in the browser version outside CrazyGames (our own site, itch.io, Newgrounds), once, after your third battle: if you answer, your rating (1 to 5 stars) and the line of text you typed (at most 200 characters), with the install ID. Please do not type personal information there.</td>
+      <td data-h="Exactly">Only in the browser version outside CrazyGames (our own site, itch.io, Newgrounds), once, after your third battle, and only while play statistics are on: if you answer, your rating (1 to 5 stars) and the line of text you typed (at most 200 characters), with the install ID. Please do not type personal information there.</td>
       <td data-h="Why">Knowing whether the game is fun</td>
       <td data-h="Legal basis">Your consent, given by sending it (Art. 6(1)(a))</td>
     </tr>
@@ -82,7 +82,7 @@
     <li><strong>No account, no name, no email address, no password.</strong></li>
     <li><strong>No third-party analytics or tracking.</strong> The statistics above go to our own server only. The game contains no Google Analytics, no Firebase and no tracking script. The iPhone app contains Google's ad software for the ads described in §5, limited to non-personalised ads.</li>
     <li><strong>No advertising ID and no profile of you</strong>, and no tracking across other sites or apps. The iPhone app never asks to track you, so neither we nor Google get Apple's advertising ID.</li>
-    <li><strong>No location.</strong> We do not record your country or anything finer. Google may estimate a rough location from your IP address to serve ads in the iPhone app (§5).</li>
+    <li><strong>No location.</strong> We do not record your country or anything finer. To know whether to ask before sending play statistics, the game looks at the country CrazyGames reports or, elsewhere, at your device's time zone; this stays on your device. Google may estimate a rough location from your IP address to serve ads in the iPhone app (§5).</li>
     <li><strong>No payment details</strong> (§6).</li>
     <li><strong>No sale or sharing of your data</strong> for anyone else's purposes.</li>
   </ul>
@@ -91,7 +91,8 @@
   <p>The game keeps a few items in your browser's local storage. No cookies.</p>
   <ul>
     <li><code>mb.save</code>: your progress and settings. On CrazyGames it lives in the portal's save, which follows a signed-in player to other devices.</li>
-    <li><code>mb.player</code>: the random install ID, the day you first played, how many times you have played, which first steps you have reached, and where you first came from.</li>
+    <li><code>mb.player</code>: the random install ID (created only once play statistics may be sent), the day you first played, how many times you have played, which first steps you have reached, and where you first came from.</li>
+    <li><code>mb.privacy</code>: your answer about play statistics.</li>
     <li><code>ps.adFree</code> (iPhone app only): whether you own the Ad-free card, as the App Store last told the app.</li>
   </ul>
   <p>In the iPhone app these items are also copied into the app's own storage, so iOS clearing the web storage loses nothing, and the app downloads game updates from our server at <code>ps-ota.gamestao.com</code>. Clearing the site's data in your browser, or deleting the app, removes all of it; the game then starts over with a new install ID.</p>
@@ -115,11 +116,15 @@
   <p>Cloudflare and Hetzner process the data for us under data processing agreements. Where data is processed outside the EEA, this happens under the European Commission's standard contractual clauses.</p>
 
   <h2>8. How long we keep it</h2>
-  <p>Play statistics, load counts and feedback are stored as files per day on our server in Germany and kept only as long as we need them to balance and improve the game; then they are deleted. They contain no name, address or other detail that says who you are. Connection data is not stored (§2).</p>
+  <!-- TODO(owner): pick a retention period (for example 14 months) and add a cron on the
+       Hetzner box that deletes /home/deploy/potion-siege/data/events-*.ndjson older than that,
+       then replace the "nothing deletes them automatically" sentences here and in the Chinese §8
+       with the period. Also check what Cloudflare logs for ps.gamestao.com on this plan. -->
+  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>At present nothing deletes these files automatically:</strong> they are kept until we delete them or you ask us to delete yours (§9). We will set a fixed period and state it here. The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
 
   <h2>9. Your rights</h2>
-  <p>You can ask for access to your data, correction, deletion, restriction and a portable copy, and you can object to processing based on our legitimate interest at any time. Consent you gave by sending feedback can be withdrawn at any time.</p>
-  <p>Because we do not know who you are, we can only find your data by your install ID, the <code>id</code> in <code>mb.player</code> (§4). To see or delete it, email <a href="mailto:support@gamestao.com">support@gamestao.com</a> with that ID. To stop being counted from now on, clear the site's data or delete the app: the old ID is then gone from your device and nothing links you to it. We answer within 30 days, free of charge. You also have the right to complain to a data protection authority.</p>
+  <p>You can ask for access to your data, correction, deletion, restriction and a portable copy, and you can object to processing based on our legitimate interest at any time. Consent you gave by allowing play statistics or by sending feedback can be withdrawn at any time, without affecting what was sent before.</p>
+  <p>Because we do not know who you are, we can only find your data by your install ID. The game shows it in <strong>Settings → Player ID</strong>, with a <em>Copy</em> button where your device allows (it is also the <code>id</code> in <code>mb.player</code>, §4). To see or delete your data, email <a href="mailto:support@gamestao.com">support@gamestao.com</a> with that ID. If Settings says there is no player ID, nothing has been sent from that device. To stop being counted from now on, switch off <em>Share stats</em> in Settings; the ID stays shown there so you can still ask us to delete what was sent. Clearing the site's data or deleting the app also removes the ID from your device, after which nothing links you to it, so note it first if you want your data deleted. We answer within 30 days, free of charge. You also have the right to complain to a data protection authority.</p>
 
   <h2>10. Children</h2>
   <p>The game asks no one for personal data: there is no account, no chat and nothing to type except the optional feedback line. Ads in the iPhone app are non-personalised. If you believe a child has sent us personal data, contact us and we will delete it.</p>
@@ -135,12 +140,12 @@
 
 <article id="zh" lang="zh-Hans">
   <h1>隐私政策</h1>
-  <p class="meta">更新日期：2026-10-18 &nbsp;·&nbsp; 药水围城（Potion Siege） &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#en" lang="en">English</a></p>
+  <p class="meta">更新日期：2026-10-19 &nbsp;·&nbsp; 药水围城（Potion Siege） &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#en" lang="en">English</a></p>
 
   <p>本政策说明游戏《药水围城》收集哪些数据、为什么收集，以及你可以怎么做。无论你在我们自己的网站（p.gamestao.com）、CrazyGames、itch.io、Newgrounds 等游戏网站还是 iPhone 应用里玩，本政策都适用。我们遵守欧盟《通用数据保护条例》（GDPR）及适用的数据保护法律。如中英文版本有出入，以英文版为准。</p>
 
   <div class="callout">
-    <strong>游戏没有账号，也不需要注册，从不询问你是谁。</strong>你的进度和设置保存在你的设备上（在 CrazyGames 上则保存在平台自己的存档里）。游戏只向我们自己的服务器发送<strong>匿名的游戏统计</strong>，它们关联的是一个随机的安装 ID，而不是你本人。只有 CrazyGames 和 iPhone 应用里有广告，iPhone 应用里的广告从不个性化。
+    <strong>游戏没有账号，也不需要注册，从不询问你是谁。</strong>你的进度和设置保存在你的设备上（在 CrazyGames 上则保存在平台自己的存档里）。游戏只向我们自己的服务器发送<strong>匿名的游戏统计</strong>，它们关联的是一个随机的安装 ID，而不是你本人；在欧洲经济区、英国和瑞士，只有在你允许之后才发送，而且在任何地方都可以在“设置”里关闭。只有 CrazyGames 和 iPhone 应用里有广告，iPhone 应用里的广告从不个性化。
   </div>
 
   <h2>1. 责任人</h2>
@@ -153,7 +158,7 @@
       <td>游戏统计</td>
       <td data-h="具体内容">一份固定的游戏事件清单，发送到我们的服务器 <code>ps.gamestao.com</code>：游戏启动（加载用时、语言、屏幕尺寸、是否触屏，以及对设备的粗略描述：内存大小档位、处理器核数、显卡只分“软件渲染”“较弱”“其他”“不可见”四类、像素密度和渲染方式）；一场战斗的开始和结束（关卡、模式、带上的药剂及其等级、到达的波次、胜负、时长）；新手引导的各步；第一次召唤、合成和胜利；选择的技能、升级和花费的水晶、领取的每日奖励和任务；打开了哪些菜单界面；可选广告的弹出以及是否看完；在 iPhone 应用里购买或恢复“免广告”卡（只记是否成功，绝不含任何支付信息）；游戏卡顿时的帧率和内存占用；以及游戏自身代码的报错信息。每条附带随机安装 ID（见第 4 节）、本次启动的随机 ID、时间、距第一次游玩的天数和游玩次数、平台（网页、CrazyGames 或 iPhone）、游戏版本，以及你最初从哪里来：你点开的链接里的简短标记（例如 <code>?src=…</code>）或链接到游戏的网站名称，绝不含完整网址。<strong>事件清单和字段都写死在游戏代码里。</strong></td>
       <td data-h="用途">了解游戏的哪些部分有人玩、新玩家卡在哪里、是否回来再玩，以便平衡和改进游戏、修复崩溃</td>
-      <td data-h="法律依据">我们改进游戏的正当利益（GDPR 第 6 条第 1 款 f 项）</td>
+      <td data-h="法律依据">在欧洲经济区、英国和瑞士：你的同意（GDPR 第 6 条第 1 款 a 项）。游戏会在你打完第一场战斗后的主界面上询问；在你点“允许”之前，不发送任何数据，也不保存安装 ID，如果你一直不回答，就永远不会发送。其他地区：我们改进游戏的正当利益（GDPR 第 6 条第 1 款 f 项）。无论哪种情况，都可以用“设置”里的“分享统计”开关关闭。</td>
     </tr>
     <tr>
       <td>加载计数</td>
@@ -163,7 +168,7 @@
     </tr>
     <tr>
       <td>反馈</td>
-      <td data-h="具体内容">只在 CrazyGames 以外的网页版里（我们自己的网站、itch.io、Newgrounds）、第三场战斗之后问一次：如果你回答，就发送你的评分（1 到 5 星）和你输入的一行文字（最多 200 个字符），附带安装 ID。请不要在里面填写个人信息。</td>
+      <td data-h="具体内容">只在 CrazyGames 以外的网页版里（我们自己的网站、itch.io、Newgrounds）、第三场战斗之后问一次，且只在游戏统计开启时：如果你回答，就发送你的评分（1 到 5 星）和你输入的一行文字（最多 200 个字符），附带安装 ID。请不要在里面填写个人信息。</td>
       <td data-h="用途">了解游戏好不好玩</td>
       <td data-h="法律依据">你的同意，即你发送反馈这一行为（第 6 条第 1 款 a 项）</td>
     </tr>
@@ -180,7 +185,7 @@
     <li><strong>没有账号，不收集姓名、电子邮箱或密码。</strong></li>
     <li><strong>没有第三方统计或追踪。</strong>上述统计只发到我们自己的服务器。游戏里没有 Google Analytics、没有 Firebase，也没有任何追踪脚本。iPhone 应用里包含 Google 的广告组件，用于第 5 节所述的广告，且只请求非个性化广告。</li>
     <li><strong>不收集广告标识符，不为你建立画像</strong>，也不跨网站或应用追踪你。iPhone 应用从不请求追踪许可，因此我们和 Google 都拿不到 Apple 的广告标识符。</li>
-    <li><strong>不收集位置。</strong>我们不记录你的国家，更不记录更精确的位置。在 iPhone 应用里，Google 可能根据你的 IP 地址估计大致位置来投放广告（见第 5 节）。</li>
+    <li><strong>不收集位置。</strong>我们不记录你的国家，更不记录更精确的位置。为了判断发送游戏统计前是否需要先询问你，游戏会查看 CrazyGames 提供的国家，或在其他地方查看你设备的时区；这些只在你的设备上使用。在 iPhone 应用里，Google 可能根据你的 IP 地址估计大致位置来投放广告（见第 5 节）。</li>
     <li><strong>不收集支付信息</strong>（见第 6 节）。</li>
     <li><strong>不出售你的数据</strong>，也不把它分享给任何人用于其他目的。</li>
   </ul>
@@ -189,7 +194,8 @@
   <p>游戏在浏览器的本地存储（localStorage）里保存以下几项。不使用 Cookie。</p>
   <ul>
     <li><code>mb.save</code>：你的进度和设置。在 CrazyGames 上它保存在平台的存档里，已登录的玩家换设备也能继续。</li>
-    <li><code>mb.player</code>：随机安装 ID、你第一次游玩的日期、游玩次数、已经完成的新手步骤，以及你最初从哪里来。</li>
+    <li><code>mb.player</code>：随机安装 ID（只有在允许发送游戏统计后才会生成）、你第一次游玩的日期、游玩次数、已经完成的新手步骤，以及你最初从哪里来。</li>
+    <li><code>mb.privacy</code>：你对游戏统计的选择。</li>
     <li><code>ps.adFree</code>（仅 iPhone 应用）：你是否拥有“免广告”卡，以 App Store 最近一次告诉应用的为准。</li>
   </ul>
   <p>在 iPhone 应用里，这些内容还会复制一份到应用自己的存储中，即使 iOS 清掉网页存储也不会丢失；应用还会从我们的服务器 <code>ps-ota.gamestao.com</code> 下载游戏更新。在浏览器里清除本站数据，或删除应用，就会把这些全部删掉；之后游戏会以新的安装 ID 重新开始。</p>
@@ -213,11 +219,11 @@
   <p>Cloudflare 和 Hetzner 依据数据处理协议代我们处理数据。若在欧洲经济区以外处理数据，则依据欧盟委员会的标准合同条款进行。</p>
 
   <h2>8. 保存多久</h2>
-  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，只保留到平衡和改进游戏所需的时间，之后删除。其中没有姓名、地址或其他能说明你是谁的信息。连接数据不保存（见第 2 节）。</p>
+  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>目前没有任何程序会自动删除这些文件：</strong>它们会一直保留，直到我们删除，或你要求删除你的数据（见第 9 节）。我们会定下固定的保存期限并在这里写明。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
 
   <h2>9. 你的权利</h2>
-  <p>你可以要求查阅、更正、删除、限制处理你的数据，或获取一份可携带的副本，也可以随时反对基于我们正当利益的处理。你通过发送反馈给出的同意可以随时撤回。</p>
-  <p>由于我们不知道你是谁，只能通过安装 ID 找到你的数据，即 <code>mb.player</code> 里的 <code>id</code>（见第 4 节）。如需查看或删除，请把这个 ID 发到 <a href="mailto:support@gamestao.com">support@gamestao.com</a>。如果想从现在起不再被统计，清除本站数据或删除应用即可：旧 ID 就从你的设备上消失了，再也没有什么能把你和它联系起来。我们会在 30 天内免费答复。你也有权向数据保护监管机构投诉。</p>
+  <p>你可以要求查阅、更正、删除、限制处理你的数据，或获取一份可携带的副本，也可以随时反对基于我们正当利益的处理。你通过允许游戏统计或发送反馈给出的同意可以随时撤回，撤回不影响之前已发送的数据。</p>
+  <p>由于我们不知道你是谁，只能通过安装 ID 找到你的数据。游戏在<strong>“设置”→“玩家 ID”</strong>里显示它，设备允许时还有“复制”按钮（它也就是 <code>mb.player</code> 里的 <code>id</code>，见第 4 节）。如需查看或删除你的数据，请把这个 ID 发到 <a href="mailto:support@gamestao.com">support@gamestao.com</a>。如果“设置”里显示没有玩家 ID，说明这台设备从未发送过数据。如果想从现在起不再被统计，关闭“设置”里的“分享统计”即可；ID 仍会显示在那里，方便你要求我们删除已发送的数据。清除本站数据或删除应用也会把 ID 从设备上删掉，之后就再也没有什么能把你和它联系起来，所以如果想让我们删除数据，请先记下它。我们会在 30 天内免费答复。你也有权向数据保护监管机构投诉。</p>
 
   <h2>10. 儿童</h2>
   <p>游戏不向任何人索要个人数据：没有账号，没有聊天，除了那一行可选的反馈，没有任何需要输入文字的地方。iPhone 应用里的广告都是非个性化的。如果你认为有儿童向我们发送了个人数据，请联系我们，我们会删除。</p>

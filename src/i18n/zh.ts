@@ -142,6 +142,19 @@ export const zh: Table = {
   /** The language's own name, for the picker. */
   lang: { name: '简体中文' },
   sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
+  privacy: {
+    title: '游戏统计',
+    ask: '可以统计你的玩法吗？游戏会发送匿名游玩数据（到达的波次、战斗时长、合成次数）和一个随机玩家 ID，用来调整平衡。不含姓名，不做广告画像。随时可在设置中更改。',
+    allow: '允许',
+    decline: '不用了',
+    setting: '分享统计',
+    id: '玩家 ID：{id}',
+    noId: '没有玩家 ID：此设备未发送任何数据。',
+    idHelp: '如需查看或删除你的数据，请把此 ID 发送至 support@gamestao.com。',
+    copy: '复制',
+    copied: '已复制',
+    copyFailed: '复制失败',
+  },
   task: {
     play: '完成 {n} 局战斗',
     win: '赢得 {n} 场战斗',
