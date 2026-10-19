@@ -68,7 +68,8 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
 | `npm run dev:crazygames` | Same game with the CrazyGames SDK, port 5181 (local test ads) |
 | `npm test` | Unit tests (sim, meta, audio, viewport, analytics) |
 | `npm run typecheck` | `tsc --noEmit` |
-| `npm run check` | Typecheck, tests and the CrazyGames build |
+| `npm run check` | Typecheck, tests, the quick half of the balance guard and the CrazyGames and iOS builds |
+| `npm run check:balance` | The balance guard (`scripts/guard/`): the main curves of the balance tools below on fewer seeds, each pinned to a band; about 30 s. `:quick` (idle wall, endless; in `check`) and `:slow` (early, chapter and boss curves; a CI step of its own) run its halves |
 | `npm run build` | Typecheck, then the web build in `dist/` |
 | `npm run build:crazygames` | Typecheck, then the CrazyGames build in `dist-crazygames/` (relative paths) |
 | `npm run preview:crazygames` | Serves the built `dist-crazygames/` on port 4174 |
@@ -78,6 +79,8 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
 Balance tools. They play seeded bot battles and print a report; most also write it under `ref/balance/`.
 Run `balance` after editing `src/sim/balance.json`. Env vars such as `SEEDS`, `STAGES` and `BAL='{...}'`
 (a balance override without editing the file) are described at the top of each script.
+CI fails when `check:balance` finds a curve outside its pin: run it after a balance change, and if the
+move was meant, copy the numbers it prints over the pins in `scripts/guard/*.test.ts` in the same commit.
 
 | Command | What it does |
 |---|---|
