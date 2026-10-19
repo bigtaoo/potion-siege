@@ -232,12 +232,12 @@ describe('the shop ad', () => {
     expect(w.save().crystals).toBe(100 + ADS_PER_DAY * AD_CRYSTALS);
   });
 
-  it('says there are no ads where the host has none', () => {
+  it('drops the ad card where the host has none, the free chest left on its own', () => {
     const w = world(veteran(), (h) => (h.available = false));
     open(w);
     expect(buttons(w.stage, t('store.watch'))).toHaveLength(0);
-    tap(w.stage, t('store.noAds'));
-    expect(w.host.rewardedCalls).toBe(0);
+    expect(texts(w.stage)).not.toContain(t('store.ad.name'));
+    expect(texts(w.stage)).toContain(t('store.chest.name'));
   });
 });
 

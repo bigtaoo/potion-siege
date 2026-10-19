@@ -53,6 +53,10 @@ export class IosPlatform extends WebPlatform implements Platform {
     return this.storeKit.owned() || this.admob.rewardedAvailable();
   }
 
+  rewardedHosted(): boolean {
+    return this.storeKit.owned() || this.admob.hosted();
+  }
+
   override rewarded(onStart: () => void): Promise<boolean> {
     return this.storeKit.owned() ? Promise.resolve(true) : this.admob.rewarded(onStart);
   }

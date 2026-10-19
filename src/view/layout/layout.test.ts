@@ -74,6 +74,9 @@ function homeScreens(): Screen[] {
         out.push({ name: `${at}/${panel}`, w: fit.w, h: fit.h, build: home('potions', panel) });
       }
     }
+    // one potion left to unlock, its big card alone, and the ad still loading
+    const one = () => Object.assign(newMeta(), { cleared: 6, stage: 7, runs: 8, unlocked: ['poison'] });
+    out.push({ name: `${fitName}/one/shop loading`, w: fit.w, h: fit.h, build: () => buildHome(one(), noop, 'shop', null, '2026-10-19', fit, null, false, null, { adsHosted: true }) });
   }
   return out;
 }

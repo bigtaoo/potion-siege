@@ -46,7 +46,14 @@ export interface MetaSave {
   achievements: AchievementSave;
   /** The chapters whose one-time crystal chest has been opened. */
   chapterChests: number[];
+  /** What a home tab's red dot was about when the tab was last open, by tab: keys of the
+   *  things it offered (view/nudges.ts), so the same thing does not light the dot again. */
+  seen: Partial<Record<SeenTab, string[]>>;
 }
+
+/** The home tabs whose dot lights once per new thing. */
+export const SEEN_TABS = ['potions', 'workshop', 'codex', 'shop'] as const;
+export type SeenTab = (typeof SEEN_TABS)[number];
 
 /** The shop's daily freebies, by local calendar day as in `daily`. */
 export interface ShopSave {
@@ -113,6 +120,7 @@ export function newMeta(): MetaSave {
     sound: { music: true, sfx: true },
     achievements: newAchievements(),
     chapterChests: [],
+    seen: {},
   };
 }
 
@@ -164,6 +172,11 @@ export function parseMeta(raw: string | null): MetaSave {
   // screen to open
   const chests = Array.isArray(data.chapterChests) ? data.chapterChests : [];
   out.chapterChests = [...new Set(chests.map(Number))].filter((c) => Number.isInteger(c) && c >= 1 && c <= chapterOf(M.stageCount)).sort((a, b) => a - b);
+  const seen = (data.seen ?? {}) as Record<string, unknown>;
+  for (const tab of SEEN_TABS) {
+    const keys = seen[tab];
+    if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
+  }
   return out;
 }
 

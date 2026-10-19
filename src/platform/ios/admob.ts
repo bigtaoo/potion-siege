@@ -18,7 +18,7 @@ interface Playing {
 }
 
 export class AdMob {
-  /** Called when whether a rewarded ad can be offered changes. */
+  /** Called when whether a rewarded ad can be offered, or may still come, changes. */
   onChange: (() => void) | null = null;
   private state: AdState | null;
   private playing: Playing | null = null;
@@ -26,15 +26,21 @@ export class AdMob {
   constructor(private readonly native: Partial<PSNative> | null) {
     this.state = typeof native?.adState === 'function' ? clean(native.adState.call(native)) : null;
     native?.onAdState?.call(native, (s) => {
-      const before = this.rewardedAvailable();
+      const before = [this.rewardedAvailable(), this.hosted()];
       this.state = clean(s);
-      if (this.rewardedAvailable() !== before) this.onChange?.();
+      if (this.rewardedAvailable() !== before[0] || this.hosted() !== before[1]) this.onChange?.();
     });
     native?.onAdEvent?.call(native, (e) => this.event(e));
   }
 
   rewardedAvailable(): boolean {
     return this.canShow() && this.state?.status === 'on' && this.state.rewarded;
+  }
+
+  /** Ads may still come: the shell can show them and has not turned them off (still loading, or
+   *  waiting on the consent form). */
+  hosted(): boolean {
+    return this.canShow() && this.state?.status !== 'off';
   }
 
   rewarded(started?: () => void): Promise<boolean> {
