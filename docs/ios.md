@@ -191,5 +191,5 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 |---|---|---|
 | 0 | Owner setup (`D:\cloud\ios\apps\potionsiege.md`) | App ID, ASC record, profile, secrets |
 | 1 | Shell, ads, card, hot updates, workflows | Done: merged 4bbf338, simulator build green |
-| 2 | First TestFlight build | 1.0 (3), then 1.0 (4) with the new icon, plays on a phone; test ads and sandbox purchase + restore still to check |
+| 2 | First TestFlight build | 1.0 (3), then 1.0 (4) with the new icon, plays on a phone; 1.0 (13) from 9cd15d9 carries our AdMob app id (UMP consent form can show) with `live` still off; test ads, consent and sandbox purchase + restore still to check |
 | 3 | Listing: our AdMob ids (`live`), privacy policy, label, screenshots, rating; submit | In review |
