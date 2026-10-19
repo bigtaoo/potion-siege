@@ -1,23 +1,26 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
+import { harm } from './damage';
 import { botAct } from './bot';
 import { hashBattle } from './hash';
 import { battleSetup, newMeta } from './meta';
 import { FP, TICK_RATE, ticks } from './math/fixed';
 import { Prng } from './math/prng';
 import { checkReplay, playReplay, takeReplay } from './replay';
+import { spawn } from './spawn';
 import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKind, type Enemy, type HeroKind } from './types';
 import { bossForStage, FIRST_STAGE, planWave, waveHp, type Spawn } from './waves';
 
 const CH = BALANCE.bosses.chapter;
 
-type Raw = { pending: Spawn[]; spawn(s: Spawn): void; harm(e: Enemy, damage: number, by: HeroKind | undefined): void };
+/** The battle's own steps, run on one battle. */
+type Raw = { spawn(s: Spawn): void; harm(e: Enemy, damage: number, by: HeroKind | undefined): void };
 
 /** A boss walking down on its own: no wave spawns. */
 function alone(kind: BossKind, hp = 1e9): { b: Battle; raw: Raw; boss: Enemy } {
   const b = new Battle(1, battleSetup(newMeta(), FIRST_STAGE[kind]));
-  const raw = b as unknown as Raw;
-  raw.pending = [];
+  const raw: Raw = { spawn: (s) => spawn(b, s), harm: (e, damage, by) => harm(b, e, damage, by) };
+  b.pending = [];
   b.enemies = [];
   raw.spawn({ at: 0, kind, hp });
   return { b, raw, boss: b.enemies[0] };

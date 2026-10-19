@@ -11,7 +11,7 @@ import { maxStage, type MetaSave } from '../../sim/meta';
 import { ENEMY_KINDS, isBoss } from '../../sim/types';
 import { onStage } from '../../sim/waves';
 import { commanderTexture } from '../art';
-import type { HomeActions } from '../Home';
+import type { HomeActions } from './types';
 import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, infinityIcon, ink, LIGHT, medal, P, PillButton, plate, redDot, tappable } from '../kit';
 import { anyChestWaiting, challengeShown } from '../nudges';
 import { gem, label } from '../ui';

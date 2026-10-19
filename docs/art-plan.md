@@ -172,4 +172,4 @@ public/art/          打包进游戏的成品（256 色量化 PNG / JPEG）
 - **Mistral 内容审核偶尔拒图**：funny 遇到过，必要时换 prompt 措辞。
 - **版权**：上线前确认所用 AI 出图服务的商用条款；字体只用 OFL/Apache 授权，音效只用 CC0。
 
-**通用技能图标**：`public/art/icon_{allDamage,allSpeed,gold,wallRepair}.png`（剑配红药瓶、秒表、金币堆、锤子和石砖），和 `icon_crit` 同一套 prompt 前缀（`art/prompts/icon_*.txt`），`flatten.py <in> <out> 220 20 10 octree`。技能卡优先用 `iconTexture`，没图时才回退到 kit.ts 里画的图标。
+**通用技能图标**：`public/art/icon_{allDamage,allSpeed,gold,wallRepair}.png`（剑配红药瓶、秒表、金币堆、锤子和石砖），和 `icon_crit` 同一套 prompt 前缀（`art/prompts/icon_*.txt`），`flatten.py <in> <out> 220 20 10 octree`。技能卡优先用 `iconTexture`，没图时才回退到 kit/icons.ts 里画的图标。

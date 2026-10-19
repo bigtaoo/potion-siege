@@ -8,7 +8,7 @@ import type { Battle } from '../sim/battle';
 import { SKILL_IDS, skillHeroes, skillMax, type SkillId } from '../sim/skills';
 import { BALANCE, isBoss, type EnemyKind, type HeroKind } from '../sim/types';
 import { isBossWave, waveKinds, type WaveMods } from '../sim/waves';
-import { cardIcon } from './Overlay';
+import { cardIcon } from './overlay/skillCard';
 import { bossTag, bottle, enemySprite, fit, ink, inset, LIGHT, lightPanel, lightTile, P, plate } from './kit';
 import { HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';

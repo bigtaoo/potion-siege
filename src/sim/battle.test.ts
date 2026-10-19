@@ -1,10 +1,13 @@
+// The battle's state and commands (battle.ts): summons, cells, merges, offers, the revive, the
+// lineup, and that a seed plays the same battle; damage.test.ts and commander.test.ts hold the
+// damage credit, the rust and the commander's skills.
+
 import { describe, expect, it } from 'vitest';
 import { Battle, SLOT_COUNT, WALL_ROW } from './battle';
 import { botAct, playOut } from './bot';
-import { FP, TICK_RATE, ticks, toFp } from './math/fixed';
+import { TICK_RATE, toFp } from './math/fixed';
 import { skillHeroes } from './skills';
-import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP, type Projectile } from './types';
-import type { Spawn } from './waves';
+import { BALANCE, type Enemy, HERO_KINDS, type HeroKind, LINEUP } from './types';
 
 /** The first cell of the wall row, open from the start. */
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -18,15 +21,6 @@ function grunt(id: number, x: number, y: number, hp: number): Enemy {
     markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false, gold: 1000, heft: 1000,
   };
 }
-
-/** A shot of `kind` already on `target` (`damage` in world units), landing on the next tick. */
-function shot(kind: HeroKind, target: Enemy, damage: number): Projectile {
-  const { x, y } = target;
-  return { id: 1, kind, star: 1, x, y, px: x, py: y, targetId: target.id, tx: x, ty: y, damage: toFp(damage) };
-}
-
-/** Hit points back in world units. */
-const u = (v: number) => v / FP;
 
 describe('Battle', () => {
   it('summons onto a free open slot and raises the cost', () => {
@@ -231,134 +225,6 @@ describe('Battle', () => {
   });
 });
 
-describe('damage dealt', () => {
-  /** No waves, so only the test's own shots land. */
-  function quiet(): Battle {
-    const b = new Battle(5);
-    b.enemies = [];
-    return b;
-  }
-
-  function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
-    const e = grunt(9000 + b.enemies.length, x, y, hp);
-    b.enemies.push(e);
-    return e;
-  }
-
-  /** A projectile of `kind` already on `target`, landing on the next step. */
-  function hit(b: Battle, kind: HeroKind, target: Enemy, damage: number): void {
-    b.projectiles.push(shot(kind, target, damage));
-    b.step();
-  }
-
-  it('credits the fire splash on every enemy it reaches', () => {
-    const b = quiet();
-    const a = enemy(b, 500, 400, 1000);
-    enemy(b, 540, 400, 1000);
-    hit(b, 'fire', a, 100);
-    expect(u(b.dealt.fire)).toBeCloseTo(200);
-  });
-
-  it('credits poison with its ticks', () => {
-    const b = quiet();
-    const e = enemy(b, 500, 400, 1e6);
-    hit(b, 'poison', e, 10);
-    for (let i = 0; i < TICK_RATE; i++) b.step();
-    expect(u(b.dealt.poison)).toBeGreaterThan(10 + BALANCE.heroes.poison.poisonDps * 0.9);
-  });
-
-  it('credits lightning with its chain jumps', () => {
-    const b = quiet();
-    const a = enemy(b, 500, 400, 1e6);
-    enemy(b, 560, 400, 1e6);
-    enemy(b, 620, 400, 1e6);
-    hit(b, 'lightning', a, 100);
-    expect(u(b.dealt.lightning)).toBeGreaterThan(100 + 100 * BALANCE.heroes.lightning.chainFalloff * 0.99);
-  });
-
-  it('leaves out overkill and the commander', () => {
-    const b = quiet();
-    hit(b, 'arcane', enemy(b, 500, 400, 10), 1000);
-    expect(u(b.dealt.arcane)).toBeCloseTo(10);
-    enemy(b, 500, 400, 1e6);
-    b.charge = BALANCE.commander.charge;
-    expect(b.cast()).toBe(true);
-    for (let i = 0; i < 60; i++) b.step();
-    expect(HERO_KINDS.reduce((a, k) => a + b.dealt[k], 0)).toBe(b.dealt.arcane);
-    expect(u(b.dealt.arcane)).toBeCloseTo(10);
-  });
-
-  it('never credits more than the enemies lost', () => {
-    const b = new Battle(11);
-    LINEUP.forEach((kind, i) => (b.slots[W + i] = { id: 500 + i, kind, star: 3, slot: W + i, cooldown: 0 }));
-    const credited = () => HERO_KINDS.reduce((a, k) => a + b.dealt[k], 0);
-    let lost = 0;
-    // an enemy can come in and die in the same step (a splash already in flight), so what
-    // spawns counts too: the hit points that left the wave plan less those still standing
-    const pending = () => (b as unknown as { pending: Spawn[] }).pending;
-    for (let i = 0; i < 900 && !b.paused && !b.result; i++) {
-      const before = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
-      const planned = new Set(pending());
-      b.step();
-      const after = new Map(b.enemies.map((e) => [e.id, Math.max(0, e.hp)]));
-      for (const [id, hp] of before) lost += hp - (after.get(id) ?? 0);
-      const left = new Set(pending());
-      for (const s of planned) if (!left.has(s)) lost += s.hp;
-      for (const e of b.enemies) if (!before.has(e.id)) lost -= Math.max(0, e.hp);
-    }
-    expect(credited()).toBeGreaterThan(0);
-    expect(credited()).toBeLessThanOrEqual(lost);
-  });
-});
-
-describe('rust', () => {
-  const P = BALANCE.heroes.poison;
-
-  function rig(): { b: Battle; e: Enemy } {
-    const b = new Battle(5);
-    b.enemies = [];
-    const e = grunt(9000, 500, 400, 1e6);
-    b.enemies.push(e);
-    return { b, e };
-  }
-
-  function shoot(b: Battle, kind: HeroKind, e: Enemy, damage: number): void {
-    b.projectiles.push(shot(kind, e, damage));
-    b.step();
-  }
-
-  it('stacks one rust per corrosion hit up to the cap', () => {
-    const { b, e } = rig();
-    for (let i = 1; i <= P.rustMax + 2; i++) {
-      shoot(b, 'poison', e, 1);
-      expect(e.rust).toBe(Math.min(i, P.rustMax));
-    }
-  });
-
-  it('wears off once the corrosion stops', () => {
-    const { b, e } = rig();
-    shoot(b, 'poison', e, 1);
-    for (let i = 0; i < ticks(P.rustTime + 0.5); i++) b.step();
-    expect(e.rust).toBe(0);
-  });
-
-  it('makes every hit land harder, on top of the arcane mark', () => {
-    const { b, e } = rig();
-    e.rust = 3;
-    e.rustTime = ticks(99);
-    let before = e.hp;
-    shoot(b, 'arcane', e, 100);
-    expect(u(before - e.hp)).toBeCloseTo(100 * (1 + P.rustStep * 3));
-    // one Arcane Mark level, taken as an offered skill
-    b.choices = ['arcaneMark'];
-    b.choose('arcaneMark');
-    e.markTime = ticks(99);
-    before = e.hp;
-    shoot(b, 'arcane', e, 100);
-    expect(u(before - e.hp)).toBeCloseTo(100 * (1 + BALANCE.skills.arcaneMark) * (1 + P.rustStep * 3));
-  });
-});
-
 describe('lineup', () => {
   const lineup: HeroKind[] = ['poison', 'fire', 'ice', 'lightning'];
   const setup = { ...new Battle(1).setup, lineup };
@@ -388,120 +254,5 @@ describe('lineup', () => {
         expect(hero === 'arcane' || also === 'arcane').toBe(false);
       }
     }
-  });
-});
-
-describe('commander skills', () => {
-  const C = BALANCE.commander;
-
-  /** No waves, a full charge. */
-  function charged(): Battle {
-    const b = new Battle(5);
-    (b as unknown as { pending: Spawn[] }).pending = [];
-    b.enemies = [];
-    b.charge = C.charge;
-    return b;
-  }
-
-  it('charges one a kill and a boss more, up to full', () => {
-    const b = new Battle(5);
-    (b as unknown as { pending: Spawn[] }).pending = [];
-    b.enemies = [grunt(1, 500, 400, 1)];
-    b.projectiles.push(shot('arcane', b.enemies[0], 10));
-    b.step();
-    expect(b.charge).toBe(1);
-    expect(b.canCast()).toBe(false);
-    expect(b.cast()).toBe(false);
-    const boss = grunt(2, 500, 400, 1);
-    boss.kind = 'boss';
-    b.enemies.push(boss);
-    b.charge = C.charge - 2;
-    b.projectiles.push(shot('arcane', boss, 10));
-    b.step();
-    expect(b.charge).toBe(C.charge);
-  });
-
-  it('comes back from the revive with the wall whole and the bomb ready', () => {
-    const b = new Battle(5);
-    (b as unknown as { pending: Spawn[] }).pending = [];
-    const boss = grunt(2, 500, 400, 1e6);
-    boss.kind = 'boss';
-    b.enemies = [grunt(1, 300, 1900, 1e6), boss]; // the grunt at the wall
-    b.charge = 3;
-    b.wall = 1;
-    for (let i = 0; i < 2000 && !b.result; i++) b.step();
-    expect(b.result).toBe('lost');
-    expect(b.revive()).toBe(true);
-    expect(b.result).toBeNull();
-    expect(b.wall).toBe(b.wallMax);
-    expect(b.enemies.map((e) => e.kind)).toEqual(['boss']);
-    expect(b.charge).toBe(C.charge);
-    expect(b.canCast()).toBe(true);
-  });
-
-  it('throws the flask into the thick of them, then brews, in turn', () => {
-    const b = charged();
-    b.slots[W] = { id: 100, kind: 'arcane', star: 2, slot: W, cooldown: 1e9 };
-    const lone = grunt(1, 200, 700, 1e6);
-    const pack = [grunt(2, 700, 400, 1e6), grunt(3, 740, 420, 1e6), grunt(4, 680, 450, 1e6)];
-    b.enemies.push(lone, ...pack);
-    expect(b.nextCast).toBe('bomb');
-    expect(b.cast()).toBe(true);
-    expect(b.charge).toBe(0);
-    const cast = b.drain().find((e) => e.type === 'cast');
-    expect(cast).toMatchObject({ skill: 'bomb' });
-    // nothing lands until the flask has flown
-    b.step();
-    expect(pack[0].hp).toBe(toFp(1e6));
-    for (let i = 0; i < ticks(C.bomb.flight); i++) b.step();
-    const H = BALANCE.heroes.arcane;
-    const dps = (H.damage * BALANCE.starDamage[1] * BALANCE.starSpeed[1]) / H.interval;
-    for (const e of pack) {
-      expect(1e6 - u(e.hp)).toBeCloseTo(Math.max(C.bomb.min, dps * C.bomb.seconds), 0);
-      expect(e.slowTime).toBeGreaterThan(0);
-    }
-    expect(lone.hp).toBe(toFp(1e6));
-
-    b.charge = C.charge;
-    expect(b.nextCast).toBe('brew');
-    expect(b.cast()).toBe(true);
-    expect(b.brewTime).toBe(ticks(C.brew.time));
-    expect(b.nextCast).toBe('bomb');
-  });
-
-  it('throws faster while the brew lasts', () => {
-    const shots = (brew: boolean): number => {
-      const b = charged();
-      b.slots[W] = { id: 100, kind: 'arcane', star: 1, slot: W, cooldown: 0 };
-      b.enemies.push(grunt(1, 500, 400, 1e9));
-      b.casts = 1;
-      if (!brew) b.charge = 0;
-      else expect(b.cast()).toBe(true);
-      let n = 0;
-      for (let i = 0; i < ticks(C.brew.time); i++) {
-        b.step();
-        n += b.drain().filter((e) => e.type === 'shot').length;
-      }
-      return n;
-    };
-    expect(shots(true) / shots(false)).toBeCloseTo(1 + C.brew.speed, 0);
-    expect(shots(true)).toBeGreaterThan(shots(false));
-  });
-
-  it('casts by itself once the charge has waited, but only with something to throw at', () => {
-    const b = charged();
-    for (let i = 0; i < ticks(C.autoCast) + 5; i++) b.step();
-    expect(b.casts).toBe(0);
-    b.enemies.push(grunt(1, 500, 400, 1e6));
-    b.step();
-    expect(b.casts).toBe(1);
-    expect(b.charge).toBe(0);
-  });
-
-  it('replays a tapped cast', () => {
-    const b = charged();
-    b.enemies.push(grunt(1, 500, 400, 1e6));
-    b.cast();
-    expect(b.commands[b.commands.length - 1]).toMatchObject({ type: 'cast' });
   });
 });
