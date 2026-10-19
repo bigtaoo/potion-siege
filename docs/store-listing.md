@@ -1,6 +1,7 @@
 # Store listing — Potion Siege (药水围城)
 
-Texts, tags, controls, covers and the trailer plan for the CrazyGames submission.
+Texts, tags, controls, covers and the trailer plan for the CrazyGames submission. The listing text in all
+15 languages, for the App Store and CrazyGames, one file per field, is in `store/` (see `store/README.md`).
 Requirements checked against docs.crazygames.com (game covers, preview video) on 2026-10-16.
 
 ## Name
@@ -35,10 +36,10 @@ Requirements checked against docs.crazygames.com (game covers, preview video) on
 >
 > - Merge-and-defend battles that last a few minutes
 > - 6 potion heroes, 30+ skills, ultimate potions with bonus skills
-> - 6 clockwork enemies with their own weaknesses and 5 bosses, 50 stages in 5 chapters
+> - 5 clockwork enemies with their own weaknesses and 5 bosses, 50 stages in 5 chapters
 > - Endless mode: how many waves can your wall hold?
 > - Daily challenge, daily tasks and rewards
-> - English and Chinese
+> - Available in 15 languages
 
 **zh**
 
@@ -55,10 +56,10 @@ Requirements checked against docs.crazygames.com (game covers, preview video) on
 >
 > - 几分钟一局的合成守城
 > - 6 种药水英雄，30 多个技能，终极药水附赠技能
-> - 6 种发条敌人各有弱点，外加 5 个首领，5 章共 50 关
+> - 5 种发条敌人各有弱点，外加 5 个首领，5 章共 50 关
 > - 无尽模式：看你的城墙能守多少波
 > - 每日挑战、每日任务与奖励
-> - 中文与英文
+> - 支持 15 种语言
 
 ## Category and tags
 

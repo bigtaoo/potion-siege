@@ -1,0 +1,5 @@
+Clique em "Invocar" para preparar uma poção.
+Arraste uma poção sobre outra igual para fundi-las numa mais forte.
+Clique em "Melhorar" e escolha uma das três cartas de habilidade.
+Quando o alquimista estiver carregado, clique nele para lançar um feitiço.
+No celular ou tablet, toque em vez de clicar.

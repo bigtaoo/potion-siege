@@ -1,0 +1,5 @@
+Haz clic en «Invocar» para preparar una poción.
+Arrastra una poción sobre otra igual para fusionarlas en una más fuerte.
+Haz clic en «Mejorar» y elige una de las tres cartas de habilidad.
+Cuando el alquimista esté cargado, haz clic en él para lanzar un hechizo.
+En el móvil o la tableta, toca en lugar de hacer clic.

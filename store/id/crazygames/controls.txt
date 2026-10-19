@@ -1,0 +1,5 @@
+Klik Panggil untuk meracik ramuan.
+Seret ramuan ke ramuan yang sama untuk menggabungkannya jadi ramuan yang lebih kuat.
+Klik Perkuat, lalu pilih satu dari tiga kartu skill.
+Saat alkemis sudah terisi penuh, klik dia untuk mengeluarkan jurus.
+Di ponsel atau tablet, ketuk sebagai ganti klik.

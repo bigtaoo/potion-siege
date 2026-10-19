@@ -1,0 +1,5 @@
+Clique sur « Invoquer » pour préparer une potion.
+Fais glisser une potion sur une potion identique pour les fusionner en une plus forte.
+Clique sur « Améliorer », puis choisis une des trois cartes de compétence.
+Quand l’alchimiste est chargé, clique sur lui pour lancer un sort.
+Sur téléphone ou tablette, touche l’écran au lieu de cliquer.

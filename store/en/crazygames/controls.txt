@@ -1,0 +1,5 @@
+Click Summon to brew a potion.
+Drag a potion onto a matching one to merge them into a stronger one.
+Click Upgrade, then pick one of three skill cards.
+When the alchemist is fully charged, click him to cast.
+On a phone or tablet, tap instead of clicking.
