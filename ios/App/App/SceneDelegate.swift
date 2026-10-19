@@ -14,6 +14,12 @@ class SceneDelegate: UIResponder, UIWindowSceneDelegate {
         SceneDelegateProxy.shared.scene(scene, willConnectTo: session, options: connectionOptions)
     }
 
+    func sceneDidBecomeActive(_ scene: UIScene) {
+        // The screen stays on while the game is up: a battle plays itself between taps, and the
+        // phone dimming mid-wave would lose it. iOS lets the screen sleep again in the background.
+        UIApplication.shared.isIdleTimerDisabled = true
+    }
+
     func scene(_ scene: UIScene, openURLContexts URLContexts: Set<UIOpenURLContext>) {
         SceneDelegateProxy.shared.scene(scene, openURLContexts: URLContexts)
     }
