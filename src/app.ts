@@ -19,7 +19,7 @@ import { claimTier, recordChallenge, recordEvents } from './sim/achievements';
 import { beginEndless, bookEndless, endlessPay, endlessSetup, nextMilestone, type EndlessResult } from './sim/endless';
 import { addProgress, canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from './sim/daily';
 import {
-  adsLeft, battleSetup, benched, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, doublesLeft, endOffers, firstSeed, heroUnlocked, maxStage, parseMeta, Purse, swapLineup,
+  adsLeft, battleSetup, buyHero, buyUnlock, buyWorkshop, claimAd, claimChest, doublesLeft, endOffers, firstSeed, maxStage, parseMeta, Purse,
   type MetaSave,
 } from './sim/meta';
 import { botAct } from './sim/bot';
@@ -31,6 +31,7 @@ import { loadArt, restOfArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud } from './view/Hud';
 import { buildHome, type HomeExtras, type HomePanel, type HomeTab } from './view/Home';
+import { tapLineup } from './view/home/lineup';
 import { FEEDBACK_RUN, FeedbackAsk } from './view/feedback';
 import { loginPops, markSeen, offersNext, upgradeHintKind } from './view/nudges';
 import { uiSound, workshopWall } from './view/kit';
@@ -864,6 +865,7 @@ export class Game {
     if (this.panel !== 'settings') this.idNote = null;
     return {
       adFree: store ? { price: store.price(), owned: store.owned(), note: this.storeNote } : undefined,
+      adsHosted: !this.autoplay && (this.platform.rewardedHosted?.() ?? this.platform.rewardedAvailable()),
       privacy: this.platform.adPrivacy?.offered() ?? false,
       policy: !!this.platform.openUrl,
       data: { sending: this.analytics.sending, id: this.analytics.playerId, copy: !!this.platform.copyText, note: this.idNote },
@@ -951,18 +953,11 @@ export class Game {
   /** A tap on the potions tab's lineup strip: a potion in the lineup swaps out for the reserve (the one picked,
    *  or the only one); a reserve potion is picked, or unpicked. */
   private lineup(kind: HeroKind): void {
-    const m = this.save;
-    if (!heroUnlocked(m, kind)) return;
-    if (m.lineup.includes(kind)) {
-      const bench = benched(m);
-      const into = this.picked ?? (bench.length === 1 ? bench[0] : null);
-      if (!into || !swapLineup(m, kind, into)) return;
-      this.picked = null;
-      this.store();
-      this.analytics.track('lineup', { out: kind, in: into });
-    } else {
-      this.picked = this.picked === kind ? null : kind;
-    }
+    const { picked, swap } = tapLineup(this.save, this.picked, kind);
+    if (!swap && picked === this.picked) return;
+    this.picked = picked;
+    if (swap) this.store();
+    if (swap) this.analytics.track('lineup', { out: swap[0], in: swap[1] });
     this.home();
   }
 

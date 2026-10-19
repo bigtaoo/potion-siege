@@ -1,42 +1,36 @@
 // The home screen between battles, in the alchemist's-workshop look: a top bar with the daily
 // login, the daily tasks and the crystals, five tabs (potions, workshop, battle, codex, shop;
-// the codex is built in Codex.ts)
+// the battle and shop tabs and the lineup strip are built in home/, the codex in Codex.ts)
 // and the daily login reward, the daily tasks and a hero's milestones as panels over it.
 // Laid out on the whole screen: a portrait page with the tabs along the bottom, or on a wide
 // (desktop) screen a landscape page with the tabs down the left side. Built afresh after every
 // purchase, claim or resize.
 
-import { Container, Graphics, Rectangle, Sprite } from 'pixi.js';
-import { getLocale, LOCALES, localeName, t, type Locale, type TextKey } from '../i18n';
+import { Container, Graphics } from 'pixi.js';
+import { getLocale, LOCALES, localeName, t, type Locale } from '../i18n';
 import {
   bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge,
 } from '../sim/challenge';
 import { type TrackId } from '../sim/achievements';
-import { endlessOpen } from '../sim/endless';
 import { ALL_DONE_BONUS, bonusReady, canClaimLogin, loginDay, loginReward, taskDone, taskGoal, taskReward, tasksClaimable } from '../sim/daily';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss } from '../sim/types';
+import { BALANCE, HERO_KINDS } from '../sim/types';
 import { baseSkills, MILESTONES, skillHeroes } from '../sim/skills';
-import { onStage } from '../sim/waves';
-import { CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterInfo, chapterOf, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists } from '../sim/chapters';
+import { CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists } from '../sim/chapters';
 import {
-  AD_CRYSTALS, adsLeft, ADS_PER_DAY, benched, CHEST_CRYSTALS, chestReady, heroCost, heroDamage, heroUnlocked, maxStage, unlockPrice, unlockStage,
+  benched, heroCost, heroDamage, heroUnlocked, maxStage, unlockStage,
   WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId,
 } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
-import { commanderTexture } from './art';
 import { buildCodex } from './Codex';
 import {
   bookIcon,
-  bossTag,
   bottle,
   coinsIcon,
   fit as fitText,
   flask,
   calendarIcon,
   chestIcon,
-  enemySprite,
   gearIcon,
-  infinityIcon,
   ink,
   inkWrapped,
   LIGHT,
@@ -50,17 +44,20 @@ import {
   PillButton,
   plate,
   redDot,
-  refuse,
   scrollIcon,
   swordsIcon,
   tappable,
   workshopWall,
   wallIcon,
 } from './kit';
-import { anyChestWaiting, challengeShown, navDots } from './nudges';
+import { navDots } from './nudges';
 import { gem, HERO_COLORS, label } from './ui';
 import { pointingHand } from './Tutorial';
 import type { MenuFit } from './viewport';
+import { battleTab } from './home/battleTab';
+import { LINEUP_H, lineupStrip } from './home/lineup';
+import { adIcon, chapterTitle, priced, tick, type Area } from './home/shared';
+import { shopTab } from './home/shopTab';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
@@ -118,6 +115,8 @@ export interface HomeActions {
 export interface HomeExtras {
   /** `price` null while the store cannot sell; `note` how the last buy or restore went. */
   adFree?: { price: string | null; owned: boolean; note: string | null };
+  /** The host has rewarded ads, loaded or not: the shop's ad card then waits for one. */
+  adsHosted?: boolean;
   privacy?: boolean;
   policy?: boolean;
   /** Play statistics: the settings switch and the player ID. */
@@ -133,15 +132,6 @@ export interface PlayData {
   copy: boolean;
   /** How the last copy went. */
   note: 'copied' | 'failed' | null;
-}
-
-/** The part of the page a tab fills. */
-interface Area {
-  x: number;
-  y: number;
-  w: number;
-  h: number;
-  wide: boolean;
 }
 
 /** Bottom bar height on a portrait page, side rail width on a landscape one, top bar height. */
@@ -174,7 +164,7 @@ export function buildHome(
   else if (tab === 'potions') potionsTab(root, m, act, area, picked, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier));
-  else shopTab(root, m, act, area, today, ads, extras.adFree ?? null);
+  else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
   topBar(root, m, act, today, left, w, wide);
   // the red-dot rule is in nudges.ts; never on the tab already open
   const dots: Partial<Record<HomeTab, boolean>> = navDots(m, today);
@@ -307,196 +297,6 @@ function navIcon(id: HomeTab): Container {
 
 // ---- tabs ----
 
-/** The main line, top to bottom: the stage between its arrows and what it sends, the commander
- *  with the four fielded potions in front, and the big button into battle low down where a
- *  thumb reaches it, today's challenge and endless mode as round buttons beside it once they
- *  are open. A wide page keeps the same column in the middle. */
-function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string): void {
-  const cx = a.x + a.w / 2;
-  const sy = a.y + (a.wide ? 70 : 80);
-  stageCard(root, m, act, cx, sy);
-  // clear of the battle medallion that rises out of the tab bar
-  const by = a.wide ? a.y + a.h - 110 : a.y + a.h - 50 - START_H / 2;
-  const challenge = challengeShown(m);
-  const endless = endlessOpen(m);
-  startButton(root, act, cx, by, challenge || endless ? SIDE_START_W : START_W);
-  const off = SIDE_START_W / 2 + 40 + SIDE_R;
-  if (challenge) challengeButton(root, m, act, today, cx - off, by);
-  if (endless) endlessButton(root, act, cx + off, by);
-  commander(root, m, act, cx, sy + CARD_BOTTOM + 20, by - START_H / 2 - 30);
-}
-
-const START_H = 180;
-const START_W = 720;
-/** The fight button between the two round ones, and their radius. */
-const SIDE_START_W = 560;
-const SIDE_R = 64;
-
-/** How far below the plate's middle the chapter line, the enemies and the twist tag reach. */
-const CARD_BOTTOM = 268;
-
-/** The stage plate between its arrows; under it one light line with the stage's chapter (its
- *  name, a pip a stage and the progress), a row of the enemies it sends and its twist as one
- *  small tag. Tapping the line or the enemies opens the chapters. */
-function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, ax = 340): void {
-  const arrow = (dx: number, text: string, on: boolean, d: number) => {
-    const c = tappable(new Container(), () => on && act.stage(d));
-    c.position.set(x + dx, y);
-    const sign = label(text, 46, { fill: on ? P.cream : P.inkSoft, stroke: { color: P.line, width: 6 } });
-    c.addChild(medal(52), sign);
-    if (!on) c.alpha = 0.6;
-    root.addChild(c);
-  };
-  const kinds = ENEMY_KINDS.filter((k) => onStage(k, m.stage));
-  const size = 66;
-  const step = size + 12;
-  const ch = chapterOf(m.stage);
-  const card = tappable(new Container(), () => act.panel('chapters'));
-  card.position.set(x, y);
-  const cw = 2 * ax + 40;
-  const ly = 100;
-  card.hitArea = new Rectangle(-cw / 2, ly - 30, cw, CARD_BOTTOM - ly + 30);
-  // the chapter line: its name on the left, a pip a stage, the count on the right
-  card.addChild(new Graphics().roundRect(-cw / 2, ly - 28, cw, 56, 28).fill({ color: LIGHT.face, alpha: 0.6 }).stroke({ width: 3, color: LIGHT.insetEdge }));
-  const count = ink(t('chapter.progress', { n: chapterProgress(m, ch), total: CHAPTER_SIZE }), 28, { fill: P.inkSoft, fontWeight: '900' });
-  count.anchor.set(1, 0.5);
-  count.position.set(cw / 2 - 26, ly);
-  const name = fitText(ink(chapterTitle(ch), 30, { fontWeight: '900' }), cw - 52 - count.width - 24);
-  name.anchor.set(0, 0.5);
-  name.position.set(-cw / 2 + 26, ly);
-  card.addChild(name, count);
-  const [first] = chapterStages(ch);
-  const right = count.x - count.width - 24;
-  const pstep = Math.min(28, (right - (name.x + name.width + 24)) / CHAPTER_SIZE);
-  if (pstep >= 18) {
-    const pips = new Graphics();
-    for (let i = 0; i < CHAPTER_SIZE; i++) {
-      const stage = first + i;
-      const px = right - (CHAPTER_SIZE - 1 - i) * pstep - pstep / 2;
-      pips.circle(px, ly, isFinale(stage) ? 9 : 6).fill(stage <= m.cleared ? P.brass : LIGHT.face).stroke({ width: stage === m.stage ? 4 : 3, color: stage === m.stage ? P.red : P.line });
-    }
-    card.addChild(pips);
-  }
-  if (anyChestWaiting(m)) redDot(card, cw / 2 - 6, ly - 26);
-  const row = new Container();
-  row.position.set(0, ly + 74);
-  kinds.forEach((kind, i) => {
-    const s = enemySprite(kind, size);
-    s.x = (i - (kinds.length - 1) / 2) * step;
-    row.addChild(s);
-    if (isBoss(kind)) {
-      const tag = bossTag(14);
-      tag.position.set(s.x, size / 2 + 2);
-      row.addChild(tag);
-    }
-  });
-  card.addChild(row);
-  const twists = stageTwists(m.stage);
-  if (twists.length > 0) {
-    // one twist says what it does; two only name themselves, in one tag
-    const text = twists.length === 1 ? `${t(`twist.${twists[0]}.name`)} · ${t(`twist.${twists[0]}.desc`)}` : twists.map((id) => t(`twist.${id}.name`)).join(' · ');
-    const tag = twistTag(text, twists.some((id) => id === 'finale' || id === 'elite') ? P.red : P.brassDark, cw - 40);
-    tag.y = CARD_BOTTOM - 20;
-    card.addChild(tag);
-  }
-  const p = plate(t('stage', { n: m.stage }), 64, 420);
-  p.position.set(x, y);
-  root.addChild(card, p);
-  arrow(-ax, '◀', m.stage > 1, -1);
-  arrow(ax, '▶', m.stage < maxStage(m), 1);
-}
-
-function chapterTitle(ch: number): string {
-  return t('chapter.title', { n: ch, name: t(`chapter.name.${chapterInfo(ch).id}` as TextKey) });
-}
-
-/** The stage's twist: small cream words on a coloured pill, at most `max` across. */
-function twistTag(text: string, color: number, max: number): Container {
-  const c = new Container();
-  const tx = label(text, 24, { stroke: { color: P.line, width: 4 } });
-  fitText(tx, max - 36);
-  const w = tx.width + 36;
-  c.addChild(new Graphics().roundRect(-w / 2, -20, w, 40, 20).fill(color).stroke({ width: 3, color: P.line }), tx);
-  return c;
-}
-
-/** The commander on its shadow, as tall as the room from `top` to `bottom` allows and in the
- *  middle of it, the four fielded potions standing in front in a shallow arc. Tapping them goes
- *  to the potions tab, where the lineup is changed. */
-function commander(root: Container, m: MetaSave, act: HomeActions, x: number, top: number, bottom: number): void {
-  const room = bottom - top;
-  const h = Math.min(760, room * 0.84);
-  // the bottles reach this far below the commander's feet
-  const size = Math.max(84, Math.min(150, h * 0.22));
-  const below = size * 0.45;
-  const feet = top + (room - below + h) / 2;
-  const tex = commanderTexture();
-  if (tex && h >= 160) {
-    const s = new Sprite(tex);
-    s.anchor.set(0.5, 1);
-    s.scale.set(h / tex.height);
-    s.position.set(x, feet);
-    root.addChild(new Graphics().ellipse(x, feet - 6, h * 0.36, h * 0.07).fill({ color: 0x000000, alpha: 0.2 }), s);
-  }
-  const team = tappable(new Container(), () => act.tab('potions'));
-  team.label = 'lineupRow';
-  team.position.set(x, feet);
-  const gap = size * 1.12;
-  m.lineup.forEach((kind, i) => {
-    const off = i - (m.lineup.length - 1) / 2;
-    // the outer two a step back, so the four stand around the commander's feet
-    const py = Math.abs(off) > 1 ? -size * 0.2 : 0;
-    team.addChild(new Graphics().ellipse(off * gap, py + size * 0.42, size * 0.32, size * 0.08).fill({ color: 0x000000, alpha: 0.2 }));
-    const b = bottle(kind, size);
-    b.position.set(off * gap, py);
-    team.addChild(b);
-  });
-  root.addChild(team);
-}
-
-function startButton(root: Container, act: HomeActions, x: number, y: number, w: number): void {
-  const b = new PillButton(t('start'), w, START_H, 'green', act.play, 86);
-  b.position.set(x, y);
-  root.addChild(b);
-}
-
-/** A round button beside the fight button: its icon on a medal, a short name on a plate below. */
-function sideButton(root: Container, icon: Container, name: string, x: number, y: number, onTap: () => void): Container {
-  const c = tappable(new Container(), onTap);
-  c.position.set(x, y - 14);
-  const cap = fitText(ink(name, 24), 2 * SIDE_R + 40);
-  const pw = cap.width + 24;
-  const capPlate = new Graphics().roundRect(-pw / 2, -17, pw, 34, 17).fill(LIGHT.face).stroke({ width: 3, color: LIGHT.edge });
-  capPlate.y = cap.y = SIDE_R + 14;
-  c.addChild(medal(SIDE_R), icon, capPlate, cap);
-  root.addChild(c);
-  return c;
-}
-
-/** Today's challenge as a round button that opens its details, the top reward on a badge while
- *  the free attempt is still there to win it. */
-function challengeButton(root: Container, m: MetaSave, act: HomeActions, today: string, x: number, y: number): void {
-  const cal = calendarIcon();
-  cal.scale.set(0.8);
-  const c = sideButton(root, cal, t('challenge.title'), x, y, () => act.panel('challenge'));
-  if (!canPlayFree(m, today)) return;
-  const n = label(String(CHALLENGE_TIERS[CHALLENGE_TIERS.length - 1].reward), 26, { stroke: { color: P.line, width: 5 } });
-  const bw = n.width + 50;
-  const badge = new Container();
-  badge.position.set(SIDE_R * 0.55, -SIDE_R * 0.95);
-  badge.addChild(new Graphics().roundRect(-bw / 2, -19, bw, 38, 19).fill(LIGHT.crystal).stroke({ width: 4, color: P.line }), gem(new Graphics(), -bw / 2 + 18, 0, 11));
-  n.x = 12;
-  badge.addChild(n);
-  c.addChild(badge);
-}
-
-/** Endless mode as a round button straight into a run. */
-function endlessButton(root: Container, act: HomeActions, x: number, y: number): void {
-  const loop = infinityIcon();
-  loop.scale.set(0.95);
-  sideButton(root, loop, t('endless.title'), x, y, act.endless);
-}
-
 /** Today's challenge in full, over the page: the two modifiers, the reward tiers (those reached
  *  today ticked), the best wave and streak, and the way in: the free attempt, then the
  *  rewarded retry, then the time until the next one. */
@@ -581,60 +381,6 @@ function challengePanel(m: MetaSave, act: HomeActions, today: string, ads: boole
     box.addChild(left);
   }
   return panel;
-}
-
-/** The lineup over the potion cards while there is a reserve: a tile a potion, the four fielded
- *  ticked, the reserve tagged. Tapping one in the lineup swaps it for the reserve (or for the
- *  reserve `picked` first, when there are several). */
-function lineupStrip(root: Container, m: MetaSave, act: HomeActions, picked: HeroKind | null, x: number, y: number, w: number): void {
-  const kinds = HERO_KINDS.filter((k) => heroUnlocked(m, k));
-  const c = new Container();
-  c.position.set(x, y);
-  root.addChild(c);
-  c.addChild(lightPanel(w, LINEUP_H));
-  const step = Math.min(150, (w - 80) / kinds.length);
-  const tw = step - 14;
-  const th = 100;
-  kinds.forEach((kind, i) => {
-    const fielded = m.lineup.includes(kind);
-    const b = tappable(new Container(), () => act.lineup(kind));
-    b.position.set((i - (kinds.length - 1) / 2) * step, -22);
-    b.addChild(lightTile(tw, th, 18));
-    if (fielded) b.addChild(new Graphics().roundRect(-tw / 2 + 5, -th / 2 + 5, tw - 10, th - 10, 14).fill({ color: HERO_COLORS[kind], alpha: 0.25 }));
-    if (kind === picked) b.addChild(new Graphics().roundRect(-tw / 2 - 6, -th / 2 - 6, tw + 12, th + 12, 22).stroke({ width: 7, color: P.brass }));
-    const bt = bottle(kind, fielded ? 84 : 70);
-    bt.y = fielded ? 0 : -12;
-    b.addChild(bt);
-    if (fielded) {
-      const tk = tick(18);
-      tk.position.set(tw / 2 - 14, -th / 2 + 14);
-      b.addChild(tk);
-    } else {
-      b.alpha = kind === picked ? 1 : 0.75;
-      const tag = new Container();
-      const word = fitText(ink(t('bench'), 22, { fill: P.inkSoft }), tw - 20);
-      const pw = word.width + 18;
-      tag.position.set(0, th / 2 - 18);
-      tag.addChild(new Graphics().roundRect(-pw / 2, -15, pw, 30, 15).fill(LIGHT.inset).stroke({ width: 3, color: LIGHT.edge }), word);
-      b.addChild(tag);
-    }
-    c.addChild(b);
-  });
-  const hint = fitText(ink(picked ? t('lineupPick') : t('lineupHint'), 28, { fill: P.inkSoft }), w - 90);
-  hint.y = LINEUP_H / 2 - 42;
-  c.addChild(hint);
-}
-
-const LINEUP_H = 204;
-
-function titledPanel(root: Container, title: string, x: number, y: number, w: number, h: number): Container {
-  const c = new Container();
-  c.position.set(x, y);
-  const p = plate(title, 40, 280);
-  p.y = -h / 2 + 4;
-  c.addChild(lightPanel(w, h), p);
-  root.addChild(c);
-  return c;
 }
 
 /** A card per potion: portrait, level, the milestones reached and the level-up button; over
@@ -723,11 +469,6 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
   return c;
 }
 
-/** A crystal-price button, off while the crystals fall short; a tap on it then says so. */
-function priced(b: PillButton, affordable: boolean): PillButton {
-  return b.setEnabled(affordable).whenOff(() => refuse(b, t('noCrystals')));
-}
-
 /** A row per upgrade: its level as pips, what it gives now and what the next level adds, and
  *  the button that buys it. The rows share the page's height. */
 function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
@@ -790,268 +531,6 @@ function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): v
     }
     root.addChild(r);
   });
-}
-
-/** The shop: the free daily chest and the rewarded ad for crystals, then the potions, the
- *  locked ones for sale. Stacked on a portrait page, side by side on a landscape one. Where the
- *  ad-free card is sold (iOS) a strip for it goes on top. */
-function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, ads: boolean, adFree: HomeExtras['adFree'] | null): void {
-  let top = a.y + 60;
-  const bottom = a.y + a.h - 40;
-  if (adFree) {
-    const sw = Math.min(a.wide ? 1500 : 960, a.w - 80);
-    adFreeStrip(root, act, adFree, a.x + a.w / 2, top + STRIP_H / 2, sw);
-    top += STRIP_H + 30;
-  }
-  if (a.wide) {
-    const gap = 40;
-    const dw = Math.min(780, (a.w - 3 * gap) * 0.46);
-    const uw = a.w - 3 * gap - dw;
-    const ph = bottom - top;
-    dailyPanel(root, m, act, today, ads, a.x + gap + dw / 2, top + ph / 2, dw, ph);
-    unlockPanel(root, m, act, a.x + 2 * gap + dw + uw / 2, top + ph / 2, uw, ph, 3);
-  } else {
-    const pw = Math.min(960, a.w - 80);
-    const gap = 60;
-    // the potion tiles are narrow here: the chest and the ad take the height they leave
-    const uh = Math.min(640, Math.round((bottom - top - gap) * 0.5));
-    const dh = bottom - top - gap - uh;
-    dailyPanel(root, m, act, today, ads, a.x + a.w / 2, top + dh / 2, pw, dh);
-    unlockPanel(root, m, act, a.x + a.w / 2, bottom - uh / 2, pw, uh, HERO_KINDS.length);
-  }
-}
-
-const STRIP_H = 200;
-
-/** The ad-free card: what it does, its price (or owned) and Restore, in one strip. */
-function adFreeStrip(root: Container, act: HomeActions, info: NonNullable<HomeExtras['adFree']>, x: number, y: number, w: number): void {
-  const c = new Container();
-  c.position.set(x, y);
-  const left = -w / 2;
-  const icon = noAdsIcon();
-  icon.position.set(left + 100, 0);
-  const textX = left + 190;
-  const textW = w - 190 - 360;
-  const name = fitText(ink(t('store.adFree.name'), 44), textW);
-  name.anchor.set(0, 0.5);
-  name.position.set(textX, -50);
-  const line = info.note ?? t('store.adFree.desc');
-  const desc = fitText(ink(line, 28, { fill: info.note ? P.brassDark : P.inkSoft }), textW);
-  desc.anchor.set(0, 0.5);
-  desc.position.set(textX, 4);
-  c.addChild(lightPanel(w, STRIP_H), icon, name, desc);
-  const bx = w / 2 - 190;
-  if (info.owned) {
-    const tk = tick(30);
-    tk.position.set(bx - 70, 0);
-    const owned = ink(t('store.owned'), 40, { fill: 0x2b7c36 });
-    owned.anchor.set(0, 0.5);
-    owned.position.set(bx - 26, -2);
-    c.addChild(tk, owned);
-  } else {
-    const buy = new PillButton(info.price ?? '…', 300, 100, 'green', act.buyAdFree, 46).setEnabled(info.price !== null);
-    buy.x = bx;
-    // Restore, as a link under the line: App Review wants it where the purchase is
-    const restore = tappable(fitText(ink(t('store.adFree.restore'), 28, { fill: P.brassDark }), textW), act.restoreAdFree);
-    restore.anchor.set(0, 0.5);
-    restore.position.set(textX, 56);
-    c.addChild(buy, restore);
-  }
-  root.addChild(c);
-}
-
-/** The ad icon's screen with a red bar across it. */
-function noAdsIcon(): Container {
-  const c = new Container();
-  const bar = new Graphics()
-    .circle(0, 0, 66)
-    .stroke({ width: 12, color: P.red })
-    .moveTo(-46, -46)
-    .lineTo(46, 46)
-    .stroke({ width: 12, color: P.red, cap: 'round' });
-  c.addChild(new Graphics().circle(0, 0, 70).fill({ color: P.brass, alpha: 0.18 }), adIcon(), bar);
-  c.scale.set(0.9);
-  return c;
-}
-
-/** Today's free chest and the ad for crystals, as two cards side by side. */
-function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: string, ads: boolean, x: number, y: number, w: number, h: number): void {
-  const c = titledPanel(root, t('store.daily'), x, y, w, h);
-  const cw = (w - 110) / 2;
-  const ch = h - 130;
-  const bw = cw - 60;
-  const ready = chestReady(m, today);
-  const left = adsLeft(m, today);
-  const chest = offerCard(cw, ch, chestIcon(), t('store.chest.name'), t('store.chest.desc'), CHEST_CRYSTALS, !ready);
-  const open: PillButton = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', () => act.claimChest(open), ready ? 46 : 34).setEnabled(ready);
-  open.y = ch / 2 - 74;
-  chest.addChild(open);
-  const can = ads && left > 0;
-  const ad = offerCard(cw, ch, adIcon(), t('store.ad.name'), t('store.ad.desc', { n: left, total: ADS_PER_DAY }), AD_CRYSTALS, left === 0);
-  const caption = !ads ? t('store.noAds') : left > 0 ? t('store.watch') : t('tomorrow');
-  const watch = new PillButton(caption, bw, 100, 'green', act.watchAd, can ? 46 : 34).setEnabled(can);
-  watch.y = ch / 2 - 74;
-  ad.addChild(watch);
-  chest.position.set(-(cw + 30) / 2, 30);
-  ad.position.set((cw + 30) / 2, 30);
-  c.addChild(chest, ad);
-}
-
-/** A green tick in a circle, for something done or owned. */
-function tick(r: number): Container {
-  const c = new Container();
-  c.addChild(new Graphics().circle(0, 0, r).fill(0x4cc35a).stroke({ width: 4, color: LIGHT.edge }), label('✓', r * 1.25, { stroke: { color: LIGHT.edge, width: 5 } }));
-  return c;
-}
-
-/** A card with an icon, a name, a line under it and the crystals it pays, for a button along
- *  its bottom; `done` dims it and ticks it. */
-function offerCard(cw: number, ch: number, icon: Container, name: string, desc: string, crystals: number, done: boolean): Container {
-  const c = new Container();
-  const top = -ch / 2;
-  c.addChild(lightTile(cw, ch, 26));
-  // the icon takes what the text and the button leave
-  const room = Math.max(90, ch - 360);
-  const art = new Container();
-  icon.scale.set(1.3);
-  art.addChild(new Graphics().circle(0, 0, 84).fill({ color: P.brass, alpha: 0.18 }), icon);
-  art.scale.set(Math.min(1.2, room / 180));
-  art.y = top + 24 + room / 2;
-  const n = fitText(ink(name, 40), cw - 40);
-  n.y = top + 60 + room;
-  const d = fitText(ink(desc, 28, { fill: P.inkSoft }), cw - 40);
-  d.y = n.y + 50;
-  // the crystals, gem first, the pair centred
-  const pay = new Container();
-  const amount = ink(t('reward', { n: crystals }), 50, { fill: LIGHT.crystal });
-  amount.x = 24;
-  pay.addChild(gem(new Graphics(), 24 - amount.width / 2 - 32, 0, 26), amount);
-  pay.y = d.y + 72;
-  c.addChild(art, n, d, pay);
-  if (done) {
-    art.alpha = 0.5;
-    pay.alpha = 0.5;
-    const tk = tick(26);
-    tk.position.set(cw / 2 - 40, top + 40);
-    c.addChild(tk);
-  }
-  return c;
-}
-
-/** Every potion: the open ones marked owned, the locked ones with their crystal price and the
- *  stage that would open them anyway. `cols` tiles to a row. */
-function unlockPanel(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, w: number, h: number, cols: number): void {
-  const c = titledPanel(root, t('store.unlocks'), x, y, w, h);
-  const n = HERO_KINDS.length;
-  const rows = Math.ceil(n / cols);
-  const gap = 20;
-  const step = Math.min(250, (w - 60) / cols);
-  const tw = step - gap;
-  // room for the title plate above the tiles and the hint under them
-  const hintH = 70;
-  const th = Math.min(440, (h - 140 - hintH - gap * (rows - 1)) / rows);
-  const y0 = -h / 2 + 90 + th / 2;
-  // every name at one size: the one the longest needs to fit its tile
-  // and when one is too long for its tile, every name on two lines, word under word
-  const twoLines = HERO_KINDS.some((k) => {
-    const x = ink(t(`hero.${k}`), 30);
-    const over = x.width > tw - 20;
-    x.destroy();
-    return over;
-  });
-  const names = HERO_KINDS.map((k) => ink(unlockName(k, twoLines), 30, { lineHeight: 32 }));
-  const nameScale = Math.min(1, ...names.map((x) => (tw - 20) / x.width));
-  names.forEach((x) => x.destroy());
-  HERO_KINDS.forEach((kind, i) => {
-    const row = Math.floor(i / cols);
-    const inRow = Math.min(cols, n - row * cols);
-    const tile = unlockTile(m, act, kind, tw, th, nameScale, twoLines);
-    tile.position.set(((i % cols) - (inRow - 1) / 2) * step, y0 + row * (th + gap));
-    c.addChild(tile);
-  });
-  const hint = fitText(ink(t('store.unlockHint'), 30, { fill: P.inkSoft }), w - 80);
-  hint.y = y0 + (rows - 1) * (th + gap) + th / 2 + hintH / 2;
-  c.addChild(hint);
-}
-
-function unlockName(kind: HeroKind, twoLines: boolean): string {
-  const name = t(`hero.${kind}`);
-  return twoLines ? name.replace(' ', '\n') : name;
-}
-
-function unlockTile(m: MetaSave, act: HomeActions, kind: HeroKind, tw: number, th: number, nameScale: number, twoLines: boolean): Container {
-  const open = heroUnlocked(m, kind);
-  const price = unlockPrice(kind);
-  const c = new Container();
-  const top = -th / 2;
-  c.addChild(lightTile(tw, th, 22));
-  const name = ink(unlockName(kind, twoLines), 30, { lineHeight: 32 });
-  name.scale.set(nameScale);
-  const head = twoLines ? 92 : 60;
-  name.y = top + head / 2 + 4;
-  c.addChild(name);
-  // the bottle fills what the name and the price leave
-  const band = th - head - (open ? 90 : 170);
-  const size = Math.min(170, tw - 40, band - 10);
-  const by = top + head + band / 2;
-  if (open) {
-    c.addChild(new Graphics().circle(0, by, size * 0.46).fill({ color: HERO_COLORS[kind], alpha: 0.16 }));
-    const bt = bottle(kind, size);
-    bt.y = by;
-    const owned = new Container();
-    owned.y = th / 2 - 56;
-    const word = ink(t('store.owned'), 30, { fill: 0x2f7a3a });
-    word.x = 22;
-    const tk = tick(18);
-    tk.x = 22 - word.width / 2 - 30;
-    owned.addChild(tk, word);
-    // the tick and the word together stay inside a narrow tile
-    owned.scale.set(Math.min(1, (tw - 16) / (word.width + 60)));
-    c.addChild(bt, owned);
-    return c;
-  }
-  const art = new Container();
-  art.addChild(flask(new Graphics(), 0, size * 0.42, size * 0.84, 0x8a7d6a));
-  const l = lock(P.cream, 0x8a7d6a);
-  l.y = size * 0.1;
-  art.addChild(l);
-  const at = unlockStage(kind);
-  // the stage that opens it anyway, over two lines rather than shrunk on a narrow tile
-  const note = fitText(inkWrapped(at ? t('unlockAt', { n: at }) : t('codex.locked'), tw < 160 ? 23 : 26, tw - 24, { fill: P.inkSoft, lineHeight: tw < 160 ? 27 : 30 }), tw - 16);
-  note.anchor.set(0.5, 1);
-  note.y = th / 2 - 106;
-  // the locked flask keeps to the room the name and a long note leave, e.g. four English lines on six tiles
-  const from = top + head + 4;
-  const to = note.y - note.height - 8;
-  const box = art.getLocalBounds();
-  const k = Math.min(1, (to - from) / box.height);
-  art.scale.set(k);
-  art.y = k === 1 && by + box.y + box.height <= to ? by : (from + to) / 2 - (box.y + box.height / 2) * k;
-  c.addChild(art, note);
-  if (price !== null) {
-    const b = priced(new PillButton(String(price), tw - 20, 84, 'purple', () => act.unlock(kind), tw < 160 ? 30 : 38, true), m.crystals >= price);
-    b.y = th / 2 - 58;
-    c.addChild(b);
-  }
-  return c;
-}
-
-/** A little screen with a play sign: the rewarded ad. */
-function adIcon(): Graphics {
-  return new Graphics()
-    .rect(-14, 34, 28, 12)
-    .fill(P.brassDark)
-    .roundRect(-30, 42, 60, 12, 5)
-    .fill(P.brass)
-    .stroke({ width: 3, color: LIGHT.edge })
-    .roundRect(-52, -38, 104, 76, 14)
-    .fill(P.woodLight)
-    .stroke({ width: 5, color: LIGHT.edge })
-    .roundRect(-42, -28, 84, 56, 8)
-    .fill(0xbfe3f2)
-    .poly([-12, -16, 18, 0, -12, 16])
-    .fill(P.cream)
-    .stroke({ width: 4, color: LIGHT.edge, join: 'round' });
 }
 
 function shopIcon(id: WorkshopId): Container {
