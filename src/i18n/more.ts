@@ -1,11 +1,12 @@
 import type { Table } from './en';
 import type { Locale } from './index';
 
-// The languages past English and Chinese, each its own chunk fetched when the player's language
-// is one of them (or they pick it), so the first screen does not wait for thirteen tables.
+// The languages past English, each its own chunk fetched when the player's language is one of
+// them (or they pick it), so the first screen does not wait for fourteen tables.
 type Loader = () => Promise<Table>;
 
 export const MORE: Partial<Record<Locale, Loader>> = {
+  zh: () => import('./zh').then((m) => m.zh),
   de: () => import('./de').then((m) => m.de),
   fr: () => import('./fr').then((m) => m.fr),
   es: () => import('./es').then((m) => m.es),
@@ -24,6 +25,6 @@ export const MORE: Partial<Record<Locale, Loader>> = {
 /** Each language's own name for the picker, before its table is fetched (its `lang.name`;
  *  i18n.test.ts holds them equal). */
 export const MORE_NAMES: Partial<Record<Locale, string>> = {
-  de: 'Deutsch', fr: 'Français', es: 'Español', it: 'Italiano', pt: 'Português', pl: 'Polski', ru: 'Русский',
-  ja: '日本語', ko: '한국어', vi: 'Tiếng Việt', tr: 'Türkçe', th: 'ไทย', id: 'Bahasa Indonesia',
+  zh: '简体中文', de: 'Deutsch', fr: 'Français', es: 'Español', it: 'Italiano', pt: 'Português', pl: 'Polski',
+  ru: 'Русский', ja: '日本語', ko: '한국어', vi: 'Tiếng Việt', tr: 'Türkçe', th: 'ไทย', id: 'Bahasa Indonesia',
 };

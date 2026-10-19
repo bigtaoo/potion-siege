@@ -1,17 +1,16 @@
 import { en, type Table } from './en';
 import { MORE, MORE_NAMES } from './more';
-import { zh } from './zh';
 
 // English is the source: every other table is typed as Table, so a missing or extra key is a
-// compile error. English and Chinese ship in the main bundle; the other languages are their own
-// chunks (more.ts), fetched before the first screen when the player's language is one of them.
+// compile error. English ships in the main bundle; the other languages are their own chunks
+// (more.ts), fetched while the game starts up when the player's language is one of them.
 
 export type Locale = 'en' | 'zh' | 'de' | 'fr' | 'es' | 'it' | 'pt' | 'pl' | 'ru' | 'ja' | 'ko' | 'vi' | 'tr' | 'th' | 'id';
 /** Every language, in the picker's order. */
 export const LOCALES: readonly Locale[] = ['en', 'zh', 'de', 'fr', 'es', 'it', 'pt', 'pl', 'ru', 'ja', 'ko', 'vi', 'tr', 'th', 'id'];
 
-/** The tables in hand: en and zh always, the others once loadLocale fetched them. */
-const TABLES: Partial<Record<Locale, Table>> = { en, zh };
+/** The tables in hand: en always, the others once loadLocale fetched them. */
+const TABLES: Partial<Record<Locale, Table>> = { en };
 let current: Locale = 'en';
 let table: Table = en;
 

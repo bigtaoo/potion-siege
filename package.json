@@ -28,6 +28,7 @@
     "bosses": "vitest run --config scripts/vitest.bosses.config.js",
     "endless": "vitest run --config scripts/vitest.endless.config.js",
     "economy": "node scripts/economy.mjs",
+    "firstframe": "node scripts/firstFrame.mjs",
     "chapters": "vitest run --config scripts/vitest.chapters.config.js"
   },
   "dependencies": {

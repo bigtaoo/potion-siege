@@ -2,7 +2,6 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { en } from './en';
 import { detectLocale, getLocale, loadLocale, LOCALES, localeName, setLocale, t, type Locale } from './index';
 import { MORE, MORE_NAMES } from './more';
-import { zh } from './zh';
 
 /** Every string in a table by its dotted key. */
 function flatten(o: object, prefix = ''): Map<string, string> {
@@ -28,8 +27,7 @@ const OTHERS = LOCALES.filter((l) => l !== 'en');
 const tables = new Map<Locale, Map<string, string>>();
 
 beforeAll(async () => {
-  tables.set('zh', flatten(zh));
-  for (const l of OTHERS) if (l !== 'zh') tables.set(l, flatten(await MORE[l]!()));
+  for (const l of OTHERS) tables.set(l, flatten(await MORE[l]!()));
 });
 
 describe.each(OTHERS)('%s', (l) => {
@@ -63,7 +61,7 @@ describe.each(OTHERS)('%s', (l) => {
   });
 
   it('names itself as the picker does', () => {
-    expect(T().get('lang.name')).toBe(l === 'zh' ? '简体中文' : MORE_NAMES[l]);
+    expect(T().get('lang.name')).toBe(MORE_NAMES[l]);
   });
 
   it('leaves no stray braces', () => {
