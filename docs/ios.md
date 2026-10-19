@@ -159,9 +159,9 @@ card at once and which offers the privacy button. `?native=owned` starts with th
 - Privacy label (published 2026-10-19): coarse location (Google, from the IP), device ID (install
   id; AdMob's vendor id), purchase history (the ad-free buy event), product interaction,
   advertising data, crash, performance and other diagnostics. Purposes: analytics, plus
-  third-party advertising for what Google's SDK takes. All marked linked to the user, since
-  Apple counts GDPR personal data as linked and the install id is that; none used for tracking.
-  Update it with any new event, SDK or identifier.
+  third-party advertising for what Google's SDK takes. None linked to the user (the owner's call:
+  the install id is random and we have no way to tie it to a person) and none used for
+  tracking. Update it with any new event, SDK or identifier.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
 - Listing (filled 2026-10-19 through the API from `store/<lang>/app-store/*.txt`, 15 locales):
   Games / Strategy + Casual; age rating cartoon violence (frequent) and ads; free in 174
