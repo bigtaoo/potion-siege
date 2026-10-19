@@ -1,6 +1,8 @@
 name: ci
 
-# Every push and pull request runs `npm run check` (typecheck, tests, the CrazyGames build). A
+# Every push and pull request runs `npm run check` (typecheck, tests, the quick half of the
+# balance guard in scripts/guard/, the CrazyGames and iOS builds), then the slow half of the guard
+# (`npm run check:balance:slow`: the early, chapter and boss curves; scripts/vitest.guard.config.js). A
 # push to main that passes then ships the telemetry collector to blightbloom (ps.gamestao.com,
 # server/) and, after it, publishes the web build to Cloudflare at p.gamestao.com
 # (wrangler/web.jsonc). Same shape as D:\standing's ci.yml. A push that leaves the collector
@@ -40,6 +42,8 @@ jobs:
           cache: npm
       - run: npm ci
       - run: npm run check
+      - name: balance guard, slow half
+        run: npm run check:balance:slow
       - name: zip the CrazyGames build
         run: cd dist-crazygames && zip -qr ../potion-siege-crazygames.zip .
       - uses: actions/upload-artifact@v4
