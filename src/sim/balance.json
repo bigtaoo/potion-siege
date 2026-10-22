@@ -124,7 +124,7 @@
       "gold": 12
     },
     "clock": {
-      "hp": 37,
+      "hp": 42,
       "speed": 30,
       "radius": 90,
       "wallDps": 140,
@@ -138,14 +138,14 @@
       "gold": 150
     },
     "anvil": {
-      "hp": 34,
+      "hp": 39,
       "speed": 22,
       "radius": 90,
       "wallDps": 130,
       "gold": 150
     },
     "gear": {
-      "hp": 46,
+      "hp": 51,
       "speed": 26,
       "radius": 90,
       "wallDps": 160,
