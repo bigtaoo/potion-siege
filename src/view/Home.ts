@@ -62,7 +62,7 @@ export function buildHome(
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
   topBar(root, m, act, today, left, w, wide);
   // the red-dot rule is in nudges.ts; never on the tab already open
-  const dots: Partial<Record<HomeTab, boolean>> = navDots(m, today);
+  const dots: Partial<Record<HomeTab, boolean>> = navDots(m, today, hint !== null);
   dots[tab] = false;
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));

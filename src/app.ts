@@ -191,6 +191,9 @@ export class Game {
   loginShown = '';
   /** The consent panel opened by itself this session (once is enough; the settings have the switch). */
   consentShown = false;
+  /** The consent panel opened on this visit home: the login waits for the next visit, so a new
+   *  player never closes two panels before a battle. */
+  consentVisit = false;
   /** How the last copy of the player ID went, shown on its button until the settings close. */
   idNote: 'copied' | 'failed' | null = null;
   /** The tutorial step on screen for `tutorial_step`: when it first showed (battle seconds) and

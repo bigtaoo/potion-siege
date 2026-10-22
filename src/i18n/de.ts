@@ -29,6 +29,7 @@ export const de: Table = {
     skip: 'Überspringen',
     summon: 'Tippe auf Brauen für einen neuen Trank',
     merge: 'Zwei gleiche Tränke! Zieh einen auf den anderen, dann mischen sie sich zu einem stärkeren',
+    more: 'Noch kein gleiches Paar: Tippe noch einmal auf Brauen',
     upgrade: 'Genug Gold: Tippe auf Aufwerten und lerne eine Fähigkeit',
     pick: 'Wähle eine der drei Fähigkeitskarten. Sie gilt den ganzen Kampf, und wählst du sie erneut, steigt sie auf',
     helped: { summon: 'Hab dir einen gebraut', merge: 'Für dich gemischt', upgrade: 'Für dich aufgewertet' },

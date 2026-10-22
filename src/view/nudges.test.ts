@@ -140,6 +140,17 @@ describe('battle dot', () => {
   });
 });
 
+describe('dots under the upgrade pointer', () => {
+  it('light only the potions tab while the pointer is up, the rest once it is done', () => {
+    const m = newMeta();
+    m.crystals = 1e5;
+    m.cleared = chapterStages(1)[1];
+    const all = navDots(m, today);
+    expect(Object.values(all).every(Boolean)).toBe(true);
+    expect(navDots(m, today, true)).toEqual({ potions: true, workshop: false, codex: false, shop: false, battle: false });
+  });
+});
+
 describe('seen keys in the save', () => {
   it('survive a round trip and drop what is not a list of strings', () => {
     const m = newMeta();

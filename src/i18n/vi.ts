@@ -29,6 +29,7 @@ export const vi: Table = {
     skip: 'Bỏ qua',
     summon: 'Chạm Triệu hồi để pha một bình thuốc',
     merge: 'Hai bình giống nhau! Kéo bình này vào bình kia để trộn thành một bình mạnh hơn',
+    more: 'Chưa có cặp giống nhau: chạm Triệu hồi thêm một bình',
     upgrade: 'Đủ vàng để nâng cấp: chạm Nâng cấp để học kỹ năng',
     pick: 'Chọn một trong ba thẻ kỹ năng. Kỹ năng có hiệu lực cả trận, chọn lại kỹ năng đó sẽ tăng cấp nó',
     helped: { summon: 'Đã pha giúp bạn một bình', merge: 'Đã trộn giúp bạn', upgrade: 'Đã nâng cấp giúp bạn' },

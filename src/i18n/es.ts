@@ -29,6 +29,7 @@ export const es: Table = {
     skip: 'Saltar',
     summon: 'Toca Invocar para preparar una poción',
     merge: '¡Dos pociones iguales! Arrastra una sobre la otra para fusionarlas en una más fuerte',
+    more: 'Aún no hay pareja: toca Invocar para otra poción',
     upgrade: '¡Ya tienes oro para mejorar! Toca Mejorar para aprender una habilidad',
     pick: 'Elige una de las tres cartas de habilidad. Dura toda la batalla, y si vuelves a elegirla, sube de nivel',
     helped: { summon: 'Te preparé una', merge: 'Las fusioné por ti', upgrade: 'Mejoré por ti' },
