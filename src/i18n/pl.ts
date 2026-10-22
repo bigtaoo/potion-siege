@@ -201,7 +201,7 @@ export const pl: Table = {
     streak: 'Seria dni: {n}',
     streakBonus: 'Dni z rzędu: {n}!',
     mod: {
-      swift: { name: 'Pośpiech', desc: 'Wrogowie 30% szybsi' },
+      swift: { name: 'Pośpiech', desc: 'Wrogowie 30% szybsi, 20% mniej PŻ' },
       ironWall: { name: 'Żelazny mur', desc: 'Mur +50%, bez napraw' },
       cheap: { name: 'Tania alchemia', desc: 'Przyzwanie -30%, połowa złota za fale' },
       twinBoss: { name: 'Dwóch bossów', desc: 'Bossowie też na falach 3 i 8' },

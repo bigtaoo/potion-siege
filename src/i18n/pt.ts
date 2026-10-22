@@ -201,7 +201,7 @@ export const pt: Table = {
     streak: 'Dias seguidos: {n}',
     streakBonus: '{n} dias em sequência!',
     mod: {
-      swift: { name: 'Pressa', desc: 'Inimigos 30% mais rápidos' },
+      swift: { name: 'Pressa', desc: 'Inimigos 30% mais rápidos, 20% menos vida' },
       ironWall: { name: 'Muro de Ferro', desc: 'Muralha +50%, sem reparos' },
       cheap: { name: 'Alquimia Barata', desc: 'Invocar -30%, ouro da onda pela metade' },
       twinBoss: { name: 'Chefes Gêmeos', desc: 'Chefes também nas ondas 3 e 8' },

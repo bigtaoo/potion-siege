@@ -201,7 +201,7 @@ export const en = {
     streak: '{n}-day streak',
     streakBonus: '{n} days in a row!',
     mod: {
-      swift: { name: 'Haste', desc: 'Enemies 30% faster' },
+      swift: { name: 'Haste', desc: 'Enemies 30% faster, 20% less HP' },
       ironWall: { name: 'Iron Wall', desc: 'Wall +50%, no repairs' },
       cheap: { name: 'Cheap Alchemy', desc: 'Summons -30%, wave gold halved' },
       twinBoss: { name: 'Twin Bosses', desc: 'Bosses on waves 3 and 8 too' },

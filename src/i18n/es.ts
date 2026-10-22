@@ -201,7 +201,7 @@ export const es: Table = {
     streak: 'Días seguidos: {n}',
     streakBonus: '¡{n} días seguidos!',
     mod: {
-      swift: { name: 'Prisa', desc: 'Enemigos un 30% más rápidos' },
+      swift: { name: 'Prisa', desc: 'Enemigos un 30% más rápidos, 20% menos vida' },
       ironWall: { name: 'Muro de hierro', desc: 'Muralla +50%, sin reparaciones' },
       cheap: { name: 'Alquimia barata', desc: 'Invocar -30%, mitad de oro por oleada' },
       twinBoss: { name: 'Jefes gemelos', desc: 'También hay jefes en las oleadas 3 y 8' },
