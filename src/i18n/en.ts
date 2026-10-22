@@ -208,7 +208,7 @@ export const en = {
       critDay: { name: 'Crit Day', desc: '20% crit, enemies +20% HP' },
       trial: { name: 'Trial', desc: '{hero} joins the lineup' },
       solo: { name: 'Lone Sprout', desc: 'Only 3 potion kinds' },
-      goldRain: { name: 'Gold Rain', desc: 'Kill gold x1.5, no start gold' },
+      goldRain: { name: 'Gold Rain', desc: 'Kill gold x1.5, start with only 10 gold' },
     },
   },
   hero: {

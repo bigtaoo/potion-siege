@@ -208,7 +208,7 @@ export const it: Table = {
       critDay: { name: 'Giorno Critico', desc: '20% critico, nemici +20% PV' },
       trial: { name: 'Prova', desc: '{hero} entra in squadra' },
       solo: { name: 'Pochi ma Buoni', desc: 'Solo 3 tipi di pozione' },
-      goldRain: { name: "Pioggia d'Oro", desc: 'Oro per uccisione x1,5, niente oro iniziale' },
+      goldRain: { name: "Pioggia d'Oro", desc: 'Oro per uccisione x1,5, solo 10 oro iniziale' },
     },
   },
   hero: {

@@ -208,7 +208,7 @@ export const ja: Table = {
       critDay: { name: '会心の日', desc: '会心率20%、敵HP +20%' },
       trial: { name: 'お試し', desc: '{hero}が編成に加わる' },
       solo: { name: '少数精鋭', desc: 'ポーションは3種類だけ' },
-      goldRain: { name: '黄金の雨', desc: '撃破ゴールド ×1.5、初期ゴールドなし' },
+      goldRain: { name: '黄金の雨', desc: '撃破ゴールド ×1.5、初期ゴールドは10だけ' },
     },
   },
   hero: {

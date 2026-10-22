@@ -208,7 +208,7 @@ export const pl: Table = {
       critDay: { name: 'Dzień krytów', desc: '20% kryt., wrogowie +20% PŻ' },
       trial: { name: 'Próba', desc: '{hero} dołącza do składu' },
       solo: { name: 'Mała półka', desc: 'Tylko 3 rodzaje mikstur' },
-      goldRain: { name: 'Złoty deszcz', desc: 'Złoto za zabicie x1,5, zero złota na start' },
+      goldRain: { name: 'Złoty deszcz', desc: 'Złoto za zabicie x1,5, tylko 10 złota na start' },
     },
   },
   hero: {

@@ -208,7 +208,7 @@ export const ko: Table = {
       critDay: { name: '치명타의 날', desc: '치명타 20%, 적 체력 +20%' },
       trial: { name: '체험', desc: '{hero} 편성 합류' },
       solo: { name: '소수 정예', desc: '포션은 3종뿐' },
-      goldRain: { name: '골드 비', desc: '처치 골드 ×1.5, 시작 골드 없음' },
+      goldRain: { name: '골드 비', desc: '처치 골드 ×1.5, 시작 골드 10뿐' },
     },
   },
   hero: {

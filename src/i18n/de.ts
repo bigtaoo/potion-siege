@@ -208,7 +208,7 @@ export const de: Table = {
       critDay: { name: 'Krit-Tag', desc: '20% Krit, Feinde +20% LP' },
       trial: { name: 'Probe', desc: '{hero} ist im Team' },
       solo: { name: 'Mageres Regal', desc: 'Nur 3 Trankarten' },
-      goldRain: { name: 'Goldregen', desc: 'Abschussgold ×1,5, kein Startgold' },
+      goldRain: { name: 'Goldregen', desc: 'Abschussgold ×1,5, Start mit nur 10 Gold' },
     },
   },
   hero: {

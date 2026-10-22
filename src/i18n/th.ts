@@ -208,7 +208,7 @@ export const th: Table = {
       critDay: { name: 'วันคริ', desc: 'คริ 20% ศัตรูพลังชีวิต +20%' },
       trial: { name: 'ทดลองใช้', desc: '{hero} เข้าร่วมทีม' },
       solo: { name: 'ลูกโทน', desc: 'มีโพชั่นแค่ 3 ชนิด' },
-      goldRain: { name: 'ฝนทอง', desc: 'ทองจากการกำจัด x1.5 ไม่มีทองเริ่มต้น' },
+      goldRain: { name: 'ฝนทอง', desc: 'ทองจากการกำจัด x1.5 ทองเริ่มต้นแค่ 10' },
     },
   },
   hero: {

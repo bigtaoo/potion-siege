@@ -208,7 +208,7 @@ export const vi: Table = {
       critDay: { name: 'Ngày Chí Mạng', desc: '20% chí mạng, kẻ địch +20% HP' },
       trial: { name: 'Dùng Thử', desc: '{hero} vào đội hình' },
       solo: { name: 'Mầm Đơn Độc', desc: 'Chỉ có 3 loại bình' },
-      goldRain: { name: 'Mưa Vàng', desc: 'Vàng hạ địch x1,5, không có vàng khởi đầu' },
+      goldRain: { name: 'Mưa Vàng', desc: 'Vàng hạ địch x1,5, chỉ có 10 vàng khởi đầu' },
     },
   },
   hero: {

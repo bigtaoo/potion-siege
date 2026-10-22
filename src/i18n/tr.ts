@@ -208,7 +208,7 @@ export const tr: Table = {
       critDay: { name: 'Kritik Günü', desc: '%20 kritik, düşmanlara +%20 can' },
       trial: { name: 'Deneme', desc: '{hero} kadroya katılıyor' },
       solo: { name: 'Tek Fidan', desc: 'Yalnızca 3 iksir türü' },
-      goldRain: { name: 'Altın Yağmuru', desc: 'Öldürme altını x1,5, başlangıç altını yok' },
+      goldRain: { name: 'Altın Yağmuru', desc: 'Öldürme altını x1,5, başlangıçta sadece 10 altın' },
     },
   },
   hero: {

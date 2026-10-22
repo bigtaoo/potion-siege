@@ -208,7 +208,7 @@ export const zh: Table = {
       critDay: { name: '暴击日', desc: '20% 暴击，敌人生命 +20%' },
       trial: { name: '试用', desc: '{hero}加入阵容' },
       solo: { name: '独苗', desc: '只有 3 种药剂' },
-      goldRain: { name: '金币雨', desc: '击杀金币 ×1.5，开局 0 金币' },
+      goldRain: { name: '金币雨', desc: '击杀金币 ×1.5，开局只有 10 金币' },
     },
   },
   hero: {

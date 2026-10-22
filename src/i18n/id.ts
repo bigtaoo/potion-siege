@@ -208,7 +208,7 @@ export const id: Table = {
       critDay: { name: 'Hari Kritis', desc: '20% kritis, musuh +20% HP' },
       trial: { name: 'Uji Coba', desc: '{hero} ikut formasi' },
       solo: { name: 'Sebatang Kara', desc: 'Hanya 3 jenis ramuan' },
-      goldRain: { name: 'Hujan Emas', desc: 'Emas buruan x1,5, tanpa emas awal' },
+      goldRain: { name: 'Hujan Emas', desc: 'Emas buruan x1,5, emas awal hanya 10' },
     },
   },
   hero: {

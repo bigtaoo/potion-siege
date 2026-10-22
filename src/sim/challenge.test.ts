@@ -94,6 +94,9 @@ describe('daily challenge', () => {
     const rain = all(['goldRain']);
     expect(rain.startGold).toBe(C.mods.goldRain.startGold);
     expect(rain.modifiers!.killGold).toBe(C.mods.goldRain.killGold);
+    // no gold comes in before wave 2's bonus, so a start that cannot pay for one summon leaves
+    // wave 1 with no potion and the wall taking the whole horde
+    expect(new Battle(1, rain).canSummon()).toBe(true);
   });
 
   it('makes summons cheaper and brings extra bosses in battle', () => {
