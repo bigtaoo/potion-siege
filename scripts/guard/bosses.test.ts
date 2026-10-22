@@ -4,6 +4,9 @@
 // so these twenty seeds play other battles, while on 480 seeds the clock held (43.0% -> 42.4%
 // won, the tank in its place 43.5% -> 44.4%). Re-pinned for the boss hit points of balance-tune
 // (bee9f41): each boss is meant to sit 5-10 points under the tank (40 seeds, `npm run bosses`).
+// Re-pinned for each potion's own pick of target (src/sim/targetPick.ts) and the hero damage cut
+// that came with it (ref/design/targeting-prefs.md), then for tripod hp 30 -> 28 and anvil
+// 39 -> 34, which put them back 7-8 points under the tank on 40 seeds.
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { battleSetup } from '../../src/sim/meta';
@@ -33,10 +36,10 @@ describe('chapter bosses', () => {
       delta[`${kind} - tank`] = 100 * (mean(own) - mean(tank));
     }
     expectNear('boss win % and its edge over the tank (20 seeds, 3 stages)', delta, {
-      'clock win %': 40, 'clock - tank': -11.7,
-      'tripod win %': 50, 'tripod - tank': -6.7,
-      'anvil win %': 30, 'anvil - tank': -3.3,
-      'gear win %': 31.7, 'gear - tank': -6.7,
+      'clock win %': 48.3, 'clock - tank': -5,
+      'tripod win %': 53.3, 'tripod - tank': -11.7,
+      'anvil win %': 48.3, 'anvil - tank': -11.7,
+      'gear win %': 41.7, 'gear - tank': -10,
     }, 15);
   }, 300_000);
 });

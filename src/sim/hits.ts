@@ -27,7 +27,10 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
       return;
     }
     case 'lightning': {
-      if (!target) return;
+      if (!target) {
+        b.wasted.lightning += p.damage;
+        return;
+      }
       const points = [{ x: p.x / FP, y: p.y / FP }];
       const hit = new Set<number>();
       let cur: Enemy | undefined = target;
@@ -67,7 +70,10 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
       return;
     }
   }
-  if (!target) return;
+  if (!target) {
+    b.wasted[by] += p.damage;
+    return;
+  }
   harm(b, target, p.damage, by);
   discharge(b, target);
   if (p.kind === 'arcane') arcaneHit(b, p, target);

@@ -106,6 +106,9 @@ export class Battle {
   /** The damage each potion has dealt, overkill left out (the commander's flask is not counted), in FP:
    *  the result screen's MVP. */
   readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
+  /** What each potion's hits had past the enemy's last hit points, and its shots that landed on
+   *  nothing (the target was dead by then), in FP: the overkill, for the balance tools. */
+  readonly wasted: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
   readonly open: boolean[] = Array.from({ length: SLOT_COUNT }, (_, s) => Math.floor(s / B.grid.cols) === WALL_ROW);
   enemies: Enemy[] = [];

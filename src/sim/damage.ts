@@ -39,7 +39,10 @@ export function harm(b: Battle, e: Enemy, damage: number, by: HeroKind | undefin
   if (e.markTime > 0) dealt = times(dealt, 1000 + b.fixed.mark);
   dealt = times(dealt, 1000 + b.fixed.rustStep * e.rust);
   if (e.brittleTime > 0) dealt = times(dealt, 1000 + pm(B.skills.brittle));
-  if (by) b.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
+  if (by && e.hp > 0) {
+    b.dealt[by] += Math.min(e.hp, dealt);
+    b.wasted[by] += Math.max(0, dealt - e.hp);
+  }
   e.hp -= dealt;
   if (e.kind === 'gear' && !e.core && e.hp <= times(e.maxHp, pm(B.bosses.gear.at))) crack(b, e);
 }
