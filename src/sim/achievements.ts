@@ -7,7 +7,7 @@ import type { MetaSave } from './meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP, type BattleEvent, type EnemyKind, type HeroKind } from './types';
 import { FIRST_STAGE } from './waves';
 
-export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'endless', 'login', 'workshop'] as const;
+export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'endless', 'login', 'workshop', 'stars', 'hard'] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface Tier {
@@ -50,6 +50,9 @@ export const TRACKS: Record<TrackId, readonly Tier[]> = {
   endless: BALANCE.endless.achievement,
   login: [T(7, 100)],
   workshop: [T(1, 200)],
+  // stars over every stage, normal and hard (300 in all), and hard stages won
+  stars: [T(30, 100), T(75, 200), T(150, 400), T(250, 800)],
+  hard: [T(1, 100), T(10, 200), T(30, 400), T(50, 800)],
 };
 
 export function newAchievements(): AchievementSave {
@@ -104,6 +107,10 @@ export function trackProgress(m: MetaSave, id: TrackId, tier: number): number {
       return m.daily.claims;
     case 'workshop':
       return Number(Object.entries(BALANCE.meta.workshop).some(([w, def]) => m.workshop[w as keyof MetaSave['workshop']] >= def.max));
+    case 'stars':
+      return [...m.stars.normal, ...m.stars.hard].reduce((a, n) => a + n, 0);
+    case 'hard':
+      return m.stars.hard.filter((n) => n > 0).length;
   }
 }
 

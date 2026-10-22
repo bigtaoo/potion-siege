@@ -7,6 +7,7 @@
 // - buttons.ts: the pill button, taps, refusals and the red dot
 // - icons.ts: potion bottles, enemy art, tags and the drawn icons
 // - modifierIcons.ts: the daily challenge's modifier icons
+// - stageStars.ts: a stage's stars
 
 export * from './palette';
 export * from './text';
@@ -15,3 +16,4 @@ export * from './buttons';
 export * from './icons';
 export * from './modifierIcons';
 
+export * from './stageStars';

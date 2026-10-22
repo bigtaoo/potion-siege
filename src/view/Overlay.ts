@@ -26,6 +26,7 @@ import {
 } from './overlay/endRows';
 import type { EndExtras } from './overlay/endTypes';
 import { CardNudge, topTag } from './overlay/cardNudge';
+import { starNotes } from './overlay/endStars';
 import { skillCard } from './overlay/skillCard';
 
 /** The skill pick's box, centred on the page (shrunk to fit), which the tutorial keeps clear of. */
@@ -133,7 +134,7 @@ export class Overlay extends Container {
     const cw = W - 120;
     const ch = more.challenge;
     const en = more.endless;
-    const left: Section[] = [en ? endlessHeader(en) : header(won, ch), statTiles(stats, cw)];
+    const left: Section[] = [en ? endlessHeader(en) : header(won, ch, more.stars?.stars, more.stars?.hard), statTiles(stats, cw)];
     if (ch) left.push(challengeTrack(ch, cw));
     if (en) left.push(endlessTrack(en, cw));
     left.push(purse(reward, more, cw));
@@ -146,6 +147,7 @@ export class Overlay extends Container {
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
     if (reward.chest) left.push(section(ribbon(t('chapter.cleared', { c: reward.chest }), W - 200), 110));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
+    left.push(...starNotes(more.stars, W - 200));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null));

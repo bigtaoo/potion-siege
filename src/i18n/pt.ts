@@ -258,6 +258,8 @@ export const pt: Table = {
     endless: { name: 'Guardião Infinito', desc: 'Alcance a onda {n} no modo infinito' },
     login: { name: 'Freguês', desc: 'Resgate {n} recompensas diárias' },
     workshop: { name: 'Obra Completa', desc: 'Maximize uma melhoria da oficina' },
+    stars: { name: 'Colecionador de Estrelas', desc: 'Ganhe {n} estrelas' },
+    hard: { name: 'Calejado', desc: 'Vença {n} fases difíceis' },
   },
   chapter: {
     title: 'Capítulo {n} · {name}',
@@ -272,6 +274,16 @@ export const pt: Table = {
     cleared: 'Capítulo vencido! Baú do capítulo +{c}',
     finale: 'Final',
     name: { outskirts: 'Arredores da Fábrica', snowfield: 'Campo Nevado', railyard: 'Ferrovia', foundry: 'Fundição', clocktower: 'Torre do Relógio' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Difícil',
+    locked: 'Consiga {n}★ num capítulo para abrir o modo difícil dele',
+    rule: '★★★: mantenha {p}% da muralha',
+    best: 'Novo recorde!',
+    hardOpen: 'Modo difícil aberto: capítulo {n}!',
+    hardFirst: 'Primeira vitória difícil!',
+    chapterLock: 'Vença antes a fase difícil {n}',
   },
   twist: {
     runners: { name: 'Enxame de Ratos', desc: 'Quase só Ratos de Corda' },

@@ -258,6 +258,8 @@ export const ko: Table = {
     endless: { name: '끝없는 수호자', desc: '무한 모드에서 {n}웨이브 도달' },
     login: { name: '단골손님', desc: '출석 보상 {n}회 받기' },
     workshop: { name: '완공', desc: '공방 강화 하나를 최대로' },
+    stars: { name: '별 수집가', desc: '별 {n}개 얻기' },
+    hard: { name: '단련된 자', desc: '어려움 단계 {n}개 승리' },
   },
   chapter: {
     title: '{n}장 · {name}',
@@ -272,6 +274,16 @@ export const ko: Table = {
     cleared: '챕터 클리어! 챕터 상자 +{c}',
     finale: '피날레',
     name: { outskirts: '공장 외곽', snowfield: '설원', railyard: '철도 기지', foundry: '주조소', clocktower: '시계탑' },
+  },
+  stars: {
+    normal: '일반',
+    hard: '어려움',
+    locked: '한 장에서 {n}★을 모으면 그 장의 어려움 모드가 열려요',
+    rule: '★★★: 성벽 {p}% 지키기',
+    best: '최고 기록!',
+    hardOpen: '어려움 모드 개방: {n}장!',
+    hardFirst: '첫 어려움 승리!',
+    chapterLock: '어려움 {n}단계를 먼저 깨세요',
   },
   twist: {
     runners: { name: '쥐 떼', desc: '대부분 태엽 쥐' },

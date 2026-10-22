@@ -27,6 +27,7 @@
     "late": "vitest run --config scripts/vitest.late.config.js",
     "lazy": "vitest run --config scripts/vitest.lazy.config.js",
     "bosses": "vitest run --config scripts/vitest.bosses.config.js",
+    "stars": "vitest run --config scripts/vitest.stars.config.js",
     "endless": "vitest run --config scripts/vitest.endless.config.js",
     "economy": "node scripts/economy.mjs",
     "firstframe": "node scripts/firstFrame.mjs",

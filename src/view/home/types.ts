@@ -24,6 +24,8 @@ export interface HomeActions {
   stage(delta: number): void;
   /** A stage tile on the chapters panel was tapped. */
   pickStage(stage: number): void;
+  /** The battle tab's normal / hard switch; false when no chapter's hard mode is open. */
+  hardMode(on: boolean): boolean;
   /** A finished chapter's one-time chest. */
   claimChapter(chapter: number, at: Container): void;
   hero(kind: HeroKind): void;

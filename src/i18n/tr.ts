@@ -258,6 +258,8 @@ export const tr: Table = {
     endless: { name: 'Sonsuz Bekçi', desc: 'Sonsuz modda {n}. dalgaya ulaş' },
     login: { name: 'Müdavim', desc: '{n} kez günlük ödül al' },
     workshop: { name: 'Tam Donanım', desc: 'Bir atölye geliştirmesini en üst seviyeye çıkar' },
+    stars: { name: 'Yıldız Koleksiyoncusu', desc: '{n} yıldız kazan' },
+    hard: { name: 'Pişmiş', desc: '{n} zor aşama kazan' },
   },
   chapter: {
     title: 'Bölüm {n} · {name}',
@@ -272,6 +274,16 @@ export const tr: Table = {
     cleared: 'Bölüm bitti! Bölüm sandığı +{c}',
     finale: 'Final',
     name: { outskirts: 'Fabrika Çevresi', snowfield: 'Karlı Ova', railyard: 'Tren Deposu', foundry: 'Dökümhane', clocktower: 'Saat Kulesi' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Zor',
+    locked: 'Zor modunu açmak için bir bölümde {n}★ topla',
+    rule: '★★★: duvarın %{p} kadarını koru',
+    best: 'Yeni rekor!',
+    hardOpen: 'Zor mod açıldı: bölüm {n}!',
+    hardFirst: 'İlk zor zafer!',
+    chapterLock: 'Önce zor aşama {n} kazan',
   },
   twist: {
     runners: { name: 'Fare Akını', desc: 'Çoğu kurmalı fare' },

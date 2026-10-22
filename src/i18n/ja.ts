@@ -258,6 +258,8 @@ export const ja: Table = {
     endless: { name: '終わりなき守護者', desc: 'エンドレスモードでウェーブ{n}に到達' },
     login: { name: '常連', desc: 'ログインボーナスを{n}回受け取る' },
     workshop: { name: '工房完成', desc: '工房の強化を1つ最大まで上げる' },
+    stars: { name: 'スターコレクター', desc: '星を{n}個集める' },
+    hard: { name: '百戦錬磨', desc: 'ハードを{n}面クリア' },
   },
   chapter: {
     title: '第{n}章：{name}',
@@ -272,6 +274,16 @@ export const ja: Table = {
     cleared: '章クリア！章の宝箱 +{c}',
     finale: '最終章',
     name: { outskirts: '工場の外れ', snowfield: '雪原', railyard: '操車場', foundry: '鋳造所', clocktower: '時計塔' },
+  },
+  stars: {
+    normal: 'ノーマル',
+    hard: 'ハード',
+    locked: '章で{n}★集めるとその章のハードが開く',
+    rule: '★★★：城壁を{p}%残す',
+    best: '自己ベスト！',
+    hardOpen: 'ハード解放：第{n}章！',
+    hardFirst: 'ハード初勝利！',
+    chapterLock: '先にハード{n}面をクリア',
   },
   twist: {
     runners: { name: 'ネズミの群れ', desc: 'ほとんどがゼンマイネズミ' },

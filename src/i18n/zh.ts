@@ -258,6 +258,8 @@ export const zh: Table = {
     endless: { name: '无尽守卫', desc: '无尽模式打到第 {n} 波' },
     login: { name: '常客', desc: '领取 {n} 次每日奖励' },
     workshop: { name: '工坊满级', desc: '任一工坊升级到满级' },
+    stars: { name: '摘星者', desc: '获得 {n} 颗星' },
+    hard: { name: '百炼成钢', desc: '赢下 {n} 个困难关卡' },
   },
   chapter: {
     title: '第{n}章 · {name}',
@@ -272,6 +274,16 @@ export const zh: Table = {
     cleared: '本章通关！章节宝箱 +{c}',
     finale: '终章',
     name: { outskirts: '工厂郊外', snowfield: '雪原', railyard: '铁路货场', foundry: '铸造厂', clocktower: '钟楼' },
+  },
+  stars: {
+    normal: '普通',
+    hard: '困难',
+    locked: '一章拿到 {n}★ 开启该章困难模式',
+    rule: '★★★：城墙保留 {p}%',
+    best: '新纪录！',
+    hardOpen: '困难模式开启：第 {n} 章！',
+    hardFirst: '首次困难胜利！',
+    chapterLock: '先赢下困难第 {n} 关',
   },
   twist: {
     runners: { name: '鼠潮', desc: '大多是发条鼠' },

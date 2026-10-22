@@ -5,8 +5,9 @@ import { t } from '../../i18n';
 import {
   CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists,
 } from '../../sim/chapters';
-import { maxStage, type MetaSave } from '../../sim/meta';
-import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, redDot, tappable } from '../kit';
+import type { MetaSave } from '../../sim/meta';
+import { chapterStars, hardOpen, STARS, stageOpen, stageStars } from '../../sim/stars';
+import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, redDot, starRow, tappable } from '../kit';
 import { gem, label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
@@ -16,12 +17,14 @@ import type { HomeActions } from './types';
 /** The five chapters, a row each: the name, the one-time chest (its button once every stage is
  *  cleared) and a tile a stage - cleared ones brass, the finale red, the chosen one ringed, a dot
  *  on a stage with a twist; a chapter not open yet says what opens it. Tapping an open stage
- *  picks it. */
+ *  picks it. Each stage shows its stars; on hard mode the tiles are the hard stages, and a
+ *  chapter whose hard mode is not open yet says what opens it. */
 export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
   const rowH = 186;
   const h = CHAPTER_COUNT * (rowH + 14) + 130;
   const { panel, box } = frame(act, t('chapter.panel'), h, fit);
   const top = -h / 2 + 90;
+  const hard = m.stars.hardMode;
   for (let ch = 1; ch <= CHAPTER_COUNT; ch++) {
     const r = new Container();
     r.position.set(0, top + (ch - 1) * (rowH + 14) + rowH / 2);
@@ -32,8 +35,13 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     const name = ink(chapterTitle(ch), 38, { fontWeight: '900' });
     name.anchor.set(0, 0.5);
     name.position.set(-400, -50);
-    fitText(name, 470);
+    // the chapter's stars, in the mode the switch is on, before the chest
+    const stars = ink(`★${chapterStars(m, ch, hard)}/${3 * CHAPTER_SIZE}`, 30, { fill: hard ? P.redInk : P.brassDark, fontWeight: '900' });
+    stars.anchor.set(1, 0.5);
+    stars.position.set(95, -50);
+    fitText(name, 475 - stars.width - 20);
     r.addChild(name);
+    if (chapterOpen(m, ch)) r.addChild(stars);
     const waiting = chestWaiting(m, ch);
     const opened = m.chapterChests.includes(ch);
     const icon = chestIcon();
@@ -61,9 +69,9 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
       c.position.set(400, -50);
       r.addChild(g, n, c);
     }
-    if (!open) {
+    if (!open || (hard && !hardOpen(m, ch))) {
       name.alpha = 0.6;
-      const text = ink(t('chapter.locked', { n: first - 1 }), 34, { fill: P.inkSoft, fontWeight: '900' });
+      const text = ink(open ? t('stars.locked', { n: STARS.unlock }) : t('chapter.locked', { n: first - 1 }), 34, { fill: P.inkSoft, fontWeight: '900' });
       text.position.set(24, 36);
       const l = lock();
       l.scale.set(0.6);
@@ -73,15 +81,19 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     }
     for (let i = 0; i < CHAPTER_SIZE; i++) {
       const stage = first + i;
-      const can = stage <= maxStage(m);
+      const can = stageOpen(m, stage);
       const tile = tappable(new Container(), () => can && act.pickStage(stage));
       tile.position.set(-351 + i * 78, 36);
       const finale = isFinale(stage);
-      const cleared = stage <= m.cleared;
-      const g = new Graphics().roundRect(-34, -34, 68, 68, 16).fill(cleared ? (finale ? 0xd0644f : P.brass) : LIGHT.face).stroke({ width: 4, color: P.line });
+      const won = stageStars(m, stage, hard);
+      const cleared = hard ? won > 0 : stage <= m.cleared;
+      const g = new Graphics().roundRect(-34, -34, 68, 68, 16).fill(cleared ? (finale || hard ? 0xd0644f : P.brass) : LIGHT.face).stroke({ width: 4, color: P.line });
       if (stage === m.stage) g.roundRect(-42, -42, 84, 84, 22).stroke({ width: 6, color: P.red });
       const n = cleared ? label(String(stage), 30, { stroke: { color: P.line, width: 5 } }) : ink(String(stage), 30, { fill: P.inkSoft, fontWeight: '900' });
-      tile.addChild(g, n);
+      n.y = -9;
+      const row = starRow(won, 8, hard);
+      row.y = 19;
+      tile.addChild(g, n, row);
       if (stageTwists(stage).length > 0) tile.addChild(new Graphics().circle(26, -26, 9).fill(finale ? P.red : P.brassDark).stroke({ width: 3, color: P.line }));
       if (!can) tile.alpha = 0.45;
       r.addChild(tile);

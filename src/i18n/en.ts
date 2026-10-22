@@ -258,6 +258,8 @@ export const en = {
     endless: { name: 'Endless Warden', desc: 'Reach wave {n} in endless mode' },
     login: { name: 'Regular', desc: 'Claim {n} daily rewards' },
     workshop: { name: 'Fully Built', desc: 'Max out a workshop upgrade' },
+    stars: { name: 'Star Collector', desc: 'Earn {n} stars' },
+    hard: { name: 'Hardened', desc: 'Win {n} hard stages' },
   },
   chapter: {
     title: 'Chapter {n} · {name}',
@@ -272,6 +274,16 @@ export const en = {
     cleared: 'Chapter cleared! Chapter chest +{c}',
     finale: 'Finale',
     name: { outskirts: 'Factory Outskirts', snowfield: 'Snowfield', railyard: 'Rail Yard', foundry: 'Foundry', clocktower: 'Clock Tower' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Hard',
+    locked: 'Get {n}★ in a chapter to open its hard mode',
+    rule: '★★★: keep {p}% of the wall',
+    best: 'New best!',
+    hardOpen: 'Hard mode open: chapter {n}!',
+    hardFirst: 'First hard win!',
+    chapterLock: 'Win hard stage {n} first',
   },
   twist: {
     runners: { name: 'Mouse Rush', desc: 'Mostly Clock Mice' },

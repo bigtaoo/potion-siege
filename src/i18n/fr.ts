@@ -258,6 +258,8 @@ export const fr: Table = {
     endless: { name: 'Gardien éternel', desc: 'Atteins la vague {n} en mode infini' },
     login: { name: 'Habitué', desc: 'Récupère {n} bonus du jour' },
     workshop: { name: 'Chantier achevé', desc: 'Monte une amélioration d’atelier au max' },
+    stars: { name: 'Collectionneur d’étoiles', desc: 'Gagne {n} étoiles' },
+    hard: { name: 'Aguerri', desc: 'Gagne {n} étapes difficiles' },
   },
   chapter: {
     title: 'Chapitre {n} · {name}',
@@ -272,6 +274,16 @@ export const fr: Table = {
     cleared: 'Chapitre terminé ! Coffre de chapitre +{c}',
     finale: 'Finale',
     name: { outskirts: 'Faubourgs de l’usine', snowfield: 'Plaine glacée', railyard: 'Gare de triage', foundry: 'Fonderie', clocktower: 'Beffroi' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Difficile',
+    locked: 'Obtiens {n}★ dans un chapitre pour ouvrir son mode difficile',
+    rule: '★★★ : garde {p} % du mur',
+    best: 'Nouveau record !',
+    hardOpen: 'Mode difficile ouvert : chapitre {n} !',
+    hardFirst: 'Première victoire difficile !',
+    chapterLock: 'Gagne d’abord l’étape difficile {n}',
   },
   twist: {
     runners: { name: 'Ruée de souris', desc: 'Surtout des souris mécaniques' },

@@ -258,6 +258,8 @@ export const pl: Table = {
     endless: { name: 'Wieczny Strażnik', desc: 'Dojdź do fali {n} w trybie bez końca' },
     login: { name: 'Bywalec', desc: 'Odbierz dzienne nagrody: {n}' },
     workshop: { name: 'Pełna Rozbudowa', desc: 'Rozwiń do maks. ulepszenie warsztatu' },
+    stars: { name: 'Zbieracz Gwiazd', desc: 'Zdobądź {n} gwiazd' },
+    hard: { name: 'Zahartowany', desc: 'Wygraj {n} trudnych etapów' },
   },
   chapter: {
     title: 'Rozdział {n} · {name}',
@@ -272,6 +274,16 @@ export const pl: Table = {
     cleared: 'Rozdział ukończony! Skrzynia rozdziału +{c}',
     finale: 'Finał',
     name: { outskirts: 'Fabryczne Przedmieścia', snowfield: 'Śnieżne Pola', railyard: 'Bocznica', foundry: 'Odlewnia', clocktower: 'Wieża Zegarowa' },
+  },
+  stars: {
+    normal: 'Normalny',
+    hard: 'Trudny',
+    locked: 'Zdobądź {n}★ w rozdziale, by otworzyć jego tryb trudny',
+    rule: '★★★: utrzymaj {p}% muru',
+    best: 'Nowy rekord!',
+    hardOpen: 'Tryb trudny otwarty: rozdział {n}!',
+    hardFirst: 'Pierwsza trudna wygrana!',
+    chapterLock: 'Najpierw wygraj trudny etap {n}',
   },
   twist: {
     runners: { name: 'Mysi Najazd', desc: 'Głównie Zegarowe Myszy' },
