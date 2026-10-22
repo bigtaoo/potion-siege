@@ -41,6 +41,8 @@ export function showEnd(g: Game, b: Battle): void {
   }
   const ads = !g.autoplay && g.platform.rewardedAvailable();
   const { revive: canRevive, double: canDouble, capped } = endOffers(g.save, b.result === 'lost', g.revived, ads, g.purse);
+  // an adblocker took away an offer the screen would have had: one line says why it is missing
+  const missed = !ads && !g.autoplay && !!g.platform.adBlocked?.() && Object.values(endOffers(g.save, b.result === 'lost', g.revived, true, g.purse)).some(Boolean);
   if (canRevive && !g.offered.revive) g.run?.onReviveOffer();
   if (canDouble && !g.offered.double) g.run?.onDoubleOffer();
   g.offered.revive ||= canRevive;
@@ -60,6 +62,7 @@ export function showEnd(g: Game, b: Battle): void {
     onTip: b.result === 'lost' ? (tab) => leaveResult(g, 'tip', tab) : null,
     onNext: next ? () => void nextStage(g, b) : null,
     endless: g.endless?.result ? { result: g.endless.result, best: g.save.endless.best, next: nextMilestone(g.save) } : undefined,
+    adBlocked: missed,
   });
 }
 
@@ -93,9 +96,10 @@ export async function nextStage(g: Game, b: Battle): Promise<void> {
 }
 
 /** The portal's midgame ad between battles: never after the very first one, nor right after
- *  a rewarded one. */
+ *  a rewarded one, nor after a loss whose revive was on offer: an interstitial straight after
+ *  the player passed on (or tried) an ad reads as a punishment for it. */
 export async function breakAd(g: Game): Promise<void> {
-  if (g.save.runs > 1 && !g.rewardedSinceEnd) {
+  if (g.save.runs > 1 && !g.rewardedSinceEnd && !g.offered.revive) {
     await g.platform.midgame(() => g.mute(true));
     g.analytics.track('ad_midgame', { run: g.save.runs });
   }

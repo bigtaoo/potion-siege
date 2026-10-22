@@ -21,6 +21,8 @@ export interface Platform {
   rewardedAvailable(): boolean;
   /** Whether the host has rewarded ads at all, loaded or not; absent: as `rewardedAvailable`. */
   rewardedHosted?(): boolean;
+  /** An adblocker keeps the host's rewarded ads off (CrazyGames); absent: never. */
+  adBlocked?(): boolean;
   /** Plays a rewarded ad; true only if the player earned the reward. */
   rewarded(onStart: () => void): Promise<boolean>;
   /** Plays an interstitial at a natural break; resolves when it is over (or skipped). */

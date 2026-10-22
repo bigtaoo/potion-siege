@@ -81,6 +81,7 @@ export const vi: Table = {
   double: '×2 pha lê',
   doubled: '×2',
   doublesLeft: 'Còn {n}/{total} lần hôm nay',
+  adBlocked: 'Đang bật chặn quảng cáo: không nhận được thưởng từ quảng cáo',
   damage: 'Sát thương gây ra',
   side: {
     skills: 'Kỹ năng trận này',

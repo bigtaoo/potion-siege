@@ -81,6 +81,7 @@ export const it: Table = {
   double: '×2 cristalli',
   doubled: '×2',
   doublesLeft: 'Ancora {n}/{total} oggi',
+  adBlocked: 'Blocco annunci attivo: niente ricompense con annunci',
   damage: 'Danni inflitti',
   side: {
     skills: 'Abilità della partita',

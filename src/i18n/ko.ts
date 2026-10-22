@@ -81,6 +81,7 @@ export const ko: Table = {
   double: '크리스탈 ×2',
   doubled: '×2',
   doublesLeft: '오늘 {n}/{total}회 남음',
+  adBlocked: '광고 차단기 사용 중: 광고 보상을 받을 수 없어요',
   damage: '피해량',
   side: {
     skills: '이번 판 스킬',

@@ -174,7 +174,8 @@ export class Game {
   /** The battle's end is booked: the battle stands still and is not booked again while the
    *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
   ended = false;
-  /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
+  /** The result screen's ad offers already reported, so a screen shown again does not count
+   *  twice; a revive on offer also keeps the midgame ad out of the break (resultScreen.breakAd). */
   offered = { revive: false, double: false };
   /** A rewarded ad was watched since the battle ended (the ×2): the portal wants no midgame ad
    *  chained after it in the same break. */

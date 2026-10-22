@@ -124,6 +124,12 @@ function overlayScreens(): Screen[] {
       });
     }
     out.push({
+      name: `${fitName}/end lost adblock`,
+      w: fit.w,
+      h: fit.h,
+      build: overlay((o) => o.showEnd(false, stats, { crystals: 640, firstClear: false, unlocked: [] }, () => {}, null, { onDouble: null, doubled: false, dealt, onTip: () => {}, adBlocked: true })),
+    });
+    out.push({
       name: `${fitName}/end challenge`,
       w: fit.w,
       h: fit.h,

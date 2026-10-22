@@ -81,6 +81,7 @@ export const ja: Table = {
   double: 'クリスタル ×2',
   doubled: '×2',
   doublesLeft: '今日はあと {n}/{total} 回',
+  adBlocked: '広告ブロッカーが有効：広告報酬は使えません',
   damage: '与ダメージ',
   side: {
     skills: 'このバトルのスキル',

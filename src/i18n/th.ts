@@ -81,6 +81,7 @@ export const th: Table = {
   double: 'คริสตัล ×2',
   doubled: '×2',
   doublesLeft: 'วันนี้เหลือ {n}/{total}',
+  adBlocked: 'เปิดตัวบล็อกโฆษณาอยู่: รับรางวัลจากโฆษณาไม่ได้',
   damage: 'ความเสียหายที่ทำได้',
   side: {
     skills: 'สกิลรอบนี้',

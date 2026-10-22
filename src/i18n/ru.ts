@@ -81,6 +81,7 @@ export const ru: Table = {
   double: 'Кристаллы ×2',
   doubled: '×2',
   doublesLeft: 'Осталось сегодня: {n}/{total}',
+  adBlocked: 'Включён блокировщик рекламы: награды за рекламу недоступны',
   damage: 'Нанесённый урон',
   side: {
     skills: 'Навыки в этом бою',

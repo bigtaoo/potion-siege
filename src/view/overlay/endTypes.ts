@@ -21,6 +21,8 @@ export interface EndExtras {
   onNext?: (() => void) | null;
   /** An endless run's result: the wave it reached, the best and the next milestone. */
   endless?: EndlessEnd;
+  /** An adblocker took the revive or the ×2 away: a line over Continue says so. */
+  adBlocked?: boolean;
 }
 
 export interface EndlessEnd {

@@ -20,6 +20,7 @@ export class Host implements Platform {
   storage = new SafeStore(null);
   answers: Answer[] = [];
   available = true;
+  blocked = false;
   rewardedCalls = 0;
   midgames = 0;
   celebrated = 0;
@@ -36,6 +37,9 @@ export class Host implements Platform {
   }
   rewardedAvailable(): boolean {
     return this.available;
+  }
+  adBlocked(): boolean {
+    return this.blocked;
   }
   async rewarded(onStart: () => void): Promise<boolean> {
     this.rewardedCalls++;

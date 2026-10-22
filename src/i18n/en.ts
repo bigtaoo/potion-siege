@@ -79,6 +79,7 @@ export const en = {
   double: '×2 crystals',
   doubled: '×2',
   doublesLeft: '{n}/{total} left today',
+  adBlocked: 'Ad blocker on: rewards from ads are off',
   damage: 'Damage dealt',
   side: {
     skills: 'Skills this run',

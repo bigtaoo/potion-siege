@@ -130,7 +130,7 @@ export class Overlay extends Container {
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));
-    const buttons = endButtons(onContinue, onRevive, more.onNext ?? null);
+    const buttons = endButtons(onContinue, onRevive, more.onNext ?? null, more.adBlocked);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];
     const heights = cols.map((col) => col.reduce((a, c) => a + c.h, 0));

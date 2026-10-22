@@ -81,6 +81,7 @@ export const de: Table = {
   double: '×2 Kristalle',
   doubled: '×2',
   doublesLeft: 'Heute noch {n}/{total}',
+  adBlocked: 'Werbeblocker an: Belohnungen per Werbung sind aus',
   damage: 'Schaden',
   side: {
     skills: 'Fähigkeiten im Kampf',
