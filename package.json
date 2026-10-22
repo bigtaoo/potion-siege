@@ -31,7 +31,8 @@
     "economy": "node scripts/economy.mjs",
     "firstframe": "node scripts/firstFrame.mjs",
     "chapters": "vitest run --config scripts/vitest.chapters.config.js",
-    "memruns": "node scripts/memRuns.mjs"
+    "memruns": "node scripts/memRuns.mjs",
+    "sweep": "vitest run --config scripts/vitest.sweep.config.js"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",
