@@ -132,14 +132,14 @@
       "gold": 150
     },
     "tripod": {
-      "hp": 30,
+      "hp": 28,
       "speed": 30,
       "radius": 90,
       "wallDps": 150,
       "gold": 150
     },
     "anvil": {
-      "hp": 39,
+      "hp": 34,
       "speed": 22,
       "radius": 90,
       "wallDps": 130,
