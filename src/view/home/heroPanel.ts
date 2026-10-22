@@ -22,7 +22,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
   const bt = bottle(kind, 220);
   bt.position.set(-300, top + 250);
   box.addChild(new Graphics().circle(-300, top + 250, 120).fill({ color: HERO_COLORS[kind], alpha: 0.2 }), bt);
-  const level = ink(`Lv ${lv} / ${BALANCE.meta.heroMax}`, 56);
+  const level = ink(t('levelOf', { n: lv, max: BALANCE.meta.heroMax }), 56);
   level.anchor.set(0, 0.5);
   level.position.set(-150, top + 210);
   const dmg = fitText(ink(t('heroDamage', { p: Math.round(BALANCE.meta.heroDamage * 100), n: Math.round((heroDamage(lv) - 1) * 100) }), 34, { fill: P.inkSoft }), 570);
@@ -44,7 +44,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
   MILESTONES[kind].forEach((ms) => {
     const on = lv >= ms.level;
     const r = new Container();
-    const lvTag = ink(`Lv.${ms.level}`, 38, { fill: on ? P.brassDark : P.inkSoft });
+    const lvTag = ink(t('level', { n: ms.level }), 38, { fill: on ? P.brassDark : P.inkSoft });
     lvTag.position.set(-350, 0);
     let what: string;
     let needs = '';

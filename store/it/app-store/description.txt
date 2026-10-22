@@ -12,6 +12,7 @@ CARATTERISTICHE
 • 5 tipi di nemici a molla, ognuno con i suoi punti deboli
 • 5 boss, ognuno con il suo trucco
 • 50 livelli in 5 capitoli
+• Da 1 a 3 stelle per livello in base alle mura rimaste; 24 stelle in un capitolo aprono la sua modalità difficile
 • Modalità infinita: quante ondate reggeranno le tue mura?
 • Sfida del giorno, missioni giornaliere e premi giornalieri
 • Potenziamenti della bottega, codice e obiettivi

@@ -182,6 +182,7 @@ function tick(x: number, y: number, r: number): Graphics {
 /** The goal of a track's tier in words. */
 function featDesc(id: TrackId, tier: number, goal: number): string {
   if (id === 'enemies') return tier === 0 ? t('ach.enemies.boss') : t('ach.enemies.all', { n: goal });
+  if ((id === 'hard' || id === 'ultimates') && goal === 1) return t(`ach.${id}.one`);
   // the challenge counts reward tiers; the player knows them by their wave
   if (id === 'challenge') return t('ach.challenge.desc', { n: CHALLENGE_TIERS[goal - 1].wave });
   return t(`ach.${id}.desc`, { n: goal });

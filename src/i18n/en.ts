@@ -60,6 +60,11 @@ export const en = {
   damageNow: 'Damage +{p}%',
   heroDamage: 'Damage +{p}% per level, now +{n}%',
   heroNext: 'Lv {n}: damage +{p}%',
+  /** A potion's level, on its card and in the codex; levelOf with the top level. */
+  level: 'Lv {n}',
+  levelOf: 'Lv {n}/{max}',
+  /** The red tag over a boss. */
+  bossTag: 'BOSS',
   noCrystals: 'Not enough crystals',
   baseCards: 'Starting skill cards',
   unlockSkill: 'Unlocks the {name} card',
@@ -209,7 +214,7 @@ export const en = {
       critDay: { name: 'Crit Day', desc: '20% crit, enemies +20% HP' },
       trial: { name: 'Trial', desc: '{hero} joins the lineup' },
       solo: { name: 'Lone Sprout', desc: 'Only 3 potion kinds' },
-      goldRain: { name: 'Gold Rain', desc: 'Kill gold x1.5, start with only 10 gold' },
+      goldRain: { name: 'Gold Rain', desc: 'Kill gold ×1.5, start with only 10 gold' },
     },
   },
   hero: {
@@ -249,7 +254,7 @@ export const en = {
     done: 'Complete',
     stages: { name: 'Siege Breaker', desc: 'Clear stage {n}' },
     level: { name: 'Master Brewer', desc: 'Raise a potion to Lv {n}' },
-    ultimates: { name: 'Grand Alchemy', desc: 'Brew {n} kinds of ultimate potion' },
+    ultimates: { name: 'Grand Alchemy', one: 'Brew an ultimate potion', desc: 'Brew {n} kinds of ultimate potion' },
     unlock: { name: 'Full Shelf', desc: 'Own {n} kinds of potion' },
     enemies: { name: 'Gear Hunter', boss: 'Defeat a boss', all: 'Defeat all {n} kinds of enemy' },
     merges: { name: 'Mixer', desc: 'Merge {n} times' },
@@ -260,7 +265,7 @@ export const en = {
     login: { name: 'Regular', desc: 'Claim {n} daily rewards' },
     workshop: { name: 'Fully Built', desc: 'Max out a workshop upgrade' },
     stars: { name: 'Star Collector', desc: 'Earn {n} stars' },
-    hard: { name: 'Hardened', desc: 'Win {n} hard stages' },
+    hard: { name: 'Hardened', one: 'Win a hard stage', desc: 'Win {n} hard stages' },
   },
   chapter: {
     title: 'Chapter {n} · {name}',

@@ -12,6 +12,7 @@ CARACTERÍSTICAS
 • 5 tipos de enemigos de relojería, cada uno con sus debilidades
 • 5 jefes, cada uno con su truco
 • 50 fases en 5 capítulos
+• De 1 a 3 estrellas por fase según la muralla que quede; 24 estrellas en un capítulo abren su modo difícil
 • Modo infinito: ¿cuántas oleadas aguantará tu muralla?
 • Desafío diario, tareas diarias y recompensas diarias
 • Mejoras del taller, códice y logros

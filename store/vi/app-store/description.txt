@@ -12,6 +12,7 @@ Giữa các trận, hãy nâng cấp bình thuốc, mở rộng xưởng và vư
 • 5 loại kẻ địch dây cót, mỗi loại có điểm yếu riêng
 • 5 boss, mỗi boss có chiêu riêng
 • 50 màn chơi trong 5 chương
+• 1–3 sao mỗi màn tùy tường thành còn lại; 24 sao trong một chương mở chế độ khó của chương đó
 • Chế độ Vô tận: tường thành của bạn trụ được bao nhiêu đợt?
 • Thử thách hằng ngày, nhiệm vụ ngày và thưởng hằng ngày
 • Nâng cấp xưởng, đồ giám và thành tựu

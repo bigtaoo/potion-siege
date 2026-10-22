@@ -17,7 +17,7 @@ function flatten(o: object, prefix = ''): Map<string, string> {
 const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
 
 /** Strings any language may leave as in English: names, links and game words everyone uses. */
-const SAME = new Set(['title', 'mvp', 'sound.policyPage', 'codex.hp', 'maxed', 'boss', 'side.fresh']);
+const SAME = new Set(['title', 'mvp', 'sound.policyPage', 'codex.hp', 'maxed', 'side.fresh', 'level', 'levelOf', 'bossTag']);
 
 /** The languages not written in Latin letters. */
 const OWN_SCRIPT = new Set<Locale>(['zh', 'ru', 'ja', 'ko', 'th']);

@@ -12,6 +12,7 @@ DESTAQUES
 • 5 tipos de inimigos mecânicos, cada um com suas fraquezas
 • 5 chefes, cada um com seu truque
 • 50 fases em 5 capítulos
+• De 1 a 3 estrelas por fase conforme a muralha que resta; 24 estrelas num capítulo abrem o modo difícil dele
 • Modo infinito: quantas ondas sua muralha aguenta?
 • Desafio diário, tarefas diárias e prêmios diários
 • Melhorias da oficina, códice e conquistas

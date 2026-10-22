@@ -39,7 +39,7 @@ export function hitEffect(g: Graphics, kind: HeroKind | 'poison', x: number, y: 
     case 'fire': {
       // a flame splash the size of the blast, with embers thrown out of it
       const r = radius * (0.5 + 0.4 * e);
-      g.poly(burstPoly(x, y, r, 0.62, 9, seed)).fill({ color: 0xff6a1f, alpha: a }).stroke({ width: 5, color: INK, alpha: a, join: 'round' });
+      g.poly(burstPoly(x, y, r, 0.62, 9, seed)).fill({ color: 0xff6a1f, alpha: a }).stroke({ width: 5, color: INK, alpha: a, join: 'bevel' });
       g.poly(burstPoly(x, y, r * 0.6, 0.6, 7, -seed)).fill({ color: 0xffd23a, alpha: a });
       g.circle(x, y, r * 0.22).fill({ color: 0xfff3b0, alpha: a });
       for (let i = 0; i < 6; i++) {
@@ -61,7 +61,7 @@ export function hitEffect(g: Graphics, kind: HeroKind | 'poison', x: number, y: 
         const len = 30 * (1 - p * 0.5);
         g.poly([bx + c * len, by + s * len, bx - s * 8, by + c * 8, bx - c * len * 0.4, by - s * len * 0.4, bx + s * 8, by - c * 8])
           .fill({ color: ICE[1], alpha: a })
-          .stroke({ width: 3.5, color: INK, alpha: a, join: 'round' });
+          .stroke({ width: 3.5, color: INK, alpha: a, join: 'bevel' });
       }
       if (p < 0.7) snowflake(g, x, y, 30 * (1 - p * 0.6), seed + p * 3, ICE, 3);
       break;
@@ -141,7 +141,7 @@ function gear(g: Graphics, x: number, y: number, r: number, angle: number, color
     const d = i % 4 < 2 ? r : r * 0.74;
     pts.push(x + Math.cos(a) * d, y + Math.sin(a) * d);
   }
-  g.poly(pts).fill({ color, alpha }).stroke({ width: 3.5, color: INK, alpha, join: 'round' });
+  g.poly(pts).fill({ color, alpha }).stroke({ width: 3.5, color: INK, alpha, join: 'bevel' });
   g.circle(x, y, r * 0.3).fill({ color: 0x3a4250, alpha }).stroke({ width: 2.5, color: INK, alpha });
 }
 
@@ -183,8 +183,8 @@ export function gearBurst(g: Graphics, x: number, y: number, boss: boolean, p: n
 export function iceShell(g: Graphics, x: number, feet: number, w: number, h: number): void {
   const top = feet - h - 6;
   g.roundRect(x - w / 2, top, w, h + 12, w * 0.22).fill({ color: 0xbff4ff, alpha: 0.42 }).stroke({ width: 5, color: 0x1f5f8a });
-  g.moveTo(x - w * 0.3, top + h * 0.18).lineTo(x - w * 0.3, top + h * 0.45).stroke({ width: 5, color: 0xffffff, alpha: 0.85, cap: 'round' });
-  g.moveTo(x - w * 0.18, top + h * 0.14).lineTo(x - w * 0.1, top + h * 0.22).stroke({ width: 5, color: 0xffffff, alpha: 0.85, cap: 'round' });
+  g.moveTo(x - w * 0.3, top + h * 0.18).lineTo(x - w * 0.3, top + h * 0.45).stroke({ width: 5, color: 0xffffff, alpha: 0.85 });
+  g.moveTo(x - w * 0.18, top + h * 0.14).lineTo(x - w * 0.1, top + h * 0.22).stroke({ width: 5, color: 0xffffff, alpha: 0.85 });
 }
 
 /** A winder winding back the enemies round it: a clock face spreading over the ground out to
@@ -201,7 +201,7 @@ export function rewindWave(g: Graphics, x: number, y: number, radius: number, p:
     const c = Math.cos(ang);
     const s = Math.sin(ang) * sy;
     const inner = i % 3 === 0 ? 0.8 : 0.88;
-    g.moveTo(x + c * r * inner, y + s * r * inner).lineTo(x + c * r, y + s * r).stroke({ width: i % 3 === 0 ? 6 : 4, color: 0xc9a24a, alpha: a, cap: 'round' });
+    g.moveTo(x + c * r * inner, y + s * r * inner).lineTo(x + c * r, y + s * r).stroke({ width: i % 3 === 0 ? 6 : 4, color: 0xc9a24a, alpha: a });
   }
   // the hand turns back from twelve o'clock, and a short arc behind it shows which way
   const back = -Math.PI / 2 - p * Math.PI * 1.5;
@@ -214,7 +214,7 @@ export function rewindWave(g: Graphics, x: number, y: number, radius: number, p:
     const ang = back + (j / 10) * 0.9;
     arc.push(x + Math.cos(ang) * r * 0.6, y + Math.sin(ang) * r * 0.6 * sy);
   }
-  g.poly(arc, false).stroke({ width: 5, color: 0x3f9a96, alpha: a, cap: 'round' });
+  g.poly(arc, false).stroke({ width: 5, color: 0x3f9a96, alpha: a });
   g.circle(x, y, 9).fill({ color: 0xc9a24a, alpha: a }).stroke({ width: 3, color: INK, alpha: a });
 }
 
@@ -242,7 +242,7 @@ function leaf(g: Graphics, x: number, y: number, r: number, angle: number, alpha
     const ly = Math.sin(t) * r * 0.7;
     pts.push(x + lx * c - ly * s, y + lx * s + ly * c);
   }
-  g.poly(pts).fill({ color: LEAF, alpha }).stroke({ width: 3, color: INK, alpha, join: 'round' });
+  g.poly(pts).fill({ color: LEAF, alpha }).stroke({ width: 3, color: INK, alpha, join: 'bevel' });
 }
 
 /** A gale gust: wind streaks sweeping across the field from `left` to `right`, `depth` deep

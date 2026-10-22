@@ -69,13 +69,16 @@ export async function boot(platform: Platform): Promise<GameHandle> {
 
   patchGraphicsDestroy();
   const app = new Application();
+  // the quality levels lower it (view/quality.ts); 3 is a 3x phone's own pixels
+  const resolution = Math.min(window.devicePixelRatio || 1, 3);
   await app.init({
     background: COLORS.bg,
     resizeTo: platform.mount ?? window,
-    // the quality levels lower it (view/quality.ts); 3 is a 3x phone's own pixels
-    resolution: Math.min(window.devicePixelRatio || 1, 3),
+    resolution,
     autoDensity: true,
-    antialias: true,
+    // at 2x and up the pixels are small enough that edges look smooth without it, and MSAA at 3x
+    // is a big part of a phone GPU's frame
+    antialias: resolution < 2,
     preference: 'webgl',
   });
   (platform.mount ?? document.body).appendChild(app.canvas);

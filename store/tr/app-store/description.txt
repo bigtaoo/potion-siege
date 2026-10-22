@@ -12,6 +12,7 @@ Savaşlar arasında iksirlerinin seviyesini yükselt, atölyeyi geliştir ve Fab
 • Her biri kendi zayıflıklarına sahip 5 kurmalı düşman türü
 • Her biri kendi hilesine sahip 5 patron
 • 5 bölümde 50 aşama
+• Kalan sura göre her aşamada 1–3 yıldız; bir bölümde 24 yıldız o bölümün zor modunu açar
 • Sonsuz Mod: surun kaç dalgaya dayanabilir?
 • Günlük Meydan Okuma, günlük görevler ve günlük ödüller
 • Atölye geliştirmeleri, kodeks ve başarımlar

@@ -58,7 +58,7 @@ function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container
   const name = fit(label(t(`hero.${kind}`), Math.min(38, rh * 0.3), { stroke: { color: P.line, width: 7 } }), sw - 24);
   name.position.set(sx, -ph * 0.17);
   const at = unlockStage(kind);
-  const sub = fit(label(open ? `Lv ${m.heroes[kind]}` : at ? t('unlockAt', { n: at }) : t('codex.locked'), Math.min(30, rh * 0.25), { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
+  const sub = fit(label(open ? t('level', { n: m.heroes[kind] }) : at ? t('unlockAt', { n: at }) : t('codex.locked'), Math.min(30, rh * 0.25), { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
   sub.position.set(sx, ph * 0.23);
   r.addChild(name, sub);
 
