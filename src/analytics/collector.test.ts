@@ -149,25 +149,25 @@ describe('collector setup', () => {
     const handler = await load({ COLLECTOR_DIR: DIR, PORT: '9001' });
     expect(state.port).toBe(9001);
     expect(state.dirs).toEqual([DIR]);
-    request(handler, 'POST', '/e', JSON.stringify([{ name: 'a', uid: 'u' }]));
+    request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     vi.setSystemTime(NOON + 86_400_000);
-    request(handler, 'POST', '/e', JSON.stringify([{ name: 'b', uid: 'u' }]));
-    expect(lines(TODAY).map((e) => e.name)).toEqual(['a']);
-    expect(lines(dayFile('2026-10-19')).map((e) => e.name)).toEqual(['b']);
+    request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_end', uid: 'u' }]));
+    expect(lines(TODAY).map((e) => e.name)).toEqual(['run_start']);
+    expect(lines(dayFile('2026-10-19')).map((e) => e.name)).toEqual(['run_end']);
   });
 
   it('defaults to port 8787 and a single file, or takes both from the command line', async () => {
     const handler = await load({});
     expect(state.port).toBe(8787);
     expect(state.dirs).toEqual(['telemetry']);
-    request(handler, 'POST', '/e', JSON.stringify([{ name: 'a', uid: 'u' }]));
+    request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('telemetry/events.ndjson')).toHaveLength(1);
 
     state.dirs.length = 0;
     const custom = await load({}, ['9100', 'out/x.ndjson']);
     expect(state.port).toBe(9100);
     expect(state.dirs).toEqual(['out']);
-    request(custom, 'POST', '/e', JSON.stringify([{ name: 'a', uid: 'u' }]));
+    request(custom, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('out/x.ndjson')).toHaveLength(1);
   });
 });
@@ -216,18 +216,18 @@ describe('collector POST /e', () => {
     expect(lines(TODAY)).toEqual(batch.map((e) => ({ ...e, received: NOON })));
 
     // a second batch appends
-    request(handler, 'POST', '/e', JSON.stringify([{ name: 'x', uid: 'u2' }]));
+    request(handler, 'POST', '/e', JSON.stringify([{ name: 'wave_start', uid: 'u2' }]));
     expect(lines(TODAY)).toHaveLength(3);
   });
 
   it('drops events without a string name and uid, and writes nothing when none are left', async () => {
     const handler = await load();
-    const batch = [null, 3, { name: 'no_uid' }, { uid: 'u' }, { name: 7, uid: 'u' }, { name: 'ok', uid: 'u' }];
+    const batch = [null, 3, { name: 'home_view' }, { uid: 'u' }, { name: 7, uid: 'u' }, { name: 'home_view', uid: 'u' }];
     expect(request(handler, 'POST', '/e', JSON.stringify(batch)).res.status).toBe(204);
-    expect(lines(TODAY).map((e) => e.name)).toEqual(['ok']);
+    expect(lines(TODAY).map((e) => e.name)).toEqual(['home_view']);
 
     state.files.clear();
-    expect(request(handler, 'POST', '/e', JSON.stringify([{ name: 'no_uid' }])).res.status).toBe(204);
+    expect(request(handler, 'POST', '/e', JSON.stringify([{ name: 'home_view' }])).res.status).toBe(204);
     expect(request(handler, 'POST', '/e', '[]').res.status).toBe(204);
     expect(state.files.size).toBe(0);
   });
@@ -242,21 +242,26 @@ describe('collector POST /e', () => {
     expect(state.files.size).toBe(0);
   });
 
-  it('cuts off a body over 256 KB', async () => {
+  it('cuts off a body over 64 KB', async () => {
     const handler = await load();
     const { req, res } = request(handler, 'POST', '/e');
-    req.emit('data', 'x'.repeat(200 * 1024));
+    req.emit('data', 'x'.repeat(60 * 1024));
     expect(req.destroy).not.toHaveBeenCalled();
-    req.emit('data', 'x'.repeat(100 * 1024));
+    req.emit('data', 'x'.repeat(5 * 1024));
     expect(req.destroy).toHaveBeenCalled();
     expect(res.ended).toBe(false);
   });
 
-  it('stops writing to a day file that is already full', async () => {
+  it('stops writing to a day file that is already full, and says so once', async () => {
     const handler = await load();
     state.sizeOverride = 512 * 1024 * 1024;
-    expect(request(handler, 'POST', '/e', JSON.stringify([{ name: 'a', uid: 'u' }])).res.status).toBe(204);
+    const log = vi.mocked(console.log);
+    log.mockClear();
+    for (let i = 0; i < 3; i++) {
+      expect(request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }])).res.status).toBe(204);
+    }
     expect(state.files.size).toBe(0);
+    expect(log.mock.calls.filter(([m]) => String(m).includes('reached'))).toHaveLength(1);
   });
 });
 
@@ -331,5 +336,27 @@ describe('collector rate limit', () => {
     expect(request(handler, 'GET', '/health', undefined, ip).res.status).toBe(200);
     vi.setSystemTime(NOON + 60_000);
     expect(request(handler, 'POST', '/e', '[]', ip).res.status).toBe(204);
+  });
+
+  it('allows 1 MB of bodies per address per minute, and logs the count of addresses over it', async () => {
+    const handler = await load();
+    const ip = { 'cf-connecting-ip': '1.2.3.4' };
+    const chunk = 'x'.repeat(60 * 1024);
+    // 17 bodies of 60 KB fit; the 18th goes over and is cut off with a 429
+    for (let i = 0; i < 17; i++) expect(request(handler, 'POST', '/e', '[]', ip).res.status).toBe(204);
+    for (let i = 0; i < 17; i++) request(handler, 'POST', '/e', chunk, ip);
+    const over = request(handler, 'POST', '/e', chunk, ip);
+    expect(over.res.status).toBe(429);
+    expect(over.req.destroy).toHaveBeenCalled();
+    // and the address is refused before it sends anything more this minute
+    expect(request(handler, 'POST', '/e', '[]', ip).res.status).toBe(429);
+    expect(request(handler, 'POST', '/e', '[]', { 'cf-connecting-ip': '5.6.7.8' }).res.status).toBe(204);
+
+    const log = vi.mocked(console.log);
+    log.mockClear();
+    vi.setSystemTime(NOON + 60_000);
+    expect(request(handler, 'POST', '/e', '[]', ip).res.status).toBe(204);
+    expect(log).toHaveBeenCalledWith(expect.stringContaining('1 address(es) sent over 1048576 bytes'));
+    expect(String(log.mock.calls)).not.toContain('1.2.3.4');
   });
 });

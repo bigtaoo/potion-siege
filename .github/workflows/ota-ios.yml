@@ -6,22 +6,21 @@ name: ota-ios
 # Review, no macOS runner. Native changes (Swift, Info.plist, the Podfile, capacitor.config.ts)
 # never travel this way: they need release-ios.yml and a new build.
 #
-# Run it by hand (Actions -> ota-ios -> Run workflow) on a commit whose ci run is green. The
-# version is worked out, never typed: <shell>.<n>, where <shell> is the newest release-ios.yml
-# build's bundle version (<MARKETING_VERSION>.<run number>, the one baked into that shell) and n
-# counts up from the live manifest. So an update always outranks the shell it was made for, and
+# Run it by hand (Actions -> ota-ios -> Run workflow) on main, on a commit whose ci run on main is
+# green. It refuses when anything native moved since the newest shell's commit (ios/,
+# capacitor.config.ts, the bridge, the @capacitor/@capgo packages: scripts/nativeDiff.mjs); that
+# needs a new shell. minNativeVersion is that shell's MARKETING_VERSION, worked out like the rest:
+# release-ios.yml refuses a shell that changes the native side without a new MARKETING_VERSION,
+# so every shell at that version runs the update. The version is worked out, never typed:
+# <shell>.<n>, where <shell> is the newest release-ios.yml build's bundle version
+# (<MARKETING_VERSION>.<run number>, the one baked into that shell) and n counts up from the live
+# manifest. So an update always outranks the shell it was made for, and
 # the next shell outranks every update made for the one before.
 #
 # Needs the CLOUDFLARE_API_TOKEN and CLOUDFLARE_ACCOUNT_ID secrets ci.yml deploys the web with.
 
 on:
-  workflow_dispatch:
-    inputs:
-      min_native:
-        description: 'oldest shell version (CFBundleShortVersionString) the update needs'
-        required: true
-        default: '1.0'
-        type: string
+  workflow_dispatch: {}
 
 concurrency:
   group: ota-deploy
@@ -36,9 +35,17 @@ env:
 
 jobs:
   publish:
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+        with:
+          # the whole history, to diff against the shell's commit
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
 
       - name: Resolve the version
         id: ver
@@ -46,15 +53,24 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           set -eu
-          GREEN=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId -q length)
-          if [ "$GREEN" != "1" ]; then echo "ci has not passed on $GITHUB_SHA"; exit 1; fi
+          # a push run on main: a pull request's run of the same commit does not count
+          GREEN=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --branch main --event push --status success --limit 1 --json databaseId -q length)
+          if [ "$GREEN" != "1" ]; then echo "ci has not passed on main at $GITHUB_SHA"; exit 1; fi
           MV=$(grep -o 'MARKETING_VERSION = [^;]*' ios/App/App.xcodeproj/project.pbxproj | sort -u | sed 's/.* = //')
           if ! echo "$MV" | grep -Eq '^[0-9]+\.[0-9]+$'; then echo "MARKETING_VERSION must be one X.Y (got: $MV)"; exit 1; fi
           # release runs only: the push-triggered compile runs share the run counter
-          BUILD=$(gh run list -R "$GITHUB_REPOSITORY" --workflow release-ios.yml --status success --limit 100 \
-            --json number,event,headBranch \
-            -q '[.[] | select(.event == "workflow_dispatch" or (.headBranch | startswith("ios-v")))][0].number')
-          if [ -z "$BUILD" ] || [ "$BUILD" = "null" ]; then echo "no successful release-ios.yml run"; exit 1; fi
+          SHELL=$(gh run list -R "$GITHUB_REPOSITORY" --workflow release-ios.yml --status success --limit 100 \
+            --json number,event,headBranch,headSha \
+            -q'[.[] | select(.event == "workflow_dispatch" or (.headBranch | startswith("ios-v")))][0] | "\(.number) \(.headSha)"')
+          BUILD=${SHELL%% *}
+          SHELL_SHA=${SHELL#* }
+          if [ -z "$SHELL" ] || [ "$BUILD" = "null" ]; then echo "no successful release-ios.yml run"; exit 1; fi
+          # the update must run on that shell as it was built: nothing native may have moved since
+          if ! node scripts/nativeDiff.mjs "$SHELL_SHA" > native.txt; then
+            echo "Native changes since shell $MV.$BUILD ($SHELL_SHA) need a new shell (release-ios.yml), not a hot update:" | tee -a "$GITHUB_STEP_SUMMARY"
+            cat native.txt | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
           SHELL_V="$MV.$BUILD"
           LIVE=$(curl -fsS --max-time 10 "$MANIFEST_URL" | jq -r .version || true)
           case "$LIVE" in
@@ -66,12 +82,10 @@ jobs:
             echo "$V would not outrank the live $LIVE"; exit 1
           fi
           echo "version=$V" >> "$GITHUB_OUTPUT"
+          # every shell at this MARKETING_VERSION is natively the same (release-ios.yml)
+          echo "min_native=$MV" >> "$GITHUB_OUTPUT"
           echo "Publishing $V for shell $SHELL_V (live: ${LIVE:-none})" | tee -a "$GITHUB_STEP_SUMMARY"
 
-      - uses: actions/setup-node@v5
-        with:
-          node-version: 22
-          cache: npm
       - run: npm ci
       - name: Build the bundle
         env:
@@ -81,7 +95,7 @@ jobs:
       - name: Zip it with the manifest
         env:
           V: ${{ steps.ver.outputs.version }}
-          MIN_NATIVE: ${{ inputs.min_native }}
+          MIN_NATIVE: ${{ steps.ver.outputs.min_native }}
         run: |
           set -eu
           OUT=dist-ota

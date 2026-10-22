@@ -50,6 +50,10 @@ on:
         type: choice
         options: [testflight, none]
 
+permissions:
+  contents: read
+  actions: read
+
 env:
   BUNDLE_ID: com.gamestao.potionsiege
 
@@ -58,10 +62,10 @@ jobs:
     if: github.event_name == 'pull_request' || (github.event_name == 'push' && github.ref_type == 'branch')
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run build:ios
@@ -82,11 +86,43 @@ jobs:
     if: github.event_name == 'workflow_dispatch' || github.ref_type == 'tag'
     runs-on: macos-26
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
         with:
-          node-version: 22
+          # the whole history, to diff against the shell before
+          fetch-depth: 0
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
+        with:
+          node-version-file: .nvmrc
           cache: npm
+
+      # The tests ran on this commit (ci.yml, on main or in its pull request); this job runs none.
+      - name: ci green on $GITHUB_SHA
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          GREEN=$(gh run list -R "$GITHUB_REPOSITORY" --workflow ci.yml --commit "$GITHUB_SHA" --status success --limit 1 --json databaseId -q length)
+          if [ "$GREEN" != "1" ]; then echo "ci has not passed on $GITHUB_SHA"; exit 1; fi
+
+      # Hot updates gate on MARKETING_VERSION alone (ota-ios.yml), so two shells at one version must
+      # be natively the same: a shell that changes the native side needs a new version.
+      - name: Native changes bump MARKETING_VERSION
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -eu
+          PREV=$(gh run list -R "$GITHUB_REPOSITORY" --workflow release-ios.yml --status success --limit 100 \
+            --json event,headBranch,headSha \
+            -q'[.[] | select(.event == "workflow_dispatch" or (.headBranch | startswith("ios-v")))][0].headSha')
+          if [ -z "$PREV" ] || [ "$PREV" = "null" ]; then echo "no shell before this one"; exit 0; fi
+          mv_at() { git show "$1:ios/App/App.xcodeproj/project.pbxproj" | grep -o 'MARKETING_VERSION = [^;]*' | sort -u | sed 's/.* = //'; }
+          if [ "$(mv_at "$PREV")" != "$(mv_at HEAD)" ]; then echo "MARKETING_VERSION $(mv_at "$PREV") -> $(mv_at HEAD)"; exit 0; fi
+          if ! node scripts/nativeDiff.mjs "$PREV" > native.txt; then
+            echo "Native changes since the last shell ($PREV) at the same MARKETING_VERSION $(mv_at HEAD); bump it in ios/App/App.xcodeproj/project.pbxproj:" | tee -a "$GITHUB_STEP_SUMMARY"
+            cat native.txt | tee -a "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
+
       - run: npm ci
 
       # The web bundle baked into this shell is <MARKETING_VERSION>.<run number>; hot updates
@@ -126,7 +162,7 @@ jobs:
         run: agvtool new-version -all ${{ github.run_number }}
 
       - name: Import signing certificate
-        uses: apple-actions/import-codesign-certs@v3
+        uses: apple-actions/import-codesign-certs@63fff01cd422d4b7b855d40ca1e9d34d2de9427d # v3
         with:
           p12-file-base64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
           p12-password: ${{ secrets.P12_PASSWORD }}
@@ -181,7 +217,7 @@ jobs:
             -exportOptionsPlist $RUNNER_TEMP/ExportOptions.plist \
             -exportPath $RUNNER_TEMP/ipa
 
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: App.ipa
           path: ${{ runner.temp }}/ipa/*.ipa
