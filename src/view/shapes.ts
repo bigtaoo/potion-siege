@@ -3,6 +3,7 @@
 import type { Graphics } from 'pixi.js';
 import { isBoss, type Enemy, type HeroKind } from '../sim/types';
 import { COLORS, HERO_COLORS } from './ui';
+import { LIGHT } from './kit/palette';
 
 function polygon(cx: number, cy: number, r: number, sides: number, turn = -Math.PI / 2): number[] {
   const pts: number[] = [];
@@ -86,7 +87,7 @@ function enemyBars(g: Graphics, e: Enemy, top: number): void {
   const w = Math.max(60, r * 1.6);
   top = Math.max(104, top); // never over the wave title in the top bar
   // an elite's bar is framed in gold
-  if (e.elite) g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: 0x6e4c2f });
+  if (e.elite) g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: LIGHT.edge });
   g.rect(x - w / 2, top, w, 10).fill(COLORS.hpBack);
   g.rect(x - w / 2, top, (w * Math.max(0, e.hp)) / e.maxHp, 10).fill(COLORS.hp);
   // the tripod's bell jar takes the hits first: its own glassy bar just above

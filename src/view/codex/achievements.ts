@@ -59,7 +59,7 @@ export function featsBoard(root: Container, m: MetaSave, a: CodexArea, top: numb
   c.position.set(a.x + a.w / 2, top + h / 2);
   const tiers = TRACK_IDS.reduce((n, id) => n + TRACKS[id].length, 0);
   const got = TRACK_IDS.reduce((n, id) => n + m.achievements.claimed[id], 0);
-  const note = ink(t('ach.count', { n: got, total: tiers }), 26, { fill: P.inkSoft });
+  const note = ink(t('ach.count', { n: got, total: tiers }), 30, { fill: P.inkSoft });
   note.anchor.set(1, 0.5);
   note.position.set(w / 2 - 34, -h / 2 + 58);
   fit(note, w / 2 - 34 - (c.children[1] as Container).width / 2 - 6);
@@ -150,7 +150,7 @@ function featRow(m: MetaSave, id: TrackId, rw: number, rh: number, claim: (at: C
   const barH = rh * 0.23;
   const barY = rh * 0.27 - barH / 2;
   const bar = new Graphics().roundRect(tx, barY, room, barH, barH / 2).fill(LIGHT.inset);
-  if (frac > 0) bar.roundRect(tx, barY, Math.max(barH, room * frac), barH, barH / 2).fill(0x5cc66a);
+  if (frac > 0) bar.roundRect(tx, barY, Math.max(barH, room * frac), barH, barH / 2).fill(P.green);
   r.addChild(bar.roundRect(tx, barY, room, barH, barH / 2).stroke({ width: 4, color: P.line }));
   const count = fit(label(next === null ? t('ach.done') : `${have}/${goal}`, barH * 0.65, { stroke: { color: P.line, width: 6 } }), room - 30);
   count.position.set(tx + room / 2, rh * 0.27);

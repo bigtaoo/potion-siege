@@ -26,7 +26,7 @@ import { Tutorial, type TutorialStep } from './sim/tutorial';
 import { BALANCE, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt, restOfArt } from './view/art';
 import { BattleView } from './view/BattleView';
-import { Hud } from './view/Hud';
+import { Hud, VETERAN_MERGES } from './view/Hud';
 import type { HomePanel, HomeTab } from './view/Home';
 import type { FeedbackAsk } from './view/feedback';
 import { uiSound, workshopWall } from './view/kit';
@@ -278,6 +278,7 @@ export class Game {
     // the merge hint, until the player has merged once
     this.hud.hint = this.save.achievements.stats.merges === 0;
     this.hud.nudge = true;
+    this.hud.veteran = this.save.achievements.stats.merges >= VETERAN_MERGES;
     this.loop = new FixedStep();
     this.view.attach(this.battle);
     this.hud.attach(this.battle);

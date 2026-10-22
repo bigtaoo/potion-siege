@@ -48,8 +48,8 @@ export function challengePanel(m: MetaSave, act: HomeActions, today: string, ads
     const tw = 270;
     const r = new Container();
     r.position.set((i - 1) * (tw + 20), top + 540);
-    r.addChild(new Graphics().roundRect(-tw / 2, -60, tw, 120, 24).fill(on ? 0xd4eec0 : LIGHT.inset).stroke({ width: 4, color: on ? 0x3c9a4a : LIGHT.insetEdge }));
-    const wave = fitText(ink(t('challenge.wave', { n: tier.wave }), 32, { fill: on ? 0x2b6a33 : P.ink }), tw - 30);
+    r.addChild(new Graphics().roundRect(-tw / 2, -60, tw, 120, 24).fill(on ? 0xd4eec0 : LIGHT.inset).stroke({ width: 4, color: on ? P.greenOn : LIGHT.insetEdge }));
+    const wave = fitText(ink(t('challenge.wave', { n: tier.wave }), 32, { fill: on ? P.greenInk : P.ink }), tw - 30);
     wave.y = -26;
     const n = ink(String(tier.reward), 40, { fill: LIGHT.crystal, fontWeight: '900' });
     n.position.set(18, 24);

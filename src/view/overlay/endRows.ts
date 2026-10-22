@@ -9,6 +9,7 @@ import { ENDLESS_MILESTONES } from '../../sim/endless';
 import { DOUBLES_PER_DAY, type Reward } from '../../sim/meta';
 import {
   bottle,
+  fit,
   gearIcon,
   infinityIcon,
   ink,
@@ -94,11 +95,11 @@ export function endlessTrack(en: EndlessEnd, cw: number): Section {
   if (en.next) {
     const from = ENDLESS_MILESTONES.filter((s) => s.wave < en.next!.wave).pop()?.wave ?? 0;
     const frac = Math.max(0, Math.min(1, (en.best - from) / (en.next.wave - from)));
-    if (frac > 0) track.roundRect(x0 + 4, cy - 8, Math.max(16, (x1 - x0 - 8) * frac), 16, 8).fill(0x4cc35a);
+    if (frac > 0) track.roundRect(x0 + 4, cy - 8, Math.max(16, (x1 - x0 - 8) * frac), 16, 8).fill(P.green);
     foot.text = `${t('endless.next', { n: en.next.wave })}   ${t('reward', { n: en.next.reward })}`;
     c.addChild(gem(new Graphics(), foot.width / 2 + 30, 158, 14));
   } else {
-    track.roundRect(x0 + 4, cy - 8, x1 - x0 - 8, 16, 8).fill(0x4cc35a);
+    track.roundRect(x0 + 4, cy - 8, x1 - x0 - 8, 16, 8).fill(P.green);
     foot.text = t('endless.allDone');
   }
   c.addChild(foot);
@@ -149,7 +150,7 @@ export function challengeTrack(ch: ChallengeEnd, cw: number): Section {
   const cy = 112;
   const track = new Graphics().roundRect(x0, cy - 12, x1 - x0, 24, 12).fill(LIGHT.tile).stroke({ width: 4, color: LIGHT.edge });
   const fill = Math.min(result.wave, last);
-  if (fill > 0) track.roundRect(x0 + 4, cy - 8, at(fill) - x0 - 4, 16, 8).fill(0x4cc35a);
+  if (fill > 0) track.roundRect(x0 + 4, cy - 8, at(fill) - x0 - 4, 16, 8).fill(P.green);
   c.addChild(track);
   const reached = ink(t('challenge.reached', { n: result.wave }), 34, { fontWeight: '900' });
   reached.anchor.set(0, 0.5);
@@ -208,7 +209,7 @@ export function purse(reward: Reward, more: EndExtras, iw: number): Section {
     if (left !== undefined) {
       b.y = -16;
       b.setEnabled(left > 0);
-      const note = label(t('doublesLeft', { n: left, total: DOUBLES_PER_DAY }), 26, { fill: 0xcfe3ff, stroke: { color: P.line, width: 5 } });
+      const note = fit(label(t('doublesLeft', { n: left, total: DOUBLES_PER_DAY }), 30, { fill: 0xcfe3ff, stroke: { color: P.line, width: 5 } }), 250);
       note.position.set(b.x, 42);
       c.addChild(note);
     }
@@ -281,7 +282,7 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
     const name = ink(t(`tip.${key}.name`), 40);
     name.anchor.set(0, 0.5);
     name.position.set(-cw / 2 + 130, -18);
-    const desc = ink(t(`tip.${key}.desc`), 30, { fill: P.inkSoft });
+    const desc = ink(t(`tip.${key}.desc`), 32, { fill: P.inkSoft });
     desc.anchor.set(0, 0.5);
     desc.position.set(-cw / 2 + 130, 24);
     if (desc.width > cw - 220) desc.scale.set((cw - 220) / desc.width);
@@ -362,10 +363,10 @@ export function ribbon(text: string, w: number): Container {
   for (const s of [-1, 1]) {
     const x0 = (s * w) / 2;
     g.poly([x0 - s * 20, -h / 2 + 14, x0 + s * 40, -h / 2 + 14, x0 + s * 22, 8, x0 + s * 40, h / 2 + 10, x0 - s * 20, h / 2 + 10])
-      .fill(0x2b7c36)
+      .fill(P.greenDark)
       .stroke({ width: 5, color: P.line, join: 'round' });
   }
-  g.roundRect(-w / 2, -h / 2, w, h, 14).fill(0x4cc35a).stroke({ width: 5, color: P.line });
+  g.roundRect(-w / 2, -h / 2, w, h, 14).fill(P.green).stroke({ width: 5, color: P.line });
   g.roundRect(-w / 2 + 14, -h / 2 + 8, w - 28, 8, 4).fill({ color: 0xffffff, alpha: 0.35 });
   const caption = label(text, 42, { stroke: { color: P.line, width: 7 } });
   caption.y = -2;

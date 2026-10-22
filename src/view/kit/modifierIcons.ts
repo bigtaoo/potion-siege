@@ -55,7 +55,7 @@ export function modifierIcon(id: ModifierId, trial: HeroKind | null = null): Con
       // a coin with the price coming down
       g.circle(-10, 4, 34).fill(COLORS.gold).stroke({ width: 5, color: P.line });
       g.circle(-10, 4, 22).stroke({ width: 4, color: P.brassDark });
-      g.poly([26, -40, 42, -40, 42, 6, 54, 6, 34, 36, 14, 6, 26, 6]).fill(0x3c9a4a).stroke({ width: 5, color: P.line, join: 'round' });
+      g.poly([26, -40, 42, -40, 42, 6, 54, 6, 34, 36, 14, 6, 26, 6]).fill(P.greenOn).stroke({ width: 5, color: P.line, join: 'round' });
       break;
     case 'twinBoss':
       crown(g, -20, 14, 0.8, P.brassDark);
@@ -75,9 +75,9 @@ export function modifierIcon(id: ModifierId, trial: HeroKind | null = null): Con
     }
     case 'solo':
       // one sprout in a pot
-      g.moveTo(0, 20).quadraticCurveTo(-4, -10, 2, -30).stroke({ width: 7, color: 0x2b7c36, cap: 'round' });
-      g.ellipse(-20, -22, 20, 11).fill(0x4cc35a).stroke({ width: 4, color: P.line });
-      g.ellipse(20, -34, 20, 11).fill(0x4cc35a).stroke({ width: 4, color: P.line });
+      g.moveTo(0, 20).quadraticCurveTo(-4, -10, 2, -30).stroke({ width: 7, color: P.greenDark, cap: 'round' });
+      g.ellipse(-20, -22, 20, 11).fill(P.green).stroke({ width: 4, color: P.line });
+      g.ellipse(20, -34, 20, 11).fill(P.green).stroke({ width: 4, color: P.line });
       g.poly([-30, 14, 30, 14, 22, 48, -22, 48]).fill(0xb8653a).stroke({ width: 5, color: P.line, join: 'round' });
       g.roundRect(-34, 8, 68, 14, 5).fill(0xcf7a48).stroke({ width: 4, color: P.line });
       break;

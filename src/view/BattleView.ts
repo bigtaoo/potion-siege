@@ -14,6 +14,7 @@ import { PotionLayer, throwingHand } from './potion';
 import { healthTube } from './stone';
 import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
 import { COLORS, label } from './ui';
+import { P } from './kit/palette';
 import { DESIGN_W } from './viewport';
 import { BADGE, BOMB_COLOR, BREW_COLOR, CMD, CommanderArt, onCommander } from './battleView/commander';
 import { EnemyLayer } from './battleView/enemies';
@@ -73,7 +74,7 @@ export class BattleView extends Container {
 
   constructor() {
     super();
-    this.wallText = label('', 40, { stroke: { color: 0x3e3128, width: 6 } });
+    this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
     this.addChild(this.field.ground, this.wall, this.under, this.fx.ground, this.enemies.art, this.world, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));

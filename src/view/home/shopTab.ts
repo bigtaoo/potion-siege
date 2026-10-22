@@ -88,7 +88,7 @@ function adFreeStrip(root: Container, act: HomeActions, info: NonNullable<HomeEx
   name.anchor.set(0, 0.5);
   name.position.set(textX, -50);
   const line = info.note ?? t('store.adFree.desc');
-  const desc = fitText(ink(line, 28, { fill: info.note ? P.brassDark : P.inkSoft }), textW);
+  const desc = fitText(ink(line, 32, { fill: info.note ? P.brassDark : P.inkSoft }), textW);
   desc.anchor.set(0, 0.5);
   desc.position.set(textX, 4);
   c.addChild(lightPanel(w, STRIP_H), icon, name, desc);
@@ -96,7 +96,7 @@ function adFreeStrip(root: Container, act: HomeActions, info: NonNullable<HomeEx
   if (info.owned) {
     const tk = tick(30);
     tk.position.set(bx - 70, 0);
-    const owned = ink(t('store.owned'), 40, { fill: 0x2b7c36 });
+    const owned = ink(t('store.owned'), 40, { fill: P.greenInk });
     owned.anchor.set(0, 0.5);
     owned.position.set(bx - 26, -2);
     c.addChild(tk, owned);
@@ -104,7 +104,7 @@ function adFreeStrip(root: Container, act: HomeActions, info: NonNullable<HomeEx
     const buy = new PillButton(info.price ?? '…', 300, 100, 'green', act.buyAdFree, 46).setEnabled(info.price !== null);
     buy.x = bx;
     // Restore, as a link under the line: App Review wants it where the purchase is
-    const restore = tappable(fitText(ink(t('store.adFree.restore'), 28, { fill: P.brassDark }), textW), act.restoreAdFree);
+    const restore = tappable(fitText(ink(t('store.adFree.restore'), 32, { fill: P.brassDark }), textW), act.restoreAdFree);
     restore.anchor.set(0, 0.5);
     restore.position.set(textX, 56);
     c.addChild(buy, restore);
@@ -195,7 +195,7 @@ function offerCard(cw: number, ch: number, icon: Container, name: string, desc: 
     const x0 = art.x + 84 * art.scale.x + 30;
     const x1 = cw / 2 - bw - 60;
     n = fitText(ink(name, 40), x1 - x0);
-    d = fitText(ink(desc, 28, { fill: P.inkSoft }), x1 - x0);
+    d = fitText(ink(desc, 32, { fill: P.inkSoft }), x1 - x0);
     n.position.set((x0 + x1) / 2, -66);
     d.position.set(n.x, -16);
     pay.position.set(n.x, 52);
@@ -208,7 +208,7 @@ function offerCard(cw: number, ch: number, icon: Container, name: string, desc: 
     art.y = top + 24 + room / 2;
     n = fitText(ink(name, 40), cw - 40);
     n.y = top + 60 + room;
-    d = fitText(ink(desc, 28, { fill: P.inkSoft }), cw - 40);
+    d = fitText(ink(desc, 32, { fill: P.inkSoft }), cw - 40);
     d.y = n.y + 50;
     pay.y = d.y + 72;
     b = button(cw - 60);
@@ -278,10 +278,10 @@ function unlockCard(m: MetaSave, act: HomeActions, kind: HeroKind, w: number, h:
   const bt = bottle(kind, s);
   bt.y = ay;
   const badge = new Container();
-  const l = lock(P.cream, 0x8a7d6a);
+  const l = lock(P.cream, P.locked);
   l.scale.set(0.62);
   l.y = 2;
-  badge.addChild(new Graphics().circle(0, 0, 34).fill(0x8a7d6a).stroke({ width: 4, color: LIGHT.edge }), l);
+  badge.addChild(new Graphics().circle(0, 0, 34).fill(P.locked).stroke({ width: 4, color: LIGHT.edge }), l);
   badge.position.set(s * 0.34, ay + s * 0.3);
   c.addChild(new Graphics().circle(0, ay, s * 0.48).fill({ color: HERO_COLORS[kind], alpha: 0.18 }), bt, badge, note);
   return c;

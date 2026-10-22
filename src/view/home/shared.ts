@@ -19,7 +19,7 @@ export interface Area {
 /** A green tick in a circle, for something done or owned. */
 export function tick(r: number): Container {
   const c = new Container();
-  c.addChild(new Graphics().circle(0, 0, r).fill(0x4cc35a).stroke({ width: 4, color: LIGHT.edge }), label('✓', r * 1.25, { stroke: { color: LIGHT.edge, width: 5 } }));
+  c.addChild(new Graphics().circle(0, 0, r).fill(P.green).stroke({ width: 4, color: LIGHT.edge }), label('✓', r * 1.25, { stroke: { color: LIGHT.edge, width: 5 } }));
   return c;
 }
 

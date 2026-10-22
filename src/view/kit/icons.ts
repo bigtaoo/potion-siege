@@ -239,7 +239,7 @@ export function calendarIcon(): Graphics {
     .fill(P.brass)
     .stroke({ width: 3, color: P.line })
     .poly([-12, 10, -4, 18, 14, -2])
-    .stroke({ width: 7, color: 0x3c9a4a, cap: 'round', join: 'round' });
+    .stroke({ width: 7, color: P.greenOn, cap: 'round', join: 'round' });
 }
 
 export function scrollIcon(): Graphics {

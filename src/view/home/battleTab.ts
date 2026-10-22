@@ -120,7 +120,7 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
 /** The stage's twist: small cream words on a coloured pill, at most `max` across. */
 function twistTag(text: string, color: number, max: number): Container {
   const c = new Container();
-  const tx = label(text, 24, { stroke: { color: P.line, width: 4 } });
+  const tx = label(text, 28, { stroke: { color: P.line, width: 4 } });
   fitText(tx, max - 36);
   const w = tx.width + 36;
   c.addChild(new Graphics().roundRect(-w / 2, -20, w, 40, 20).fill(color).stroke({ width: 3, color: P.line }), tx);
@@ -171,7 +171,7 @@ function startButton(root: Container, act: HomeActions, x: number, y: number, w:
 function sideButton(root: Container, icon: Container, name: string, x: number, y: number, onTap: () => void): Container {
   const c = tappable(new Container(), onTap);
   c.position.set(x, y - 14);
-  const cap = fitText(ink(name, 24), 2 * SIDE_R + 40);
+  const cap = fitText(ink(name, 28), 2 * SIDE_R + 40);
   const pw = cap.width + 24;
   const capPlate = new Graphics().roundRect(-pw / 2, -17, pw, 34, 17).fill(LIGHT.face).stroke({ width: 3, color: LIGHT.edge });
   capPlate.y = cap.y = SIDE_R + 14;
@@ -187,7 +187,7 @@ function challengeButton(root: Container, m: MetaSave, act: HomeActions, today: 
   cal.scale.set(0.8);
   const c = sideButton(root, cal, t('challenge.title'), x, y, () => act.panel('challenge'));
   if (!canPlayFree(m, today)) return;
-  const n = label(String(CHALLENGE_TIERS[CHALLENGE_TIERS.length - 1].reward), 26, { stroke: { color: P.line, width: 5 } });
+  const n = label(String(CHALLENGE_TIERS[CHALLENGE_TIERS.length - 1].reward), 30, { stroke: { color: P.line, width: 5 } });
   const bw = n.width + 50;
   const badge = new Container();
   badge.position.set(SIDE_R * 0.55, -SIDE_R * 0.95);

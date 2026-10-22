@@ -253,7 +253,7 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
     c.addChild(name);
     const tag = wave === count ? t('side.last') : now ? t('side.now') : '';
     if (tag) {
-      const s = ink(tag, 26, { fill: P.brassDark });
+      const s = ink(tag, 28, { fill: P.brassDark });
       s.anchor.set(1, 0.5);
       s.position.set(iw / 2 - 22, y - rh / 2 + 34);
       c.addChild(s);
@@ -270,7 +270,7 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
         bt.position.set(x, ey + size / 2 - 4);
         c.addChild(bt);
       } else if (wave > 1 && !before.has(kind)) {
-        const chip = label(t('side.fresh'), 18, { fill: P.cream, stroke: { color: P.line, width: 4 } });
+        const chip = label(t('side.fresh'), 24, { fill: P.cream, stroke: { color: P.line, width: 4 } });
         const cw = chip.width + 16;
         const bg = new Graphics().roundRect(-cw / 2, -14, cw, 28, 12).fill(0x3f9b4c).stroke({ width: 3, color: P.line });
         const ch = new Container();

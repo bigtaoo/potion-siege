@@ -26,6 +26,9 @@ const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
 /** How long the grid stays full with a pair to fuse and gold for a summon before the board
  *  points at the pair by itself. */
 const NUDGE_AFTER = 2;
+/** Merges after which a player knows how: the board no longer points by itself or explains on
+ *  a plate, only when a summon is tapped on a full grid. */
+export const VETERAN_MERGES = 20;
 
 export class Hud extends Container {
   private readonly coin = new Graphics();
@@ -57,6 +60,8 @@ export class Hud extends Container {
   hint = true;
   /** The full-grid pointer on the board; off while the tutorial points at things itself. */
   nudge = true;
+  /** Past VETERAN_MERGES: no pointer by itself and no plate, the hand only when asked. */
+  veteran = false;
   /** Around the two cells that could fuse while the grid is full: pulsing rings, the dragging
    *  arc and the tutorial's hand. Takes no taps, so the drag reaches the board under it. */
   private readonly nudgeRings = new Graphics();
@@ -136,7 +141,7 @@ export class Hud extends Container {
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
     ids.forEach((id, i) => {
       const chip = new Container();
-      const name = fit(ink(t(`challenge.mod.${id}.name`), 28, { fontWeight: '900' }), 300);
+      const name = fit(ink(t(`challenge.mod.${id}.name`), 30, { fontWeight: '900' }), 300);
       name.anchor.set(1, 0.5);
       const w = name.width + 92;
       const icon = modifierIcon(id, trial);
@@ -189,23 +194,23 @@ export class Hud extends Container {
   private showBoss(kind: BossKind, weak: string): void {
     const c = this.bossCard;
     c.removeChildren().forEach((o) => o.destroy({ children: true }));
-    const w = 860;
-    const h = 250;
-    const art = enemySprite(kind, 200, 220);
+    const w = 900;
+    const tx = -w / 2 + 250;
+    const room = w / 2 - 30 - tx;
+    const head = fit(ink(t('bossNew'), 34, { fill: LIGHT.edge }), room);
+    const name = fit(ink(t(`enemy.${kind}`), 52), room);
+    const lines = [head, name];
+    if (kind !== 'boss') lines.push(fit(ink(t(`codex.trait.${kind}`), 34), room));
+    lines.push(fit(ink(t('bossWeak', { weak }), 34, { fill: P.redInk }), room));
+    const h = 64 + (lines.length - 1) * 62;
+    const art = enemySprite(kind, 200, Math.min(220, h - 30));
     art.position.set(-w / 2 + 130, 0);
     const tag = bossTag(22);
     tag.position.set(-w / 2 + 130, h / 2 - 26);
-    const tx = -w / 2 + 250;
-    const room = w / 2 - 30 - tx;
-    const head = fit(ink(t('bossNew'), 26, { fill: LIGHT.edge }), room);
-    const name = fit(ink(t(`enemy.${kind}`), 48), room);
-    const lines = [head, name];
-    if (kind !== 'boss') lines.push(fit(ink(t(`codex.trait.${kind}`), 28), room));
-    lines.push(fit(ink(t('bossWeak', { weak }), 28, { fill: 0xb23a2a }), room));
     c.addChild(lightTile(w, h, 28), art, tag);
     lines.forEach((l, i) => {
       l.anchor.set(0, 0.5);
-      l.position.set(tx, -h / 2 + 40 + i * 56);
+      l.position.set(tx, -h / 2 + 36 + i * 62);
       c.addChild(l);
     });
     // under the BOSS WAVE banner
@@ -226,7 +231,7 @@ export class Hud extends Container {
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
-    this.pointAt(this.nudge && pair && (this.asked || this.fullTime >= NUDGE_AFTER) ? pair : null, dt);
+    this.pointAt(this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null, dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
     for (const btn of [this.summonButton, this.upgradeButton]) {
@@ -239,7 +244,7 @@ export class Hud extends Container {
     // the opening hint, or a word on what to do while the board points at a pair
     const pointing = this.nudgeHand.visible;
     const opening = this.hint && b.seconds < HINT_SECONDS;
-    this.hintBox.visible = (pointing || opening) && this.mods.children.length === 0;
+    this.hintBox.visible = ((pointing && !this.veteran) || opening) && this.mods.children.length === 0;
     const words = pointing ? t('full.hint') : t('hint');
     if (this.hintText.text !== words) this.hintText.text = words;
     if (this.hintBox.visible) this.fitHint();

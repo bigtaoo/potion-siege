@@ -90,7 +90,7 @@ function chips(kind: EnemyKind, cols: number): Container {
     chip.addChild(new Graphics().circle(-cw / 2 + 22, 0, 17).fill(HERO_COLORS[el]).stroke({ width: 3, color: P.line }));
     const b = bottle(el, 28);
     b.position.set(-cw / 2 + 22, 0);
-    const text = ink(resistLabel(v), 20, { fill: color });
+    const text = ink(resistLabel(v), 26, { fill: color });
     text.anchor.set(0, 0.5);
     text.position.set(-cw / 2 + 41, 0);
     fit(text, cw - 41 - 14); // clear of the pill's round end

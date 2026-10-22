@@ -8,7 +8,7 @@ import { fit, ink } from './text';
 
 /** The button colours: body, the darker lip under it, and the glossy band on top. */
 const BUTTON = {
-  green: [0x4cc35a, 0x2b7c36],
+  green: [P.green, P.greenDark],
   brass: [P.brass, P.brassDark],
   purple: [0x8f5ce0, 0x5a35a0],
   off: [0xa8987f, 0x6e604f],

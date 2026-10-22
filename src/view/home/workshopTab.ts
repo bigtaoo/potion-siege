@@ -51,7 +51,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
       pips.roundRect(x0 + k * (pw + 8), top + 62, pw, 22, 8).fill(k < lv ? P.brass : LIGHT.inset).stroke({ width: 3, color: k < lv ? LIGHT.edge : LIGHT.insetEdge });
     }
     // nothing bought yet reads as such, not as "+0"
-    const now = ink(t('shop.now', { text: lv > 0 ? effect(lv) : t('shop.none') }), 30, { fill: P.inkSoft });
+    const now = ink(t('shop.now', { text: lv > 0 ? effect(lv) : t('shop.none') }), 34, { fill: P.inkSoft });
     now.anchor.set(0, 0.5);
     now.position.set(x0, top + 124);
     fitText(now, room);
@@ -61,7 +61,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
       done.x = bx;
       r.addChild(done);
     } else {
-      const next = ink(t('shop.next', { text: effect(lv + 1) }), 30, { fill: 0x2b6a33, fontWeight: '900' });
+      const next = ink(t('shop.next', { text: effect(lv + 1) }), 34, { fill: P.greenInk, fontWeight: '900' });
       next.anchor.set(0, 0.5);
       next.position.set(x0, top + 170);
       fitText(next, room);

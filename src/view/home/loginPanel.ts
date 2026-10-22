@@ -33,7 +33,7 @@ export function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: Me
     tile.addChild(gem(new Graphics(), 0, -6, last ? 50 : 38), day, amount);
     if (i < done) {
       tile.alpha = 0.6;
-      const tick = label('✓', 90, { fill: 0x5cc66a, stroke: { color: P.line, width: 8 } });
+      const tick = label('✓', 90, { fill: P.green, stroke: { color: P.line, width: 8 } });
       tick.position.set(0, -6);
       tile.addChild(tick);
     }

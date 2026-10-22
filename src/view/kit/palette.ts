@@ -15,6 +15,20 @@ export const P = {
   cream: 0xfff1d6,
   soft: 0xf0dcc0,
   red: 0xe5484d,
+  /** Red words on the light board (a weakness, a warning): darker than `red` to read at 5:1. */
+  redInk: 0xb23a2a,
+  /** The one success green: a tick, a filled bar, a green button's face. */
+  green: 0x4cc35a,
+  /** Its shade: a green button's lip, a stem. */
+  greenDark: 0x2b7c36,
+  /** A switch or medal that is on. */
+  greenOn: 0x3c9a4a,
+  /** Green words on the light board (the next level, owned): 5.8:1 on the face. */
+  greenInk: 0x2b6a33,
+  /** Locked or not yet seen: the grey-brown of a closed card or padlock. */
+  locked: 0x8a7d6a,
+  /** The dark umber the battle's labels and the commander's badge are outlined in. */
+  umber: 0x3e3128,
 } as const;
 
 /** The light board's colours: the cream face, its seams and the soft insets on it. */

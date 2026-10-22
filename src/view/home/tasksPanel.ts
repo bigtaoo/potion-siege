@@ -27,10 +27,10 @@ export function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Contain
       .roundRect(-400, 14, 420, 34, 17)
       .fill(P.paperDark)
       .roundRect(-400, 14, Math.max(34, 420 * frac), 34, 17)
-      .fill({ color: 0x5cc66a, alpha: frac > 0 ? 1 : 0 })
+      .fill({ color: P.green, alpha: frac > 0 ? 1 : 0 })
       .roundRect(-400, 14, 420, 34, 17)
       .stroke({ width: 4, color: P.line });
-    const count = label(`${task.progress}/${goal}`, 28, { stroke: { color: P.line, width: 6 } });
+    const count = label(`${task.progress}/${goal}`, 32, { stroke: { color: P.line, width: 6 } });
     count.position.set(-190, 31);
     r.addChild(lightTile(860, 160), desc, bar, count);
     if (task.claimed) {

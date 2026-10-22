@@ -64,8 +64,8 @@ export function skillCard(id: SkillId, level: number): Container {
   // the description keeps clear of the pips: a smaller size when it runs long
   const dy = iy + (other ? 160 : 140);
   const room = CARD_H / 2 - 62 - 14 - dy;
-  let desc = balanced(t(`skill.${id}.desc`), 31, w - 40, { align: 'center', lineHeight: 40 });
-  for (const ds of [28, 25]) {
+  let desc = balanced(t(`skill.${id}.desc`), 34, w - 40, { align: 'center', lineHeight: 44 });
+  for (const ds of [31, 28, 25]) {
     if (desc.height <= room) break;
     desc.destroy();
     desc = balanced(t(`skill.${id}.desc`), ds, w - 36, { align: 'center', lineHeight: Math.round(ds * 1.28) });
@@ -83,7 +83,7 @@ export function skillCard(id: SkillId, level: number): Container {
     const step = 44;
     for (let i = 0; i < max; i++) {
       const px = (i - (max - 1) / 2) * step;
-      const fill = i < level ? P.brass : i === level ? 0x5cc66a : P.paperDark;
+      const fill = i < level ? P.brass : i === level ? P.green : P.paperDark;
       pips.roundRect(px - 15, CARD_H / 2 - 62, 30, 30, 8).fill(fill).stroke({ width: 4, color: P.line });
     }
     card.addChild(pips);

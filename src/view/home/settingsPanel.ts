@@ -37,7 +37,7 @@ export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, priva
     r.position.set(0, top + i * 190);
     const icon = new Container();
     icon.position.set(-330, 0);
-    icon.addChild(medal(56, on ? 0x3c9a4a : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));
+    icon.addChild(medal(56, on ? P.greenOn : P.wood), which === 'music' ? noteIcon() : speakerIcon(on));
     const name = ink(t(`sound.${which}`), 50);
     name.anchor.set(0, 0.5);
     name.position.set(-245, -4);
@@ -72,7 +72,7 @@ function playDataRows(box: Container, act: HomeActions, data: PlayData, y: numbe
   r.position.set(0, y);
   const icon = new Container();
   icon.position.set(-330, 0);
-  icon.addChild(medal(56, data.sending ? 0x3c9a4a : P.wood), chartIcon());
+  icon.addChild(medal(56, data.sending ? P.greenOn : P.wood), chartIcon());
   const name = ink(t('privacy.setting'), 50);
   name.anchor.set(0, 0.5);
   name.position.set(-245, -4);
@@ -98,7 +98,7 @@ function playDataRows(box: Container, act: HomeActions, data: PlayData, y: numbe
     id.position.set(-400, -ID_H / 2 + 42);
     fitText(id, textW);
     tile.addChild(id);
-    const help = inkWrapped(t('privacy.idHelp'), 26, textW, { fill: P.inkSoft, align: 'left' });
+    const help = inkWrapped(t('privacy.idHelp'), 30, textW, { fill: P.inkSoft, align: 'left' });
     help.anchor.set(0, 0);
     help.position.set(-400, -ID_H / 2 + 72);
     tile.addChild(help);
@@ -149,7 +149,7 @@ function toggle(on: boolean): Container {
     .roundRect(-w / 2, -h / 2 + 6, w, h, h / 2)
     .fill({ color: P.line, alpha: 0.3 })
     .roundRect(-w / 2, -h / 2, w, h, h / 2)
-    .fill(on ? 0x3c9a4a : LIGHT.inset)
+    .fill(on ? P.greenOn : LIGHT.inset)
     .stroke({ width: 5, color: on ? P.line : LIGHT.edge });
   const kx = on ? w / 2 - h / 2 : -w / 2 + h / 2;
   const knob = new Graphics()
