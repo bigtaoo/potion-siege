@@ -191,7 +191,8 @@ export function parseMeta(raw: string | null): MetaSave {
     if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
   }
   out.stars = parseStars(data.stars, out.cleared);
-  return carry(data, out);
+  // only a newer build's save has fields worth keeping; this build's own junk is dropped as before
+  return newer ? carry(data, out) : out;
 }
 
 /** The furthest stage open to play. */

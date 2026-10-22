@@ -1,5 +1,6 @@
 // Reading stored saves: numbers that can be trusted, and the fields a newer build wrote that
-// this one does not know, carried through so a rollback (an older OTA bundle) never erases them.
+// this one does not know, carried through so a rollback (an older OTA bundle) never erases them
+// (only for a save of a higher version: see parseMeta).
 
 /** `v` as a whole number in [min, max]; `fallback` for anything that is not a finite number
  *  ("Infinity", NaN, an object). */
