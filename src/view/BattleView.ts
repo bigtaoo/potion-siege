@@ -46,7 +46,10 @@ export class BattleView extends Container {
   private readonly under = new Graphics();
   /** The wall's top, under the enemies so they stand behind its merlons' shadows. */
   private readonly wall = new Graphics();
-  private wallKey = '';
+  /** The open cells the wall was drawn for, one bit each. */
+  private wallKey = -1;
+  /** The wall's hit points and maximum its label shows. */
+  private wallShown = [-1, -1];
   private readonly enemies = new EnemyLayer();
   private readonly world = new Graphics();
   private readonly heroArt = new SpriteLayer();
@@ -279,7 +282,13 @@ export class BattleView extends Container {
     const frac = Math.max(0, b.wall / b.wallMax);
     const barY = BAR_Y;
     healthTube(w, F.left, barY, F.right - F.left, BAR_H, frac);
-    this.wallText.text = `${Math.ceil(Math.max(0, b.wall) / FP)} / ${Math.round(b.wallMax / FP)}`;
+    const hp = Math.ceil(Math.max(0, b.wall) / FP);
+    const max = Math.round(b.wallMax / FP);
+    if (hp !== this.wallShown[0] || max !== this.wallShown[1]) {
+      this.wallShown[0] = hp;
+      this.wallShown[1] = max;
+      this.wallText.text = `${hp} / ${max}`;
+    }
     this.wallText.position.set(DESIGN_W / 2, barY + BAR_H / 2);
 
     this.fx.update(dt);
@@ -359,7 +368,8 @@ export class BattleView extends Container {
 
   /** The wall from above, redrawn only when a cell is built (see drawWallTop). */
   private drawWall(b: Battle): void {
-    const key = b.open.map(Number).join('');
+    let key = 0;
+    for (let s = 0; s < SLOT_COUNT; s++) if (b.open[s]) key |= 1 << s;
     if (key === this.wallKey) return;
     this.wallKey = key;
     drawWallTop(this.wall.clear(), b);

@@ -46,7 +46,11 @@ export class FxLayer {
     const fx = this.mid.clear();
     const fxTop = this.top.clear();
     const fxGround = this.ground.clear();
-    this.list = this.list.filter((e) => (e.ttl -= dt) > 0);
-    for (const e of this.list) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
+    // in place: a new array every frame was garbage
+    const list = this.list;
+    let n = 0;
+    for (const e of list) if ((e.ttl -= dt) > 0) list[n++] = e;
+    list.length = n;
+    for (const e of list) e.draw(e.top ? fxTop : e.ground ? fxGround : fx, e.ttl / e.max);
   }
 }

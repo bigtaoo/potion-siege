@@ -30,7 +30,8 @@
     "endless": "vitest run --config scripts/vitest.endless.config.js",
     "economy": "node scripts/economy.mjs",
     "firstframe": "node scripts/firstFrame.mjs",
-    "chapters": "vitest run --config scripts/vitest.chapters.config.js"
+    "chapters": "vitest run --config scripts/vitest.chapters.config.js",
+    "memruns": "node scripts/memRuns.mjs"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",
