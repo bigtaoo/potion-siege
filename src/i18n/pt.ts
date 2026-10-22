@@ -29,6 +29,7 @@ export const pt: Table = {
     skip: 'Pular',
     summon: 'Toque em Invocar para preparar uma poção',
     merge: 'Duas poções iguais! Arraste uma sobre a outra para fundi-las numa mais forte',
+    more: 'Ainda sem par: toque em Invocar para mais uma poção',
     upgrade: 'Ouro suficiente para melhorar: toque em Melhorar para aprender uma habilidade',
     pick: 'Escolha uma das três cartas de habilidade. Ela vale a batalha inteira, e escolher a mesma de novo sobe o nível dela',
     helped: { summon: 'Preparei uma para você', merge: 'Fundi para você', upgrade: 'Melhorei para você' },

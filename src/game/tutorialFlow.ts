@@ -88,6 +88,6 @@ export function lessonFor(g: Game, step: NonNullable<ReturnType<Tutorial['showin
     });
     return { step, holes, from: center(holes[0]), to: center(holes[1]), clear: board };
   }
-  const r = page(g.hud.buttonRect(step));
+  const r = page(g.hud.buttonRect(step === 'more' ? 'summon' : step));
   return { step, holes: [r], from: { x: r.x + r.w / 2, y: r.y + 8 }, clear: board };
 }

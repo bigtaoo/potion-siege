@@ -5,7 +5,7 @@
 
 import { Container, Graphics, Sprite, type Text } from 'pixi.js';
 import { t } from '../i18n';
-import { TUTORIAL_STEPS, type TutorialStep } from '../sim/tutorial';
+import { TUTORIAL_STEPS, type TutorialCue } from '../sim/tutorial';
 import { handTexture } from './art';
 import { balanced, fit, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
 
@@ -20,7 +20,7 @@ export interface Rect {
  *  for the merge), and the area the card keeps out of (the board on a wide screen, the skill
  *  cards during the pick). */
 export interface Lesson {
-  step: TutorialStep;
+  step: TutorialCue;
   holes: Rect[];
   from: { x: number; y: number };
   to?: { x: number; y: number };
@@ -98,7 +98,7 @@ export class TutorialLayer extends Container {
       side = target.y + target.h / 2 > h * 0.45 ? 'above' : 'below';
     }
 
-    const n = TUTORIAL_STEPS.indexOf(lesson.step) + 1;
+    const n = TUTORIAL_STEPS.indexOf(lesson.step === 'more' ? 'merge' : lesson.step) + 1;
     const head = ink(t('tutorial.step', { n, total: TUTORIAL_STEPS.length }), 32, { fill: P.inkSoft });
     const body = balanced(t(`tutorial.${lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
     const skip = skipButton(() => this.onSkip());

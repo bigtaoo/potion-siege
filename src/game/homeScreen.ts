@@ -22,14 +22,17 @@ export function home(g: Game, panel: HomePanel = null): void {
   const today = dayOf(new Date());
   rollDay(g.save, today);
   const entering = !g.menu.visible;
+  if (entering) g.consentVisit = false;
   // the play statistics question, from the first home screen on (never in the first battle,
   // which starts live), ahead of the login reward
   if (panel === null && g.privacy.asking() && g.save.runs >= CONSENT_AFTER_RUNS && !g.autoplay && !g.consentShown) {
     panel = 'privacy';
     g.consentShown = true;
+    g.consentVisit = true;
   }
-  // not between the first battles: once a few runs are in, the first time each day
-  if (panel === null && loginPops(g.save) && canClaimLogin(g.save, today) && g.loginShown !== today) {
+  // not between the first battles: once a few runs are in, the first time each day, and not
+  // on the visit the consent panel opened (it keeps its place: events wait for its answer)
+  if (panel === null && !g.consentVisit && loginPops(g.save) && canClaimLogin(g.save, today) && g.loginShown !== today) {
     panel = 'login';
     g.loginShown = today;
     g.analytics.track('dialog', { id: 'login', action: 'open', auto: true, run: g.save.runs });

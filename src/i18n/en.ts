@@ -27,6 +27,7 @@ export const en = {
     skip: 'Skip',
     summon: 'Tap Summon to brew a potion',
     merge: 'Two matching potions! Drag one onto the other to fuse them into a stronger one',
+    more: 'No matching pair yet: tap Summon for one more potion',
     upgrade: 'Enough gold for an upgrade: tap it to learn a skill',
     pick: 'Pick one of the three skill cards. It lasts for the whole battle, and picking the same skill again levels it up',
     helped: { summon: 'Brewed one for you', merge: 'Fused them for you', upgrade: 'Upgraded for you' },

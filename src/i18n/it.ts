@@ -29,6 +29,7 @@ export const it: Table = {
     skip: 'Salta',
     summon: 'Tocca Evoca per preparare una pozione',
     merge: "Due pozioni uguali! Trascinane una sull'altra per fonderle in una più forte",
+    more: 'Ancora nessuna coppia: tocca Evoca per un’altra pozione',
     upgrade: "Hai abbastanza oro: tocca Potenzia per imparare un'abilità",
     pick: "Scegli una delle tre carte abilità. Dura per tutta la battaglia, e se riscegli la stessa abilità sale di livello",
     helped: { summon: 'Eccone una per te', merge: 'Fuse per te', upgrade: 'Potenziato per te' },

@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { Battle, WALL_ROW } from './battle';
 import { TICK_RATE } from './math/fixed';
-import { ASSIST_SECONDS, mergeablePair, Tutorial } from './tutorial';
+import { BASE_SETUP, FIRST_SEED } from './meta';
+import { ASSIST_SECONDS, mergeablePair, PAIR_WAIT_SECONDS, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -28,9 +29,12 @@ describe('tutorial', () => {
     b.summon();
     tut.update(b, b.drain());
     expect(tut.step).toBe('merge');
-    // no pair yet: the battle plays on until there is one
+    // no pair yet: the battle plays on and the hand goes to 召唤 for one more
     b.slots.fill(null);
+    expect(tut.showing(b)).toBe('more');
+    b.gold = 0;
     expect(tut.showing(b)).toBeNull();
+    b.gold = 1e5;
 
     b.slots[W] = { id: 1, kind: 'fire', star: 1, slot: W, cooldown: 1 };
     b.slots[W + 1] = { id: 2, kind: 'fire', star: 1, slot: W + 1, cooldown: 1 };
@@ -82,6 +86,35 @@ describe('tutorial', () => {
     expect(helped[0]).toBe('summon');
     expect(helped).toContain('merge');
     expect(b.summons).toBeGreaterThanOrEqual(2);
+  });
+
+  it('points at 召唤 while there is no pair and summons the next one after a short wait', () => {
+    const b = new Battle(1);
+    const tut = new Tutorial();
+    b.summon();
+    tut.update(b, b.drain());
+    b.slots.fill(null);
+    b.gold = 1e5;
+    tut.update(b, b.drain());
+    expect(tut.showing(b)).toBe('more');
+    expect(run(b, tut, PAIR_WAIT_SECONDS - 0.5)).toEqual([]);
+    expect(run(b, tut, 1)).toEqual(['summon']);
+    expect(tut.step).toBe('merge');
+  });
+
+  it('times the first battle for an idle player: summons at 8 and 10 s, merge at 18 s, upgrade at 32 s', () => {
+    const b = new Battle(FIRST_SEED, BASE_SETUP);
+    const tut = new Tutorial();
+    const at: string[] = [];
+    for (let i = 0; i < 40 * TICK_RATE && !b.choices; i++) {
+      b.step();
+      tut.update(b, b.drain());
+      const s = tut.assist(b);
+      if (s) at.push(`${s}@${Math.round(b.seconds)}`);
+      tut.update(b, b.drain());
+    }
+    expect(at).toEqual(['summon@8', 'summon@10', 'merge@18', 'upgrade@32']);
+    expect(tut.step).toBe('pick');
   });
 
   it('merges and upgrades for an idle player, but leaves the pick to them', () => {

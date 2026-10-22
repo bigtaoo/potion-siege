@@ -29,6 +29,7 @@ export const pl: Table = {
     skip: 'Pomiń',
     summon: 'Dotknij „Przyzwij”, by uwarzyć miksturę',
     merge: 'Dwie takie same mikstury! Przeciągnij jedną na drugą, by połączyć je w silniejszą',
+    more: 'Nie ma jeszcze pary: dotknij „Przyzwij” po kolejną miksturę',
     upgrade: 'Masz złoto na ulepszenie: dotknij „Ulepsz”, by poznać umiejętność',
     pick: 'Wybierz jedną z trzech kart umiejętności. Działa przez całą walkę, a ponowny wybór tej samej ją ulepsza',
     helped: { summon: 'Uwarzono jedną za ciebie', merge: 'Połączono je za ciebie', upgrade: 'Ulepszono za ciebie' },

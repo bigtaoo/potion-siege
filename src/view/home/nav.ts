@@ -32,6 +32,11 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
     else slot.position.set(span * (i + 0.5), h - NAV / 2 + 8);
     const on = id === tab;
     const big = id === 'battle';
+    const pointed = point && id === 'potions';
+    if (pointed) {
+      // the pointed tab glows, so the hand reads as "this tab" and not the start button above
+      slot.addChild(new Graphics().roundRect(-span / 2 + 10, -NAV / 2 + 14, span - 20, NAV - 32, 28).fill({ color: P.brassLight, alpha: 0.35 }).stroke({ width: 8, color: P.brassLight }));
+    }
     if (on && !big) {
       slot.addChild(
         new Graphics()
@@ -60,9 +65,10 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
     if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -96 : -110) : -62);
     if (!on) slot.alpha = big ? 1 : 0.85;
     root.addChild(slot);
-    // the pointer comes down onto the potions tab from above right, or up into its rail slot from below
-    if (point && id === 'potions') {
-      root.addChild(wide ? pointer(slot.x + 40, slot.y + 64, -0.6, 0.8) : pointer(slot.x + 22, slot.y - NAV / 2 + 6, Math.PI + 0.5));
+    // the pointer comes down onto the potions tab beside the start button, clear of it
+    // and of the workshop tab, or comes up into its rail slot from below
+    if (pointed) {
+      root.addChild(wide ? pointer(slot.x + 40, slot.y + 64, -0.6, 0.8) : pointer(slot.x + 8, slot.y - NAV / 2 + 10, Math.PI + 0.15, 0.72));
     }
   });
 }

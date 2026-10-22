@@ -29,6 +29,7 @@ export const id: Table = {
     skip: 'Lewati',
     summon: 'Ketuk Panggil untuk meracik ramuan',
     merge: 'Dua ramuan yang sama! Seret satu ke yang lain untuk menggabungkannya jadi ramuan yang lebih kuat',
+    more: 'Belum ada pasangan: ketuk Panggil untuk satu ramuan lagi',
     upgrade: 'Emas cukup untuk memperkuat: ketuk Perkuat untuk mempelajari skill',
     pick: 'Pilih satu dari tiga kartu skill. Berlaku sepanjang pertempuran, dan memilih skill yang sama lagi akan menaikkan levelnya',
     helped: { summon: 'Satu sudah diracik untukmu', merge: 'Sudah digabung untukmu', upgrade: 'Sudah diperkuat untukmu' },

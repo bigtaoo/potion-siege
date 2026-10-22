@@ -29,6 +29,7 @@ export const tr: Table = {
     skip: 'Geç',
     summon: 'Bir iksir yapmak için Çağır düğmesine dokun',
     merge: 'İki aynı iksir! Daha güçlü bir iksir için birini diğerinin üstüne sürükle',
+    more: 'Henüz eş yok: bir iksir daha için Çağır düğmesine dokun',
     upgrade: 'Güçlendirmeye yetecek altın var: Güçlendir düğmesine dokun ve bir yetenek öğren',
     pick: 'Üç yetenek kartından birini seç. Tüm savaş boyunca sürer; aynı yeteneği yine seçersen seviyesi artar',
     helped: { summon: 'Senin için bir iksir çağırdık', merge: 'Senin için birleştirdik', upgrade: 'Senin için güçlendirdik' },

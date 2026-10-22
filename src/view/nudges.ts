@@ -13,6 +13,8 @@ import { FIRST_STAGE } from '../sim/waves';
 // and shop tabs once for each new thing they offer (an upgrade level that became affordable, an
 // achievement tier reached, today's chest, a potion for sale) until that tab has been open; the
 // battle tab while a chapter chest waits. A mid-game home then shows one or two at a time.
+// While the one-time upgrade pointer is up (the first home screens, where every tab has
+// something), the potions tab it points at is the only one lit; the others light once it is done.
 
 /** One of the four fielded potions can level up with the crystals at hand. */
 export function canUpgradeLineup(m: MetaSave): boolean {
@@ -64,10 +66,13 @@ export function anyChestWaiting(m: MetaSave): boolean {
   return false;
 }
 
-/** The nav bar's dots, tab by tab (the tab already open gets none). */
-export function navDots(m: MetaSave, today: string): Record<SeenTab | 'battle', boolean> {
+/** The nav bar's dots, tab by tab (the tab already open gets none); `pointing` while the
+ *  upgrade pointer is up, which leaves only the potions dot. */
+export function navDots(m: MetaSave, today: string, pointing = false): Record<SeenTab | 'battle', boolean> {
+  const potions = canUpgradeLineup(m) || newOnTab(m, 'potions', today);
+  if (pointing) return { potions, workshop: false, codex: false, shop: false, battle: false };
   return {
-    potions: canUpgradeLineup(m) || newOnTab(m, 'potions', today),
+    potions,
     workshop: newOnTab(m, 'workshop', today),
     codex: newOnTab(m, 'codex', today),
     shop: newOnTab(m, 'shop', today),
