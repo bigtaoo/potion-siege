@@ -35,8 +35,12 @@ describe('endless waves', () => {
   });
 
   it('keeps growing past the last wave, the crowd capped', () => {
-    // a boss wave sends half the crowd, so compare each wave with the same place in the next cycle
-    for (let w = BALANCE.waves.count; w < 60; w++) expect(total(w + E.bossEvery)).toBeGreaterThan(total(w) * 1.1);
+    // a boss wave sends half the crowd, so compare each wave with the same place in the next cycle,
+    // and a boss wave with the next one the same boss comes back in (the bosses' hit points differ)
+    for (let w = BALANCE.waves.count; w < 60; w++) {
+      const next = isBossWave(w, undefined, true) ? w + E.bossEvery * BOSS_KINDS.length : w + E.bossEvery;
+      expect(total(next)).toBeGreaterThan(total(w) * 1.1);
+    }
     for (const w of [21, 33, 59]) expect(planWave(w, new Prng(1), E.stage, undefined, true).filter((s) => s.kind !== 'winder').length).toBeLessThanOrEqual(E.maxCount);
   });
 

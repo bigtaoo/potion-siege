@@ -4,7 +4,7 @@
 // reports the win rate, the wall lost in the boss waves and how long the bosses lived.
 // SEEDS (default 40), BOSS=clock (default: every chapter boss), STAGES=11-20 overrides the range:
 // the boss then stands in for the boss of the chapter those stages are in, so a later boss can be
-// measured on stages whose curve is already tuned.
+// measured on stages whose curve is already tuned. BAL='{...}' overrides balance.json.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { botAct } from '../src/sim/bot';
@@ -16,6 +16,13 @@ import { bossForStage, FIRST_STAGE } from '../src/sim/waves';
 import { ARRIVE, saveFor } from './guard/saves';
 
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
+
+function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
+  for (const [k, v] of Object.entries(from)) {
+    if (v && typeof v === 'object' && !Array.isArray(v)) merge(into[k] as Record<string, unknown>, v as Record<string, unknown>);
+    else into[k] = v;
+  }
+}
 
 interface Run {
   won: boolean;
@@ -56,6 +63,7 @@ const mean = (xs: number[]) => xs.reduce((a, b) => a + b, 0) / Math.max(1, xs.le
 const pct = (x: number) => `${Math.round(x * 100)}%`;
 
 it('compares each chapter boss with the steam tank', () => {
+  if (env.BAL) merge(BALANCE as unknown as Record<string, unknown>, JSON.parse(env.BAL));
   const seeds = Number(env.SEEDS ?? 40);
   const kinds = (env.BOSS ? [env.BOSS] : BOSS_KINDS.slice(1)) as BossKind[];
   const slots = BOSS_KINDS as unknown as BossKind[];

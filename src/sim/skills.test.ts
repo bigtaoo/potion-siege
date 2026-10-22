@@ -41,7 +41,7 @@ function enemy(b: Battle, x: number, y: number, hp: number): Enemy {
   const e: Enemy = {
     id: 9000 + b.enemies.length, kind: 'grunt', x, y, px: x, py: y, hp, maxHp: hp, speed: 0, radius: toFp(30),
     slowFactor: 1000, slowTime: 0, freezeTime: 0, poisonDps: 0, poisonTime: 0, rust: 0, rustTime: 0, burnDps: 0, burnTime: 0, scorch: 0, scorchTime: 0,
-      markTime: 0, chill: 0, chillTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false, gold: 1000, heft: 1000,
+      markTime: 0, chill: 0, chillTime: 0, brittleTime: 0, charge: 0, chargeTime: 0, pushTime: 0, atWall: false, gold: 1000, heft: 1000,
   };
   b.enemies.push(e);
   return e;
@@ -200,6 +200,10 @@ describe('the corrosion line', () => {
     const e = enemy(b, 500, 600, 1e6);
     hit(b, 'lightning', e, 1);
     expect(e.rust).toBe(1);
+    // only up to its own cap, below the poison's
+    for (let i = 0; i < 5; i++) hit(b, 'lightning', e, 1);
+    expect(e.rust).toBe(BALANCE.skills.electrolysisRust);
+    expect(BALANCE.skills.electrolysisRust).toBeLessThan(BALANCE.heroes.poison.rustMax);
     const plain = withSkills([]);
     const f = enemy(plain, 500, 600, 1e6);
     hit(plain, 'lightning', f, 1);

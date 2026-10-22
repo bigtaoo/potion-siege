@@ -66,6 +66,7 @@ export function rewind(b: Battle, w: Enemy): void {
     o.slowTime = 0;
     o.chill = 0;
     o.chillTime = 0;
+    o.brittleTime = 0;
   }
   b.events.push({ type: 'rewind', x: w.x / FP, y: w.y / FP, radius: R.range });
 }

@@ -16,8 +16,9 @@ export function splash(e: Enemy): number {
 }
 
 /** Every bit of damage goes through here, for the enemy's resistance to the potion it came
- *  from (`by`; the commander's flask has none), the arcane mark and the corrosion's rust (all
- *  multiply), and for crediting that potion with what the enemy had left of it. */
+ *  from (`by`; the commander's flask has none), the arcane mark, the corrosion's rust and the
+ *  brittleness a freeze leaves (all multiply), and for crediting that potion with what the
+ *  enemy had left of it. */
 export function harm(b: Battle, e: Enemy, damage: number, by: HeroKind | undefined): void {
   if (e.guardTime) return;
   if (e.shield) {
@@ -37,6 +38,7 @@ export function harm(b: Battle, e: Enemy, damage: number, by: HeroKind | undefin
   let dealt = by ? times(damage, pm(resistOf(e, by))) : damage;
   if (e.markTime > 0) dealt = times(dealt, 1000 + b.fixed.mark);
   dealt = times(dealt, 1000 + b.fixed.rustStep * e.rust);
+  if (e.brittleTime > 0) dealt = times(dealt, 1000 + pm(B.skills.brittle));
   if (by) b.dealt[by] += Math.max(0, Math.min(e.hp, dealt));
   e.hp -= dealt;
   if (e.kind === 'gear' && !e.core && e.hp <= times(e.maxHp, pm(B.bosses.gear.at))) crack(b, e);
@@ -51,28 +53,30 @@ export function discharge(b: Battle, e: Enemy): void {
   harm(b, e, charge, 'lightning');
 }
 
-/** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, and with
- *  the fire recipe it counts as a fire hit that sets them alight. */
+/** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, with the
+ *  fire recipe it counts as a fire hit that sets them alight, and with the poison one it rusts
+ *  them (only so far: the rest of the rust is the poison's). */
 export function shock(b: Battle, e: Enemy, damage: number): void {
   const S = B.skills;
   if (b.mods.superconduct && (e.slowTime > 0 || e.freezeTime > 0)) damage = times(damage, 1000 + pm(S.superconduct));
   if (b.mods.plasma) scorch(b, e, damage, 'lightning', b.fixed.plasmaBurn);
   else harm(b, e, damage, 'lightning');
-  if (b.mods.electrolysis) corrode(b, e);
+  if (b.mods.electrolysis) corrode(b, e, 0, 1, B.skills.electrolysisRust);
   if (b.fixed.static > 0) {
     e.charge = Math.max(e.chargeTime > 0 ? e.charge : 0, times(damage, b.fixed.static));
     e.chargeTime = ticks(S.staticTime);
   }
 }
 
-/** Rusts by `stacks` and, with `dps` (FP a second), poisons: what a corrosion hit does. */
-export function corrode(b: Battle, e: Enemy, dps = 0, stacks = 1): void {
+/** Rusts by `stacks`, up to `cap` (never taking off what is already there), and, with `dps` (FP
+ *  a second), poisons: what a corrosion hit does. */
+export function corrode(b: Battle, e: Enemy, dps = 0, stacks = 1, cap = b.mods.rustMax): void {
   const P = B.heroes.poison;
   if (dps > 0) {
     e.poisonDps = Math.max(e.poisonDps, dps);
     e.poisonTime = ticks(P.poisonTime);
   }
-  e.rust = Math.min(b.mods.rustMax, e.rust + stacks);
+  e.rust = Math.max(e.rust, Math.min(cap, e.rust + stacks));
   e.rustTime = ticks(P.rustTime);
 }
 
@@ -92,14 +96,16 @@ export function slow(e: Enemy, amount: number, time: number): void {
   e.slowTime = time;
 }
 
-/** Freezes for `seconds`, for `hit`, the damage of the ice hit that froze it. A boss is too
- *  big to freeze: the frost slows it hard instead and, with shatter, chips shards off it. A
- *  flyer cannot freeze either, its wings keep beating: it only slows. */
+/** Freezes for `seconds`, for `hit`, the damage of the ice hit that froze it, and leaves it
+ *  brittle as long. A boss is too big to freeze: the frost slows it hard instead and, with
+ *  shatter, chips shards off it. A flyer cannot freeze either, its wings keep beating: it only
+ *  slows. */
 export function freeze(b: Battle, e: Enemy, seconds: number, hit: number): void {
   const S = B.skills;
   const time = times(ticks(seconds), b.fixed.freezeTime);
   if (!isBoss(e.kind) && e.kind !== 'flyer') {
     e.freezeTime = Math.max(e.freezeTime, time);
+    e.brittleTime = Math.max(e.brittleTime, time);
     return;
   }
   slow(e, S.bossFreezeSlow, time);
@@ -107,6 +113,8 @@ export function freeze(b: Battle, e: Enemy, seconds: number, hit: number): void 
     harm(b, e, times(hit, pm(S.bossShatter)), 'ice');
     b.events.push({ type: 'hit', kind: 'ice', x: e.x / FP, y: e.y / FP, radius: e.radius / FP });
   }
+  // brittle from here on: the shards that crack off it come before
+  e.brittleTime = Math.max(e.brittleTime, time);
 }
 
 /** Fire damage: remembered for a while (a death soon after counts as burnt, for the chain

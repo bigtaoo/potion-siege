@@ -1,6 +1,7 @@
 // Balance guard for stages 9-50 (`npm run check:balance:slow`, a CI step of its own): the
 // first-try curve `npm run chapters` (and `npm run late` for 10-20) prints, every other stage,
-// pinned per chapter after the horde opener (74fee89).
+// pinned per chapter after the horde opener (74fee89), re-pinned after balance-tune (stages 6-8,
+// ice, poison, boss hit points, chapter finales).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { chapterOf } from '../../src/sim/chapters';
@@ -18,6 +19,6 @@ describe('chapters', () => {
     }
     const won: Record<string, number> = {};
     for (const [ch, wins] of byChapter) won[`chapter ${ch}`] = 100 * mean(wins);
-    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 65, 'chapter 2': 29, 'chapter 3': 32, 'chapter 4': 34, 'chapter 5': 28 }, 10);
+    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 70, 'chapter 2': 25, 'chapter 3': 35, 'chapter 4': 30, 'chapter 5': 26 }, 10);
   }, 300_000);
 });

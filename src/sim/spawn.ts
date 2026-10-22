@@ -66,6 +66,7 @@ export function spawn(b: Battle, s: Spawn, at?: { x: number; y: number }): void 
     markTime: 0,
     chill: 0,
     chillTime: 0,
+    brittleTime: 0,
     charge: 0,
     chargeTime: 0,
     pushTime: 0,
