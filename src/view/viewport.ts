@@ -30,6 +30,9 @@ export interface MenuFit {
 }
 
 export function fitMenu(screenW: number, screenH: number): MenuFit {
+  // a page with no size yet (a portal's iframe at boot) gets the design page, never NaN: a NaN
+  // size would compare unchanged against every later one, and the menus would never relayout
+  if (!(screenW > 0 && screenH > 0)) return { scale: 1, w: DESIGN_W, h: DESIGN_H, wide: false };
   const wide = screenW > screenH * 1.1;
   const scale = wide ? Math.min(screenW / DESIGN_H, screenH / DESIGN_W) : Math.min(screenW / DESIGN_W, screenH / DESIGN_H);
   return { scale, w: screenW / scale, h: screenH / scale, wide };

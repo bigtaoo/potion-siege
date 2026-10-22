@@ -20,8 +20,13 @@ interface Playing {
 export class AdMob {
   /** Called when whether a rewarded ad can be offered, or may still come, changes. */
   onChange: (() => void) | null = null;
+  /** An ad given up before it started that comes on screen after all: true as it starts (the
+   *  game mutes again), false once it is gone. Its reward was already settled as not earned. */
+  onLate: ((onScreen: boolean) => void) | null = null;
   private state: AdState | null;
   private playing: Playing | null = null;
+  /** The kind of the ad given up last, until the shell says it is done; true once on screen. */
+  private late: { kind: AdKind; onScreen: boolean } | null = null;
 
   constructor(private readonly native: Partial<PSNative> | null) {
     this.state = typeof native?.adState === 'function' ? clean(native.adState.call(native)) : null;
@@ -70,24 +75,48 @@ export class AdMob {
   }
 
   private show(kind: AdKind, started?: () => void): Promise<boolean> {
-    if (!this.canShow() || !this.state?.[kind] || this.playing) return Promise.resolve(false);
+    if (!this.canShow() || !this.state?.[kind] || this.playing || this.late?.onScreen) return Promise.resolve(false);
+    this.late = null;
     return new Promise((resolve) => {
-      const timer = setTimeout(() => this.finish(false), START_WAIT_MS);
+      const timer = setTimeout(() => {
+        this.late = { kind, onScreen: false };
+        this.finish(false);
+      }, START_WAIT_MS);
       this.playing = { kind, started, resolve, timer };
-      this.native?.showAd?.call(this.native, kind);
+      try {
+        this.native?.showAd?.call(this.native, kind);
+      } catch {
+        // the bridge broke: no event will come for this ad
+        this.late = null;
+        this.finish(false);
+      }
     });
   }
 
   private event(e: unknown): void {
-    const p = this.playing;
-    if (!p || !e || typeof e !== 'object') return;
+    if (!e || typeof e !== 'object') return;
     const { kind, event, ok } = e as Record<string, unknown>;
+    const p = this.playing;
+    if (!p) return this.lateEvent(kind, event);
     if (kind !== p.kind) return;
     if (event === 'started') {
       // on screen: it runs as long as the player watches
       clearTimeout(p.timer);
       p.started?.();
     } else if (event === 'done') this.finish(ok === true);
+  }
+
+  /** An ad given up on that came on screen after all: muted while it plays. */
+  private lateEvent(kind: unknown, event: unknown): void {
+    const l = this.late;
+    if (!l || kind !== l.kind) return;
+    if (event === 'started' && !l.onScreen) {
+      l.onScreen = true;
+      this.onLate?.(true);
+    } else if (event === 'done') {
+      this.late = null;
+      if (l.onScreen) this.onLate?.(false);
+    }
   }
 
   private finish(ok: boolean): void {

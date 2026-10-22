@@ -65,6 +65,11 @@ export class IosPlatform extends WebPlatform implements Platform {
     if (!this.storeKit.owned()) await this.admob.midgame(onStart);
   }
 
+  /** An ad that came on screen after the game gave up on it mutes the game while it plays. */
+  override onHostMute(listener: (muted: boolean) => void): void {
+    this.admob.onLate = listener;
+  }
+
   /** Safari, through the shell (it opens only http(s) pages); a new tab without the bridge. */
   override readonly openUrl = (url: string): void => {
     const open = this.native?.openUrl;

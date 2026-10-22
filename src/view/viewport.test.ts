@@ -21,6 +21,14 @@ describe('fitDesign', () => {
 });
 
 describe('fitMenu', () => {
+  it('gives a page with no size the design page, and a real size after it differs', () => {
+    for (const [w, h] of [[0, 0], [0, 800], [NaN, 600]]) {
+      const f = fitMenu(w, h);
+      expect([f.scale, f.w, f.h, f.wide]).toEqual([1, DESIGN_W, DESIGN_H, false]);
+    }
+    expect(fitMenu(390, 844).h).not.toBeCloseTo(DESIGN_H);
+  });
+
   it('gives a phone a portrait page, filling the extra height', () => {
     const f = fitMenu(390, 844);
     expect(f.wide).toBe(false);

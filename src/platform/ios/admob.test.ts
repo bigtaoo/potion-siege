@@ -93,6 +93,34 @@ describe('AdMob', () => {
     expect(await first).toBe(false);
   });
 
+  it('gives up an ad whose bridge throws', async () => {
+    const s = shell(ON);
+    s.native.showAd = () => {
+      throw new Error('bridge gone');
+    };
+    const ads = new AdMob(s.native);
+    expect(await ads.rewarded()).toBe(false);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+
+  it('mutes again for an ad that starts after it was given up, until it is gone', async () => {
+    const s = shell(ON);
+    const ads = new AdMob(s.native);
+    const late: boolean[] = [];
+    ads.onLate = (on) => late.push(on);
+    const paid = ads.rewarded();
+    await vi.advanceTimersByTimeAsync(START_WAIT_MS);
+    expect(await paid).toBe(false);
+    s.event({ kind: 'rewarded', event: 'started' });
+    // no second ad over the one on screen
+    expect(await ads.midgame().then(() => s.shown)).toEqual(['rewarded']);
+    s.event({ kind: 'rewarded', event: 'done', ok: true });
+    expect(late).toEqual([true, false]);
+    // and the next ad plays as usual
+    void ads.midgame();
+    expect(s.shown).toEqual(['rewarded', 'interstitial']);
+  });
+
   it('offers the privacy options only where the shell says they are due', () => {
     const s = shell(ON);
     const ads = new AdMob(s.native);

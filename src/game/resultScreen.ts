@@ -102,11 +102,16 @@ export async function nextStage(g: Game, b: Battle): Promise<void> {
  *  a rewarded one, nor after a loss whose revive was on offer: an interstitial straight after
  *  the player passed on (or tried) an ad reads as a punishment for it. */
 export async function breakAd(g: Game): Promise<void> {
-  if (g.save.runs > 1 && !g.rewardedSinceEnd && !g.offered.revive) {
-    await g.platform.midgame(() => g.mute(true));
-    g.analytics.track('ad_midgame', { run: g.save.runs });
+  try {
+    if (g.save.runs > 1 && !g.rewardedSinceEnd && !g.offered.revive) {
+      await g.platform.midgame(() => g.mute(true));
+      g.analytics.track('ad_midgame', { run: g.save.runs });
+    }
+  } catch {
+    // an ad that broke is skipped: the next battle comes all the same
+  } finally {
+    g.mute(false);
   }
-  g.mute(false);
 }
 
 /** The rewarded ×2: what the battle earned, paid once more. */
