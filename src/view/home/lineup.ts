@@ -50,7 +50,7 @@ export function lineupStrip(root: Container, m: MetaSave, act: HomeActions, pick
     } else {
       b.alpha = kind === picked ? 1 : 0.75;
       const tag = new Container();
-      const word = fitText(ink(t('bench'), 22, { fill: P.inkSoft }), tw - 20);
+      const word = fitText(ink(t('bench'), 26, { fill: P.inkSoft }), tw - 20);
       const pw = word.width + 18;
       tag.position.set(0, th / 2 - 18);
       tag.addChild(new Graphics().roundRect(-pw / 2, -15, pw, 30, 15).fill(LIGHT.inset).stroke({ width: 3, color: LIGHT.edge }), word);

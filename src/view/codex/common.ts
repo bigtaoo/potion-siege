@@ -1,7 +1,7 @@
 // What the codex's pages share: the area they fill, a board's measures and colours, and the board.
 
 import { Container } from 'pixi.js';
-import { lightPanel, plate } from '../kit';
+import { lightPanel, P, plate } from '../kit';
 
 /** The part of the page the tab fills. */
 export interface CodexArea {
@@ -18,7 +18,7 @@ export const FOOT = 34;
 export const GAP = 14;
 export const WEAK = 0x26732f;
 export const STRONG = 0xb3352a;
-export const GREY = 0x8a7d6a;
+export const GREY = P.locked;
 
 /** A page's board: the paper panel with its title plate over the top edge. */
 export function board(title: string, w: number, h: number): Container {

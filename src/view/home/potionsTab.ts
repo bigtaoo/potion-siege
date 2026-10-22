@@ -50,16 +50,16 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
   const c = tappable(new Container(), () => act.panel(kind));
   const top = -ch / 2;
   c.addChild(paperCard(cw, ch));
-  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(open ? HERO_COLORS[kind] : 0x8a7d6a).stroke({ width: 4, color: LIGHT.edge }));
+  c.addChild(new Graphics().roundRect(-cw / 2 + 10, top + 10, cw - 20, 84, 18).fill(open ? HERO_COLORS[kind] : P.locked).stroke({ width: 4, color: LIGHT.edge }));
   const name = fitText(label(t(`hero.${kind}`), 42, { stroke: { color: P.line, width: 7 } }), cw - 40);
   name.y = top + 50;
   const size = Math.min(250, cw - 40);
   const glow = new Graphics().circle(0, top + 250, size * 0.48).fill({ color: HERO_COLORS[kind], alpha: open ? 0.18 : 0 });
-  const bt = open ? bottle(kind, size) : flask(new Graphics(), 0, size * 0.42, size * 0.84, 0x8a7d6a);
+  const bt = open ? bottle(kind, size) : flask(new Graphics(), 0, size * 0.42, size * 0.84, P.locked);
   bt.y = top + 250;
   c.addChild(name, glow, bt);
   if (!open) {
-    const l = lock(P.cream, 0x8a7d6a);
+    const l = lock(P.cream, P.locked);
     l.scale.set(1.4);
     l.y = top + 270;
     const at = unlockStage(kind);
@@ -71,7 +71,7 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
   }
   const level = ink(`Lv ${lv}`, 50);
   level.y = top + 404;
-  const dmg = fitText(ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 30, { fill: P.inkSoft }), cw - 30);
+  const dmg = fitText(ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 32, { fill: P.inkSoft }), cw - 30);
   dmg.y = top + 450;
   c.addChild(level, dmg);
   // the milestones as pips, lit once reached
@@ -83,7 +83,7 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
     const pip = new Container();
     pip.position.set((i - (ms.length - 1) / 2) * gap, top + 504);
     pip.addChild(new Graphics().roundRect(-pw / 2, -20, pw, 40, 12).fill(on ? P.brass : P.paperDark).stroke({ width: 4, color: on ? P.line : P.inkSoft }));
-    pip.addChild(ink(String(s.level), 26, { fill: on ? P.line : P.inkSoft }));
+    pip.addChild(ink(String(s.level), 28, { fill: on ? P.line : P.inkSoft }));
     c.addChild(pip);
   });
   const cost = heroCost(lv);

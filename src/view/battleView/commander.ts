@@ -1,5 +1,5 @@
 // The commander under the wall, as the battle draws it: where it stands and where a tap casts,
-// its raise-and-throw, its charge badge, the count or the call to tap over its head, and its
+// its raise-and-throw, its charge badge, the count over its head, the call to tap at its feet, and its
 // flasks in the air.
 
 import type { Graphics } from 'pixi.js';
@@ -12,6 +12,7 @@ import { INK } from '../potion';
 import { drawHero, heroShadow } from '../shapes';
 import { summonCircle } from '../stone';
 import { COLORS, label } from '../ui';
+import { LIGHT, P } from '../kit/palette';
 
 const C = BALANCE.commander;
 /** Where the commander stands: feet on this point, below the wall between the two buttons. */
@@ -20,6 +21,9 @@ export const CMD = { x: C.x, feet: C.y, height: 180 };
 const CMD_TAP = 120;
 /** The charge badge: up by the commander's raised flask. */
 export const BADGE = { x: CMD.x + 100, y: CMD.feet - CMD.height + 30, r: 34 };
+/** The call to tap: across the commander's boots, clear of the wall's health bar, no wider
+ *  than the gap between the two buttons. */
+const TAP = { y: CMD.feet - 34, maxW: 340 };
 /** Seconds the commander's raise-and-throw takes. */
 const CAST_TIME = 0.5;
 /** How high the thrown flask arcs above its straight path. */
@@ -35,9 +39,9 @@ export function onCommander(x: number, y: number): boolean {
 /** Its two labels go into the view under the wall's numbers. */
 export class CommanderArt {
   /** How far it is through the summons that build the next cell, over its head. */
-  readonly count = label('', 34, { stroke: { color: 0x3e3128, width: 5 } });
-  /** The call to tap once it is charged, in the count's place. */
-  readonly castTap = label('', 30, { stroke: { color: 0x3e3128, width: 5 } });
+  readonly count = label('', 34, { stroke: { color: P.umber, width: 5 } });
+  /** The call to tap once it is charged, at its feet. */
+  readonly castTap = label('', 40, { stroke: { color: P.umber, width: 6 } });
   /** The pop as a cell is built, running down. */
   pulse = 0;
   /** The commander's last cast, for the raise-and-throw; a summon gets a smaller nod. */
@@ -50,7 +54,7 @@ export class CommanderArt {
 
   constructor() {
     this.count.position.set(CMD.x, CMD.feet - CMD.height - 22);
-    this.castTap.position.set(CMD.x, CMD.feet - CMD.height - 22);
+    this.castTap.position.set(CMD.x, TAP.y);
   }
 
   /** A new battle: nothing cast, nothing in the air. */
@@ -65,7 +69,6 @@ export class CommanderArt {
   legible(k: number): void {
     this.boost = k;
     this.count.scale.set(k);
-    this.castTap.scale.set(k);
   }
 
   /** The commander under the wall at `t` seconds into the battle: how far it is through the
@@ -102,21 +105,24 @@ export class CommanderArt {
     this.drawCharge(over, b, full, t);
     const k = this.boost;
     const head = CMD.feet - CMD.height - 22;
-    // once full, the call to tap takes the cell count's place over its head, on the skill's colour
+    // once full, the call to tap across its boots on the skill's colour; the cell count stays
+    // over its head
     const tap = full && !b.paused;
     this.castTap.visible = tap;
     if (tap) {
-      if (this.castTap.text !== tr('castTap')) this.castTap.text = tr('castTap');
-      const w = this.castTap.width + 36 * k;
-      // left of the badge (at its biggest pulse) when the words grow on a small board
-      this.castTap.x = Math.min(CMD.x, BADGE.x - (BADGE.r * 1.12 + 9) * k - 6 - w / 2);
-      over.roundRect(this.castTap.x - w / 2, head - 22 * k, w, 44 * k, 22 * k).fill({ color: b.nextCast === 'bomb' ? BOMB_COLOR : BREW_COLOR, alpha: 0.9 });
+      const words = tr('castTap');
+      if (this.castTap.text !== words) this.castTap.text = words;
+      const s = Math.min(k, (TAP.maxW - 40 * k) / (this.castTap.width / this.castTap.scale.x));
+      this.castTap.scale.set(s);
+      const w = this.castTap.width + 40 * k;
+      const h = 58 * k;
+      over.roundRect(CMD.x - w / 2, TAP.y - h / 2, w, h, h / 2).fill({ color: b.nextCast === 'bomb' ? BOMB_COLOR : BREW_COLOR, alpha: 0.95 }).stroke({ width: 4, color: P.umber });
     }
     const next = b.summonsToNextCell();
-    this.count.visible = next !== null && !tap;
-    if (next === null || tap) return;
+    this.count.visible = next !== null;
+    if (next === null) return;
     const per = C.summonsPerCell;
-    over.roundRect(CMD.x - 56 * k, head - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: 0x6e4c2f, alpha: 0.85 });
+    over.roundRect(CMD.x - 56 * k, head - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: LIGHT.edge, alpha: 0.85 });
     this.count.text = tr('commanderNext', { n: per - next, total: per });
   }
 
@@ -127,8 +133,8 @@ export class CommanderArt {
     const bomb = b.nextCast === 'bomb';
     const color = bomb ? BOMB_COLOR : BREW_COLOR;
     const r = BADGE.r * this.boost * (full ? 1 + Math.abs(Math.sin(t * 6)) * 0.12 : 1);
-    g.circle(x, y, r + 9).fill({ color: 0x3e3128, alpha: 0.9 });
-    g.circle(x, y, r).fill(full ? color : 0x6e4c2f);
+    g.circle(x, y, r + 9).fill({ color: P.umber, alpha: 0.9 });
+    g.circle(x, y, r).fill(full ? color : LIGHT.edge);
     const frac = full ? 1 - b.chargedFor / ticks(C.autoCast) : b.charge / C.charge;
     if (frac > 0) {
       const a0 = -Math.PI / 2;

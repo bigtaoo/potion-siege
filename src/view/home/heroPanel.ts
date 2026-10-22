@@ -65,14 +65,14 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
     text.addChild(a);
     let ty = a.height + 6;
     if (needs) {
-      const n = ink(needs, 26, { fill: P.brassDark });
+      const n = inkWrapped(needs, 30, 600, { fill: P.brassDark, align: 'left', lineHeight: 38 });
       n.anchor.set(0, 0);
       n.y = ty;
       text.addChild(n);
       ty += n.height + 2;
     }
     if (detail) {
-      const d = inkWrapped(detail, 26, 600, { fill: P.inkSoft, align: 'left', lineHeight: 32 });
+      const d = inkWrapped(detail, 30, 600, { fill: P.inkSoft, align: 'left', lineHeight: 38 });
       d.anchor.set(0, 0);
       d.y = ty;
       text.addChild(d);
@@ -87,7 +87,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
     text.position.set(what.startsWith('「') ? -277 : -260, -text.height / 2);
     r.addChild(lvTag, text);
     if (on) {
-      const tick = label('✓', 52, { fill: 0x5cc66a, stroke: { color: P.line, width: 8 } });
+      const tick = label('✓', 52, { fill: P.green, stroke: { color: P.line, width: 8 } });
       tick.position.set(380, 0);
       r.addChild(tick);
     } else {
@@ -109,7 +109,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
     return panel;
   }
   if (!heroUnlocked(m, kind)) return panel;
-  const next = ink(t('heroNext', { n: lv + 1, p: Math.round((heroDamage(lv + 1) - 1) * 100) }), 38, { fill: 0x2b6a33, fontWeight: '900' });
+  const next = ink(t('heroNext', { n: lv + 1, p: Math.round((heroDamage(lv + 1) - 1) * 100) }), 38, { fill: P.greenInk, fontWeight: '900' });
   next.anchor.set(0, 0.5);
   next.position.set(-410, foot);
   fitText(next, 450);

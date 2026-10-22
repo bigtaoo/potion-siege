@@ -44,7 +44,7 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
     if (big) {
       // clear of its caption below, and in portrait of the challenge card above
       const lift = wide ? -12 : -26;
-      const md = medal(92, on ? 0x3c9a4a : P.wood);
+      const md = medal(92, on ? P.greenOn : P.wood);
       md.y = lift - 14;
       icon.y = lift - 14;
       icon.scale.set(0.95);

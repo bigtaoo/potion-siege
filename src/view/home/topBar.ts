@@ -16,9 +16,9 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, today: st
     c.position.set(x, y);
     icon.scale.set(0.72);
     // the caption sits on its own cream plate below the medal, clear of the brass rim
-    const cap = fitText(ink(text, 24), 112);
+    const cap = fitText(ink(text, 28), 130);
     const plate = new Graphics()
-      .roundRect(-cap.width / 2 - 12, -17, cap.width + 24, 34, 17)
+      .roundRect(-cap.width / 2 - 12, -20, cap.width + 24, 40, 20)
       .fill(LIGHT.face)
       .stroke({ width: 3, color: LIGHT.edge });
     plate.y = cap.y = 74;
