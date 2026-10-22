@@ -35,6 +35,7 @@ export function stepEnemies(b: Battle): void {
     e.chargeTime = Math.max(0, e.chargeTime - 1);
     if (e.chargeTime <= 0) e.charge = 0;
     e.chillTime = Math.max(0, e.chillTime - 1);
+    e.brittleTime = Math.max(0, e.brittleTime - 1);
     if (e.chillTime <= 0) e.chill = 0;
     e.slowTime = Math.max(0, e.slowTime - 1);
     e.pushTime = Math.max(0, e.pushTime - 1);

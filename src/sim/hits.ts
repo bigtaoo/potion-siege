@@ -161,7 +161,11 @@ export function pull(e: Enemy, v: Vortex): void {
 export function arcaneHit(b: Battle, p: Projectile, target: Enemy): void {
   const S = B.skills;
   if (b.fixed.mark > 0) target.markTime = ticks(S.markTime);
-  if (b.mods.frostBolts) slow(target, S.frostBoltSlow, ticks(S.frostBoltTime));
+  if (b.mods.frostBolts) {
+    // frost bolts chill, and leave it brittle for a moment as a freeze does
+    slow(target, S.frostBoltSlow, ticks(S.frostBoltTime));
+    target.brittleTime = Math.max(target.brittleTime, ticks(S.frostBoltBrittle));
+  }
   if (b.mods.burstBolts) {
     // the fire-and-arcane recipe: the bolt bursts and singes what stands around its target
     const radius = toFp(S.burstBoltRadius);

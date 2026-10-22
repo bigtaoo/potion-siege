@@ -41,13 +41,16 @@ export function reapDead(b: Battle): void {
       for (const o of b.enemies) if (within(o, e.x, e.y, radius)) corrode(b, o, 0, o.kind === 'flyer' ? Math.ceil(e.rust * B.flyer.splash) : e.rust);
       b.events.push({ type: 'hit', kind: 'poison', x: e.x / FP, y: e.y / FP, radius: B.skills.meltRadius });
     }
-    if (b.mods.shatter && e.freezeTime > 0) {
-      // died frozen: it shatters into shards that cut and chill what stands around it
+    if (b.mods.shatter && (e.freezeTime > 0 || e.slowTime > 0)) {
+      // died frozen (or only chilled, for fewer shards): it shatters into shards that cut and
+      // chill what stands around it
       const radius = toFp(B.skills.shatterRadius);
+      const part = pm(e.freezeTime > 0 ? B.skills.shatter : B.skills.shatterChill);
       for (const o of b.enemies) {
         if (!within(o, e.x, e.y, radius)) continue;
-        harm(b, o, times(times(e.maxHp, pm(B.skills.shatter)), splash(o)), 'ice');
-        slow(o, B.heroes.ice.slow, ticks(B.heroes.ice.slowTime));
+        harm(b, o, times(times(e.maxHp, part), splash(o)), 'ice');
+        // only a frozen one chills them: chilled shards that chill would chain through a crowd
+        if (e.freezeTime > 0) slow(o, B.heroes.ice.slow, ticks(B.heroes.ice.slowTime));
       }
       b.events.push({ type: 'hit', kind: 'ice', x: e.x / FP, y: e.y / FP, radius: B.skills.shatterRadius });
     }

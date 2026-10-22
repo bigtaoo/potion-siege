@@ -84,6 +84,9 @@ export interface Enemy {
    *  without a new ice hit. */
   chill: number;
   chillTime: number;
+  /** Ticks left of brittleness: whatever froze it (or, on a boss, slowed it in place of a
+   *  freeze) leaves it taking skills.brittle more damage from everything. */
+  brittleTime: number;
   /** Static from lightning: extra damage the next hit of another potion sets off. */
   charge: number;
   chargeTime: number;

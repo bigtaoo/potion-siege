@@ -9,7 +9,7 @@
 // enemies do the wall damage and how much one skill card granted at the start moves the win rate.
 // Written to D:/fang/ref/balance/late/<TAG>.md (OUT_DIR overrides) and a JSON summary beside it.
 // BAL='{...}' overrides balance.json as in balance.test.ts; SEEDS (default 60), STAGES=10-20,
-// SKILLS=0 skips the card section, SKILL_STAGES=12,16,19 and SKILL_SEEDS set it up; CURVE_ONLY=1
+// SKILLS=0 skips the card section, SKILL_STAGES=12,16,19, SKILL_SEEDS and SKILL_ONLY=id,id set it up; CURVE_ONLY=1
 // plays only the starting four (arrive and clear), for quick tuning passes.
 import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
@@ -331,7 +331,8 @@ it('late game', () => {
     lines.push(`## One skill card granted at the start (arrive save; Δ against no card, ${skillSeeds} seeds, ±9pp noise)`, '');
     lines.push(`| skill | lineup | Lv needed | ${skillStages.map((s) => `st${s} Δ`).join(' | ')} | Δ μ | its potion's share (no card → card), st${skillStages[0]} |`);
     lines.push(`|---|---|---|${skillStages.map(() => '---').join('|')}|---|---|`);
-    for (const id of SKILL_IDS) {
+    const only = env.SKILL_ONLY?.split(',');
+    for (const id of SKILL_IDS.filter((s) => !only || only.includes(s))) {
       const lineup = lineupFor(id);
       const key = lineup.join(',');
       const ds: number[] = [];
