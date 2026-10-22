@@ -93,7 +93,9 @@ move was meant, copy the numbers it prints over the pins in `scripts/guard/*.tes
 | `npm run endless` | How far endless runs get at three points of the campaign (stage 10 cleared, mid-game, maxed), and what a run pays |
 | `npm run economy` | Simulates casual, regular and heavy players day by day, with and without ads, and reports how fast crystals are earned and spent |
 
-## URL switches (dev)
+## URL switches (dev builds only)
+
+A release build (web, CrazyGames, iOS) reads only `?lang`; the rest are dropped (`src/game/switches.ts`). `?autoplay` never writes the save.
 
 | Switch | What it does |
 |---|---|

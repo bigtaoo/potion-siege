@@ -2,10 +2,14 @@
 // (OUT_DIR, default D:/fang/ref/balance/chapters, files TAG-a-b.json) into one markdown table,
 // a row a stage. Several TAGs (default: base) side by side, each after the first with its
 // difference to the first in points.
-import { readdirSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 
 const DIR = process.env.OUT_DIR ?? 'D:/fang/ref/balance/chapters';
 const tags = process.argv.slice(2).length ? process.argv.slice(2) : ['base'];
+if (!existsSync(DIR)) {
+  console.error(`No shards in ${DIR}: run \`npm run chapters\` first (OUT_DIR to look elsewhere).`);
+  process.exit(1);
+}
 const files = readdirSync(DIR);
 const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 
