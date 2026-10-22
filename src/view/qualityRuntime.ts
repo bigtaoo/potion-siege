@@ -25,6 +25,8 @@ export class QualityRuntime {
   private readonly gate: FrameGate;
   private readonly maxResolution: number;
   private last = 0;
+  /** Stops the loop for good (a newer tab took the game over, game/tabLock.ts). */
+  stopped = false;
 
   constructor(
     private readonly app: Application,
@@ -40,6 +42,7 @@ export class QualityRuntime {
     app.ticker.stop();
     this.apply();
     const loop = (now: number) => {
+      if (this.stopped) return;
       requestAnimationFrame(loop);
       const calm = this.calm();
       this.gate.fps = targetFps(this.settings, calm);

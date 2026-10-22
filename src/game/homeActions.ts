@@ -4,7 +4,7 @@
 import { Text, type Container } from 'pixi.js';
 import type { Game } from '../app';
 import { getLocale, loadLocale, setLocale, t, type Locale } from '../i18n';
-import { dayOf } from '../sim/daily';
+import { gameDay } from '../sim/daily';
 import { adsLeft, claimAd } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { flyCrystals } from '../view/fly';
@@ -75,7 +75,7 @@ export function hintDone(g: Game, bought: boolean): void {
 /** The shop's rewarded ad: crystals when it was watched, a few times a day. The menu takes no
  *  taps while it plays, and an ad that broke counts as not watched. */
 export async function shopAd(g: Game): Promise<void> {
-  if (adsLeft(g.save, dayOf(new Date())) <= 0) return;
+  if (adsLeft(g.save, gameDay(g.save, new Date())) <= 0) return;
   g.menu.interactiveChildren = false;
   let ok = false;
   try {
@@ -87,7 +87,7 @@ export async function shopAd(g: Game): Promise<void> {
     g.mute(false);
   }
   g.analytics.track('ad_shop', { ok });
-  const n = ok ? claimAd(g.save, dayOf(new Date())) : 0;
+  const n = ok ? claimAd(g.save, gameDay(g.save, new Date())) : 0;
   if (n > 0) claimed(g, 'shop_ad', n, null);
   else if (g.menu.visible) home(g);
 }

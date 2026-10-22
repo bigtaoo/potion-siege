@@ -123,12 +123,12 @@ export function challengeSetup(m: MetaSave, c: Challenge): BattleSetup {
 
 /** Attempts started today. */
 export function attemptsUsed(m: MetaSave, today: string): number {
-  return m.challenge.date === today ? m.challenge.attempts : 0;
+  return today > m.challenge.date ? 0 : m.challenge.attempts;
 }
 
 /** The furthest wave reached today, 0 before the first attempt. */
 export function bestToday(m: MetaSave, today: string): number {
-  return m.challenge.date === today ? m.challenge.best : 0;
+  return today > m.challenge.date ? 0 : m.challenge.best;
 }
 
 /** Today's challenge has not been tried yet. */
@@ -150,7 +150,7 @@ export function canPlayAd(m: MetaSave, today: string): boolean {
 /** Days in a row played, as it stands today: broken once a day was missed. */
 export function streak(m: MetaSave, today: string): number {
   const s = m.challenge;
-  return s.date === today || s.date === prevDay(today) ? s.streak : 0;
+  return today <= s.date || s.date === prevDay(today) ? s.streak : 0;
 }
 
 /** Starts an attempt (`ad`: the one a rewarded ad bought). The first of a day moves the streak
@@ -160,7 +160,7 @@ export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | 
   if (ad ? !canPlayAd(m, today) : !canPlayFree(m, today)) return null;
   const s = m.challenge;
   let bonus = 0;
-  if (s.date !== today) {
+  if (today > s.date) {
     s.streak = s.date === prevDay(today) ? s.streak + 1 : 1;
     s.date = today;
     s.attempts = 0;

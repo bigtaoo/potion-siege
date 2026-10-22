@@ -68,6 +68,12 @@ export interface CgGlobal {
 
 /** How long boot waits for the script and its init; a blocked request never arrives. */
 export const SDK_WAIT_MS = 3000;
+/** An ad that has not started by then is given up, and one that started but never says it
+ *  ended is given up after AD_PLAY_MS: an SDK that never calls back must not freeze the game. */
+export const AD_START_MS = 10_000;
+export const AD_PLAY_MS = 120_000;
+/** How long boot waits for the adblock probe; no answer counts as no adblocker. */
+export const ADBLOCK_WAIT_MS = 1500;
 const POLL_MS = 50;
 
 /** Runs fn, awaiting a promise, and turns every failure into undefined. */
@@ -178,15 +184,25 @@ export class CrazyGamesSdk {
     if (!this.isEnabled() || typeof fn !== 'function') return false;
     return new Promise<boolean>((resolve) => {
       let settled = false;
+      let timer: ReturnType<typeof setTimeout> | undefined;
+      const watch = (ms: number) => {
+        clearTimeout(timer);
+        timer = setTimeout(() => finish(false), ms);
+      };
       const finish = (ok: boolean) => {
         if (!settled) {
           settled = true;
+          clearTimeout(timer);
           resolve(ok);
         }
       };
+      watch(AD_START_MS);
       try {
         fn.call(this.sdk?.ad, type, {
-          adStarted: () => guard(hooks.adStarted),
+          adStarted: () => {
+            if (!settled) watch(AD_PLAY_MS);
+            guard(hooks.adStarted);
+          },
           adFinished: () => {
             guard(hooks.adFinished);
             finish(true);
@@ -208,7 +224,10 @@ export class CrazyGamesSdk {
     if (this.adblock !== null) return this.adblock;
     const fn = this.sdk?.ad?.hasAdblock;
     if (typeof fn !== 'function') return false;
-    this.adblock = (await settle(() => fn.call(this.sdk?.ad))) === true;
+    const answer = await this.until(this.now() + ADBLOCK_WAIT_MS, settle(() => fn.call(this.sdk?.ad)));
+    // no answer in time is not cached: a later ask may still get one
+    if (answer === undefined) return false;
+    this.adblock = answer === true;
     return this.adblock;
   }
 

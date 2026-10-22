@@ -107,6 +107,20 @@ describe('the result screen', () => {
     expect(w.host.midgames).toBe(1);
   });
 
+  it('goes home unmuted when the midgame ad breaks', async () => {
+    const w = world(veteran(), (h) => {
+      h.available = false;
+      h.midgameBreaks = true;
+    });
+    play(w);
+    playToEnd(w);
+    tap(w.stage, t('continue'));
+    await flush();
+    expect(w.host.midgames).toBe(1);
+    expect(w.game['menu'].visible).toBe(true);
+    expect(w.game.audio.mix.ad).toBe(false);
+  });
+
   it('says an adblocker took the revive away instead of just leaving it out', () => {
     const w = world(veteran(), (h) => {
       h.available = false;

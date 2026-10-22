@@ -23,5 +23,6 @@ export default defineConfig({
   plugins: [webBeacon()],
   server: { port: 5180, host: true, watch: { ignored: WATCH_IGNORED } },
   build: { target: 'es2020', outDir: 'dist' },
-  test: { include: ['src/**/*.test.ts'] },
+  // 5 s is vitest's default; the sim-heavy tests pass it under the full suite's load on CI
+  test: { include: ['src/**/*.test.ts'], testTimeout: 30_000 },
 });

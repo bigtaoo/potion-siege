@@ -87,6 +87,10 @@ export const de: Table = {
   doubled: '×2',
   doublesLeft: 'Heute noch {n}/{total}',
   adBlocked: 'Werbeblocker an: Belohnungen per Werbung sind aus',
+  tab: {
+    elsewhere: 'Das Spiel ist in einem anderen Tab offen, dein Fortschritt wird dort gespeichert.',
+    playHere: 'Hier spielen',
+  },
   damage: 'Schaden',
   side: {
     skills: 'Fähigkeiten im Kampf',

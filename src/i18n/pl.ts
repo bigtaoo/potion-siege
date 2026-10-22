@@ -87,6 +87,10 @@ export const pl: Table = {
   doubled: '×2',
   doublesLeft: 'Zostało dziś: {n}/{total}',
   adBlocked: 'Blokada reklam włączona: brak nagród za reklamy',
+  tab: {
+    elsewhere: 'Gra jest otwarta w innej karcie i tam zapisuje się twój postęp.',
+    playHere: 'Graj tutaj',
+  },
   damage: 'Zadane obrażenia',
   side: {
     skills: 'Umiejętności w walce',

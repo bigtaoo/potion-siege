@@ -125,11 +125,14 @@ describe('synth', () => {
     for (const id of SFX_IDS) {
       const b = renderSfx(id, 22050);
       expect(b.length).toBe(Math.ceil(SFX[id].len * 22050));
+      // one expect per sound, not per sample: a million expects ran past 5 s on a loaded CI box
       let peak = 0;
+      let finite = true;
       for (const v of b) {
-        expect(Number.isFinite(v)).toBe(true);
+        finite &&= Number.isFinite(v);
         peak = Math.max(peak, Math.abs(v));
       }
+      expect(finite).toBe(true);
       expect(peak).toBeGreaterThan(0.05);
       expect(peak).toBeLessThanOrEqual(1);
     }

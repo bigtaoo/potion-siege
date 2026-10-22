@@ -86,6 +86,10 @@ export const zh: Table = {
   doubled: '×2',
   doublesLeft: '今日剩余 {n}/{total} 次',
   adBlocked: '已开启广告拦截：看广告领奖励不可用',
+  tab: {
+    elsewhere: '游戏已在另一个标签页打开，进度保存在那边。',
+    playHere: '在这里玩',
+  },
   damage: '伤害统计',
   side: {
     skills: '本局技能',

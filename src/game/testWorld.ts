@@ -23,6 +23,8 @@ export class Host implements Platform {
   blocked = false;
   rewardedCalls = 0;
   midgames = 0;
+  /** The midgame ad throws after it muted the game, as AdMob's bridge can. */
+  midgameBreaks = false;
   celebrated = 0;
   muted: boolean[] = [];
   store: Store | null = null;
@@ -54,6 +56,7 @@ export class Host implements Platform {
   async midgame(onStart: () => void): Promise<void> {
     this.midgames++;
     onStart();
+    if (this.midgameBreaks) throw new Error('the ad broke');
   }
   onHostMute(): void {}
 }

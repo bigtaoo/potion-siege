@@ -21,7 +21,7 @@ import { Battle } from './sim/battle';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
 import { recordEvents } from './sim/achievements';
 import { endlessSetup, type EndlessResult } from './sim/endless';
-import { addProgress, dayOf, rollDay } from './sim/daily';
+import { addProgress, gameDay, rollDay } from './sim/daily';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
@@ -49,6 +49,7 @@ import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { urlSwitches } from './game/switches';
 import { createAnalytics, device, loadedBeacon, pointerKind, safeDevice, showLocale } from './game/startup';
+import { pageLink, staleNotice, TabLock } from './game/tabLock';
 import { beginTutorial, endTutorial, lesson } from './game/tutorialFlow';
 
 /** What a host's entry can do with the game once it is up. */
@@ -93,7 +94,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   const game = new Game(app, platform, params, analytics, privacy);
   // our own frame loop from here on: a frame rate and resolution the device keeps up with
   const mode = params.get('quality') as QualityMode;
-  new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm());
+  const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm());
   if (import.meta.env.DEV) Object.assign(window, { __game: game });
   platform.loaded();
   analytics.track('session_start', {
@@ -135,6 +136,8 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   // time on screen, an `alive` beat each minute of it, and one leave per time away (bfcache)
   watchPage(game.beat, () => game.leave(), () => game.back());
   game.start();
+  // one tab plays: an older one stops, keeps its save off the newer one's, and says why
+  game.tabs = new TabLock(pageLink(), () => ((quality.stopped = true), game.audio.host(true), staleNotice(document.body)));
   // the art the first frame did not wait for: screens built without it are built again
   void restOfArt().then(() => game.artIn());
   // the first battle frame is on screen two animation frames later: the `loaded` checkpoint, and
@@ -176,6 +179,8 @@ export class Game {
   battle: Battle | null = null;
   run: RunTracker | null = null;
   save: MetaSave;
+  /** Set at boot: once a newer tab has taken over, this one keeps its save off the storage. */
+  tabs: TabLock | null = null;
   /** Crystals paid for the current battle: what it earned and the ×2. */
   purse = new Purse();
   /** A reserve potion tapped on the lineup row, waiting for the one it replaces. */
@@ -314,7 +319,7 @@ export class Game {
     this.view.starMark = () => !ch && cause !== 'endless' && !this.revived;
     this.hud.attach(this.battle);
     // today's tasks exist before the first battle counts toward them (a fresh save has none)
-    rollDay(this.save, dayOf(new Date()));
+    rollDay(this.save, gameDay(this.save, new Date()));
   }
 
   /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */
@@ -452,9 +457,10 @@ export class Game {
     this.overlay.hide();
   }
 
-  /** Writes the save; the bot's battles (?autoplay) play on it in memory but never keep it. */
+  /** Writes the save; the bot's battles (?autoplay) play on it in memory but never keep it, nor
+   *  does a tab a newer one took over (game/tabLock.ts). */
   store(): void {
-    if (this.autoplay) return;
+    if (this.autoplay || this.tabs?.stale) return;
     this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
   }
 

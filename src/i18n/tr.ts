@@ -87,6 +87,10 @@ export const tr: Table = {
   doubled: '×2',
   doublesLeft: 'Bugün {n}/{total} kaldı',
   adBlocked: 'Reklam engelleyici açık: reklam ödülleri kapalı',
+  tab: {
+    elsewhere: 'Oyun başka bir sekmede açık, ilerlemen orada kaydediliyor.',
+    playHere: 'Burada oyna',
+  },
   damage: 'Verilen hasar',
   side: {
     skills: 'Bu turdaki yetenekler',

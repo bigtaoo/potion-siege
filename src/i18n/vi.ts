@@ -87,6 +87,10 @@ export const vi: Table = {
   doubled: '×2',
   doublesLeft: 'Còn {n}/{total} lần hôm nay',
   adBlocked: 'Đang bật chặn quảng cáo: không nhận được thưởng từ quảng cáo',
+  tab: {
+    elsewhere: 'Trò chơi đang mở ở một thẻ khác, tiến trình của bạn được lưu ở đó.',
+    playHere: 'Chơi ở đây',
+  },
   damage: 'Sát thương gây ra',
   side: {
     skills: 'Kỹ năng trận này',

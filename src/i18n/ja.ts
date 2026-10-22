@@ -87,6 +87,10 @@ export const ja: Table = {
   doubled: '×2',
   doublesLeft: '今日はあと {n}/{total} 回',
   adBlocked: '広告ブロッカーが有効：広告報酬は使えません',
+  tab: {
+    elsewhere: 'ゲームは別のタブで開いています。進行状況はそちらに保存されます。',
+    playHere: 'ここでプレイ',
+  },
   damage: '与ダメージ',
   side: {
     skills: 'このバトルのスキル',
