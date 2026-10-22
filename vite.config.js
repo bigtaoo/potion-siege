@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
+import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
 
 /** A build gets the anonymous `open_*` load checkpoint (scripts/openBeacon.mjs) as the first
@@ -20,7 +21,7 @@ const webBeacon = () => {
 export default defineConfig({
   define: buildDefine(),
   plugins: [webBeacon()],
-  server: { port: 5180, host: true },
+  server: { port: 5180, host: true, watch: { ignored: WATCH_IGNORED } },
   build: { target: 'es2020', outDir: 'dist' },
   test: { include: ['src/**/*.test.ts'] },
 });

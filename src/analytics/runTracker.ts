@@ -102,6 +102,11 @@ export class RunTracker {
     if (reason === 'pagehide' && !this.battle.result) this.a.track('run_quit', this.summary());
   }
 
+  /** The page came back from the back/forward cache with the battle still on: it can quit again. */
+  reopen(): void {
+    this.ended = false;
+  }
+
   private wallPct(): number {
     return Math.round((100 * Math.max(0, this.battle.wall)) / this.battle.wallMax);
   }

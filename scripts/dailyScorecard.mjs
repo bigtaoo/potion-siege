@@ -9,7 +9,8 @@
 //   conv         sessions started that day with >= 60 s of battle / opens. Sessions, not players,
 //                because the opens count launches: a player who opens the game twice is two of each
 //   play         mean minutes per new player of that day over their install-day sessions (the
-//                session's own calendar `day` 0), so a day's number is final once it is over
+//                session's own calendar `day` 0), so a day's number is final once it is over; a
+//                session's minutes are its time on screen (playtestMetrics.mjs sessionSecs)
 //   D1           of that day's new players, back on their calendar day 1; shown once every one of
 //                them is 2+ days older than the newest data (before that: "wait"); the 7-day row
 //                counts the ones old enough so far

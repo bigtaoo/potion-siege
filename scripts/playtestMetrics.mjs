@@ -5,8 +5,12 @@
 //
 //   conversion   new players with >= 60 s of battle in their first session / new players'
 //                `open_*` beacons of the same build, source and device
-//   playtime     mean minutes per new player over all their sessions: per session the longer of
-//                `session_end`'s secs and the time between its first and last event
+//   playtime     mean minutes per new player over all their sessions. Per session the time the page
+//                was on screen, as CrazyGames counts it (src/analytics/heartbeat.ts): the larger
+//                of `session_end`'s `vis` and the last `alive` beat's, plus up to a minute after
+//                that beat to the session's last event (a page killed between two beats). A
+//                build from before the beat: the longer of `session_end`'s secs and the time
+//                between its first and last event, hidden time included
 //   D1           back on calendar day 1, of the players whose install is 2+ days before the newest event
 //   tutorial     finished the first battle's tutorial without skipping it
 //   run 1 end .. run 3 end   the battles 1-3 funnel
@@ -36,22 +40,42 @@ const median = (xs) => {
 /** desktop or touch for a session_start (`device` since the playtest build, `touch` before). */
 export const deviceOf = (props) => (props.device === 'touch' || props.device === 'desktop' ? props.device : props.touch ? 'touch' : 'desktop');
 
-/** Sessions of the events `keep` lets through: sid -> { uid, first, last, secs } (device time, `session_end`'s secs). */
+/** Seconds on screen between two `alive` beats (src/analytics/heartbeat.ts ALIVE_EVERY). */
+export const ALIVE_EVERY = 60;
+
+/**
+ * Sessions of the events `keep` lets through: sid -> { uid, first, last, secs, vis, beat, ended }
+ * (device time; `session_end`'s secs; seconds on screen from `session_end` or the last `alive`,
+ * null before the beat; the last beat's time; a `session_end` came).
+ */
 export function sessionSpans(events, keep = () => true) {
   const sessions = new Map();
   for (const e of events) {
     if (!e.sid || !keep(e)) continue;
-    const s = sessions.get(e.sid) ?? { uid: e.uid, first: e.ts, last: e.ts, secs: 0 };
+    const s = sessions.get(e.sid) ?? { uid: e.uid, first: e.ts, last: e.ts, secs: 0, vis: null, beat: null, ended: false };
     s.first = Math.min(s.first, e.ts);
     s.last = Math.max(s.last, e.ts);
-    if (e.name === 'session_end') s.secs = Math.max(s.secs, Number(e.props?.secs) || 0);
+    const vis = Number(e.props?.vis);
+    if (e.name === 'session_end') {
+      s.secs = Math.max(s.secs, Number(e.props?.secs) || 0);
+      s.ended = true;
+    }
+    if ((e.name === 'session_end' || e.name === 'alive') && Number.isFinite(vis) && vis >= (s.vis ?? -1)) {
+      s.vis = vis;
+      if (e.name === 'alive') s.beat = e.ts;
+      else s.beat = null;
+    }
     sessions.set(e.sid, s);
   }
   return sessions;
 }
 
-/** A session's length in seconds: the longer of `session_end`'s secs and its first-to-last event span. */
-export const sessionSecs = (s) => Math.max(s.secs, (s.last - s.first) / 1000);
+/** A session's playtime in seconds: on screen where the build counts it, else the older wall-clock guess. */
+export const sessionSecs = (s) => {
+  if (s.vis === null || s.vis === undefined) return Math.max(s.secs, (s.last - s.first) / 1000);
+  // a page killed after its last beat: the events after it, at most up to the next beat
+  return s.vis + (s.beat === null || s.beat === undefined ? 0 : Math.min(ALIVE_EVERY, Math.max(0, (s.last - s.beat) / 1000)));
+};
 
 /**
  * Runs of the events `keep` lets through, keyed by session and run number (a run left unfinished
