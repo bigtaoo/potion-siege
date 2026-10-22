@@ -20,7 +20,11 @@ npm run report -- telemetry/events.ndjson
 ## Deploy from CI
 
 Every green push to `main` deploys it (`.github/workflows/ci.yml`, job `deploy-server`, before
-the web build goes out); a push that leaves the payload unchanged restarts nothing.
+the web build goes out); a push that leaves the collector unchanged restarts nothing. CI sends
+`collector.mjs` and nothing else: the `Dockerfile` and `docker-compose.yml` say what runs and
+what is mounted, so a leaked key that could send them could take the box. They are installed by
+hand, and `ci-deploy.sh` refuses to build unless both hash to the values written in it
+(`src/analytics/deploy.test.ts` keeps those equal to this folder's copies).
 
 CI holds an ssh key (`D:\cloud\potion_siege_ci_ed25519`, the only readable copy; the private
 half is the repo Secret `SERVER_DEPLOY_KEY`) that can do one thing on the box: it is registered
@@ -37,6 +41,17 @@ The live script sits outside the deploy target so a deploy cannot replace it; af
 
 ```bash
 tr -d '\r' < server/ci-deploy.sh | ssh blightbloom 'install -o deploy -g deploy -m 700 /dev/stdin /home/deploy/potion-siege-ci-deploy.sh'
+```
+
+After editing the `Dockerfile` or `docker-compose.yml` (and so the hashes in `ci-deploy.sh`),
+install all three by hand before the push reaches `main`; root owns the two, so nothing running
+as `deploy` can change them:
+
+```bash
+for f in Dockerfile docker-compose.yml; do
+  tr -d '\r' < server/$f | ssh blightbloom "sudo install -o root -g root -m 644 /dev/stdin /home/deploy/potion-siege/$f"
+done
+ssh blightbloom 'cd /home/deploy/potion-siege && sha256sum Dockerfile docker-compose.yml'
 ```
 
 ## The tunnel

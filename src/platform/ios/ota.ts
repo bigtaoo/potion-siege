@@ -13,6 +13,8 @@ import { CapacitorUpdater } from '@capgo/capacitor-updater';
 // anything is drawn.
 
 export const MANIFEST_URL = 'https://ps-ota.gamestao.com/manifest.json';
+/** Bundles come from our own host only, whatever a manifest says. */
+export const BUNDLE_ORIGIN = 'https://ps-ota.gamestao.com/';
 const FETCH_TIMEOUT_MS = 8000;
 
 export interface OtaManifest {
@@ -46,12 +48,12 @@ export function isNewer(a: string, b: string): boolean {
 
 /**
  * Whether the bundle running at `running` on shell `native` should download the manifest's: newer,
- * runnable here, and not on the device already (waiting, or failed once: a bundle that never
- * booted is not fetched again until a newer one is published).
+ * runnable here, served from BUNDLE_ORIGIN, and not on the device already (waiting, or failed
+ * once: a bundle that never booted is not fetched again until a newer one is published).
  */
 export function wantsDownload(m: Partial<OtaManifest> | null, running: string, native: string, have: Bundle[]): m is OtaManifest {
   if (!m || typeof m.version !== 'string' || typeof m.url !== 'string' || typeof m.checksum !== 'string') return false;
-  if (!m.checksum || !isNewer(m.version, running)) return false;
+  if (!m.checksum || !m.url.startsWith(BUNDLE_ORIGIN) || !isNewer(m.version, running)) return false;
   if (m.minNativeVersion && isNewer(m.minNativeVersion, native)) return false;
   return !have.some((b) => b.version === m.version);
 }

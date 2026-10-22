@@ -8,6 +8,7 @@
 // first one (the classic "came back that day" definition), counted only for cohorts old enough.
 
 import { readFileSync } from 'node:fs';
+import { parseEvents } from './eventRows.mjs';
 import { perfSummary, printPerf } from './perfSummary.mjs';
 import { BENCHMARKS, CATEGORY } from './cgBenchmarks.mjs';
 import { dailyRows, printDaily } from './dailyScorecard.mjs';
@@ -29,10 +30,8 @@ for (let i = 0; i < args.length; i++) {
   else file = args[i];
 }
 if (!BENCHMARKS[category]) throw new Error(`--bench: one of ${Object.keys(BENCHMARKS).join(', ')}`);
-const events = readFileSync(file, 'utf8')
-  .split('\n')
-  .filter(Boolean)
-  .map((l) => JSON.parse(l));
+const { events, skipped } = parseEvents(readFileSync(file, 'utf8'));
+if (skipped) console.log(`(skipped ${skipped} line(s) that are not usable events: scripts/eventRows.mjs)`);
 
 const pct = (n, d) => (d ? `${((100 * n) / d).toFixed(1)}%` : '-');
 const median = (xs) => {

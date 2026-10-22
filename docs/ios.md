@@ -101,11 +101,18 @@ The web layer (`dist-ios`) can change without App Review:
   hot updates are `1.0.12.1`, `1.0.12.2`, … so an update outranks its shell and the next shell
   outranks every update for the one before (`resetWhenUpdate` drops them after an App Store
   update).
-- Publish: Actions → `ota-ios` → Run workflow, on a commit whose ci run is green. It works out the
-  version, builds, zips, writes the manifest with the zip's sha256 and deploys `dist-ota` to the
-  `potion-siege-ota` worker (`wrangler/ota.jsonc`, the web deploy's Cloudflare secrets). Only the
-  newest update is served. `minNativeVersion` (the input) holds it back from older shells.
-- Only JS, art and sound travel this way. A new bridge call or native setting needs a new shell.
+- Publish: Actions → `ota-ios` → Run workflow, on main, on a commit whose ci push run on main is
+  green. It works out the version, builds, zips, writes the manifest with the zip's sha256 and
+  deploys `dist-ota` to the `potion-siege-ota` worker (`wrangler/ota.jsonc`, the web deploy's
+  Cloudflare secrets). Only the newest update is served, and the app downloads it only from
+  `https://ps-ota.gamestao.com/` (`BUNDLE_ORIGIN` in `ota.ts`).
+- Only JS, art and sound travel this way. A new bridge call or native setting needs a new shell,
+  and the workflows hold to that: `ota-ios` refuses when anything native moved since the newest
+  shell's commit (`ios/`, `capacitor.config.ts`, `bridge.ts`, the `@capacitor`/`@capgo` packages:
+  `scripts/nativeDiff.mjs`), and `release` refuses a shell with native changes at the same
+  `MARKETING_VERSION` as the one before. So **a native change needs a new MARKETING_VERSION**
+  (`ios/App/App.xcodeproj/project.pbxproj`), and `minNativeVersion` is simply the current one:
+  every shell at that version runs the update.
   Never use it to add a way to pay outside StoreKit (guideline 3.3.1).
 
 ## Release

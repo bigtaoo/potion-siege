@@ -5,7 +5,7 @@ import wrangler from '../../../wrangler/ota.jsonc?raw';
 import capConfig from '../../../capacitor.config.ts?raw';
 import podfile from '../../../ios/App/Podfile?raw';
 import privacy from '../../../ios/App/App/PrivacyInfo.xcprivacy?raw';
-import { applyDownloaded, checkOta, isNewer, MANIFEST_URL, pickDownloaded, wantsDownload, type Bundle, type Updater } from './ota';
+import { applyDownloaded, BUNDLE_ORIGIN, checkOta, isNewer, MANIFEST_URL, pickDownloaded, wantsDownload, type Bundle, type Updater } from './ota';
 
 const manifest = { version: '1.0.18.2', url: 'https://ps-ota.gamestao.com/1.0.18.2.zip', checksum: 'ab12', minNativeVersion: '1.0' };
 
@@ -44,6 +44,12 @@ describe('wantsDownload', () => {
     expect(wantsDownload({ version: '9' }, '1.0.18', '1.0', [])).toBe(false);
     expect(wantsDownload(null, '1.0.18', '1.0', [])).toBe(false);
     expect(wantsDownload(manifest, '1.0.18', '1.0', [{ id: 'a', version: '1.0.18.2', status: 'error' }])).toBe(false);
+  });
+
+  it('refuses a bundle from anywhere but our own host', () => {
+    for (const url of ['https://evil.example/1.0.18.2.zip', 'http://ps-ota.gamestao.com/1.0.18.2.zip', 'https://ps-ota.gamestao.com.evil.example/x.zip', 'https://ps-ota.gamestao.com@evil.example/x.zip']) {
+      expect(wantsDownload({ ...manifest, url }, '1.0.18', '1.0', []), url).toBe(false);
+    }
   });
 });
 
@@ -99,6 +105,8 @@ describe('the shell and the pipeline agree', () => {
     expect(otaWorkflow).toContain('PS_BUNDLE_VERSION: ${{ steps.ver.outputs.version }}');
     expect(otaWorkflow).toContain(`MANIFEST_URL: ${MANIFEST_URL}`);
     expect(wrangler).toContain(`"pattern": "${new URL(MANIFEST_URL).host}"`);
+    expect(new URL(MANIFEST_URL).origin + '/').toBe(BUNDLE_ORIGIN);
+    expect(otaWorkflow).toContain(`--arg url "${BUNDLE_ORIGIN}$V.zip"`);
     expect(otaWorkflow).toContain('wrangler deploy -c wrangler/ota.jsonc'.replace('wrangler deploy', 'wrangler@4.118.0 deploy'));
   });
 });

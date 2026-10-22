@@ -6,8 +6,10 @@ name: ci
 # push to main that passes then ships the telemetry collector to blightbloom (ps.gamestao.com,
 # server/) and, after it, publishes the web build to Cloudflare at p.gamestao.com
 # (wrangler/web.jsonc). Same shape as D:\standing's ci.yml. A push that leaves the collector
-# unchanged restarts nothing (server/ci-deploy.sh compares the files). The CrazyGames zip is
-# built too and kept as a run artifact, for uploading on the developer portal by hand.
+# unchanged restarts nothing (server/ci-deploy.sh compares it). The CrazyGames zip is
+# built too and kept as a run artifact, for uploading on the developer portal by hand. Both
+# deploys check that their commit is still main's tip first: a run that finishes after a newer
+# push's never puts the older build back.
 #
 # The deploys need, in Settings -> Secrets and variables -> Actions:
 #   Secrets    CLOUDFLARE_API_TOKEN   gamestao.com account, at least Workers Scripts:Edit
@@ -26,6 +28,9 @@ on:
   pull_request:
   workflow_dispatch: {}
 
+permissions:
+  contents: read
+
 # a newer push cancels an older run, except on main, where a deploy may be halfway through
 concurrency:
   group: ci-${{ github.ref }}
@@ -35,10 +40,10 @@ jobs:
   check:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - run: npm run check
@@ -46,7 +51,7 @@ jobs:
         run: npm run check:balance:slow
       - name: zip the CrazyGames build
         run: cd dist-crazygames && zip -qr ../potion-siege-crazygames.zip .
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
         with:
           name: potion-siege-crazygames
           path: potion-siege-crazygames.zip
@@ -60,8 +65,16 @@ jobs:
       group: server-deploy
       cancel-in-progress: false
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - name: still main's tip?
+        id: tip
+        run: |
+          set -eu
+          git fetch -q --depth=1 origin main
+          if [ "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA" ]; then echo "go=1" >> "$GITHUB_OUTPUT"
+          else echo "main has moved on from $GITHUB_SHA; its own run deploys" | tee -a "$GITHUB_STEP_SUMMARY"; fi
       - name: deploy over ssh
+        if: steps.tip.outputs.go == '1'
         env:
           DEPLOY_KEY: ${{ secrets.SERVER_DEPLOY_KEY }}
           SSH_KNOWN_HOSTS: ${{ vars.SERVER_SSH_KNOWN_HOSTS }}
@@ -72,12 +85,12 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           # pinned, never StrictHostKeyChecking=no: the key and payload go only to this box
           echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          mkdir -p payload
-          cp scripts/collector.mjs server/Dockerfile server/docker-compose.yml payload/
-          # the forced command on the box reads this tar.gz from stdin (server/ci-deploy.sh)
-          tar czf - -C payload collector.mjs Dockerfile docker-compose.yml |
+          # the forced command on the box reads this tar.gz from stdin and takes collector.mjs alone;
+          # the Dockerfile and compose file stay as installed by hand there (server/ci-deploy.sh)
+          tar czf - -C scripts collector.mjs |
             ssh -T -i ~/.ssh/deploy_key -o IdentitiesOnly=yes deploy@62.238.1.182
       - name: verify from the outside
+        if: steps.tip.outputs.go == '1'
         run: |
           set -eu
           for i in $(seq 1 10); do
@@ -96,20 +109,30 @@ jobs:
       group: web-deploy
       cancel-in-progress: true
     steps:
-      - uses: actions/checkout@v5
-      - uses: actions/setup-node@v5
+      - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5
+      - uses: actions/setup-node@a0853c24544627f65ddf259abe73b1d18a591444 # v5
         with:
-          node-version: 22
+          node-version-file: .nvmrc
           cache: npm
       - run: npm ci
       - name: build web
         run: npm run build
+      # checked last thing before the deploy: main may move while this builds
+      - name: still main's tip?
+        id: tip
+        run: |
+          set -eu
+          git fetch -q --depth=1 origin main
+          if [ "$(git rev-parse FETCH_HEAD)" = "$GITHUB_SHA" ]; then echo "go=1" >> "$GITHUB_OUTPUT"
+          else echo "main has moved on from $GITHUB_SHA; its own run deploys" | tee -a "$GITHUB_STEP_SUMMARY"; fi
       - name: deploy to Cloudflare
+        if: steps.tip.outputs.go == '1'
         env:
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
         run: npx -y wrangler@4.118.0 deploy -c wrangler/web.jsonc
       - name: verify from the outside
+        if: steps.tip.outputs.go == '1'
         run: |
           set -eu
           for i in $(seq 1 10); do

@@ -248,7 +248,8 @@ export function feedbackLines(events) {
   const device = new Map();
   for (const e of events) if (e.name === 'session_start' && !device.has(e.uid)) device.set(e.uid, deviceOf(e.props ?? {}));
   return events
-    .filter((e) => e.name === 'feedback')
+    // a row without a time Date can show would throw in toISOString (eventRows.mjs skips them too)
+    .filter((e) => e.name === 'feedback' && Number.isFinite(new Date(e.ts).getTime()))
     .sort((a, b) => b.ts - a.ts)
-    .map((e) => `${new Date(e.ts).toISOString().slice(0, 16)}  ${String(e.props?.rating ?? '-')}/5  ${(e.src ?? 'unknown').padEnd(14)} ${(device.get(e.uid) ?? '?').padEnd(8)} ${e.props?.text ? JSON.stringify(e.props.text) : ''}`);
+    .map((e) => `${new Date(e.ts).toISOString().slice(0, 16)}  ${String(e.props?.rating ?? '-')}/5  ${(typeof e.src === 'string' ? e.src : 'unknown').padEnd(14)} ${(device.get(e.uid) ?? '?').padEnd(8)} ${e.props?.text ? JSON.stringify(e.props.text) : ''}`);
 }
