@@ -7,6 +7,10 @@ import { FIRST_STAGE } from '../sim/waves';
 import {
   anyChestWaiting, canUpgradeLineup, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, dotKeys, LOGIN_AFTER_RUNS, loginPops, markSeen, navDots, newOnTab, NEXT_UNTIL, offersNext,
   upgradeHintKind,
+  topPick,
+  TOP_PICK_UNTIL,
+  lossStep,
+  lossTips,
 } from './nudges';
 
 const today = '2026-10-17';
@@ -215,17 +219,48 @@ describe('first battles', () => {
     expect(loginPops(m)).toBe(true);
   });
 
-  it('points at the first affordable potion once, after a win', () => {
+  it('points at the first affordable potion once, after the first battle won or lost', () => {
     const m = newMeta();
     m.crystals = 10_000;
     expect(upgradeHintKind(m)).toBe(null);
-    m.cleared = 1;
+    m.runs = 1;
     expect(upgradeHintKind(m)).toBe(HERO_KINDS.find((k) => heroUnlocked(m, k)));
     m.crystals = 0;
     expect(upgradeHintKind(m)).toBe(null);
     m.crystals = 10_000;
     m.upgradeHint = true;
     expect(upgradeHintKind(m)).toBe(null);
+  });
+
+  it('tags the suggested skill card in the first battles only', () => {
+    const m = newMeta();
+    expect(topPick(m)).toBe(true);
+    m.runs = TOP_PICK_UNTIL - 1;
+    expect(topPick(m)).toBe(true);
+    m.runs = TOP_PICK_UNTIL;
+    expect(topPick(m)).toBe(false);
+  });
+
+  it('singles out a potion level after a loss, else the workshop, else an easier stage', () => {
+    const m = newMeta();
+    m.crystals = 0;
+    expect(lossStep(m)).toBe(null);
+    m.stage = 2;
+    expect(lossStep(m)).toBe('battle');
+    m.crystals = workshopCost('wall', m.workshop.wall) ?? 0;
+    expect(lossStep(m)).toBe(heroCost(1)! <= m.crystals ? 'potions' : 'workshop');
+    m.crystals = 10_000;
+    expect(lossStep(m)).toBe('potions');
+  });
+
+  it('lists the easier stage after a loss only past stage 1, the one to do now first', () => {
+    const m = newMeta();
+    m.crystals = 0;
+    expect(lossTips(m)).toEqual(['potions', 'workshop']);
+    m.stage = 3;
+    expect(lossTips(m)).toEqual(['battle', 'potions', 'workshop']);
+    m.crystals = 10_000;
+    expect(lossTips(m)).toEqual(['potions', 'workshop', 'battle']);
   });
 });
 

@@ -113,10 +113,10 @@ export function loginPops(m: MetaSave): boolean {
   return m.runs >= LOGIN_AFTER_RUNS;
 }
 
-/** The home screen's one-time pointer at a potion upgrade: after a first win, with crystals
- *  for one; the kind it points at is the first such potion. */
+/** The home screen's one-time pointer at a potion upgrade: after the first battle, won or
+ *  lost, with crystals for one; the kind it points at is the first such potion. */
 export function upgradeHintKind(m: MetaSave): HeroKind | null {
-  if (m.upgradeHint || m.cleared < 1) return null;
+  if (m.upgradeHint || m.runs < 1) return null;
   return HERO_KINDS.find((k) => {
     const cost = heroCost(m.heroes[k]);
     return heroUnlocked(m, k) && cost !== null && cost <= m.crystals;
@@ -127,4 +127,31 @@ export function upgradeHintKind(m: MetaSave): HeroKind | null {
  *  when that is later. */
 export function codexStage(kind: EnemyKind, stage: number): number {
   return Math.max(stage, FIRST_STAGE[kind]);
+}
+
+/** Battles (counting the one being played) whose skill picks carry the "推荐" tag and the
+ *  tapping hand (view/overlay/cardNudge.ts). */
+export const TOP_PICK_UNTIL = 3;
+
+export function topPick(m: MetaSave): boolean {
+  return m.runs < TOP_PICK_UNTIL;
+}
+
+/** The one tip a lost battle's result singles out: a fielded potion's level the crystals now
+ *  pay for, else a workshop level, else an easier stage once there is one; null when none of
+ *  them is there to do. */
+export function lossStep(m: MetaSave): 'potions' | 'workshop' | 'battle' | null {
+  if (canUpgradeLineup(m)) return 'potions';
+  if (WORKSHOP_IDS.some((id) => {
+    const cost = workshopCost(id, m.workshop[id]);
+    return cost !== null && cost <= m.crystals;
+  })) return 'workshop';
+  return m.stage > 1 ? 'battle' : null;
+}
+
+/** A lost battle's tips, the one to do now first: the easier stage only once there is one. */
+export function lossTips(m: MetaSave): ('potions' | 'workshop' | 'battle')[] {
+  const ready = lossStep(m);
+  const all = (['potions', 'workshop', 'battle'] as const).filter((tab) => tab !== 'battle' || m.stage > 1);
+  return ready ? [ready, ...all.filter((tab) => tab !== ready)] : all;
 }

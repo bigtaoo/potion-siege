@@ -25,6 +25,7 @@ import {
   type Section,
 } from './overlay/endRows';
 import type { EndExtras } from './overlay/endTypes';
+import { CardNudge, topTag } from './overlay/cardNudge';
 import { skillCard } from './overlay/skillCard';
 
 /** The skill pick's box, centred on the page (shrunk to fit), which the tutorial keeps clear of. */
@@ -37,6 +38,8 @@ export class Overlay extends Container {
   private h = DESIGN_H;
   /** Builds the panel that is up again, for a new page size. */
   private redo: (() => void) | null = null;
+  /** The hand over the suggested skill card, while the pick is up. */
+  private nudge: CardNudge | null = null;
 
   constructor() {
     super();
@@ -59,6 +62,7 @@ export class Overlay extends Container {
   hide(): void {
     this.visible = false;
     this.redo = null;
+    this.nudge = null;
     this.removeChildren().forEach((c) => c.destroy({ children: true }));
   }
 
@@ -81,10 +85,16 @@ export class Overlay extends Container {
     return box;
   }
 
+  /** The hand over the suggested card taps on. */
+  tick(dt: number): void {
+    if (this.nudge && !this.nudge.destroyed) this.nudge.update(dt);
+  }
+
   /** Three tall cards side by side, and under them the rewarded refresh when `onReroll` is
-   *  given. `levels` says how far each skill has been taken. */
-  showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null): void {
-    this.open(0.7, () => this.showSkills(choices, levels, title, onPick, onReroll));
+   *  given. `levels` says how far each skill has been taken. In the first battles the card at
+   *  index `top` carries the "推荐" tag and, left alone, a hand tapping it. */
+  showSkills(choices: SkillId[], levels: SkillLevels, title: string, onPick: (id: SkillId) => void, onReroll: (() => void) | null, top: number | null = null): void {
+    this.open(0.7, () => this.showSkills(choices, levels, title, onPick, onReroll, top));
     const box = this.box(SKILL_BOX.w, SKILL_BOX.h);
     const head = plate(title, 54, 520, 'brass', SKILL_BOX.w - 120);
     head.y = -450;
@@ -94,8 +104,17 @@ export class Overlay extends Container {
       const card = skillCard(id, levels[id]);
       card.x = (i - (choices.length - 1) / 2) * gap;
       tappable(card, () => onPick(id));
+      if (i === top) {
+        const tag = topTag();
+        tag.y = -320;
+        card.addChild(tag);
+      }
       box.addChild(card);
     });
+    if (top !== null && top < choices.length) {
+      this.nudge = new CardNudge((top - (choices.length - 1) / 2) * gap, 215); // on the pips, clear of the text
+      box.addChild(this.nudge);
+    }
     if (onReroll) {
       const b = adButton(t('reroll'), 440, 130, 'purple', onReroll, 50);
       b.y = 460;
@@ -129,7 +148,7 @@ export class Overlay extends Container {
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
-    if (more.onTip) right.push(tips(more.onTip, more.dealt, cw));
+    if (more.onTip) right.push(tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null));
     const buttons = endButtons(onContinue, onRevive, more.onNext ?? null);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];

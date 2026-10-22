@@ -257,17 +257,18 @@ export function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
 }
 
 /** After a loss: where to get stronger, a parchment row each that opens that home tab. */
-export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: number): Section {
+export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: number, tabs: TipTab[] = ['potions', 'workshop', 'battle'], ready: TipTab | null = null): Section {
   const c = new Container();
   const title = plate(t('tips'), 40, 300, 'brass');
   title.y = 40;
   c.addChild(title);
   const best = [...dealt].sort((a, b) => b.damage - a.damage)[0]?.kind ?? 'fire';
-  const items: [TipTab, 'potions' | 'workshop' | 'stage', () => Container][] = [
+  const all: [TipTab, 'potions' | 'workshop' | 'stage', () => Container][] = [
     ['potions', 'potions', () => bottle(best, 76)],
     ['workshop', 'workshop', () => gearIcon(34)],
     ['battle', 'stage', swordsIcon],
   ];
+  const items = tabs.flatMap((tab) => all.filter((item) => item[0] === tab));
   const rh = 108;
   const gap = 14;
   const top = 96;
@@ -275,6 +276,8 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
     const row = new Container();
     row.y = top + i * (rh + gap) + rh / 2;
     row.addChild(lightTile(cw, rh, 22));
+    const lit = tab === ready;
+    if (lit) row.addChild(new Graphics().roundRect(-cw / 2, -rh / 2, cw, rh, 22).stroke({ width: 7, color: 0x4cc35a }));
     const pic = icon();
     pic.x = -cw / 2 + 64;
     if (key === 'stage') pic.scale.set(0.7);
@@ -289,6 +292,14 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
       .poly([cw / 2 - 58, -22, cw / 2 - 34, 0, cw / 2 - 58, 22], false)
       .stroke({ width: 8, color: P.inkSoft, cap: 'round', join: 'round' });
     row.addChild(pic, name, desc, go);
+    if (lit) {
+      const now = label(t('tip.now'), 30, { stroke: { color: P.line, width: 5 } });
+      const pw = now.width + 36;
+      const pill = new Container();
+      pill.addChild(new Graphics().roundRect(-pw / 2, -22, pw, 44, 22).fill(0x4cc35a).stroke({ width: 4, color: P.line }), now);
+      pill.position.set(cw / 2 - 90 - pw / 2, -rh / 2 + 4);
+      row.addChild(pill);
+    }
     tappable(row, () => onTip(tab));
     c.addChild(row);
   });

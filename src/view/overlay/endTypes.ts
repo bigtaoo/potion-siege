@@ -14,6 +14,10 @@ export interface EndExtras {
   doublesLeft?: number;
   dealt: { kind: HeroKind; damage: number }[];
   onTip: ((tab: TipTab) => void) | null;
+  /** After a loss, the tips in order (view/nudges.ts lossTips) and the one the player can act
+   *  on right now (lossStep), lit green. */
+  tipTabs?: TipTab[];
+  ready?: TipTab | null;
   /** The daily challenge's result: the tiers this attempt reached instead of a stage's win. */
   challenge?: ChallengeEnd;
   /** Straight into the next stage, the big button, with Continue as a smaller 返回 under it
