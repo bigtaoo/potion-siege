@@ -95,6 +95,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
     // the beacons' test, so players and launches split the same way
     device: pointerKind(),
     ...safeDevice(app),
+    ...platform.sessionProps?.(),
   });
   // inside a portal's iframe the page can have no size yet at boot: the size once it has one
   if (!(window.innerWidth > 0 && window.innerHeight > 0)) {

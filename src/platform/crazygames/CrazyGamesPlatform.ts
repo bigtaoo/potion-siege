@@ -49,6 +49,14 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     return locale ? [locale] : super.languages();
   }
 
+  /** `app`: where the portal runs the game (a browser or one of its own apps); `basic`: no ads
+   *  yet (Basic Launch). Nothing off the portal. */
+  sessionProps(): Record<string, string | boolean> {
+    if (!this.sdk.isEnabled()) return {};
+    const app = this.sdk.applicationType();
+    return { ...(app ? { app } : {}), basic: !this.sdk.adsAllowed() };
+  }
+
   /** The portal's country, which decides whether the game asks before sending play statistics. */
   country(): string | null {
     return this.sdk.countryCode();

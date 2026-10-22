@@ -64,9 +64,9 @@
 
 ## 风险 / 需要你决定
 
-1. ⚠️ **统计数据发到自己的服务器**：CrazyGames 版也会把随机 uid、设备信息、GPU 等发到 `ps.gamestao.com/e`。文档说，SDK 事件以外收集个人数据的游戏需要显示隐私政策 / 条款提示。二选一：CrazyGames 版关掉统计（去掉 `VITE_ANALYTICS_URL` 就行），或者加一个隐私提示和链接。
-2. ⚠️ **adblock 下激励按钮直接隐藏，没有提示**：文档要求功能被禁用时告诉玩家原因。优先级低，但审核可能会提。
-3. ⚠️ **失败后的“复活”加回主页的插屏**：输了会先出复活（激励“继续玩”），如果不看，回主页会播插屏。严格理解“关卡之间不要把插屏和继续玩的激励放在一起”的话，这里可能有问题。看过复活的那次已经不播插屏（88cc4a4）；要不要连“只是出现过复活按钮”的那次也跳过插屏，由你决定。
+1. ✅（d885182 / 5a07fe4 起：EEA/英国/瑞士玩家先问再发，设置里有玩家 ID 和保留期）~~**统计数据发到自己的服务器**~~：CrazyGames 版也会把随机 uid、设备信息、GPU 等发到 `ps.gamestao.com/e`。文档说，SDK 事件以外收集个人数据的游戏需要显示隐私政策 / 条款提示。二选一：CrazyGames 版关掉统计（去掉 `VITE_ANALYTICS_URL` 就行），或者加一个隐私提示和链接。
+2. 🔧（2026-10-22，见文末）~~**adblock 下激励按钮直接隐藏，没有提示**~~：文档要求功能被禁用时告诉玩家原因。优先级低，但审核可能会提。
+3. 🔧（2026-10-22，见文末）~~**失败后的“复活”加回主页的插屏**~~：输了会先出复活（激励“继续玩”），如果不看，回主页会播插屏。严格理解“关卡之间不要把插屏和继续玩的激励放在一起”的话，这里可能有问题。看过复活的那次已经不播插屏（88cc4a4）；要不要连“只是出现过复活按钮”的那次也跳过插屏，由你决定。
 4. ℹ️ 开发者测试模式 `?autoplay` 会卡在终极技能选择弹窗（只影响自动测试，玩家不受影响），可以以后再修。
 
 ## 需要你处理（账号、素材、提交）
@@ -159,3 +159,46 @@
 - `src/app.ts`：autoplay 在一帧结束时先替机器人选技能，避免弹窗卡住
 - `src/platform/crazygames/CrazyGamesPlatform.test.ts`：门户静音的单元测试
 - 本节文档
+
+## 发布前收尾 2026-10-22（分支 `claude/launch-leftovers-e4fc7c`，未合并、未推送）
+
+### 改了什么
+
+| 项 | 结果 | 标记 |
+|---|---|---|
+| adblock | 门户上有 adblock 时，结算页在“继续”上方加一行“已开启广告拦截：看广告领奖励不可用”（15 种语言，`layout.test.ts` 加了这一屏的溢出检查）。只在本来会出现复活或 ×2 时才显示。Basic Launch 期间奖励本来就不用看广告直接给，所以 adblock 不再隐藏这些按钮 | 🔧 6a9cedf |
+| 跳过复活后的插屏 | 输了且出现过复活按钮（不管点没点、广告有没有播完），这次回主页不播插屏。`resultScreen.test.ts` 加了：跳过复活 → 0 次插屏；没有复活可选的失败 → 照常 1 次插屏 | 🔧 6a9cedf |
+| URL 开关 | 正式构建（网页、CrazyGames、iOS）只认 `?lang`。`?autoplay`、`?speed`、`?ads=fake`、`?track`、`?quality` 只在开发构建里生效（`src/game/switches.ts`，和 standing 的 5958f85 一样）。之前线上可以用 `?speed=N` 加速刷晶石，网页版用 `?ads=fake` 白拿奖励。`?native` 本来就只在开发构建里生效。没有种子或关卡相关的 URL 开关 | 🔧 4dd8093 |
+| `?autoplay` 写存档 | 机器人的战斗只改内存里的存档，`store()` 不再写入 | 🔧 4dd8093 |
+| `chapter-report.mjs` | ad7347b 里已经补上了，引用没问题。没有分片时改成提示先跑 `npm run chapters`，不再抛 ENOENT | 🔧 4dd8093 |
+| CrazyGames 会话统计 | `session_start` 带上 `app`（SDK 的 `applicationType`：web / google_play_store / apple_store / pwa）和 `basic`（是否在 Basic Launch），对应 standing 的 00b3a0f。报表还没按 `app` 分列 | 🔧 本次提交 |
+| iOS shell 测试 | Windows 检出（CRLF）时 `shell.test.ts` 的 AdMob live 开关正则不匹配，改成接受 `?
+` | 🔧 本次提交 |
+
+关于插屏的取舍：门户允许在自然停顿处放插屏，所以这条不是硬性要求。代价是：有广告时每一局失败都会出现复活，于是失败后的插屏全部没了，插屏收入大约少一半。Basic Launch 期间本来就没有广告，所以对上架评估没有影响；Full Launch 后如果插屏收入不够，可以改成“只在没点复活时跳过”。
+
+### standing 2026-10-10 以来的修复，Potion Siege 是否也有同样问题（不含 UI / 内存 / 新手 / 平衡）
+
+| standing | 内容 | Potion Siege | 标记 |
+|---|---|---|---|
+| 00b3a0f | CrazyGames `applicationType` 进统计 | 有同样问题，已移植（只到客户端，报表没改） | 🔧 |
+| 937a1cb | 每分钟一个 `alive` 事件，页面直接被杀掉（没有 pagehide）时也知道玩到哪 | 部分：`run_quit` / `session_end` 只在 pagehide 时发；`wave_start` 能看出最后一波 | ⚠️ 建议移植 |
+| 4bb561a | 开发构建把 perf / anomaly 打到控制台（超出上限的也打） | 有：开发构建只有 `?track` 才打印，超过 `ANOMALY_CAP` 直接丢 | ℹ️ 小 |
+| c05ae3d | 会话事件带上门户语言和浏览器语言 | 部分：只发了最终选的 `lang` | ℹ️ 小 |
+| 8267b39 | dev server 忽略构建输出目录（Windows 上会占满 CPU） | 部分：三个 vite 配置都没有 `server.watch.ignored`（`dist-*`、`ios/`、`ref/`、`telemetry/`） | ℹ️ 小 |
+| 8f4de83 | 用线上真实存档测试能完整解析 | 部分：只有手写的旧存档测试 | ℹ️ 小 |
+| 0af6559 | `launch_check.mjs`：新上传版本前几小时和上一版对比 | 部分：`report.mjs` 能按首个版本分组，但没有同玩家年龄的两版对比 | ℹ️ 中 |
+| baee706 附带 | 从 bfcache 恢复的页面可能发两次 `session_end`（pagehide 没限制只发一次） | 有，小问题 | ℹ️ |
+
+已经有或不适用：1024b09（纹理卸载后冻结，已移植）、aa727bc（open 信标，已经正确）、c63aa50（重复批次，BeaconSink 不重试）、5d8db2f（iOS 帧抖动，没有对应代码）、bd5e7f5、97057ff、a3fe951/544021f、回放收集、Playgama / Newgrounds 相关。另外：standing 发现 saver 档 30 fps 在 iPhone 13 上越跑越卡，Potion Siege 也还是 30 fps（`quality.ts:22`），这属于性能，留给内存/性能那边。
+
+### 自动检查
+
+`npm run check` 全绿（typecheck、check:filelength、55 个测试文件 629 个测试、balance quick、build:crazygames、build:ios）。`dist-crazygames` 用 vite preview 打开（SDK 3.8.0 local）：控制台只有 SDK 的 log/debug 行，没有 warning 或 error；首局直接进战斗，教程提示正常。主包 591 kB（gzip 198 kB），和之前一样。
+
+### 仍然开着的风险
+
+1. ⚠️ 插屏收入的取舍（上面）：Full Launch 前再看一次。
+2. ⚠️ 没有 `alive` 心跳：手机上页面直接被杀掉的局不知道最后的状态（standing 937a1cb）。
+3. 👤 门户里真正切换静音、adblock 提示行的实际效果，要在 crazygames.com/preview 的 QA 工具里看一次（本地 SDK 模拟不了 adblock）。
+4. ℹ️ `?lang` 在正式构建里保留（只换语言，没有影响）。
