@@ -201,7 +201,7 @@ export const zh: Table = {
     streak: '连续 {n} 天',
     streakBonus: '连续挑战 {n} 天！',
     mod: {
-      swift: { name: '疾行', desc: '敌人速度 +30%' },
+      swift: { name: '疾行', desc: '敌人速度 +30%，生命 -20%' },
       ironWall: { name: '铁壁', desc: '城墙 +50%，不出修墙' },
       cheap: { name: '廉价炼金', desc: '召唤 -30%，波次金币减半' },
       twinBoss: { name: '双 BOSS', desc: '第 3、8 波也来 BOSS' },

@@ -330,7 +330,7 @@
     "streakDays": 7,
     "streakReward": 200,
     "mods": {
-      "swift": { "speed": 1.3 },
+      "swift": { "speed": 1.3, "hp": 0.8 },
       "ironWall": { "wall": 1.5 },
       "cheap": { "summon": 0.7, "waveGold": 0.5 },
       "twinBoss": { "waves": [3, 8] },

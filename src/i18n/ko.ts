@@ -201,7 +201,7 @@ export const ko: Table = {
     streak: '{n}일 연속',
     streakBonus: '{n}일 연속 도전!',
     mod: {
-      swift: { name: '가속', desc: '적 속도 +30%' },
+      swift: { name: '가속', desc: '적 속도 +30%, 체력 -20%' },
       ironWall: { name: '철벽', desc: '성벽 +50%, 수리 없음' },
       cheap: { name: '싸구려 연금술', desc: '소환 비용 -30%, 웨이브 골드 절반' },
       twinBoss: { name: '쌍둥이 보스', desc: '3, 8웨이브에도 보스 등장' },

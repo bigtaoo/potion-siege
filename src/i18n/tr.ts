@@ -201,7 +201,7 @@ export const tr: Table = {
     streak: '{n} günlük seri',
     streakBonus: 'Üst üste {n} gün!',
     mod: {
-      swift: { name: 'Acele', desc: 'Düşmanlar %30 daha hızlı' },
+      swift: { name: 'Acele', desc: 'Düşmanlar %30 daha hızlı, %20 daha az can' },
       ironWall: { name: 'Demir Sur', desc: 'Sur +%50, onarım yok' },
       cheap: { name: 'Ucuz Simya', desc: 'Çağırma -%30, dalga altını yarıya iner' },
       twinBoss: { name: 'İkiz Patronlar', desc: '3. ve 8. dalgada da patron' },

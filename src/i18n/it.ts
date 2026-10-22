@@ -201,7 +201,7 @@ export const it: Table = {
     streak: 'Giorni di fila: {n}',
     streakBonus: 'Serie di {n} giorni!',
     mod: {
-      swift: { name: 'Rapidità', desc: 'Nemici +30% velocità' },
+      swift: { name: 'Rapidità', desc: 'Nemici +30% velocità, -20% PV' },
       ironWall: { name: 'Mura di Ferro', desc: 'Mura +50%, niente riparazioni' },
       cheap: { name: 'Alchimia Povera', desc: 'Evocazioni -30%, oro a ondata dimezzato' },
       twinBoss: { name: 'Boss Gemelli', desc: 'Boss anche alle ondate 3 e 8' },

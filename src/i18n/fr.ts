@@ -201,7 +201,7 @@ export const fr: Table = {
     streak: 'Jours d’affilée : {n}',
     streakBonus: '{n} jours d’affilée !',
     mod: {
-      swift: { name: 'Hâte', desc: 'Ennemis 30% plus rapides' },
+      swift: { name: 'Hâte', desc: 'Ennemis 30% plus rapides, 20% de PV en moins' },
       ironWall: { name: 'Mur de fer', desc: 'Mur +50%, sans réparation' },
       cheap: { name: 'Petit budget', desc: 'Invocations -30%, or des vagues divisé par 2' },
       twinBoss: { name: 'Boss jumeaux', desc: 'Des boss aussi aux vagues 3 et 8' },

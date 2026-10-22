@@ -201,7 +201,7 @@ export const id: Table = {
     streak: '{n} hari beruntun',
     streakBonus: '{n} hari berturut-turut!',
     mod: {
-      swift: { name: 'Kilat', desc: 'Musuh 30% lebih cepat' },
+      swift: { name: 'Kilat', desc: 'Musuh 30% lebih cepat, HP -20%' },
       ironWall: { name: 'Tembok Besi', desc: 'Tembok +50%, tanpa perbaikan' },
       cheap: { name: 'Alkimia Murah', desc: 'Panggil -30%, emas gelombang separuh' },
       twinBoss: { name: 'Bos Kembar', desc: 'Bos juga di gelombang 3 dan 8' },

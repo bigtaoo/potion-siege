@@ -113,7 +113,7 @@ export function challengeSetup(m: MetaSave, c: Challenge): BattleSetup {
   };
   return {
     ...s,
-    enemyHp: s.enemyHp * (has('critDay') ? X.critDay.hp : 1),
+    enemyHp: s.enemyHp * (has('critDay') ? X.critDay.hp : 1) * (has('swift') ? X.swift.hp : 1),
     wallHp: s.wallHp * (has('ironWall') ? X.ironWall.wall : 1),
     startGold: has('goldRain') ? X.goldRain.startGold : s.startGold,
     lineup: challengeLineup(m, c),

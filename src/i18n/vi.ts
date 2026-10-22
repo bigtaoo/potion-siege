@@ -201,7 +201,7 @@ export const vi: Table = {
     streak: 'Chuỗi {n} ngày',
     streakBonus: '{n} ngày liên tiếp!',
     mod: {
-      swift: { name: 'Thần Tốc', desc: 'Kẻ địch nhanh hơn 30%' },
+      swift: { name: 'Thần Tốc', desc: 'Kẻ địch nhanh hơn 30%, máu -20%' },
       ironWall: { name: 'Tường Sắt', desc: 'Tường +50%, không sửa chữa' },
       cheap: { name: 'Giả Kim Giá Rẻ', desc: 'Triệu hồi -30%, vàng mỗi đợt giảm nửa' },
       twinBoss: { name: 'Boss Song Sinh', desc: 'Có Boss cả ở đợt 3 và 8' },

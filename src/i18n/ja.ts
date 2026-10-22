@@ -201,7 +201,7 @@ export const ja: Table = {
     streak: '{n}日連続',
     streakBonus: '{n}日連続挑戦！',
     mod: {
-      swift: { name: '俊足', desc: '敵の速度 +30%' },
+      swift: { name: '俊足', desc: '敵の速度 +30%、HP -20%' },
       ironWall: { name: '鉄壁', desc: '城壁 +50%、修理なし' },
       cheap: { name: '格安錬金', desc: '召喚コスト −30%、ウェーブのゴールド半減' },
       twinBoss: { name: 'ツインボス', desc: 'ウェーブ3と8にもボス' },

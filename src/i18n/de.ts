@@ -201,7 +201,7 @@ export const de: Table = {
     streak: 'Tage in Folge: {n}',
     streakBonus: '{n} Tage in Folge!',
     mod: {
-      swift: { name: 'Eile', desc: 'Feinde 30% schneller' },
+      swift: { name: 'Eile', desc: 'Feinde 30% schneller, 20% weniger LP' },
       ironWall: { name: 'Eisenmauer', desc: 'Mauer +50%, keine Reparatur' },
       cheap: { name: 'Billige Alchemie', desc: 'Brauen -30%, halbes Wellengold' },
       twinBoss: { name: 'Doppelboss', desc: 'Bosse auch in Welle 3 und 8' },
