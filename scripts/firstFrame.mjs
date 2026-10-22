@@ -4,6 +4,9 @@
 // and reads the `first_frame` mark boot() sets two frames after the first battle starts. Prints
 // each run and the median; the collector is blocked, so nothing is counted.
 // Build first with the collector off: VITE_ANALYTICS_URL= npx vite build
+// CrazyGames build (vite build --config vite.crazygames.config.js): the portal's SDK is blocked, so
+// boot would sit through its whole timeout. CG_SDK_MS=300 stands a fake SDK in its place whose
+// init settles after that many ms, like the portal's round trip.
 
 import { spawn } from 'node:child_process';
 import { createReadStream, existsSync, mkdtempSync, readFileSync, rmSync, statSync } from 'node:fs';
@@ -107,6 +110,11 @@ await send('Network.setCacheDisabled', { cacheDisabled: true });
 await send('Network.setBlockedURLs', { urls: ['*gamestao.com*', '*crazygames.com*'] });
 await send('Emulation.setDeviceMetricsOverride', PHONE);
 await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
+if (process.env.CG_SDK_MS) {
+  const ms = Number(process.env.CG_SDK_MS);
+  const fake = `window.CrazyGames = { SDK: { init: () => new Promise((r) => setTimeout(() => { window.CrazyGames.SDK.environment = 'crazygames'; r(); }, ${ms})), game: { settings: {} }, ad: { hasAdblock: () => false }, user: { systemInfo: { locale: 'en-US' } }, data: { getItem: (k) => localStorage.getItem(k), setItem: (k, v) => localStorage.setItem(k, v) } } };`;
+  await send('Page.addScriptToEvaluateOnNewDocument', { source: fake });
+}
 await send('Target.setAutoAttach', { autoAttach: true, waitForDebuggerOnStart: true, flatten: true });
 
 // bytes per request that finished before the mark

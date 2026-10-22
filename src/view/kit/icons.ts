@@ -6,6 +6,7 @@ import { enemyTexture, ultimateTexture } from '../art';
 import { COLORS, HERO_COLORS, label } from '../ui';
 import { slab } from '../stone';
 import type { EnemyKind, HeroKind } from '../../sim/types';
+import { t } from '../../i18n';
 import { P } from './palette';
 
 /** A hero's ultimate bottle, `h` tall. */
@@ -56,12 +57,13 @@ export function enemySprite(kind: EnemyKind, w: number, h: number = w): Containe
   return c;
 }
 
-/** The red BOSS tag, its text `size` high. */
+/** The red boss tag, its text `size` high. */
 export function bossTag(size: number): Container {
   const c = new Container();
-  const w = size * 4.1;
+  const text = label(t('bossTag'), size);
+  const w = Math.max(size * 4.1, text.width + size * 1.2);
   const h = size * 1.6;
-  c.addChild(new Graphics().roundRect(-w / 2, -h / 2, w, h, size * 0.5).fill(P.red).stroke({ width: 4, color: P.line }), label('BOSS', size));
+  c.addChild(new Graphics().roundRect(-w / 2, -h / 2, w, h, size * 0.5).fill(P.red).stroke({ width: 4, color: P.line }), text);
   return c;
 }
 

@@ -12,6 +12,7 @@ FITUR UTAMA
 • 5 jenis musuh mesin jam, masing-masing dengan kelemahannya
 • 5 bos, masing-masing dengan triknya sendiri
 • 50 tahap dalam 5 bab
+• 1–3 bintang per tahap sesuai sisa tembok; 24 bintang di satu bab membuka mode sulitnya
 • Mode Tanpa Batas: berapa gelombang yang bisa ditahan tembokmu?
 • Tantangan Harian, tugas harian, dan hadiah harian
 • Peningkatan bengkel, kodeks, dan pencapaian

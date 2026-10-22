@@ -79,7 +79,7 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
-    this.addChild(this.field.ground, this.wall, this.under, this.fx.ground, this.enemies.art, this.world, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
     this.field.build(this);

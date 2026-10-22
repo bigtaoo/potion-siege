@@ -11,6 +11,7 @@ import { poseEnemy } from '../enemyPose';
 import { lerpX, lerpY } from '../fixedStep';
 import { hordeFade } from '../hordeFx';
 import { ENEMY_ART, drawEnemy } from '../shapes';
+import { EnemyMarks } from './enemyMarks';
 
 /** Farther enemies first, so nearer ones overlap them. */
 const byDepth = (p: Enemy, q: Enemy): number => p.y - q.y;
@@ -18,6 +19,8 @@ const byDepth = (p: Enemy, q: Enemy): number => p.y - q.y;
 export class EnemyLayer {
   /** The enemies' art; goes into the view at its place in the drawing order. */
   readonly art = new SpriteLayer();
+  /** Their shadows (under the art) and HP bars (over it); BattleView places both. */
+  readonly marks = new EnemyMarks();
   /** The enemies in drawing order, refilled every frame. */
   private readonly depth: Enemy[] = [];
   /** The enemies as drawn: world units, between their last two ticks; reused every frame. */
@@ -27,6 +30,7 @@ export class EnemyLayer {
    *  battle: shapes and ice on `w`, what goes under the art on `u`. */
   draw(b: Battle, alpha: number, t: number, w: Graphics, u: Graphics): void {
     this.art.begin();
+    this.marks.begin();
     const depth = this.depth;
     depth.length = 0;
     for (let i = 0; i < b.enemies.length; i++) {
@@ -50,8 +54,12 @@ export class EnemyLayer {
         continue;
       }
       if (fade >= 1) {
-        drawEnemy(u, e, 'under');
-        drawEnemy(w, e, 'over');
+        this.marks.shadow(e);
+        this.marks.hp(e);
+        if (e.elite) {
+          drawEnemy(u, e, 'under');
+          drawEnemy(w, e, 'over');
+        }
       }
       const s = poseEnemy(this.art, tex, e, t, b.seconds);
       if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
@@ -60,5 +68,6 @@ export class EnemyLayer {
     }
     depth.length = 0;
     this.art.end();
+    this.marks.end();
   }
 }

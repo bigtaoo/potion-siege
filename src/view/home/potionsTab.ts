@@ -69,7 +69,7 @@ function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: number, ch:
     c.alpha = 0.85;
     return c;
   }
-  const level = ink(`Lv ${lv}`, 50);
+  const level = ink(t('level', { n: lv }), 50);
   level.y = top + 404;
   const dmg = fitText(ink(t('damageNow', { p: Math.round((heroDamage(lv) - 1) * 100) }), 32, { fill: P.inkSoft }), cw - 30);
   dmg.y = top + 450;

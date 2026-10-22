@@ -1,4 +1,5 @@
-// Finished art from public/art/. Anything without a texture yet keeps its placeholder shape.
+// Finished art from public/art/ (WebP, written from the sources in art/web/ by tools/to_webp.py).
+// Anything without a texture yet keeps its placeholder shape.
 
 import { Assets, Container, Sprite, type Texture } from 'pixi.js';
 import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
@@ -8,7 +9,7 @@ import type { PotionLook } from './potion';
 /** What the first battle shows from its first frame: the field, the commander, the tutorial's
  *  glove, the starting four potions and the first wave's grunts. The first frame waits for these
  *  only (about a sixth of the art). */
-const FIRST = ['bg_field.jpg', 'commander', 'tutorial_hand', 'enemy_grunt', ...LINEUP.map((k) => `potion_${k}_body`)];
+const FIRST = ['bg_field', 'commander', 'tutorial_hand', 'enemy_grunt', ...LINEUP.map((k) => `potion_${k}_body`)];
 /** Fetched right after: what the first battle comes to next (the skill cards show the
  *  ultimates and icons, runners and brutes walk in from waves 2 and 4) and the other potions. */
 const SOON = [
@@ -41,14 +42,14 @@ export const ART_TIERS = { FIRST, SOON, LATER } as const;
 
 const textures = new Map<string, Texture>();
 let rest: Promise<void> = Promise.resolve();
+let first: Promise<void> | undefined;
 
 function load(files: readonly string[]): Promise<void> {
   const base = import.meta.env.BASE_URL;
   return Promise.all(
     files.map(async (f) => {
       try {
-        const file = f.includes('.') ? f : `${f}.png`;
-        textures.set(f.replace(/\.\w+$/, ''), await Assets.load<Texture>(`${base}art/${file}`));
+        textures.set(f, await Assets.load<Texture>(`${base}art/${f}.webp`));
       } catch (err) {
         console.warn(`art: ${f} failed to load, keeping the placeholder`, err);
       }
@@ -57,10 +58,13 @@ function load(files: readonly string[]): Promise<void> {
 }
 
 /** Fetches the first battle's art and resolves once it is in; the rest follows on its own (see
- *  restOfArt). Anything that fails keeps its placeholder. */
-export async function loadArt(): Promise<void> {
-  await load(FIRST);
-  rest = load(SOON).then(() => load(LATER));
+ *  restOfArt). Anything that fails keeps its placeholder. A second call gets the first one's
+ *  promise: a host's entry can start it before boot() does. */
+export function loadArt(): Promise<void> {
+  first ??= load(FIRST).then(() => {
+    rest = load(SOON).then(() => load(LATER));
+  });
+  return first;
 }
 
 /** Resolves once the art loadArt did not wait for is in too (or failed). Until then a texture
@@ -178,7 +182,7 @@ export function loadField(key: string): Promise<Texture | undefined> {
   if (have || !FIELDS.has(key)) return Promise.resolve(have);
   let p = fetching.get(key);
   if (!p) {
-    p = Assets.load<Texture>(`${import.meta.env.BASE_URL}art/${key}.jpg`).then(
+    p = Assets.load<Texture>(`${import.meta.env.BASE_URL}art/${key}.webp`).then(
       (t) => (textures.set(key, t), t),
       (err) => (console.warn(`art: ${key} failed to load, keeping the first field`, err), undefined),
     );

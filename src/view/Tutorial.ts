@@ -195,7 +195,7 @@ export function pointingHand(): Container {
   return handArt() ?? handShape();
 }
 
-/** Until public/art/tutorial_hand.png is in: a gloved hand pointing up, its fingertip at the origin: the index finger out, the other
+/** Until public/art/tutorial_hand.webp is in: a gloved hand pointing up, its fingertip at the origin: the index finger out, the other
  *  three curled against the palm, the thumb along the side and a brass cuff. */
 function handShape(): Graphics {
   const edge = { width: 6, color: LIGHT.edge, join: 'round' as const };

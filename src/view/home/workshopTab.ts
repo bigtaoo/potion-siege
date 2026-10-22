@@ -42,7 +42,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
     const n = ink(t(`shop.${id}.name`), 46);
     n.anchor.set(0, 0.5);
     n.position.set(x0, top + 20);
-    const lvTag = ink(`Lv ${lv}/${max}`, 32, { fill: P.inkSoft });
+    const lvTag = ink(t('levelOf', { n: lv, max }), 32, { fill: P.inkSoft });
     lvTag.anchor.set(0, 0.5);
     lvTag.position.set(x0 + n.width + 18, top + 24);
     const pips = new Graphics();

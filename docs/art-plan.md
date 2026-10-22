@@ -21,14 +21,14 @@
 | poison | 腐蚀药剂 | 锈蚀减抗 | 酸绿色高窄药瓶，瓶底一圈带铆钉的锈铁箍 | 瓶口冒酸泡、破裂，瓶肩一滴酸液往下淌（`acid`） | 锈铁桶，酸液漫出成王冠，两手举小瓶 |
 
 **分层**：
-- 1-3 级：AI 只画一个光瓶身加脸（`public/art/potion_{kind}_body.png`），手脚、眨眼、元素标记、投掷和倒药水动画都由 `src/view/potion.ts` 画。眼睛和瓶口位置、颜色、`size` 写在 `src/view/art.ts` 的 `POTIONS` 里。
+- 1-3 级：AI 只画一个光瓶身加脸（`art/web/potion_{kind}_body.png`），手脚、眨眼、元素标记、投掷和倒药水动画都由 `src/view/potion.ts` 画。眼睛和瓶口位置、颜色、`size` 写在 `src/view/art.ts` 的 `POTIONS` 里。
 - 终极形态：单张图（`potion_{kind}_ult.png`），代码只做挤压回弹。按高度 150 显示，太宽的按宽度 155 缩小。
 
 **出图流程**：
 1. 文生图（`tools/generate_image.sh`），prompt 在 `art/prompts/potion_*_gen.txt`，第一行是统一风格前缀。
 2. `tools/flatten.py <in> <out> <高> 24 <描边>`：抠图、量化成平涂、重画统一黑描边（瓶身 256/4，终极 400/6）。
 3. 腮红重涂成 (255,150,185)；`tools/clean_edges.py` 清掉描边上的杂色。
-4. 成品放 `public/art/`，副本放 `art/cut/`。
+4. 成品放 `art/web/`，副本放 `art/cut/`；再跑 `python tools/to_webp.py` 写出游戏读的 `public/art/*.webp`（有损 q85，alpha 无损）。
 
 **经验**：
 - Mistral 几乎总会加软木塞和深色玻璃，要在预处理里切掉，并用墨线封住瓶口。
@@ -44,7 +44,7 @@
 
 **城墙与指挥官**（`commander`）：
 - 棋盘 7 列 × 3 行。开局只有最下面一排 7 格。
-- 指挥官是炼金术士（`public/art/commander.png`）：蓝色巫师帽、帽檐绑黄铜护目镜、白胡子，一手高举紫色药水烧瓶。站在城墙下方正中间，左边是「强化」按钮，右边是「召唤」按钮。
+- 指挥官是炼金术士（`art/web/commander.png`）：蓝色巫师帽、帽檐绑黄铜护目镜、白胡子，一手高举紫色药水烧瓶。站在城墙下方正中间，左边是「强化」按钮，右边是「召唤」按钮。
   出图：`art/prompts/commander_alchemist_gen.txt`，`flatten.py ... 320 32 5 octree`（中位切分会把金色并进肤色，所以用 octree），先在源图里去掉地面阴影。
 - 指挥官每召唤 5 次就在城墙上搭 1 个新格子（头顶显示 x/5）。新格子位置随机，但必须落在已有格子的正上方。共搭 6 格。
 - 指挥官不普通攻击，靠击杀充能（boss 算多次），充满后点他施法，两个技能轮流：炼金爆瓶（抛一瓶到敌人最密处，范围伤害按当前全场药剂 DPS 算，附带减速）和灌注药剂（全体药剂短时加攻速，格子冒紫泡）。充满 8 秒没点就自己放。旁边的圆形徽章显示充能环和下一个技能的图标；召唤、搭格子时他会举瓶点头，施法时后仰再甩出去。
@@ -57,7 +57,7 @@
 - 墙的背面接内墙面，血条是嵌在内墙面里的黄铜框玻璃管（药液绿色，墙血低于 30% 变红）；再往下是浅色工坊木地板，指挥官站在紫色粉笔召唤圈里，两个按钮在两侧。
 - 画法（2026-10-17 改，方向 A“灰石砌墙”）：全部在 `src/view/stone.ts` 里用代码画，不再用图片。墙用和战场灰石路同色系的暖灰石：墙顶铺石块、厚垛口带顶面高光、墙脚在路上投一道浅影；每块格子石板上画一圈淡紫粉笔炼金圈；描边用暖灰棕（`STONE.line`），不用纯黑。战斗按钮（`ui.ts` 的 `Button`）描边也改成棕色。旧的 `bg_base.png` 和 `tools/make_base_bg.py` 已删。
 
-**战场背景**：`art/prompts/bg_field_gen.txt` 生成横幅草稿（Mistral 只出 1024×768），`tools/make_field_bg.py` 裁成竖幅并在 HSV 里降色：路改成灰石路，装饰物降饱和，让特效在上面看得清。成品 `public/art/bg_field.jpg`。
+**战场背景**：`art/prompts/bg_field_gen.txt` 生成横幅草稿（Mistral 只出 1024×768），`tools/make_field_bg.py` 裁成竖幅并在 HSV 里降色：路改成灰石路，装饰物降饱和，让特效在上面看得清。成品 `art/web/bg_field.jpg`。
 
 **特效**（`src/view/effects.ts`）：和角色一样的贴纸风，平涂色块加墨线描边。火焰爆炸、冰晶飞溅、雷电火花、奥术星星；敌人被击杀时喷出齿轮和弹簧。
 
@@ -151,7 +151,8 @@ art/                 源文件（不打包）
 tools/               从 standing 复制：generate_image.sh、edit_image.sh、mistral_failover.sh、
                      cutout.py、bake_mob.py、pack_icons.py、lineup_test.py、make_tile.py、
                      make_logo.py、cover_*.py
-public/art/          打包进游戏的成品（256 色量化 PNG / JPEG）
+art/web/             成品源文件（256 色量化 PNG / JPEG）
+public/art/          打包进游戏的 WebP（tools/to_webp.py 从 art/web/ 写出）
 ```
 
 生成 → `cutout.py` 抠图缩放 → 256 色量化 → `lineup_test.py` 检查描边、饱和度、暖色占比 → 打包 → 用 Pixi `Assets.load` 加载。
@@ -172,4 +173,4 @@ public/art/          打包进游戏的成品（256 色量化 PNG / JPEG）
 - **Mistral 内容审核偶尔拒图**：funny 遇到过，必要时换 prompt 措辞。
 - **版权**：上线前确认所用 AI 出图服务的商用条款；字体只用 OFL/Apache 授权，音效只用 CC0。
 
-**通用技能图标**：`public/art/icon_{allDamage,allSpeed,gold,wallRepair}.png`（剑配红药瓶、秒表、金币堆、锤子和石砖），和 `icon_crit` 同一套 prompt 前缀（`art/prompts/icon_*.txt`），`flatten.py <in> <out> 220 20 10 octree`。技能卡优先用 `iconTexture`，没图时才回退到 kit/icons.ts 里画的图标。
+**通用技能图标**：`art/web/icon_{allDamage,allSpeed,gold,wallRepair}.png`（剑配红药瓶、秒表、金币堆、锤子和石砖），和 `icon_crit` 同一套 prompt 前缀（`art/prompts/icon_*.txt`），`flatten.py <in> <out> 220 20 10 octree`。技能卡优先用 `iconTexture`，没图时才回退到 kit/icons.ts 里画的图标。

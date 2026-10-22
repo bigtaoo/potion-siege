@@ -12,6 +12,7 @@ FEATURES
 • 5 clockwork enemy types, each with its own weaknesses
 • 5 bosses, each with its own trick
 • 50 stages in 5 chapters
+• 1–3 stars per stage by how much wall is left; 24 stars in a chapter open its hard mode
 • Endless mode: how many waves can your wall hold?
 • Daily challenge, daily tasks and daily rewards
 • Workshop upgrades, a codex and achievements

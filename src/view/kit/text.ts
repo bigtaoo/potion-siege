@@ -26,8 +26,9 @@ function words(): WordSegmenter | null {
   if (!s) segmenters.set(l, (s = new Segmenter(l, { granularity: 'word' })));
   return s;
 }
-/** A word or number that stays whole, in any script that puts spaces between its words. */
-const WORD = /^[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Hangul}\p{Script=Thai}\p{M}0-9+%.×'’-]+$/u;
+/** A word or number that stays whole, in any script that puts spaces between its words (not
+ *  Thai: its words come from the word breaker, and gluing them would make a clause unbreakable). */
+const WORD = /^[\p{Script=Latin}\p{Script=Cyrillic}\p{Script=Hangul}\p{M}0-9+%.×'’-]+$/u;
 const CLOSE = /^[»›"”“)\]!?:;,.…，。！？：；、]+$/u;
 const OPEN = /^[«‹„"“(\[¿¡]+$/u;
 

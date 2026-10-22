@@ -12,6 +12,7 @@ POINTS FORTS
 • 5 types d’ennemis mécaniques, chacun avec ses faiblesses
 • 5 boss, chacun avec sa propre ruse
 • 50 étapes en 5 chapitres
+• 1 à 3 étoiles par étape selon le mur restant ; 24 étoiles dans un chapitre ouvrent son mode difficile
 • Mode infini : combien de vagues ton mur tiendra-t-il ?
 • Défi du jour, tâches du jour et bonus quotidiens
 • Améliorations de l’atelier, codex et succès

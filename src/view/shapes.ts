@@ -52,17 +52,19 @@ const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss:
  *  relative to its hit circle. */
 export const ENEMY_ART = { height: 3.8, feet: 0.9, lift: 1.1 };
 
-/** `art`: the body is a sprite drawn elsewhere, so only the shadow (`under`) or the bars and rings go here. */
+/** `art`: the body is a sprite drawn elsewhere, and so are its shadow and bars (sprites, in
+ *  battleView/enemyMarks.ts): only an elite's ring under it (`under`) or its bar's frame over it
+ *  (`over`) go here. */
 export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = null): void {
   const { x, y, radius: r } = e;
   const fly = e.kind === 'flyer';
   // a flyer's shadow is smaller and fainter, cast from up in the air
-  if (art !== 'over') g.ellipse(x, y + r * 0.8, r * (fly ? 0.7 : 0.9), r * (fly ? 0.22 : 0.3)).fill({ color: 0x000000, alpha: fly ? 0.2 : 0.3 });
+  if (!art) g.ellipse(x, y + r * 0.8, r * (fly ? 0.7 : 0.9), r * (fly ? 0.22 : 0.3)).fill({ color: 0x000000, alpha: fly ? 0.2 : 0.3 });
   // an elite stands in a gold ring
   if (e.elite && art !== 'over') g.ellipse(x, y + r * 0.8, r * 1.15, r * 0.4).stroke({ width: 6, color: COLORS.gold, alpha: 0.9 });
   if (art === 'under') return;
   if (art) {
-    enemyBars(g, e, y - r * (ENEMY_ART.height - ENEMY_ART.feet + (fly ? ENEMY_ART.lift : 0)) - 18);
+    if (e.elite) eliteFrame(g, enemyBarBox(e, artBarTop(e)));
     return;
   }
   if (e.kind === 'runner') g.poly(polygon(x, y, r * 1.1, 3, Math.PI / 2));
@@ -82,12 +84,33 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
   enemyBars(g, e, y - r - (isBoss(e.kind) ? 60 : 22));
 }
 
-function enemyBars(g: Graphics, e: Enemy, top: number): void {
-  const { x, radius: r } = e;
-  const w = Math.max(60, r * 1.6);
-  top = Math.max(104, top); // never over the wave title in the top bar
+/** Where the bars go over an enemy drawn in its art. */
+export function artBarTop(e: Enemy): number {
+  return e.y - e.radius * (ENEMY_ART.height - ENEMY_ART.feet + (e.kind === 'flyer' ? ENEMY_ART.lift : 0)) - 18;
+}
+
+/** An untouched enemy shows no bars, so a full road is not a wall of them; an elite always does,
+ *  in its gold frame. */
+export function barsShown(e: Enemy): boolean {
+  return !!e.elite || e.hp < e.maxHp || (!!e.shieldMax && (e.shield ?? 0) < e.shieldMax);
+}
+
+/** The HP bar's centre, width and top, for an enemy whose bars would start at `top`. */
+export function enemyBarBox(e: Enemy, top: number): { x: number; w: number; top: number } {
+  // never over the wave title in the top bar
+  return { x: e.x, w: Math.max(60, e.radius * 1.6), top: Math.max(104, top) };
+}
+
+function eliteFrame(g: Graphics, { x, w, top }: { x: number; w: number; top: number }): void {
+  g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: LIGHT.edge });
+}
+
+function enemyBars(g: Graphics, e: Enemy, at: number): void {
+  if (!barsShown(e)) return;
+  const box = enemyBarBox(e, at);
+  const { x, w, top } = box;
   // an elite's bar is framed in gold
-  if (e.elite) g.roundRect(x - w / 2 - 5, top - 5, w + 10, 20, 6).fill(COLORS.gold).stroke({ width: 2, color: LIGHT.edge });
+  if (e.elite) eliteFrame(g, box);
   g.rect(x - w / 2, top, w, 10).fill(COLORS.hpBack);
   g.rect(x - w / 2, top, (w * Math.max(0, e.hp)) / e.maxHp, 10).fill(COLORS.hp);
   // the tripod's bell jar takes the hits first: its own glassy bar just above
