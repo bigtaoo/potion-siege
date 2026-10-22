@@ -1,6 +1,8 @@
 // Retention / funnel report from collector NDJSON.  npm run report -- telemetry/events.ndjson
 //   [--src <tag>]...    also a Basic Launch daily scorecard for that playtest source (repeatable)
 //   [--bench <name>]    the category whose CG benchmarks score it (scripts/cgBenchmarks.mjs; default strategy)
+//   [--compare <host>]  that host's newest build beside the one before, over the same player age
+//                       (scripts/buildCompare.mjs; --hours <n> sets the age)
 //
 // D1/D7 here = share of players whose `session_start` shows up on calendar day 1 / 7 after their
 // first one (the classic "came back that day" definition), counted only for cohorts old enough.
@@ -10,14 +12,20 @@ import { perfSummary, printPerf } from './perfSummary.mjs';
 import { BENCHMARKS, CATEGORY } from './cgBenchmarks.mjs';
 import { dailyRows, printDaily } from './dailyScorecard.mjs';
 import { feedbackLines, playtestRows, printPlaytest } from './playtestMetrics.mjs';
+import { printSessions, sessionStats } from './sessionReport.mjs';
+import { compareBuilds, printCompare } from './buildCompare.mjs';
 
 const args = process.argv.slice(2);
 const sources = [];
 let category = CATEGORY;
+const compare = [];
+let hours = null;
 let file = 'telemetry/events.ndjson';
 for (let i = 0; i < args.length; i++) {
   if (args[i] === '--src') sources.push(args[++i]);
   else if (args[i] === '--bench') category = args[++i];
+  else if (args[i] === '--compare') compare.push(args[++i]);
+  else if (args[i] === '--hours') hours = Number(args[++i]);
   else file = args[i];
 }
 if (!BENCHMARKS[category]) throw new Error(`--bench: one of ${Object.keys(BENCHMARKS).join(', ')}`);
@@ -137,8 +145,7 @@ funnelRow('run 2 start', reached((e) => e.name === 'run_start' && e.props.run ==
 funnelRow('run 3 start', reached((e) => e.name === 'run_start' && e.props.run === 3));
 
 // --- session length ---
-const sessionSecs = events.filter((e) => e.name === 'session_end').map((e) => e.props.secs);
-console.log(`\n== Sessions ==\nmedian length ${median(sessionSecs)}s over ${sessionSecs.length} ended sessions`);
+printSessions(sessionStats(events));
 
 // --- run outcomes and where runs end ---
 const ends = events.filter((e) => e.name === 'run_end' || e.name === 'run_quit');
@@ -212,3 +219,6 @@ if (said.length) {
 // --- Basic Launch: each day's CG score on the portal, and the same view for a chosen playtest source ---
 printDaily(dailyRows(events, { host: 'crazygames' }, category), 'host crazygames', console.log, category);
 for (const src of sources) printDaily(dailyRows(events, { src }, category), `source ${src}`, console.log, category);
+
+// --- a new upload's first hours beside the build before it ---
+for (const host of compare) printCompare(host, compareBuilds(events, host, hours));

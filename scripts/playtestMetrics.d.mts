@@ -30,8 +30,18 @@ export interface PlaytestRow {
 type Event = { name: string; ts: number; uid?: string; sid?: string; session?: number; day?: number; build?: string; src?: string; props?: Record<string, unknown>; [k: string]: unknown };
 
 export function deviceOf(props: Record<string, unknown>): 'desktop' | 'touch';
-export function sessionSpans(events: Event[], keep?: (e: Event) => boolean): Map<string, { uid: string; first: number; last: number; secs: number }>;
-export function sessionSecs(s: { first: number; last: number; secs: number }): number;
+export const ALIVE_EVERY: number;
+export interface SessionSpan {
+  uid: string;
+  first: number;
+  last: number;
+  secs: number;
+  vis: number | null;
+  beat: number | null;
+  ended: boolean;
+}
+export function sessionSpans(events: Event[], keep?: (e: Event) => boolean): Map<string, SessionSpan>;
+export function sessionSecs(s: { first: number; last: number; secs: number; vis?: number | null; beat?: number | null }): number;
 export interface Run {
   uid: string;
   sid: string;
