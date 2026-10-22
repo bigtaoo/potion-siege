@@ -27,7 +27,7 @@ describe('balance targets', () => {
   it('makes stage 3 clearly harder than stage 1 on a fresh save', () => {
     // the epsilon: 0.85 - 0.2 is 0.6499... in floating point, and 39 / 60 has to pass
     expect(winRate(runs(3, 60))).toBeLessThanOrEqual(winRate(fresh1) - 0.2 + 1e-9);
-  });
+  }, 30_000); // sixty horde battles run past vitest's 5 s under the full suite's load
 
   it('lets a late save beat stage 1 every time', () => {
     expect(winRate(runs(1, 8, 12, 8))).toBe(1);
