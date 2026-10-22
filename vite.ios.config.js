@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
+import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
 
 // The iOS build: `npm run build:ios` writes dist-ios/, which `npx cap sync ios` copies into the
@@ -43,7 +44,7 @@ export default defineConfig({
   base: './',
   define: buildDefine(),
   plugins: [iosHtml()],
-  server: { port: 5182, host: true },
+  server: { port: 5182, host: true, watch: { ignored: WATCH_IGNORED } },
   // Safari 15 is the oldest web view the shell runs in (iOS 15)
   build: { target: ['es2020', 'safari15'], outDir: 'dist-ios', emptyOutDir: true },
 });

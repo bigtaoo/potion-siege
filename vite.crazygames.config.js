@@ -1,5 +1,6 @@
 import { defineConfig, loadEnv } from 'vite';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
+import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
 
 // The CrazyGames build: the same index.html, rewritten to boot the portal entry and to load the
@@ -49,6 +50,6 @@ export default defineConfig({
   base: './',
   define: buildDefine(),
   plugins: [portalHtml()],
-  server: { port: 5181, host: true },
+  server: { port: 5181, host: true, watch: { ignored: WATCH_IGNORED } },
   build: { target: 'es2020', outDir: 'dist-crazygames', emptyOutDir: true },
 });
