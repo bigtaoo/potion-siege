@@ -1,5 +1,6 @@
 // `npx vitest run --config scripts/vitest.seed.config.js`: scores seeds for the new player's first
-// battle (FIRST_SEED in src/sim/meta.ts) on the stage 1 base setup. SEEDS=2000 sets how many.
+// battle (FIRST_SEED in src/sim/meta.ts) on the stage 1 base setup. SEEDS=2000 sets how many,
+// ONLY=609 scores that one seed alone.
 // The opening is what every new player sees the same: the first three summons (taken one at a
 // time as gold allows, before any shot rolls a crit) and wave 1's spawn places. The rest of the
 // battle depends on the player, so it is judged by the bot at four paces.
@@ -30,7 +31,8 @@ const wallPct = (b: Battle) => Math.round((100 * Math.max(0, b.wall)) / b.wallMa
 
 it('scores first-battle seeds', () => {
   const all: { seed: number; score: number; wins: number; line: string }[] = [];
-  for (let seed = 1; seed <= N; seed++) {
+  const only = env.ONLY ? Number(env.ONLY) : 0;
+  for (let seed = only || 1; seed <= (only || N); seed++) {
     const b = new Battle(seed, BASE_SETUP);
     const kinds: string[] = [];
     const slots: number[] = [];
@@ -63,7 +65,7 @@ it('scores first-battle seeds', () => {
     const line = `${seed}\tpair@${pairAt} gap ${gap}\t${kinds.join(',')}\tslots ${slots.join(',')}\tw1 n=${xs.length} bal=${balance.toFixed(2)}\twins ${wins}/${PACES.length} walls ${walls.join(',')}\tscore ${score.toFixed(2)}`;
     all.push({ seed, score, wins, line });
   }
-  console.log(`seeds ${N}: won at every pace ${all.filter((r) => r.wins === PACES.length).length}, mean wins ${(all.reduce((a, r) => a + r.wins, 0) / N).toFixed(2)}/${PACES.length}`);
+  console.log(`seeds ${all.length}: won at every pace ${all.filter((r) => r.wins === PACES.length).length}, mean wins ${(all.reduce((a, r) => a + r.wins, 0) / all.length).toFixed(2)}/${PACES.length}`);
   all.sort((a, b) => b.score - a.score || a.seed - b.seed);
   for (const r of all.slice(0, 25)) console.log(r.line);
 });

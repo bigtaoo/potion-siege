@@ -2,6 +2,8 @@
 // first-try curve `npm run chapters` (and `npm run late` for 10-20) prints, every other stage,
 // pinned per chapter after the horde opener (74fee89), re-pinned after balance-tune (stages 6-8,
 // ice, poison, boss hit points, chapter finales).
+// Re-pinned for each potion's own pick of target (src/sim/targetPick.ts) and the hero damage cut
+// that came with it (ref/design/targeting-prefs.md).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { chapterOf } from '../../src/sim/chapters';
@@ -19,6 +21,6 @@ describe('chapters', () => {
     }
     const won: Record<string, number> = {};
     for (const [ch, wins] of byChapter) won[`chapter ${ch}`] = 100 * mean(wins);
-    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 70, 'chapter 2': 25, 'chapter 3': 35, 'chapter 4': 30, 'chapter 5': 26 }, 10);
+    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 70, 'chapter 2': 36, 'chapter 3': 37, 'chapter 4': 38, 'chapter 5': 28 }, 10);
   }, 300_000);
 });

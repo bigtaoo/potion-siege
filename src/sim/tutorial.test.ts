@@ -102,7 +102,7 @@ describe('tutorial', () => {
     expect(tut.step).toBe('merge');
   });
 
-  it('times the first battle for an idle player: summons at 8 and 10 s, merge at 18 s, upgrade at 32 s', () => {
+  it('times the first battle for an idle player: summons at 8 and 10 s, merge at 18 s, upgrade at 28 s', () => {
     const b = new Battle(FIRST_SEED, BASE_SETUP);
     const tut = new Tutorial();
     const at: string[] = [];
@@ -113,7 +113,7 @@ describe('tutorial', () => {
       if (s) at.push(`${s}@${Math.round(b.seconds)}`);
       tut.update(b, b.drain());
     }
-    expect(at).toEqual(['summon@8', 'summon@10', 'merge@18', 'upgrade@32']);
+    expect(at).toEqual(['summon@8', 'summon@10', 'merge@18', 'upgrade@28']); // 32 s before the fire threw at the thickest crowd
     expect(tut.step).toBe('pick');
   });
 

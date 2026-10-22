@@ -5,13 +5,13 @@ import type { Battle } from './battle';
 import { K, slotCenter } from './field';
 import { impact } from './hits';
 import { dist, muldiv, pm, times, toFp } from './math/fixed';
-import { targets as aliveFrontFirst } from './targets';
+import { TargetPick } from './targetPick';
 import { BALANCE, type Enemy, type Hero, type HeroKind, type Projectile } from './types';
 
 const B = BALANCE;
 
 export function stepHeroes(b: Battle): void {
-  let targets: Enemy[] | null = null;
+  let pick: TargetPick | null = null;
   for (const h of b.slots) {
     if (!h) continue;
     if (h.stunTime) {
@@ -21,21 +21,21 @@ export function stepHeroes(b: Battle): void {
     const speed = h.kind === 'wind' ? b.fixed.windSpeed : b.fixed.speed;
     h.cooldown -= b.brewTime > 0 ? times(speed, K.brew) : speed;
     if (h.cooldown > 0) continue;
-    targets ??= aliveFrontFirst(b);
+    pick ??= new TargetPick(b);
+    const targets = pick.front;
     if (targets.length === 0) {
       // waiting: a small offset per hero, so the first enemy is not met by one big volley
       h.cooldown = (h.id % 5) * K.idleCooldown;
       continue;
     }
     h.cooldown += K.interval[h.kind][h.star - 1];
-    if (h.kind === 'wind') {
-      // the wind goes for what it can catch: the flying ornithopter and the winder's big key
-      fire(b, h, targets.find((e) => e.kind === 'flyer' || e.kind === 'winder') ?? targets[0]);
+    if (h.kind !== 'arcane') {
+      // each potion its own pick (targetPick.ts)
+      fire(b, h, pick.pick(h.kind));
       continue;
     }
-    const shots = h.kind === 'arcane' ? 1 + b.mods.extraArrows : 1;
-    // the extra bolts of the arcane multishot go to the enemies behind, weaker
-    for (let i = 0; i < shots && i < targets.length; i++) fire(b, h, targets[i], i === 0 ? 1000 : pm(B.skills.multiBolt));
+    // the arcane bolt goes for the front, the extra ones of its multishot for the enemies behind, weaker
+    for (let i = 0; i <= b.mods.extraArrows && i < targets.length; i++) fire(b, h, targets[i], i === 0 ? 1000 : pm(B.skills.multiBolt));
   }
 }
 

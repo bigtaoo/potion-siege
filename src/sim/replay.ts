@@ -8,7 +8,7 @@ import type { BattleSetup } from './meta';
 
 /** Bump when a change to the battle plays the same commands differently (the rules, the
  *  units, the trig table): an old replay then no longer checks. */
-export const REPLAY_VERSION = 3;
+export const REPLAY_VERSION = 4;
 
 export interface Replay {
   version: number;
