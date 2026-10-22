@@ -35,6 +35,7 @@ import { TutorialLayer } from './view/Tutorial';
 import { COLORS } from './view/ui';
 import { SideInfo } from './view/SideInfo';
 import { FixedStep } from './view/fixedStep';
+import { patchGraphicsDestroy } from './view/graphicsDestroy';
 import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
@@ -59,6 +60,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   const table = loadLocale(want);
   const art = loadArt();
 
+  patchGraphicsDestroy();
   const app = new Application();
   await app.init({
     background: COLORS.bg,

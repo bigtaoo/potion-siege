@@ -9,6 +9,7 @@
 import type { Analytics, Props } from './analytics';
 import { gpuClass, perfTrouble, PerfMeter, type PerfSnapshot, type PerfWhy } from './perfMeter';
 import type { MemSample } from './memProbe';
+import { devPrint } from './devPrint';
 
 /** A battle frame at least this long (ms) is a `stall`; one of STALL_MAX_MS or more is the page
  *  stopped without saying it was hidden (an iframe scrolled out of sight), a pause, not a hitch. */
@@ -93,12 +94,14 @@ export class Anomalies {
 
   report(kind: AnomalyKind, props: Props = {}): void {
     const n = this.sent.get(kind) ?? 0;
-    if (n >= ANOMALY_CAP || this.total >= ANOMALY_TOTAL) return;
-    this.sent.set(kind, n + 1);
-    this.total++;
     const at = this.where();
     const out: Props = { kind, place: at.place, ...props };
     if (at.wave !== undefined) out.wave = at.wave;
+    // a development build prints every one, past the cap too
+    devPrint('anomaly', out);
+    if (n >= ANOMALY_CAP || this.total >= ANOMALY_TOTAL) return;
+    this.sent.set(kind, n + 1);
+    this.total++;
     if (kind === 'webgl_lost' && this.probe) {
       const m = this.probe();
       Object.assign(out, { tex: m.tex, texMB: m.texMB, nodes: m.nodes }, m.heap !== undefined ? { heap: m.heap } : {});
@@ -257,6 +260,7 @@ export class PerfReport {
   }
 
   private track(props: PerfProps): void {
+    devPrint('perf', props as unknown as Props);
     this.a.track('perf', props as unknown as Props);
   }
 
