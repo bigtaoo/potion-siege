@@ -22,6 +22,7 @@ import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, dayOf, rollDay } from './sim/daily';
 import { battleSetup, firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { botAct } from './sim/bot';
+import { suggestSkill } from './sim/suggest';
 import { Tutorial, type TutorialStep } from './sim/tutorial';
 import { BALANCE, type BattleEvent, type HeroKind } from './sim/types';
 import { loadArt, restOfArt } from './view/art';
@@ -36,6 +37,7 @@ import { COLORS } from './view/ui';
 import { SideInfo } from './view/SideInfo';
 import { FixedStep } from './view/fixedStep';
 import { patchGraphicsDestroy } from './view/graphicsDestroy';
+import { topPick } from './view/nudges';
 import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
@@ -361,6 +363,7 @@ export class Game {
       else if (b.result) finish(this, b);
     }
     lesson(this, b, events, m, dt);
+    this.overlay.tick(dt);
     this.view.update(dt, this.loop.alpha);
     this.hud.update(dt);
   }
@@ -385,7 +388,9 @@ export class Game {
     const canReroll = b.canReroll() && !this.autoplay && !this.tutorial && this.platform.rewardedAvailable();
     if (canReroll) this.run?.onRerollOffer();
     const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick');
-    this.overlay.showSkills(b.choices ?? [], b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null);
+    const choices = b.choices ?? [];
+    const top = !this.autoplay && topPick(this.save) ? suggestSkill(b, choices) : null;
+    this.overlay.showSkills(choices, b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null, top);
   }
 
   /** The rewarded refresh: a new set of cards for the waiting offer. */

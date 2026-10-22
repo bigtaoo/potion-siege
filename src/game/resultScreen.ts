@@ -10,7 +10,7 @@ import { doublesLeft, endOffers, maxStage } from '../sim/meta';
 import { HERO_KINDS } from '../sim/types';
 import { FEEDBACK_RUN, FeedbackAsk } from '../view/feedback';
 import type { HomeTab } from '../view/Home';
-import { offersNext } from '../view/nudges';
+import { lossStep, lossTips, offersNext } from '../view/nudges';
 import { home } from './homeScreen';
 
 export function showEnd(g: Game, b: Battle): void {
@@ -60,6 +60,8 @@ export function showEnd(g: Game, b: Battle): void {
     doublesLeft: canDouble || capped ? doublesLeft(g.save) : undefined,
     dealt,
     onTip: b.result === 'lost' ? (tab) => leaveResult(g, 'tip', tab) : null,
+    tipTabs: lossTips(g.save),
+    ready: b.result === 'lost' ? lossStep(g.save) : null,
     onNext: next ? () => void nextStage(g, b) : null,
     endless: g.endless?.result ? { result: g.endless.result, best: g.save.endless.best, next: nextMilestone(g.save) } : undefined,
     adBlocked: missed,
