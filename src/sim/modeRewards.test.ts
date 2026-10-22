@@ -9,6 +9,7 @@ import { beginAttempt, bookAttempt, challengeSetup } from './challenge';
 import { beginEndless, bookEndless, endlessOpen, endlessPay, endlessSetup } from './endless';
 import { battleSetup, parseMeta, Purse, type BattleSetup, type MetaSave } from './meta';
 import { challengeFor, SAVES, type SaveId } from './setupCatalog';
+import { bookStars, runStars } from './stars';
 
 const TODAY = '2026-10-22';
 const CAP = 1200 * 30;
@@ -50,10 +51,14 @@ describe.each(Object.keys(SAVES) as SaveId[])('on the %s save', (id) => {
     const purse = new Purse();
     const first = purse.settle(m, result(b, s)).crystals;
     const after = m.crystals;
+    let revived = false;
     if (b.result === 'lost' && b.revive()) {
+      revived = true;
       botPlay(b);
       purse.settle(m, result(b, s));
     }
+    // the game books a win's stars beside the crystals (src/game/ending.ts)
+    if (b.result === 'won') bookStars(m, s.stage, false, runStars(true, revived, Math.max(0, b.wall) / b.wallMax));
     // the revived battle pays only what it earned on top
     expect(m.crystals - start).toBe(purse.paid);
     expect(purse.paid).toBeGreaterThanOrEqual(first);

@@ -6,6 +6,7 @@
 import { challengeSetup, challengeStage, MODIFIER_IDS, type Challenge, type ModifierId } from './challenge';
 import { endlessSetup } from './endless';
 import { battleSetup, buyHero, buyWorkshop, heroCost, newMeta, WORKSHOP_IDS, workshopCost, type BattleSetup, type MetaSave } from './meta';
+import { parseStars } from './stars';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
@@ -23,6 +24,8 @@ export function spentSave(cleared: number, budget: number, lineup: readonly Hero
   m.stage = Math.min(M.stageCount, cleared + 1);
   m.runs = cleared;
   m.tutorial = m.upgradeHint = cleared > 0;
+  // a cleared stage holds a star at least, as a stored save is read back
+  m.stars = parseStars(m.stars, cleared);
   m.unlocked = HERO_KINDS.filter((k) => !LINEUP.includes(k) && (lineup.includes(k) || ((BALANCE.heroes[k] as { unlockStage?: number }).unlockStage ?? 99) <= cleared));
   m.lineup = [...lineup];
   m.crystals = budget;
