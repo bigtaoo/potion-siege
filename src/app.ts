@@ -8,6 +8,8 @@
 
 import { Application, Container, Graphics } from 'pixi.js';
 import type { Analytics } from './analytics/analytics';
+import { Heartbeat, watchPage } from './analytics/heartbeat';
+import { languageProps } from './analytics/languages';
 import { memProbe } from './analytics/memProbe';
 import { deviceTimeZone, PrivacyChoice, privacyRegion } from './analytics/privacy';
 import { PerfReport } from './analytics/perfReport';
@@ -93,6 +95,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   analytics.track('session_start', {
     loadMs: Math.round(performance.now()),
     lang,
+    ...languageProps(platform, navigator.languages),
     w: window.innerWidth,
     h: window.innerHeight,
     touch: navigator.maxTouchPoints > 0,
@@ -125,7 +128,8 @@ export async function boot(platform: Platform): Promise<GameHandle> {
       analytics.flush();
     }
   });
-  window.addEventListener('pagehide', () => game.leave());
+  // time on screen, an `alive` beat each minute of it, and one leave per time away (bfcache)
+  watchPage(game.beat, () => game.leave(), () => game.back());
   game.start();
   // the art the first frame did not wait for: screens built without it are built again
   void restOfArt().then(() => game.artIn());
@@ -211,6 +215,8 @@ export class Game {
   readonly audio = new GameAudio();
   /** The `perf` and `anomaly` telemetry: battle frames only, see analytics/perfReport. */
   readonly perf: PerfReport;
+  /** Seconds on screen and the `alive` beat (analytics/heartbeat.ts). */
+  readonly beat: Heartbeat;
 
   constructor(
     readonly app: Application,
@@ -223,6 +229,7 @@ export class Game {
     this.autoplay = params.has('autoplay');
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
     this.perf = new PerfReport(analytics, memProbe(app), () => this.place(), this.speed);
+    this.beat = new Heartbeat(analytics, () => ({ ...this.place(), ...(this.run && this.battle ? { stage: this.battle.setup.stage } : {}) }), undefined, document.visibilityState !== 'hidden');
     this.audio.attach();
     this.audio.prefs(this.save.sound);
     platform.onHostMute((muted) => this.audio.host(muted));
@@ -261,8 +268,13 @@ export class Game {
     this.store(); // task progress made in the battle so far
     if (this.run && this.battle && !this.battle.result) this.perf.quit();
     this.run?.close('pagehide');
-    this.analytics.track('session_end', { secs: this.analytics.sessionSeconds, runs: this.save.runs, best: this.save.bestWave });
+    this.analytics.track('session_end', { secs: this.analytics.sessionSeconds, vis: this.beat.seconds, runs: this.save.runs, best: this.save.bestWave });
     this.analytics.flush();
+  }
+
+  /** The page came back from the back/forward cache: the run left on pagehide goes on. */
+  back(): void {
+    if (this.battle && !this.battle.result) this.run?.reopen();
   }
 
   /** `cause` null: an idle battle under the home screen, no run. */

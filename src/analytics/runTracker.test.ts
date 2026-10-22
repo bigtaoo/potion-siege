@@ -186,4 +186,14 @@ describe('RunTracker close', () => {
     replaced.tracker.close('pagehide');
     expect(replaced.sink.events).toEqual([]);
   });
+
+  it('can quit again once the page came back from the back/forward cache', () => {
+    const { sink, b, tracker } = setup();
+    b.wave = 2;
+    tracker.close('pagehide');
+    tracker.reopen();
+    b.wave = 5;
+    tracker.close('pagehide');
+    expect(named(sink, 'run_quit').map((p) => p.wave)).toEqual([2, 5]);
+  });
 });
