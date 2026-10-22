@@ -53,28 +53,30 @@ export function discharge(b: Battle, e: Enemy): void {
   harm(b, e, charge, 'lightning');
 }
 
-/** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, and with
- *  the fire recipe it counts as a fire hit that sets them alight. */
+/** Lightning damage: harder on chilled enemies with the ice recipe, leaving static, with the
+ *  fire recipe it counts as a fire hit that sets them alight, and with the poison one it rusts
+ *  them (only so far: the rest of the rust is the poison's). */
 export function shock(b: Battle, e: Enemy, damage: number): void {
   const S = B.skills;
   if (b.mods.superconduct && (e.slowTime > 0 || e.freezeTime > 0)) damage = times(damage, 1000 + pm(S.superconduct));
   if (b.mods.plasma) scorch(b, e, damage, 'lightning', b.fixed.plasmaBurn);
   else harm(b, e, damage, 'lightning');
-  if (b.mods.electrolysis) corrode(b, e);
+  if (b.mods.electrolysis) corrode(b, e, 0, 1, B.skills.electrolysisRust);
   if (b.fixed.static > 0) {
     e.charge = Math.max(e.chargeTime > 0 ? e.charge : 0, times(damage, b.fixed.static));
     e.chargeTime = ticks(S.staticTime);
   }
 }
 
-/** Rusts by `stacks` and, with `dps` (FP a second), poisons: what a corrosion hit does. */
-export function corrode(b: Battle, e: Enemy, dps = 0, stacks = 1): void {
+/** Rusts by `stacks`, up to `cap` (never taking off what is already there), and, with `dps` (FP
+ *  a second), poisons: what a corrosion hit does. */
+export function corrode(b: Battle, e: Enemy, dps = 0, stacks = 1, cap = b.mods.rustMax): void {
   const P = B.heroes.poison;
   if (dps > 0) {
     e.poisonDps = Math.max(e.poisonDps, dps);
     e.poisonTime = ticks(P.poisonTime);
   }
-  e.rust = Math.min(b.mods.rustMax, e.rust + stacks);
+  e.rust = Math.max(e.rust, Math.min(cap, e.rust + stacks));
   e.rustTime = ticks(P.rustTime);
 }
 

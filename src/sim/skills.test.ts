@@ -200,6 +200,10 @@ describe('the corrosion line', () => {
     const e = enemy(b, 500, 600, 1e6);
     hit(b, 'lightning', e, 1);
     expect(e.rust).toBe(1);
+    // only up to its own cap, below the poison's
+    for (let i = 0; i < 5; i++) hit(b, 'lightning', e, 1);
+    expect(e.rust).toBe(BALANCE.skills.electrolysisRust);
+    expect(BALANCE.skills.electrolysisRust).toBeLessThan(BALANCE.heroes.poison.rustMax);
     const plain = withSkills([]);
     const f = enemy(plain, 500, 600, 1e6);
     hit(plain, 'lightning', f, 1);

@@ -59,9 +59,9 @@
       "chainFalloff": 0.8
     },
     "poison": {
-      "damage": 5.5,
+      "damage": 7.5,
       "interval": 0.9,
-      "poisonDps": 12,
+      "poisonDps": 16.5,
       "poisonTime": 3,
       "rustStep": 0.1,
       "rustMax": 3,
@@ -267,6 +267,7 @@
     "plasmaBurn": 0.5,
     "rustExtra": 2,
     "rustPlus": 0.5,
+    "electrolysisRust": 2,
     "acidRadius": 90,
     "meltRadius": 120,
     "windPush": 0.35,
