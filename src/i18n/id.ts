@@ -84,6 +84,10 @@ export const id: Table = {
   doubled: '×2',
   doublesLeft: 'Sisa {n}/{total} hari ini',
   adBlocked: 'Pemblokir iklan aktif: hadiah dari iklan tidak tersedia',
+  tab: {
+    elsewhere: 'Game sedang terbuka di tab lain, dan progresmu disimpan di sana.',
+    playHere: 'Main di sini',
+  },
   damage: 'Total kerusakan',
   side: {
     skills: 'Skill permainan ini',

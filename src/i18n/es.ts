@@ -84,6 +84,10 @@ export const es: Table = {
   doubled: '×2',
   doublesLeft: 'Quedan {n}/{total} hoy',
   adBlocked: 'Bloqueador de anuncios activo: sin recompensas por anuncios',
+  tab: {
+    elsewhere: 'El juego está abierto en otra pestaña y tu progreso se guarda allí.',
+    playHere: 'Jugar aquí',
+  },
   damage: 'Daño causado',
   side: {
     skills: 'Tus habilidades',

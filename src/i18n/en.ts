@@ -82,6 +82,10 @@ export const en = {
   doubled: '×2',
   doublesLeft: '{n}/{total} left today',
   adBlocked: 'Ad blocker on: rewards from ads are off',
+  tab: {
+    elsewhere: 'The game is open in another tab, and your progress is saved there.',
+    playHere: 'Play here',
+  },
   damage: 'Damage dealt',
   side: {
     skills: 'Skills this run',

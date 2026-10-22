@@ -84,6 +84,10 @@ export const ko: Table = {
   doubled: '×2',
   doublesLeft: '오늘 {n}/{total}회 남음',
   adBlocked: '광고 차단기 사용 중: 광고 보상을 받을 수 없어요',
+  tab: {
+    elsewhere: '게임이 다른 탭에서 열려 있어요. 진행 상황은 그쪽에 저장돼요.',
+    playHere: '여기서 플레이',
+  },
   damage: '피해량',
   side: {
     skills: '이번 판 스킬',

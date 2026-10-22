@@ -84,6 +84,10 @@ export const it: Table = {
   doubled: '×2',
   doublesLeft: 'Ancora {n}/{total} oggi',
   adBlocked: 'Blocco annunci attivo: niente ricompense con annunci',
+  tab: {
+    elsewhere: 'Il gioco è aperto in un’altra scheda e i tuoi progressi vengono salvati lì.',
+    playHere: 'Gioca qui',
+  },
   damage: 'Danni inflitti',
   side: {
     skills: 'Abilità della partita',

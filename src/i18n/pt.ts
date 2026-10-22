@@ -84,6 +84,10 @@ export const pt: Table = {
   doubled: '×2',
   doublesLeft: 'Restam {n}/{total} hoje',
   adBlocked: 'Bloqueador de anúncios ativo: sem recompensas por anúncio',
+  tab: {
+    elsewhere: 'O jogo está aberto em outra aba, e seu progresso é salvo lá.',
+    playHere: 'Jogar aqui',
+  },
   damage: 'Dano causado',
   side: {
     skills: 'Suas habilidades',
