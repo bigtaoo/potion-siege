@@ -81,6 +81,7 @@ export const fr: Table = {
   double: '×2 cristaux',
   doubled: '×2',
   doublesLeft: 'Encore {n}/{total} aujourd’hui',
+  adBlocked: 'Bloqueur de pub actif : pas de récompenses par pub',
   damage: 'Dégâts infligés',
   side: {
     skills: 'Tes compétences',

@@ -126,9 +126,24 @@ describe('CrazyGamesPlatform ads', () => {
     expect(asked).toEqual([]);
   });
 
-  it('hides rewarded ads under an adblocker and off the portal', async () => {
-    expect((await platform('crazygames', ads('finished', { adblock: true }).ad)).p.rewardedAvailable()).toBe(false);
-    expect((await platform('disabled', ads('finished').ad)).p.rewardedAvailable()).toBe(false);
+  it('hides rewarded ads under an adblocker, saying so, and off the portal', async () => {
+    const blocked = (await platform('crazygames', ads('finished', { adblock: true }).ad)).p;
+    expect([blocked.rewardedAvailable(), blocked.adBlocked()]).toEqual([false, true]);
+    const off = (await platform('disabled', ads('finished').ad)).p;
+    expect([off.rewardedAvailable(), off.adBlocked()]).toEqual([false, false]);
+  });
+
+  it('tells the session where the portal runs the game and whether it is in Basic Launch', async () => {
+    const global: CgGlobal = { CrazyGames: { SDK: { environment: 'crazygames', user: { systemInfo: { applicationType: 'google_play_store' } }, ad: ads('error', { basicLaunch: true }).ad } } };
+    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(global))).sessionProps()).toEqual({ app: 'google_play_store', basic: true });
+    const odd: CgGlobal = { CrazyGames: { SDK: { environment: 'crazygames', user: { systemInfo: { applicationType: 'Web App!' } } } } };
+    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(odd))).sessionProps()).toEqual({ basic: false });
+    expect((await platform('disabled')).p.sessionProps()).toEqual({});
+  });
+
+  it('keeps the rewards under an adblocker in Basic Launch, where they come without an ad', async () => {
+    const { p } = await platform('crazygames', ads('error', { adblock: true, basicLaunch: true }).ad);
+    expect([p.rewardedAvailable(), p.adBlocked(), await p.rewarded(() => {})]).toEqual([true, false, true]);
   });
 
   it('plays a midgame ad on the portal', async () => {

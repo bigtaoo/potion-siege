@@ -42,6 +42,7 @@ import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 import { finish } from './game/ending';
 import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
+import { urlSwitches } from './game/switches';
 import { createAnalytics, device, loadedBeacon, pointerKind, safeDevice, showLocale } from './game/startup';
 import { beginTutorial, endTutorial, lesson } from './game/tutorialFlow';
 
@@ -52,7 +53,8 @@ export interface GameHandle {
 }
 
 export async function boot(platform: Platform): Promise<GameHandle> {
-  const params = new URLSearchParams(location.search);
+  // the URL switches; a release build reads only ?lang (game/switches.ts)
+  const params = urlSwitches(location.search);
   // ?lang= (testing) over the player's pick over the device's language; a table that cannot be
   // fetched (offline) leaves English
   const want = detectLocale([params.get('lang'), platform.storage.getItem(LANG_KEY), ...platform.languages()]);
@@ -95,6 +97,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
     // the beacons' test, so players and launches split the same way
     device: pointerKind(),
     ...safeDevice(app),
+    ...platform.sessionProps?.(),
   });
   // inside a portal's iframe the page can have no size yet at boot: the size once it has one
   if (!(window.innerWidth > 0 && window.innerHeight > 0)) {
@@ -176,7 +179,8 @@ export class Game {
   /** The battle's end is booked: the battle stands still and is not booked again while the
    *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
   ended = false;
-  /** The result screen's ad offers already reported, so a screen shown again does not count twice. */
+  /** The result screen's ad offers already reported, so a screen shown again does not count
+   *  twice; a revive on offer also keeps the midgame ad out of the break (resultScreen.breakAd). */
   offered = { revive: false, double: false };
   /** A rewarded ad was watched since the battle ended (the ×2): the portal wants no midgame ad
    *  chained after it in the same break. */
@@ -419,7 +423,9 @@ export class Game {
     this.overlay.hide();
   }
 
+  /** Writes the save; the bot's battles (?autoplay) play on it in memory but never keep it. */
   store(): void {
+    if (this.autoplay) return;
     this.platform.storage.setItem(SAVE_KEY, JSON.stringify(this.save));
   }
 

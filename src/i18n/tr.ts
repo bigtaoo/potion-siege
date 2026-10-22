@@ -81,6 +81,7 @@ export const tr: Table = {
   double: '×2 kristal',
   doubled: '×2',
   doublesLeft: 'Bugün {n}/{total} kaldı',
+  adBlocked: 'Reklam engelleyici açık: reklam ödülleri kapalı',
   damage: 'Verilen hasar',
   side: {
     skills: 'Bu turdaki yetenekler',

@@ -80,6 +80,7 @@ export const zh: Table = {
   double: '×2 晶石',
   doubled: '×2',
   doublesLeft: '今日剩余 {n}/{total} 次',
+  adBlocked: '已开启广告拦截：看广告领奖励不可用',
   damage: '伤害统计',
   side: {
     skills: '本局技能',

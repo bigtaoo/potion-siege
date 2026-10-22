@@ -21,6 +21,8 @@ export interface Platform {
   rewardedAvailable(): boolean;
   /** Whether the host has rewarded ads at all, loaded or not; absent: as `rewardedAvailable`. */
   rewardedHosted?(): boolean;
+  /** An adblocker keeps the host's rewarded ads off (CrazyGames); absent: never. */
+  adBlocked?(): boolean;
   /** Plays a rewarded ad; true only if the player earned the reward. */
   rewarded(onStart: () => void): Promise<boolean>;
   /** Plays an interstitial at a natural break; resolves when it is over (or skipped). */
@@ -39,6 +41,8 @@ export interface Platform {
   /** The player's country as the host knows it ('DE'), which decides whether the game asks
    *  before sending play statistics (analytics/privacy.ts); absent or null: the time zone decides. */
   country?(): string | null;
+  /** What `session_start` adds about the host (CrazyGames: its app or a browser, Basic Launch). */
+  sessionProps?(): Record<string, string | boolean>;
   /** Puts `text` on the clipboard, from a tap; false when the host refused. Absent where there is none. */
   copyText?(text: string): Promise<boolean>;
 }

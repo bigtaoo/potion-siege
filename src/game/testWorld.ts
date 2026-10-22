@@ -20,6 +20,7 @@ export class Host implements Platform {
   storage = new SafeStore(null);
   answers: Answer[] = [];
   available = true;
+  blocked = false;
   rewardedCalls = 0;
   midgames = 0;
   celebrated = 0;
@@ -36,6 +37,9 @@ export class Host implements Platform {
   }
   rewardedAvailable(): boolean {
     return this.available;
+  }
+  adBlocked(): boolean {
+    return this.blocked;
   }
   async rewarded(onStart: () => void): Promise<boolean> {
     this.rewardedCalls++;
@@ -106,7 +110,7 @@ export interface World {
   events(name: string): Record<string, unknown>[];
 }
 
-export function world(save: MetaSave = veteran(), setup: (h: Host) => void = () => {}): World {
+export function world(save: MetaSave = veteran(), setup: (h: Host) => void = () => {}, switches = 'speed=200'): World {
   const host = new Host();
   setup(host);
   host.storage.setItem('mb.save', JSON.stringify(save));
@@ -114,7 +118,7 @@ export function world(save: MetaSave = veteran(), setup: (h: Host) => void = () 
   const app = { stage, ticker: { add() {} }, screen: { width: 1080, height: 1920 }, renderer: {} } as unknown as Application;
   const sink = new MemorySink();
   const analytics = new Analytics(host.storage, [sink], 'test', host.name);
-  const game = new Game(app, host, new URLSearchParams('speed=200'), analytics, new PrivacyChoice(host.storage, 'notice'));
+  const game = new Game(app, host, new URLSearchParams(switches), analytics, new PrivacyChoice(host.storage, 'notice'));
   game.start();
   return {
     game,

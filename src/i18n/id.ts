@@ -81,6 +81,7 @@ export const id: Table = {
   double: '×2 kristal',
   doubled: '×2',
   doublesLeft: 'Sisa {n}/{total} hari ini',
+  adBlocked: 'Pemblokir iklan aktif: hadiah dari iklan tidak tersedia',
   damage: 'Total kerusakan',
   side: {
     skills: 'Skill permainan ini',

@@ -81,6 +81,7 @@ export const es: Table = {
   double: '×2 cristales',
   doubled: '×2',
   doublesLeft: 'Quedan {n}/{total} hoy',
+  adBlocked: 'Bloqueador de anuncios activo: sin recompensas por anuncios',
   damage: 'Daño causado',
   side: {
     skills: 'Tus habilidades',

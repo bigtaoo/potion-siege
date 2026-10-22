@@ -110,7 +110,7 @@ describe('iOS shell', () => {
 
   it("runs under our own app id, with our units behind the one live switch", () => {
     // Google's advice: the real app id always, its demo units while testing (docs/ios.md "Ids")
-    expect(adMob).toMatch(/private static let live = (true|false)\n/);
+    expect(adMob).toMatch(/private static let live = (true|false)\r?\n/);
     const appId = plist.match(/<key>GADApplicationIdentifier<\/key>\s*<string>([^<]+)<\/string>/)?.[1];
     expect(appId).toMatch(/^ca-app-pub-\d+~\d+$/);
     expect(appId).not.toBe(SAMPLE_APP_ID);

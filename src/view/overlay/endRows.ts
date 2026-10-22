@@ -12,6 +12,7 @@ import {
   gearIcon,
   infinityIcon,
   ink,
+  inkWrapped,
   inset,
   LIGHT,
   lightTile,
@@ -297,7 +298,7 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
 
 /** The revive (with the ad sign) on top when there is one, Continue under it; or Next Stage
  *  with a smaller 返回 under it. */
-export function endButtons(onContinue: () => void, onRevive: (() => void) | null, onNext: (() => void) | null): Section {
+export function endButtons(onContinue: () => void, onRevive: (() => void) | null, onNext: (() => void) | null, adBlocked = false): Section {
   const c = new Container();
   if (onNext) {
     const next = new PillButton(t('nextStage'), 620, 150, 'green', onNext, 62);
@@ -308,6 +309,13 @@ export function endButtons(onContinue: () => void, onRevive: (() => void) | null
     return { c, h: 330 };
   }
   let by = 20;
+  if (adBlocked && !onRevive) {
+    const note = inkWrapped(t('adBlocked'), 34, 700, { align: 'center' });
+    note.anchor.set(0.5, 0);
+    note.y = by;
+    c.addChild(note);
+    by += note.height + 20;
+  }
   if (onRevive) {
     const revive = adButton(t('revive'), 640, 150, 'purple', onRevive, 54);
     revive.y = by + 75;
@@ -318,7 +326,7 @@ export function endButtons(onContinue: () => void, onRevive: (() => void) | null
   const go = new PillButton(t('continue'), big ? 620 : 460, big ? 150 : 120, 'green', onContinue, big ? 62 : 50);
   go.y = by + (big ? 75 : 60);
   c.addChild(go);
-  return { c, h: onRevive ? 300 : 170 };
+  return { c, h: by + (onRevive ? 100 : 150) };
 }
 
 /** Three stars, the middle one higher and bigger: a win. `lit` of them are gold, from the left

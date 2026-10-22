@@ -81,6 +81,7 @@ export const pl: Table = {
   double: 'Kryształy ×2',
   doubled: '×2',
   doublesLeft: 'Zostało dziś: {n}/{total}',
+  adBlocked: 'Blokada reklam włączona: brak nagród za reklamy',
   damage: 'Zadane obrażenia',
   side: {
     skills: 'Umiejętności w walce',

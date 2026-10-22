@@ -6,7 +6,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { dayOf } from '../sim/daily';
 import { doublesLeft } from '../sim/meta';
-import { buttons, englishPage, flush, play, playToEnd, tap, veteran, world, type World } from './testWorld';
+import { buttons, englishPage, flush, play, playToEnd, tap, texts, veteran, world, type World } from './testWorld';
 
 beforeAll(englishPage);
 
@@ -82,8 +82,40 @@ describe('the result screen', () => {
     tap(w.stage, t('continue'));
     await flush();
     expect(w.game['menu'].visible).toBe(true);
-    // a break after a battle with no ad watched gets the portal's midgame ad
+    // the revive was on offer: no midgame ad in this break either
+    expect(w.host.midgames).toBe(0);
+  });
+
+  it('plays no midgame ad after a loss whose revive was passed over', async () => {
+    const w = world();
+    play(w);
+    playToEnd(w);
+    expect(buttons(w.stage, t('revive'))).toHaveLength(1);
+    tap(w.stage, t('continue'));
+    await flush();
+    expect(w.game['menu'].visible).toBe(true);
+    expect([w.host.rewardedCalls, w.host.midgames]).toEqual([0, 0]);
+  });
+
+  it('plays the midgame ad after a loss with no revive on offer', async () => {
+    const w = world(veteran(), (h) => (h.available = false));
+    play(w);
+    playToEnd(w);
+    expect(texts(w.stage)).not.toContain(t('adBlocked'));
+    tap(w.stage, t('continue'));
+    await flush();
     expect(w.host.midgames).toBe(1);
+  });
+
+  it('says an adblocker took the revive away instead of just leaving it out', () => {
+    const w = world(veteran(), (h) => {
+      h.available = false;
+      h.blocked = true;
+    });
+    play(w);
+    playToEnd(w);
+    expect(buttons(w.stage, t('revive'))).toHaveLength(0);
+    expect(texts(w.stage)).toContain(t('adBlocked'));
   });
 
   it('plays no ×2 ad once the day is used up', async () => {

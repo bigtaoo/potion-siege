@@ -49,6 +49,14 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     return locale ? [locale] : super.languages();
   }
 
+  /** `app`: where the portal runs the game (a browser or one of its own apps); `basic`: no ads
+   *  yet (Basic Launch). Nothing off the portal. */
+  sessionProps(): Record<string, string | boolean> {
+    if (!this.sdk.isEnabled()) return {};
+    const app = this.sdk.applicationType();
+    return { ...(app ? { app } : {}), basic: !this.sdk.adsAllowed() };
+  }
+
   /** The portal's country, which decides whether the game asks before sending play statistics. */
   country(): string | null {
     return this.sdk.countryCode();
@@ -87,9 +95,16 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     this.sdk.happytime();
   }
 
-  /** Hidden under an adblocker; in Basic Launch (no ads) the reward is simply granted. */
+  /** Hidden under an adblocker; in Basic Launch (no ads) the reward is simply granted, so an
+   *  adblocker changes nothing there. */
   override rewardedAvailable(): boolean {
-    return this.sdk.isEnabled() && !this.adblock;
+    return this.sdk.isEnabled() && !this.adBlocked();
+  }
+
+  /** An adblocker stops the ads the portal would play: the result screen says so instead of
+   *  just leaving the offers out. */
+  adBlocked(): boolean {
+    return this.sdk.isEnabled() && this.adblock && this.sdk.adsAllowed();
   }
 
   override async rewarded(onStart: () => void): Promise<boolean> {

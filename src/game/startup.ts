@@ -12,6 +12,7 @@ import type { Platform } from '../platform/types';
 import type { DeviceInfo } from '../view/quality';
 import { gpuName } from '../view/qualityRuntime';
 import { BUILD } from './keys';
+import { urlSwitches } from './switches';
 
 /** The page follows the language: its title, and its `lang`, which the browser reads to pick
  *  the right glyphs for Chinese, Japanese and Korean text on the canvas. */
@@ -34,7 +35,7 @@ export function pointerKind(): 'touch' | 'desktop' {
  *  no id, sent whatever the privacy state, split by touch/desktop, new player or not, and source. */
 export function loadedBeacon(host: string, analytics: Analytics): void {
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
-  if (!url || new URLSearchParams(location.search).has('autoplay')) return;
+  if (!url || urlSwitches(location.search).has('autoplay')) return;
   // a local preview of a production build counts nothing, like the open beacon (the iOS app's
   // page is capacitor://localhost, and does count)
   const h = location.hostname;
