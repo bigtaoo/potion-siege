@@ -7,7 +7,8 @@ import { t } from '../i18n';
 import { claimTier } from '../sim/achievements';
 import { openChapterChest } from '../sim/chapters';
 import { canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from '../sim/daily';
-import { buyHero, buyUnlock, buyWorkshop, claimChest, maxStage } from '../sim/meta';
+import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
+import { setHardMode, stageOpen, stepStage } from '../sim/stars';
 import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
 import { loginPops, markSeen, upgradeHintKind } from '../view/nudges';
 import { fitMenu } from '../view/viewport';
@@ -88,14 +89,23 @@ export function home(g: Game, panel: HomePanel = null): void {
       if (n > 0) claimed(g, `ach_${id}`, n, panel, at);
     },
     stage: (d) => {
-      g.save.stage = Math.min(maxStage(g.save), Math.max(1, g.save.stage + d));
+      const to = stepStage(g.save, g.save.stage, d);
+      if (to === null) return;
+      g.save.stage = to;
       g.store();
       home(g);
     },
     pickStage: (stage) => {
-      g.save.stage = Math.min(maxStage(g.save), Math.max(1, stage));
+      if (!stageOpen(g.save, stage)) return;
+      g.save.stage = stage;
       g.store();
       home(g);
+    },
+    hardMode: (on) => {
+      if (!setHardMode(g.save, on)) return false;
+      g.store();
+      home(g);
+      return true;
     },
     claimChapter: (ch, at) => {
       const n = openChapterChest(g.save, ch);

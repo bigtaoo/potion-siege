@@ -24,6 +24,7 @@ import { Floaters } from './battleView/floaters';
 import { FxLayer } from './battleView/fxLayer';
 import { MergeAnims } from './battleView/merges';
 import { ShotLayer } from './battleView/shots';
+import { starMark } from './battleView/starMark';
 import { BAR_H, BAR_Y, WALL_TOP, drawWallTop } from './battleView/wall';
 
 const F = BALANCE.field;
@@ -91,6 +92,9 @@ export class BattleView extends Container {
     this.on('pointerup', (e) => this.onUp(e));
     this.on('pointerupoutside', (e) => this.onUp(e));
   }
+
+  /** Whether the wall's tube shows where three stars end: on a stage battle not revived (app.ts). */
+  starMark: () => boolean = () => false;
 
   attach(battle: Battle): void {
     this.battle = battle;
@@ -283,6 +287,7 @@ export class BattleView extends Container {
     const frac = Math.max(0, b.wall / b.wallMax);
     const barY = BAR_Y;
     healthTube(w, F.left, barY, F.right - F.left, BAR_H, frac);
+    if (this.starMark()) starMark(w, F.left, barY, F.right - F.left, BAR_H, frac);
     const hp = Math.ceil(Math.max(0, b.wall) / FP);
     const max = Math.round(b.wallMax / FP);
     if (hp !== this.wallShown[0] || max !== this.wallShown[1]) {

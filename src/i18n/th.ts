@@ -258,6 +258,8 @@ export const th: Table = {
     endless: { name: 'ผู้พิทักษ์ไม่สิ้นสุด', desc: 'ไปถึงเวฟ {n} ในโหมดไม่สิ้นสุด' },
     login: { name: 'ขาประจำ', desc: 'รับรางวัลรายวัน {n} ครั้ง' },
     workshop: { name: 'สร้างครบ', desc: 'อัปเกรดเวิร์กช็อป จนเต็ม 1 อย่าง' },
+    stars: { name: 'นักสะสมดาว', desc: 'เก็บดาว {n} ดวง' },
+    hard: { name: 'ผ่านศึกหนัก', desc: 'ชนะด่านยาก {n} ด่าน' },
   },
   chapter: {
     title: 'บทที่ {n} · {name}',
@@ -272,6 +274,16 @@ export const th: Table = {
     cleared: 'ผ่านบทแล้ว! หีบประจำบท +{c}',
     finale: 'ศึกปิดฉาก',
     name: { outskirts: 'ชานเมืองโรงงาน', snowfield: 'ทุ่งหิมะ', railyard: 'ลานรถไฟ', foundry: 'โรงหล่อ', clocktower: 'หอนาฬิกา' },
+  },
+  stars: {
+    normal: 'ปกติ',
+    hard: 'ยาก',
+    locked: 'เก็บ {n}★ ในบทเพื่อเปิดโหมดยากของบทนั้น',
+    rule: '★★★: รักษากำแพงไว้ {p}%',
+    best: 'สถิติใหม่!',
+    hardOpen: 'เปิดโหมดยากแล้ว: บทที่ {n}!',
+    hardFirst: 'ชนะโหมดยากครั้งแรก!',
+    chapterLock: 'ชนะด่านยาก {n} ก่อน',
   },
   twist: {
     runners: { name: 'หนูบุก', desc: 'ส่วนใหญ่เป็นหนูไขลาน' },

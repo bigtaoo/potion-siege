@@ -22,6 +22,7 @@ import {
   P,
   PillButton,
   plate,
+  STAR_HARD,
   stopwatchIcon,
   swordsIcon,
   tappable,
@@ -45,12 +46,13 @@ export function section(c: Container, h: number): Section {
   return { c: row, h };
 }
 
-/** The plate, with stars over a win and the wall knocked apart over a loss. */
-export function header(won: boolean, ch?: ChallengeEnd): Section {
+/** The plate, with stars over a win (`lit` of them, red on hard mode) and the wall knocked
+ *  apart over a loss. */
+export function header(won: boolean, ch?: ChallengeEnd, lit = 3, hard = false): Section {
   const c = new Container();
   // a challenge reads as won once it reached a tier
   const good = ch ? ch.result.tier > 0 : won;
-  const crest = good ? stars(ch ? ch.result.tier : 3) : brokenWall();
+  const crest = good ? stars(ch ? ch.result.tier : lit, hard ? STAR_HARD : COLORS.gold) : brokenWall();
   crest.y = -30;
   const head = plate(ch ? t('challenge.result') : won ? t('won') : t('lost'), 72, 560, good ? 'brass' : 'red', 860);
   head.y = 80;
@@ -343,7 +345,7 @@ export function endButtons(onContinue: () => void, onRevive: (() => void) | null
 
 /** Three stars, the middle one higher and bigger: a win. `lit` of them are gold, from the left
  *  (a challenge lights one per tier reached). */
-function stars(lit = 3): Graphics {
+function stars(lit = 3, color: number = COLORS.gold): Graphics {
   const g = new Graphics();
   const star = (x: number, y: number, r: number, on: boolean) => {
     const pts: number[] = [];
@@ -352,7 +354,7 @@ function stars(lit = 3): Graphics {
       const rr = i % 2 ? r * 0.46 : r;
       pts.push(x + Math.cos(a) * rr, y + Math.sin(a) * rr);
     }
-    g.poly(pts).fill(on ? COLORS.gold : LIGHT.inset).stroke({ width: 6, color: P.line, join: 'round' });
+    g.poly(pts).fill(on ? color : LIGHT.inset).stroke({ width: 6, color: P.line, join: 'round' });
     if (on) g.circle(x - r * 0.18, y - r * 0.22, r * 0.16).fill({ color: 0xffffff, alpha: 0.55 });
   };
   star(-130, 14, 54, lit >= 1);

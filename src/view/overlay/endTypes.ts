@@ -3,6 +3,7 @@
 
 import type { ChallengeResult, ModifierId } from '../../sim/challenge';
 import type { EndlessResult } from '../../sim/endless';
+import type { StarsResult } from '../../sim/stars';
 import type { HeroKind } from '../../sim/types';
 
 /** What else the result screen shows: the rewarded ×2 (null when it is not on offer), whether
@@ -27,6 +28,8 @@ export interface EndExtras {
   endless?: EndlessEnd;
   /** An adblocker took the revive or the ×2 away: a line over Continue says so. */
   adBlocked?: boolean;
+  /** A stage win's stars: how many, the best before, and a hard mode it opened. */
+  stars?: StarsResult;
 }
 
 export interface EndlessEnd {

@@ -6,6 +6,7 @@ import { newAchievements, parseAchievements, type AchievementSave } from './achi
 import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
+import { newStars, parseStars, type StarSave } from './stars';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
 import type { SkillId } from './skills';
 import type { WaveMods } from './waves';
@@ -49,6 +50,8 @@ export interface MetaSave {
   /** What a home tab's red dot was about when the tab was last open, by tab: keys of the
    *  things it offered (view/nudges.ts), so the same thing does not light the dot again. */
   seen: Partial<Record<SeenTab, string[]>>;
+  /** Best stars per stage, normal and hard, and the hard mode switch (stars.ts). */
+  stars: StarSave;
 }
 
 /** The home tabs whose dot lights once per new thing. */
@@ -81,6 +84,8 @@ export interface BattleSetup {
   modifiers?: BattleModifiers;
   /** Endless mode: no last wave, the waves keep coming until the wall falls. */
   endless?: boolean;
+  /** A stage on hard mode (stars.ts). */
+  hard?: boolean;
 }
 
 /** What a daily challenge or a stage's chapter changes inside the battle (the wall, enemy hit
@@ -121,6 +126,7 @@ export function newMeta(): MetaSave {
     achievements: newAchievements(),
     chapterChests: [],
     seen: {},
+    stars: newStars(),
   };
 }
 
@@ -177,6 +183,7 @@ export function parseMeta(raw: string | null): MetaSave {
     const keys = seen[tab];
     if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
   }
+  out.stars = parseStars(data.stars, out.cleared);
   return out;
 }
 

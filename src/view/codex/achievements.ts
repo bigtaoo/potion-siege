@@ -9,7 +9,7 @@ import { nextTier, TRACK_IDS, TRACKS, trackProgress, trackReady, type TrackId } 
 import { CHALLENGE_TIERS } from '../../sim/challenge';
 import type { MetaSave } from '../../sim/meta';
 import {
-  bottle, calendarIcon, enemySprite, fit, flask, gearIcon, infinityIcon, ink, LIGHT, lightTile, P, PillButton, stopwatchIcon, swordsIcon, wallIcon,
+  bottle, calendarIcon, enemySprite, fit, flask, gearIcon, infinityIcon, ink, LIGHT, lightTile, P, PillButton, starIcon, stopwatchIcon, swordsIcon, wallIcon,
 } from '../kit';
 import { scrollList } from '../scroll';
 import { COLORS, HERO_COLORS, label } from '../ui';
@@ -230,6 +230,12 @@ function trackIcon(id: TrackId, size: number): Container {
       break;
     case 'workshop':
       add(gearIcon());
+      break;
+    case 'stars':
+      add(starIcon());
+      break;
+    case 'hard':
+      add(starIcon(true));
       break;
   }
   return c;

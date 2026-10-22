@@ -22,7 +22,9 @@ import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge } from '../s
 import { addProgress, claimBonus, claimLogin, claimTask, rollDay } from '../src/sim/daily';
 import { TICK_RATE } from '../src/sim/math/fixed';
 import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, doublesLeft, heroCost, heroUnlocked, newMeta, Purse, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
+import { bookStars, hardReward, hardSetup, runStars } from '../src/sim/stars';
 import { BALANCE, HERO_KINDS } from '../src/sim/types';
+import { offFrontier } from './economyStars';
 
 function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
   for (const [k, v] of Object.entries(from)) {
@@ -151,6 +153,7 @@ it('economy', () => {
   const endless = Number(env.ENDLESS ?? 0);
   const endlessFrom = Number(env.ENDLESS_FROM ?? 10);
   const chapterChest = Number(env.CHAPTER_CHEST ?? 0);
+  const stars = env.STARS !== '0';
   const lateGrowth = env.LATE_GROWTH ? Number(env.LATE_GROWTH) : null;
   const setupFor = (m: MetaSave, stage: number): BattleSetup => {
     const s = battleSetup(m, stage);
@@ -229,6 +232,7 @@ it('economy', () => {
 
       let frontierLosses = 0;
       let farm = m.cleared;
+      let hardLosses = 0;
       while (time < minutes) {
         const all = m.cleared >= BALANCE.meta.stageCount;
         const atFrontier = !all && frontierLosses < 2;
@@ -242,16 +246,18 @@ it('economy', () => {
           if (spend()) frontierLosses = 0;
           continue;
         }
-        const stage = atFrontier ? m.stage : Math.max(1, Math.min(farm, m.cleared));
+        const { stage, hard } = atFrontier ? { stage: m.stage, hard: false } : offFrontier(m, farm, hardLosses, stars);
         const purse = new Purse();
-        const pl = play(m, seed++, setupFor(m, stage), ads);
+        const pl = play(m, seed++, hard ? hardSetup(setupFor(m, stage)) : setupFor(m, stage), ads);
         const b = pl.b;
         const won = b.result === 'won';
         m.runs++;
         addProgress(m, 'play');
         if (won) addProgress(m, 'win');
         const before = m.cleared;
-        const r = purse.settle(m, { stage, won, wave: b.wave, kills: b.kills });
+        const run = { stage, won, wave: b.wave, kills: b.kills };
+        const r = purse.settle(m, run, hard ? hardReward(m, run) : undefined);
+        if (won && stars) bookStars(m, stage, hard, runStars(true, pl.revived, Math.max(0, b.wall) / b.wallMax));
         book('runs', r.crystals);
         if (r.firstClear && chapterChest > 0 && stage % 10 === 0 && stage > before) {
           m.crystals += chapterChest * (stage / 10);
@@ -269,9 +275,10 @@ it('economy', () => {
           if (won) frontierWins++;
           frontierLosses = won ? 0 : frontierLosses + 1;
           if (frontierLosses >= 2) farm = m.cleared;
-        } else if (!won) farm = Math.max(1, farm - 1);
+        } else if (hard) hardLosses = won ? 0 : hardLosses + 1;
+        else if (!won) farm = Math.max(1, farm - 1);
         claimAll();
-        if (spend()) frontierLosses = 0;
+        if (spend()) frontierLosses = hardLosses = 0;
       }
       const n = nextBuy(m);
       log.push({

@@ -18,7 +18,7 @@ export function showEnd(g: Game, b: Battle): void {
   const stats = t('stats', { wave: b.wave, kills: b.kills, time: `${Math.floor(secs / 60)}:${String(secs % 60).padStart(2, '0')}` });
   const run = g.challenge;
   const won = b.result === 'won';
-  const next = !run && !g.endless && won && !g.autoplay && offersNext(g.save, b.setup.stage);
+  const next = !run && !g.endless && !b.setup.hard && won && !g.autoplay && offersNext(g.save, b.setup.stage);
   if (!g.resultAt) {
     g.resultAt = performance.now();
     g.analytics.track('result_shown', { run: g.save.runs, stage: b.setup.stage, won, next, challenge: !!run });
@@ -65,6 +65,7 @@ export function showEnd(g: Game, b: Battle): void {
     onNext: next ? () => void nextStage(g, b) : null,
     endless: g.endless?.result ? { result: g.endless.result, best: g.save.endless.best, next: nextMilestone(g.save) } : undefined,
     adBlocked: missed,
+    stars: g.stars ?? undefined,
   });
 }
 

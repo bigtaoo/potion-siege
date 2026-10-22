@@ -258,6 +258,8 @@ export const id: Table = {
     endless: { name: 'Penjaga Abadi', desc: 'Capai gelombang {n} di mode tanpa batas' },
     login: { name: 'Pelanggan Setia', desc: 'Klaim {n} hadiah harian' },
     workshop: { name: 'Bengkel Lengkap', desc: 'Maksimalkan satu peningkatan bengkel' },
+    stars: { name: 'Pengumpul Bintang', desc: 'Dapatkan {n} bintang' },
+    hard: { name: 'Tahan Banting', desc: 'Menangkan {n} tahap sulit' },
   },
   chapter: {
     title: 'Bab {n} · {name}',
@@ -272,6 +274,16 @@ export const id: Table = {
     cleared: 'Bab tamat! Peti bab +{c}',
     finale: 'Final',
     name: { outskirts: 'Pinggiran Pabrik', snowfield: 'Padang Salju', railyard: 'Depo Kereta', foundry: 'Pengecoran', clocktower: 'Menara Jam' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Sulit',
+    locked: 'Raih {n}★ di satu bab untuk membuka mode sulitnya',
+    rule: '★★★: sisakan {p}% tembok',
+    best: 'Rekor baru!',
+    hardOpen: 'Mode sulit terbuka: bab {n}!',
+    hardFirst: 'Menang sulit pertama!',
+    chapterLock: 'Menangkan dulu tahap sulit {n}',
   },
   twist: {
     runners: { name: 'Serbuan Tikus', desc: 'Kebanyakan Tikus Jam' },

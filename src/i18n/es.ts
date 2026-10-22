@@ -258,6 +258,8 @@ export const es: Table = {
     endless: { name: 'Guardián eterno', desc: 'Llega a la oleada {n} en modo infinito' },
     login: { name: 'Asiduo', desc: 'Recoge {n} recompensas diarias' },
     workshop: { name: 'Obra completa', desc: 'Lleva una mejora del taller al máximo' },
+    stars: { name: 'Coleccionista de estrellas', desc: 'Gana {n} estrellas' },
+    hard: { name: 'Curtido', desc: 'Gana {n} fases difíciles' },
   },
   chapter: {
     title: 'Capítulo {n} · {name}',
@@ -272,6 +274,16 @@ export const es: Table = {
     cleared: '¡Capítulo superado! Cofre del capítulo +{c}',
     finale: 'Final',
     name: { outskirts: 'Afueras de la fábrica', snowfield: 'Campo nevado', railyard: 'Patio de vías', foundry: 'Fundición', clocktower: 'Torre del reloj' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Difícil',
+    locked: 'Consigue {n}★ en un capítulo para abrir su modo difícil',
+    rule: '★★★: conserva el {p}% de la muralla',
+    best: '¡Nuevo récord!',
+    hardOpen: 'Modo difícil abierto: ¡capítulo {n}!',
+    hardFirst: '¡Primera victoria difícil!',
+    chapterLock: 'Gana antes la fase difícil {n}',
   },
   twist: {
     runners: { name: 'Plaga de ratones', desc: 'Sobre todo ratones de cuerda' },

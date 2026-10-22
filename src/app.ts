@@ -20,7 +20,8 @@ import { challengeSetup, type Challenge, type ChallengeResult } from './sim/chal
 import { recordEvents } from './sim/achievements';
 import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, dayOf, rollDay } from './sim/daily';
-import { battleSetup, firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
+import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
+import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
 import { suggestSkill } from './sim/suggest';
 import { Tutorial, type TutorialStep } from './sim/tutorial';
@@ -178,6 +179,8 @@ export class Game {
   /** The battle is an endless run: what its ends booked so far (a revived run ends twice). */
   endless: { result: EndlessResult | null } | null = null;
   revived = false;
+  /** The stars a won stage booked, for the result screen. */
+  stars: StarsResult | null = null;
   /** The battle's end is booked: the battle stands still and is not booked again while the
    *  result screen waits on an ad (it is hidden then) until a revive brings it back. */
   ended = false;
@@ -271,13 +274,14 @@ export class Game {
     // a new player's runs on stage 1 share one seed until the first win, for comparable telemetry
     const fixed = cause === 'first' || cause === 'again' ? firstSeed(this.save) : null;
     const seed = fixed ?? (Math.random() * 2 ** 32) >>> 0;
-    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? endlessSetup(this.save) : battleSetup(this.save));
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? endlessSetup(this.save) : stageSetup(this.save));
     this.challenge = null;
     this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     if (this.run) this.perf.start();
     this.revived = false;
+    this.stars = null;
     this.ended = false;
     this.offered = { revive: false, double: false };
     this.resultAt = 0;
@@ -289,6 +293,7 @@ export class Game {
     this.hud.veteran = this.save.achievements.stats.merges >= VETERAN_MERGES;
     this.loop = new FixedStep();
     this.view.attach(this.battle);
+    this.view.starMark = () => !ch && cause !== 'endless' && !this.revived;
     this.hud.attach(this.battle);
     // today's tasks exist before the first battle counts toward them (a fresh save has none)
     rollDay(this.save, dayOf(new Date()));

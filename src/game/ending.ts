@@ -7,6 +7,7 @@ import type { Battle } from '../sim/battle';
 import { bookAttempt } from '../sim/challenge';
 import { addProgress, dayOf, rollDay } from '../sim/daily';
 import { bookEndless, endlessPay } from '../sim/endless';
+import { bookStars, hardReward, runStars } from '../sim/stars';
 import { again, showEnd } from './resultScreen';
 import { endTutorial } from './tutorialFlow';
 
@@ -31,8 +32,13 @@ export function finish(g: Game, b: Battle): void {
   }
   if (b.result === 'won' && !g.autoplay) addProgress(g.save, 'win');
   const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
+  const hard = b.setup.hard === true;
   // a revived battle ending again pays only what it earned on top
-  const { crystals: gain, firstClear } = g.purse.settle(g.save, result);
+  const { crystals: gain, firstClear } = g.purse.settle(g.save, result, hard ? hardReward(g.save, result) : undefined);
+  if (result.won) {
+    g.stars = bookStars(g.save, result.stage, hard, runStars(true, g.revived, Math.max(0, b.wall) / b.wallMax));
+    g.analytics.track('stars', { stage: result.stage, hard, stars: g.stars.stars, before: g.stars.before });
+  }
   g.store();
   // the portal's happytime is for rare moments: a stage beaten for the first time, not every win
   if (b.result === 'won' && firstClear && !g.autoplay) g.platform.celebrate();

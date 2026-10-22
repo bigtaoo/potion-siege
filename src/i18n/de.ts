@@ -258,6 +258,8 @@ export const de: Table = {
     endless: { name: 'Ewiger Wächter', desc: 'Erreiche Welle {n} im Endlosmodus' },
     login: { name: 'Stammgast', desc: 'Hol {n} Tagesbelohnungen ab' },
     workshop: { name: 'Voll ausgebaut', desc: 'Bau eine Werkstatt-Verbesserung voll aus' },
+    stars: { name: 'Sternsammler', desc: 'Verdiene {n} Sterne' },
+    hard: { name: 'Abgehärtet', desc: 'Gewinn {n} schwere Stufen' },
   },
   chapter: {
     title: 'Kapitel {n} · {name}',
@@ -272,6 +274,16 @@ export const de: Table = {
     cleared: 'Kapitel geschafft! Kapiteltruhe +{c}',
     finale: 'Endkampf',
     name: { outskirts: 'Fabrikrand', snowfield: 'Schneefeld', railyard: 'Güterbahnhof', foundry: 'Gießerei', clocktower: 'Uhrturm' },
+  },
+  stars: {
+    normal: 'Normal',
+    hard: 'Schwer',
+    locked: 'Hol {n}★ in einem Kapitel für seinen schweren Modus',
+    rule: '★★★: {p}% der Mauer halten',
+    best: 'Neue Bestleistung!',
+    hardOpen: 'Schwerer Modus offen: Kapitel {n}!',
+    hardFirst: 'Erster schwerer Sieg!',
+    chapterLock: 'Gewinn zuerst schwere Stufe {n}',
   },
   twist: {
     runners: { name: 'Mäuseansturm', desc: 'Vor allem Aufziehmäuse' },

@@ -258,6 +258,8 @@ export const it: Table = {
     endless: { name: 'Guardiano Eterno', desc: "Raggiungi l'ondata {n} in modalità infinita" },
     login: { name: 'Affezionato', desc: 'Riscuoti {n} premi giornalieri' },
     workshop: { name: 'Al Massimo', desc: 'Porta al massimo un potenziamento della bottega' },
+    stars: { name: 'Collezionista di Stelle', desc: 'Ottieni {n} stelle' },
+    hard: { name: 'Temprato', desc: 'Vinci {n} livelli difficili' },
   },
   chapter: {
     title: 'Capitolo {n} · {name}',
@@ -272,6 +274,16 @@ export const it: Table = {
     cleared: 'Capitolo completato! Forziere capitolo +{c}',
     finale: 'Finale',
     name: { outskirts: 'Periferia Industriale', snowfield: 'Nevaio', railyard: 'Scalo Merci', foundry: 'Fonderia', clocktower: "Torre dell'Orologio" },
+  },
+  stars: {
+    normal: 'Normale',
+    hard: 'Difficile',
+    locked: 'Ottieni {n}★ in un capitolo per aprirne la modalità difficile',
+    rule: '★★★: conserva il {p}% delle mura',
+    best: 'Nuovo record!',
+    hardOpen: 'Modalità difficile aperta: capitolo {n}!',
+    hardFirst: 'Prima vittoria difficile!',
+    chapterLock: 'Vinci prima il livello difficile {n}',
   },
   twist: {
     runners: { name: 'Orda di Topi', desc: 'Quasi tutti Topi a Molla' },

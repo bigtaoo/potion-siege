@@ -258,6 +258,8 @@ export const vi: Table = {
     endless: { name: 'Hộ Vệ Vô Tận', desc: 'Đạt đợt {n} ở chế độ vô tận' },
     login: { name: 'Khách Quen', desc: 'Nhận {n} lần thưởng hằng ngày' },
     workshop: { name: 'Xây Trọn Vẹn', desc: 'Nâng tối đa một mục ở Xưởng' },
+    stars: { name: 'Nhà Sưu Tầm Sao', desc: 'Đạt {n} sao' },
+    hard: { name: 'Tôi Luyện', desc: 'Thắng {n} màn khó' },
   },
   chapter: {
     title: 'Chương {n} · {name}',
@@ -272,6 +274,16 @@ export const vi: Table = {
     cleared: 'Qua chương! Rương chương +{c}',
     finale: 'Hồi kết',
     name: { outskirts: 'Ngoại Ô Nhà Máy', snowfield: 'Đồng Tuyết', railyard: 'Bãi Tàu', foundry: 'Xưởng Đúc', clocktower: 'Tháp Đồng Hồ' },
+  },
+  stars: {
+    normal: 'Thường',
+    hard: 'Khó',
+    locked: 'Đạt {n}★ trong một chương để mở chế độ khó của chương đó',
+    rule: '★★★: giữ {p}% tường thành',
+    best: 'Kỷ lục mới!',
+    hardOpen: 'Mở chế độ khó: chương {n}!',
+    hardFirst: 'Thắng khó lần đầu!',
+    chapterLock: 'Hãy thắng màn khó {n} trước',
   },
   twist: {
     runners: { name: 'Chuột Tràn', desc: 'Phần lớn là Chuột Dây Cót' },

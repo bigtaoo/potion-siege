@@ -7,7 +7,8 @@ import { t } from '../../i18n';
 import { canPlayFree, CHALLENGE_TIERS } from '../../sim/challenge';
 import { CHAPTER_SIZE, chapterOf, chapterProgress, chapterStages, isFinale, stageTwists } from '../../sim/chapters';
 import { endlessOpen } from '../../sim/endless';
-import { maxStage, type MetaSave } from '../../sim/meta';
+import type { MetaSave } from '../../sim/meta';
+import { stageStars, stepStage } from '../../sim/stars';
 import { ENEMY_KINDS, isBoss } from '../../sim/types';
 import { onStage } from '../../sim/waves';
 import { commanderTexture } from '../art';
@@ -15,6 +16,7 @@ import type { HomeActions } from './types';
 import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, infinityIcon, ink, LIGHT, medal, P, PillButton, plate, redDot, tappable } from '../kit';
 import { anyChestWaiting, challengeShown } from '../nudges';
 import { gem, label } from '../ui';
+import { hardToggle, plateStars, TOGGLE_ROOM, toggleShown } from './hardToggle';
 import { chapterTitle, type Area } from './shared';
 
 /** The main line, top to bottom: the stage between its arrows and what it sends, the commander
@@ -33,7 +35,9 @@ export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Are
   const off = SIDE_START_W / 2 + 40 + SIDE_R;
   if (challenge) challengeButton(root, m, act, today, cx - off, by);
   if (endless) endlessButton(root, act, cx + off, by);
-  commander(root, m, act, cx, sy + CARD_BOTTOM + 20, by - START_H / 2 - 30);
+  const toggle = toggleShown(m);
+  if (toggle) hardToggle(root, m, act, cx, sy + CARD_BOTTOM + TOGGLE_ROOM / 2 + 4);
+  commander(root, m, act, cx, sy + CARD_BOTTOM + 20 + (toggle ? TOGGLE_ROOM : 0), by - START_H / 2 - 30);
 }
 
 const START_H = 180;
@@ -61,6 +65,9 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
   const size = 66;
   const step = size + 12;
   const ch = chapterOf(m.stage);
+  const hard = m.stars.hardMode;
+  // on hard mode the chapter line follows the hard stages won
+  const done = (stage: number) => (hard ? stageStars(m, stage, true) > 0 : stage <= m.cleared);
   const card = tappable(new Container(), () => act.panel('chapters'));
   card.position.set(x, y);
   const cw = 2 * ax + 40;
@@ -68,14 +75,16 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
   card.hitArea = new Rectangle(-cw / 2, ly - 30, cw, CARD_BOTTOM - ly + 30);
   // the chapter line: its name on the left, a pip a stage, the count on the right
   card.addChild(new Graphics().roundRect(-cw / 2, ly - 28, cw, 56, 28).fill({ color: LIGHT.face, alpha: 0.6 }).stroke({ width: 3, color: LIGHT.insetEdge }));
-  const count = ink(t('chapter.progress', { n: chapterProgress(m, ch), total: CHAPTER_SIZE }), 28, { fill: P.inkSoft, fontWeight: '900' });
+  const [first] = chapterStages(ch);
+  let won = 0;
+  for (let i = 0; i < CHAPTER_SIZE; i++) if (done(first + i)) won++;
+  const count = ink(t('chapter.progress', { n: hard ? won : chapterProgress(m, ch), total: CHAPTER_SIZE }), 28, { fill: P.inkSoft, fontWeight: '900' });
   count.anchor.set(1, 0.5);
   count.position.set(cw / 2 - 26, ly);
   const name = fitText(ink(chapterTitle(ch), 30, { fontWeight: '900' }), cw - 52 - count.width - 24);
   name.anchor.set(0, 0.5);
   name.position.set(-cw / 2 + 26, ly);
   card.addChild(name, count);
-  const [first] = chapterStages(ch);
   const right = count.x - count.width - 24;
   const pstep = Math.min(28, (right - (name.x + name.width + 24)) / CHAPTER_SIZE);
   if (pstep >= 18) {
@@ -83,7 +92,7 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     for (let i = 0; i < CHAPTER_SIZE; i++) {
       const stage = first + i;
       const px = right - (CHAPTER_SIZE - 1 - i) * pstep - pstep / 2;
-      pips.circle(px, ly, isFinale(stage) ? 9 : 6).fill(stage <= m.cleared ? P.brass : LIGHT.face).stroke({ width: stage === m.stage ? 4 : 3, color: stage === m.stage ? P.red : P.line });
+      pips.circle(px, ly, isFinale(stage) ? 9 : 6).fill(done(stage) ? (hard ? 0xc9463d : P.brass) : LIGHT.face).stroke({ width: stage === m.stage ? 4 : 3, color: stage === m.stage ? P.red : P.line });
     }
     card.addChild(pips);
   }
@@ -109,11 +118,12 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     tag.y = CARD_BOTTOM - 20;
     card.addChild(tag);
   }
-  const p = plate(t('stage', { n: m.stage }), 64, 420);
+  const p = plate(t('stage', { n: m.stage }), 64, 420, hard ? 'red' : 'brass');
   p.position.set(x, y);
   root.addChild(card, p);
-  arrow(-ax, '◀', m.stage > 1, -1);
-  arrow(ax, '▶', m.stage < maxStage(m), 1);
+  plateStars(root, m, x, y + 52);
+  arrow(-ax, '◀', stepStage(m, m.stage, -1) !== null, -1);
+  arrow(ax, '▶', stepStage(m, m.stage, 1) !== null, 1);
 }
 
 
