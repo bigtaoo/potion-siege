@@ -1,6 +1,6 @@
 // `npm run bosses`: each chapter boss against the steam tank on the same stages and seeds. Per
 // stage of the boss's chapter it plays the bot with the starting four at the "arrive" save
-// (late-game.test.ts) twice - once with the chapter's boss, once with the tank in its place - and
+// (scripts/guard/saves.ts, as npm run chapters) twice - once with the chapter's boss, once with the tank in its place - and
 // reports the win rate, the wall lost in the boss waves and how long the bosses lived.
 // SEEDS (default 40), BOSS=clock (default: every chapter boss), STAGES=11-20 overrides the range:
 // the boss then stands in for the boss of the chapter those stages are in, so a later boss can be
@@ -9,37 +9,13 @@ import { it } from 'vitest';
 import { Battle } from '../src/sim/battle';
 import { botAct } from '../src/sim/bot';
 import { TICK_RATE } from '../src/sim/math/fixed';
-import { battleSetup, buyHero, buyWorkshop, heroCost, newMeta, workshopCost, type MetaSave, type WorkshopId } from '../src/sim/meta';
-import { BALANCE, BOSS_KINDS, isBoss, LINEUP, type BossKind } from '../src/sim/types';
+import { battleSetup } from '../src/sim/meta';
+import { BALANCE, BOSS_KINDS, isBoss, type BossKind } from '../src/sim/types';
 import { bossForStage, FIRST_STAGE } from '../src/sim/waves';
+// the arrive saves the chapter curve and the guard play (7.2% more a stage past 21), bought cheapest first
+import { ARRIVE, saveFor } from './guard/saves';
 
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
-
-/** As in late-game.test.ts: crystals spent when the median player first tries each stage;
- *  past 20, +20% a stage. */
-const ARRIVE = [0, 0, 290, 560, 865, 1195, 1555, 2330, 2830, 3550, 4755, 5545, 6665, 8250, 10095, 12700, 15380, 20305, 24385, 29600, 35500, 42500];
-const arrive = (stage: number) => ARRIVE[stage] ?? Math.round(ARRIVE[ARRIVE.length - 1] * 1.2 ** (stage - ARRIVE.length + 1));
-
-function saveFor(budget: number): MetaSave {
-  const m = newMeta();
-  m.lineup = [...LINEUP];
-  m.crystals = budget;
-  for (;;) {
-    let best: { cost: number; buy: () => boolean } | null = null;
-    for (const k of m.lineup) {
-      const c = heroCost(m.heroes[k]);
-      if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyHero(m, k) };
-    }
-    for (const id of ['wall', 'startGold', 'crystals'] as WorkshopId[]) {
-      const c = workshopCost(id, m.workshop[id]);
-      if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyWorkshop(m, id) };
-    }
-    if (!best || m.crystals < best.cost) break;
-    best.buy();
-  }
-  m.crystals = 0;
-  return m;
-}
 
 interface Run {
   won: boolean;
@@ -52,7 +28,7 @@ interface Run {
 }
 
 function play(seed: number, stage: number): Run {
-  const b = new Battle(seed, battleSetup(saveFor(arrive(stage)), stage));
+  const b = new Battle(seed, battleSetup(saveFor(ARRIVE[stage]), stage));
   const born = new Map<number, number>();
   const lived: number[] = [];
   const reached = new Set<number>();
