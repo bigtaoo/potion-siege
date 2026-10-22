@@ -2,7 +2,8 @@
 // `npm run bosses` on three stages a chapter, each boss against the steam tank in its place,
 // pinned to a344dc7 and re-pinned for the wave-1 horde: its rushes reroll every seed's enemies,
 // so these twenty seeds play other battles, while on 480 seeds the clock held (43.0% -> 42.4%
-// won, the tank in its place 43.5% -> 44.4%).
+// won, the tank in its place 43.5% -> 44.4%). Re-pinned for the boss hit points of balance-tune
+// (bee9f41): each boss is meant to sit 5-10 points under the tank (40 seeds, `npm run bosses`).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { battleSetup } from '../../src/sim/meta';
@@ -32,10 +33,10 @@ describe('chapter bosses', () => {
       delta[`${kind} - tank`] = 100 * (mean(own) - mean(tank));
     }
     expectNear('boss win % and its edge over the tank (20 seeds, 3 stages)', delta, {
-      'clock win %': 43.3, 'clock - tank': -8.3,
-      'tripod win %': 48.3, 'tripod - tank': -8.3,
-      'anvil win %': 35, 'anvil - tank': 1.7,
-      'gear win %': 35, 'gear - tank': -3.3,
+      'clock win %': 40, 'clock - tank': -11.7,
+      'tripod win %': 50, 'tripod - tank': -6.7,
+      'anvil win %': 30, 'anvil - tank': -3.3,
+      'gear win %': 31.7, 'gear - tank': -6.7,
     }, 15);
   }, 300_000);
 });
