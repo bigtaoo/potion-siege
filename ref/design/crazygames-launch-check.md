@@ -182,13 +182,13 @@
 | standing | 内容 | Potion Siege | 标记 |
 |---|---|---|---|
 | 00b3a0f | CrazyGames `applicationType` 进统计 | 有同样问题，已移植（只到客户端，报表没改） | 🔧 |
-| 937a1cb | 每分钟一个 `alive` 事件，页面直接被杀掉（没有 pagehide）时也知道玩到哪 | 部分：`run_quit` / `session_end` 只在 pagehide 时发；`wave_start` 能看出最后一波 | ⚠️ 建议移植 |
-| 4bb561a | 开发构建把 perf / anomaly 打到控制台（超出上限的也打） | 有：开发构建只有 `?track` 才打印，超过 `ANOMALY_CAP` 直接丢 | ℹ️ 小 |
-| c05ae3d | 会话事件带上门户语言和浏览器语言 | 部分：只发了最终选的 `lang` | ℹ️ 小 |
-| 8267b39 | dev server 忽略构建输出目录（Windows 上会占满 CPU） | 部分：三个 vite 配置都没有 `server.watch.ignored`（`dist-*`、`ios/`、`ref/`、`telemetry/`） | ℹ️ 小 |
-| 8f4de83 | 用线上真实存档测试能完整解析 | 部分：只有手写的旧存档测试 | ℹ️ 小 |
-| 0af6559 | `launch_check.mjs`：新上传版本前几小时和上一版对比 | 部分：`report.mjs` 能按首个版本分组，但没有同玩家年龄的两版对比 | ℹ️ 中 |
-| baee706 附带 | 从 bfcache 恢复的页面可能发两次 `session_end`（pagehide 没限制只发一次） | 有，小问题 | ℹ️ |
+| 937a1cb | 每分钟一个 `alive` 事件，页面直接被杀掉（没有 pagehide）时也知道玩到哪 | 已移植并改过：所有可见界面都计时（和 CrazyGames 的 playtime 一样只算页面可见时间，每次 tick 最多算 5 s），带界面/关卡/波次；`session_end` 带 `vis`；报表的 playtime 改用 `vis`，新增 Sessions 一段（页面死掉时最后在哪）。没有 run_resume（Potion Siege 没有保留的局） | 🔧 26d151d、4e44330 |
+| 4bb561a | 开发构建把 perf / anomaly 打到控制台（超出上限的也打） | 已经有：`src/analytics/devPrint.ts`（ceecfb0），开发构建直接打印，超过上限也打 | ℹ️ 已有 |
+| c05ae3d | 会话事件带上门户语言和浏览器语言 | 已移植：`session_start` 带 `langs`（门户/手机）和 `navLangs`（浏览器），各最多 4 个 | 🔧 26d151d |
+| 8267b39 | dev server 忽略构建输出目录（Windows 上会占满 CPU） | 已移植：`scripts/devWatch.mjs` 的 `WATCH_IGNORED`（从根目录起的 `dist*`、`ios/`、`ref/`、`telemetry/`，`src/platform/ios` 照常监视），三个 vite 配置都用 | 🔧 b496be0 |
+| 8f4de83 | 用线上真实存档测试能完整解析 | 跳过：还没在 CrazyGames 上线，没有线上存档可用；等上线后取一份真实存档再补 | ⏭️ 跳过 |
+| 0af6559 | `launch_check.mjs`：新上传版本前几小时和上一版对比 | 已移植：`npm run report -- <file> --compare crazygames [--hours n]`（`scripts/buildCompare.mjs`），按设备，同样的安装后时长 | 🔧 4e44330 |
+| baee706 附带 | 从 bfcache 恢复的页面可能发两次 `session_end`（pagehide 没限制只发一次） | 已修：每次离开只发一次，bfcache 恢复后重新允许，未结束的局可以再记 `run_quit`；报表按 sid 合并多个 `session_end` | 🔧 26d151d |
 
 已经有或不适用：1024b09（纹理卸载后冻结，已移植）、aa727bc（open 信标，已经正确）、c63aa50（重复批次，BeaconSink 不重试）、5d8db2f（iOS 帧抖动，没有对应代码）、bd5e7f5、97057ff、a3fe951/544021f、回放收集、Playgama / Newgrounds 相关。另外：standing 发现 saver 档 30 fps 在 iPhone 13 上越跑越卡，Potion Siege 也还是 30 fps（`quality.ts:22`），这属于性能，留给内存/性能那边。
 
@@ -199,6 +199,6 @@
 ### 仍然开着的风险
 
 1. ⚠️ 插屏收入的取舍（上面）：Full Launch 前再看一次。
-2. ⚠️ 没有 `alive` 心跳：手机上页面直接被杀掉的局不知道最后的状态（standing 937a1cb）。
+2. ✅ `alive` 心跳已移植（26d151d）：页面被直接杀掉时，报表能看到最后一次心跳的界面/关卡/波次。隐私页（中英）已写上每分钟报到、游戏关闭和语言列表。
 3. 👤 门户里真正切换静音、adblock 提示行的实际效果，要在 crazygames.com/preview 的 QA 工具里看一次（本地 SDK 模拟不了 adblock）。
 4. ℹ️ `?lang` 在正式构建里保留（只换语言，没有影响）。
