@@ -91,7 +91,7 @@ CrazyGames needs three covers with the same look. Rules: no borders, the title i
 | Portrait | 800x1200 (2:3) | `ref/store/cover_portrait_800x1200_{en,zh}.png` |
 | Square | 800x800 (1:1) | `ref/store/cover_square_800x800_{en,zh}.png` |
 
-How the candidates were made: composed with PIL from the game's own art in `public/art/`:
+How the candidates were made: composed with PIL from the game's own art (the PNG/JPEG sources, now in `art/web/`; `public/art/` ships WebP made from them):
 - the field and the wall from the battle background
 - the four starting potions in their ultimate forms
 - the alchemist in the middle
