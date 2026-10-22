@@ -21,7 +21,7 @@ import { Battle } from './sim/battle';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
 import { recordEvents } from './sim/achievements';
 import { endlessSetup, type EndlessResult } from './sim/endless';
-import { addProgress, dayOf, rollDay } from './sim/daily';
+import { addProgress, gameDay, rollDay } from './sim/daily';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
@@ -311,7 +311,7 @@ export class Game {
     this.view.starMark = () => !ch && cause !== 'endless' && !this.revived;
     this.hud.attach(this.battle);
     // today's tasks exist before the first battle counts toward them (a fresh save has none)
-    rollDay(this.save, dayOf(new Date()));
+    rollDay(this.save, gameDay(this.save, new Date()));
   }
 
   /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */

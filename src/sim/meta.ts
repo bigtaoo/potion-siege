@@ -7,6 +7,7 @@ import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import { newStars, parseStars, type StarSave } from './stars';
+import { carry, int } from './parse';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
 import type { SkillId } from './skills';
 import type { WaveMods } from './waves';
@@ -15,10 +16,16 @@ import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 const M = BALANCE.meta;
 const S = BALANCE.shop;
 
+/** The save's format. A build reading a save of a higher version (an OTA rollback) keeps what it
+ *  does not know and never lowers what the newer one may allow higher (cleared, hero levels). */
+export const SAVE_VERSION = 1;
+
 export const WORKSHOP_IDS = ['wall', 'startGold', 'crystals'] as const;
 export type WorkshopId = (typeof WORKSHOP_IDS)[number];
 
 export interface MetaSave {
+  /** The highest SAVE_VERSION that wrote this save. */
+  v: number;
   crystals: number;
   /** 1-based level of each hero kind. */
   heroes: Record<HeroKind, number>;
@@ -107,6 +114,7 @@ export interface BattleModifiers extends WaveMods {
 
 export function newMeta(): MetaSave {
   return {
+    v: SAVE_VERSION,
     crystals: 0,
     heroes: { arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 1, wind: 1 },
     workshop: { wall: 0, startGold: 0, crystals: 0 },
@@ -130,13 +138,8 @@ export function newMeta(): MetaSave {
   };
 }
 
-function int(v: unknown, min: number, max: number, fallback: number): number {
-  const n = Math.floor(Number(v));
-  return Number.isFinite(n) ? Math.min(max, Math.max(min, n)) : fallback;
-}
-
 /** Reads a stored save, filling in anything missing or broken; the old save (bestWave and runs
- *  only) becomes a fresh one that keeps those two. */
+ *  only) becomes a fresh one that keeps those two. Fields it does not know are kept as stored. */
 export function parseMeta(raw: string | null): MetaSave {
   const out = newMeta();
   let data: Record<string, unknown> = {};
@@ -146,12 +149,16 @@ export function parseMeta(raw: string | null): MetaSave {
   } catch {
     return out;
   }
+  const v = int(data.v, 0, Number.MAX_SAFE_INTEGER, 0);
+  out.v = Math.max(SAVE_VERSION, v);
+  // a newer build may have more stages or a higher level cap: this one keeps what it wrote
+  const newer = v > SAVE_VERSION;
   const heroes = (data.heroes ?? {}) as Record<string, unknown>;
   const workshop = (data.workshop ?? {}) as Record<string, unknown>;
-  for (const k of Object.keys(out.heroes) as HeroKind[]) out.heroes[k] = int(heroes[k], 1, M.heroMax, 1);
+  for (const k of Object.keys(out.heroes) as HeroKind[]) out.heroes[k] = int(heroes[k], 1, newer ? Number.MAX_SAFE_INTEGER : M.heroMax, 1);
   for (const k of WORKSHOP_IDS) out.workshop[k] = int(workshop[k], 0, M.workshop[k].max, 0);
   out.crystals = int(data.crystals, 0, Number.MAX_SAFE_INTEGER, 0);
-  out.cleared = int(data.cleared, 0, M.stageCount, 0);
+  out.cleared = int(data.cleared, 0, newer ? Number.MAX_SAFE_INTEGER : M.stageCount, 0);
   out.stage = int(data.stage, 1, maxStage(out), 1);
   out.bestWave = int(data.bestWave, 0, 999, 0);
   out.runs = int(data.runs, 0, Number.MAX_SAFE_INTEGER, 0);
@@ -184,7 +191,7 @@ export function parseMeta(raw: string | null): MetaSave {
     if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
   }
   out.stars = parseStars(data.stars, out.cleared);
-  return out;
+  return carry(data, out);
 }
 
 /** The furthest stage open to play. */
@@ -226,7 +233,7 @@ export function workshopValue(id: WorkshopId, level: number): number {
 
 export function buyHero(m: MetaSave, kind: HeroKind): boolean {
   const cost = heroCost(m.heroes[kind]);
-  if (!heroUnlocked(m, kind) || cost === null || m.crystals < cost) return false;
+  if (!heroUnlocked(m, kind) || cost === null || !(m.crystals >= cost)) return false;
   m.crystals -= cost;
   m.heroes[kind]++;
   return true;
@@ -234,7 +241,7 @@ export function buyHero(m: MetaSave, kind: HeroKind): boolean {
 
 export function buyWorkshop(m: MetaSave, id: WorkshopId): boolean {
   const cost = workshopCost(id, m.workshop[id]);
-  if (cost === null || m.crystals < cost) return false;
+  if (cost === null || !(m.crystals >= cost)) return false;
   m.crystals -= cost;
   m.workshop[id]++;
   return true;
@@ -433,7 +440,7 @@ export const AD_CRYSTALS = S.ad;
 export const ADS_PER_DAY = S.adsPerDay;
 
 export function chestReady(m: MetaSave, today: string): boolean {
-  return m.shop.chestDay !== today;
+  return today > m.shop.chestDay;
 }
 
 /** Opens today's free chest; the crystals it paid, 0 when it was opened already today. */
@@ -446,13 +453,13 @@ export function claimChest(m: MetaSave, today: string): number {
 
 /** Rewarded ads for crystals still on offer today. */
 export function adsLeft(m: MetaSave, today: string): number {
-  return m.shop.adDay === today ? Math.max(0, S.adsPerDay - m.shop.ads) : S.adsPerDay;
+  return today > m.shop.adDay ? S.adsPerDay : Math.max(0, S.adsPerDay - m.shop.ads);
 }
 
 /** Pays for a rewarded ad that was watched to the end; 0 once today's are used up. */
 export function claimAd(m: MetaSave, today: string): number {
   if (adsLeft(m, today) <= 0) return 0;
-  if (m.shop.adDay !== today) {
+  if (today > m.shop.adDay) {
     m.shop.adDay = today;
     m.shop.ads = 0;
   }
@@ -469,7 +476,7 @@ export function unlockPrice(kind: HeroKind): number | null {
 /** Buys a locked potion early; false when it is open already, not sold or too dear. */
 export function buyUnlock(m: MetaSave, kind: HeroKind): boolean {
   const price = unlockPrice(kind);
-  if (price === null || heroUnlocked(m, kind) || m.crystals < price) return false;
+  if (price === null || heroUnlocked(m, kind) || !(m.crystals >= price)) return false;
   m.crystals -= price;
   return unlockHero(m, kind);
 }

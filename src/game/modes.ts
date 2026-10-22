@@ -3,7 +3,7 @@
 
 import type { Game } from '../app';
 import { beginAttempt, todaysChallenge } from '../sim/challenge';
-import { dayOf } from '../sim/daily';
+import { gameDay } from '../sim/daily';
 import { beginEndless } from '../sim/endless';
 import { home } from './homeScreen';
 
@@ -21,7 +21,7 @@ export function playEndless(g: Game): void {
 
 /** Starts today's challenge (`ad`: the retry a rewarded ad bought). */
 export function playChallenge(g: Game, ad: boolean): void {
-  const today = dayOf(new Date());
+  const today = gameDay(g.save, new Date());
   const ch = todaysChallenge(g.save, today);
   const bonus = beginAttempt(g.save, today, ad);
   if (bonus === null) return;

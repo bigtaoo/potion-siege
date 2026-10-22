@@ -1,9 +1,12 @@
 // The daily hooks: a seven-day login reward and three tasks a day, both paid in crystals.
 // Days are local calendar dates ('2026-10-15'), passed in so the rules stay testable. A missed
 // day does not reset the login streak; the next claim simply gives the next day's reward.
+// Days only move forward: a device clock turned back reads as the latest day the save has seen
+// (gameDay), and every "new day" test is `today > stored`, so nothing is paid twice.
 
 import { endlessOpen } from './endless';
 import type { MetaSave } from './meta';
+import { int } from './parse';
 import { Rng } from './rng';
 import { BALANCE } from './types';
 
@@ -38,6 +41,15 @@ export function dayOf(now: Date): string {
   return `${now.getFullYear()}-${p(now.getMonth() + 1)}-${p(now.getDate())}`;
 }
 
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/** The day the game runs on: the device's date, or the latest day this save has seen when the
+ *  clock was turned back (rollDay keeps `daily.day` at that latest day). */
+export function gameDay(m: MetaSave, now: Date): string {
+  const seen = [m.daily.day, m.daily.lastClaim, m.shop.chestDay, m.shop.adDay, m.challenge.date];
+  return seen.reduce((latest, d) => (DAY.test(d) && d > latest ? d : latest), dayOf(now));
+}
+
 export function newDaily(): DailySave {
   return { day: '', tasks: [], claims: 0, lastClaim: '', bonus: false, doubles: 0 };
 }
@@ -49,13 +61,13 @@ export function parseDaily(v: unknown): DailySave {
   const d = v as Record<string, unknown>;
   if (typeof d.day === 'string') out.day = d.day;
   if (typeof d.lastClaim === 'string') out.lastClaim = d.lastClaim;
-  out.claims = Math.max(0, Math.floor(Number(d.claims)) || 0);
+  out.claims = int(d.claims, 0, Number.MAX_SAFE_INTEGER, 0);
   out.bonus = d.bonus === true;
-  out.doubles = Math.max(0, Math.floor(Number(d.doubles)) || 0);
+  out.doubles = int(d.doubles, 0, Number.MAX_SAFE_INTEGER, 0);
   if (Array.isArray(d.tasks)) {
     for (const t of d.tasks as Record<string, unknown>[]) {
       if (!t || !TASK_IDS.includes(t.id as TaskId)) continue;
-      out.tasks.push({ id: t.id as TaskId, progress: Math.max(0, Math.floor(Number(t.progress)) || 0), claimed: t.claimed === true });
+      out.tasks.push({ id: t.id as TaskId, progress: int(t.progress, 0, taskGoal(t.id as TaskId), 0), claimed: t.claimed === true });
     }
   }
   return out;
@@ -71,7 +83,7 @@ export function hash(s: string): number {
 /** On a new day, rolls that day's tasks (the same for everyone on that date who has the same
  *  modes open: the endless task only comes once endless mode is open). */
 export function rollDay(m: MetaSave, today: string): void {
-  if (m.daily.day === today) return;
+  if (!(today > m.daily.day)) return;
   m.daily.day = today;
   m.daily.bonus = false;
   m.daily.doubles = 0;
@@ -113,7 +125,7 @@ export function loginReward(day: number): number {
 }
 
 export function canClaimLogin(m: MetaSave, today: string): boolean {
-  return m.daily.lastClaim !== today;
+  return today > m.daily.lastClaim;
 }
 
 export function claimLogin(m: MetaSave, today: string): number {

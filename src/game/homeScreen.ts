@@ -6,7 +6,7 @@ import { CONSENT_AFTER_RUNS } from '../analytics/privacy';
 import { t } from '../i18n';
 import { claimTier } from '../sim/achievements';
 import { openChapterChest } from '../sim/chapters';
-import { canClaimLogin, claimBonus, claimLogin, claimTask, dayOf, rollDay } from '../sim/daily';
+import { canClaimLogin, claimBonus, claimLogin, claimTask, gameDay, rollDay } from '../sim/daily';
 import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
 import { setHardMode, stageOpen, stepStage } from '../sim/stars';
 import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
@@ -19,7 +19,7 @@ import { beginTutorial } from './tutorialFlow';
 /** The home screen over an idle battle of the chosen stage; the login reward opens by itself
  *  the first time each day it can be claimed. */
 export function home(g: Game, panel: HomePanel = null): void {
-  const today = dayOf(new Date());
+  const today = gameDay(g.save, new Date());
   rollDay(g.save, today);
   const entering = !g.menu.visible;
   if (entering) g.consentVisit = false;

@@ -5,7 +5,7 @@ import type { Game } from '../app';
 import { recordChallenge } from '../sim/achievements';
 import type { Battle } from '../sim/battle';
 import { bookAttempt } from '../sim/challenge';
-import { addProgress, dayOf, rollDay } from '../sim/daily';
+import { addProgress, gameDay, rollDay } from '../sim/daily';
 import { bookEndless, endlessPay } from '../sim/endless';
 import { bookStars, hardReward, runStars } from '../sim/stars';
 import { again, showEnd } from './resultScreen';
@@ -25,7 +25,7 @@ export function finish(g: Game, b: Battle): void {
   g.platform.gameplayStop();
   // the tutorial belongs to the first battle only, however far it got
   if (g.tutorial) endTutorial(g, true);
-  rollDay(g.save, dayOf(new Date()));
+  rollDay(g.save, gameDay(g.save, new Date()));
   if (!g.revived) {
     g.save.runs++; // a revived run ending again is still one run
     if (!g.autoplay) addProgress(g.save, 'play');
@@ -53,7 +53,7 @@ export function finish(g: Game, b: Battle): void {
  *  campaign crystals, no revive and no ×2. */
 export function finishChallenge(g: Game, b: Battle, run: NonNullable<Game['challenge']>): void {
   g.platform.gameplayStop();
-  rollDay(g.save, dayOf(new Date()));
+  rollDay(g.save, gameDay(g.save, new Date()));
   g.save.runs++;
   addProgress(g.save, 'play');
   addProgress(g.save, 'challenge');
@@ -73,7 +73,7 @@ export function finishChallenge(g: Game, b: Battle, run: NonNullable<Game['chall
  *  work as after a stage), then the best wave and any milestone reached for the first time. */
 export function finishEndless(g: Game, b: Battle, run: NonNullable<Game['endless']>): void {
   g.platform.gameplayStop();
-  rollDay(g.save, dayOf(new Date()));
+  rollDay(g.save, gameDay(g.save, new Date()));
   if (!g.revived) {
     g.save.runs++;
     addProgress(g.save, 'play');
