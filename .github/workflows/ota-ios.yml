@@ -91,6 +91,9 @@ jobs:
         env:
           PS_BUNDLE_VERSION: ${{ steps.ver.outputs.version }}
         run: npm run build:ios
+      # the bundle about to ship, played for 30 s in the runner's Chrome (scripts/smoke.mjs)
+      - name: Smoke the bundle
+        run: npm run smoke -- ios
 
       - name: Zip it with the manifest
         env:
