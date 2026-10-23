@@ -2,7 +2,7 @@
 // the crystals top right.
 
 import { Container, Graphics } from 'pixi.js';
-import { t } from '../../i18n';
+import { formatAmount, t } from '../../i18n';
 import { canClaimLogin, tasksClaimable } from '../../sim/daily';
 import type { MetaSave } from '../../sim/meta';
 import { calendarIcon, fit as fitText, gearIcon, ink, LIGHT, medal, redDot, scrollIcon, tappable } from '../kit';
@@ -31,7 +31,7 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, today: st
   button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
 
   // the crystals in a dark inset, top right
-  const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });
+  const count = ink(formatAmount(m.crystals), 50, { fill: LIGHT.crystal });
   const pw = Math.max(240, count.width + 120);
   const purse = new Container();
   // found by the claim animation, which flies crystals into it

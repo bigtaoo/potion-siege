@@ -14,7 +14,11 @@ function flatten(o: object, prefix = ''): Map<string, string> {
   return out;
 }
 
-const placeholders = (s: string) => [...s.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort();
+/** The names a string fills, plural picks ({n|one:…|other:…}) included, each once. */
+const placeholders = (s: string) => [...new Set([...s.matchAll(/\{(\w+)(?=[}|])/g)].map((m) => m[1]))].sort();
+
+/** A string with its placeholders and plural picks taken out. */
+const bare = (s: string) => s.replace(/\{\w+\|[^{}]+\}/g, '').replace(/\{\w+\}/g, '');
 
 /** Strings any language may leave as in English: names, links and game words everyone uses. */
 const SAME = new Set(['title', 'mvp', 'sound.policyPage', 'codex.hp', 'maxed', 'side.fresh', 'level', 'levelOf', 'bossTag']);
@@ -54,7 +58,7 @@ describe.each(OTHERS)('%s', (l) => {
     // a string that is only placeholders, numbers and symbols needs no translation; in another
     // script any English left is a miss, in a Latin one a few words are the same (Plasma, Finale)
     const words = /[A-Za-z]{2,}/;
-    const same = [...T()].filter(([k, v]) => !SAME.has(k) && words.test(v.replace(/\{\w+\}/g, '')) && v === E.get(k));
+    const same = [...T()].filter(([k, v]) => !SAME.has(k) && words.test(bare(v)) && v === E.get(k));
     expect([...T()].filter(([, v]) => !v.trim())).toEqual([]);
     if (OWN_SCRIPT.has(l)) expect(same.map(([k, v]) => `${k}: ${v}`)).toEqual([]);
     else expect(same.length).toBeLessThan(15);
@@ -65,7 +69,7 @@ describe.each(OTHERS)('%s', (l) => {
   });
 
   it('leaves no stray braces', () => {
-    const stray = (s: string) => /[{}]/.test(s.replace(/\{\w+\}/g, ''));
+    const stray = (s: string) => /[{}]/.test(bare(s));
     const bad = [...T()].filter(([, v]) => stray(v));
     expect(bad.map(([k, v]) => `${k}: ${v}`)).toEqual([]);
   });
@@ -102,7 +106,7 @@ describe('locale', () => {
   });
 
   it('leaves no stray braces in English', () => {
-    const bad = [...E].filter(([, v]) => /[{}]/.test(v.replace(/\{\w+\}/g, '')));
+    const bad = [...E].filter(([, v]) => /[{}]/.test(bare(v)));
     expect(bad).toEqual([]);
   });
 });
