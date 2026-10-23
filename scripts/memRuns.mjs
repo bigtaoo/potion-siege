@@ -3,7 +3,8 @@
 // plays `runs` runs in a row (every third one endless), each from the home screen with every tab
 // and two panels built first, the way a player goes home and back. After each run it collects
 // the garbage and prints the JS heap and the live Pixi objects (Graphics, their contexts, Text,
-// Sprite, all display objects, those on stage, GPU textures). A heap or a count that climbs from
+// Sprite, all display objects, those on stage, GPU textures, GPU texture MB by kind and how many
+// art uploads were repeats after Pixi's texture GC dropped them). A heap or a count that climbs from
 // run to run is a leak. Last it samples 10 s of one battle at speed 1 and prints the allocation
 // rate and the functions that allocate the most. Numbers: ref/design/memory-audit.md.
 
@@ -12,7 +13,8 @@ import { launchChrome } from './cdp.mjs';
 
 const runs = Number(process.argv[2] ?? 12);
 const speed = Number(process.argv[3] ?? 8);
-const PORT = 5299;
+// PORT and CDP_PORT move it off 5299 and 9338 when another measurement is running beside it
+const PORT = Number(process.env.PORT ?? 5299);
 /** Real seconds a run may take before it is left where it is and the next one starts. */
 const RUN_MAX_S = Number(process.env.RUN_MAX_S ?? 90);
 
@@ -28,7 +30,7 @@ for (let i = 0; ; i++) {
 }
 
 console.error('dev server up');
-const { send, evaluate, close } = await launchChrome({ args: ['--window-size=430,932', '--enable-precise-memory-info'] });
+const { send, evaluate, close } = await launchChrome({ port: Number(process.env.CDP_PORT ?? 9338), args: ['--window-size=430,932', '--enable-precise-memory-info'] });
 await send('Runtime.enable');
 await send('Emulation.setDeviceMetricsOverride', { width: 430, height: 932, deviceScaleFactor: 2, mobile: true });
 await send('Page.navigate', { url: `${origin}/?autoplay&speed=${speed}` });
@@ -44,6 +46,12 @@ await evaluate(`(async () => {
   const find = (pipe) => { const s = [g.app.stage]; while (s.length) { const o = s.pop(); if (o.renderPipeId === pipe) return o; s.push(...(o.children ?? [])); } throw new Error('no ' + pipe + ' on stage'); };
   await frames(10);
   const graphics = find('graphics');
+  // every GPU upload of a texture source, and which ones went up again after Pixi's GC dropped them
+  const tex = g.app.renderer.texture, seen = new Set(), again = new Map();
+  if (tex._initSource) {
+    const init = tex._initSource.bind(tex);
+    tex._initSource = (s) => { if (seen.has(s)) { const k = String(s.label || s.resource?.src || s.uid).split('/').pop(); again.set(k, (again.get(k) ?? 0) + 1); } seen.add(s); return init(s); };
+  }
   window.__mem = {
     protos: { Graphics: Object.getPrototypeOf(graphics), GraphicsContext: Object.getPrototypeOf(graphics.context), Text: Object.getPrototypeOf(find('text')), Sprite: Object.getPrototypeOf(find('sprite')), Container: Object.getPrototypeOf(g.app.stage) },
     async run(kind, maxS) {
@@ -71,7 +79,13 @@ await evaluate(`(async () => {
       let stage = 0;
       const s = [g.app.stage];
       while (s.length) { const o = s.pop(); stage++; s.push(...(o.children ?? [])); }
-      return { stage, gpuContexts: live(r.graphicsContext?._managedContexts), gpuTex: (r.texture?.managedTextures ?? []).filter(Boolean).length, textTex: live({ items: r.canvasText?._activeTextures }) };
+      // GPU texture memory by kind: loaded art (an image behind it), text (a canvas), and sources with
+      // nothing behind them (pooled scratch: returned text textures and filter or render targets)
+      const srcs = (r.texture?.managedTextures ?? []).filter(Boolean);
+      const mb = (f) => Math.round(srcs.filter(f).reduce((a, s) => a + s.pixelWidth * s.pixelHeight * 4, 0) / 2 ** 19) / 2;
+      const reup = [...again.values()].reduce((a, n) => a + n, 0);
+      return { stage, gpuContexts: live(r.graphicsContext?._managedContexts), gpuTex: srcs.length, textTex: live({ items: r.canvasText?._activeTextures }),
+        artMB: mb((s) => s.resource && !s.resource.getContext), textMB: mb((s) => s.resource?.getContext), scratchMB: mb((s) => !s.resource), reup, reupWhat: [...again].map(([k, n]) => k + '×' + n).join(' ') };
     },
   };
 })()`);
@@ -124,8 +138,9 @@ walk(profile.head);
 console.log('\nrun   kind     wave  secs  heapMB  Graphics  GfxCtx  Text  Sprite  Container  stage  gpuCtx  gpuTex  textTex');
 for (const r of rows) {
   const c = (v, w) => String(v ?? '').padStart(w);
-  console.log(`${c(r.run, 5)}  ${String(r.kind ?? '').padEnd(7)} ${c(r.wave, 5)} ${c(r.secs, 5)} ${c(r.heapMB, 7)} ${c(r.Graphics, 9)} ${c(r.GraphicsContext, 7)} ${c(r.Text, 5)} ${c(r.Sprite, 7)} ${c(r.Container, 10)} ${c(r.stage, 6)} ${c(r.gpuContexts, 7)} ${c(r.gpuTex, 7)} ${c(r.textTex, 8)}`);
+  console.log(`${c(r.run, 5)}  ${String(r.kind ?? '').padEnd(7)} ${c(r.wave, 5)} ${c(r.secs, 5)} ${c(r.heapMB, 7)} ${c(r.Graphics, 9)} ${c(r.GraphicsContext, 7)} ${c(r.Text, 5)} ${c(r.Sprite, 7)} ${c(r.Container, 10)} ${c(r.stage, 6)} ${c(r.gpuContexts, 7)} ${c(r.gpuTex, 7)} ${c(r.textTex, 8)} ${c(r.artMB, 6)} ${c(r.textMB, 7)} ${c(r.scratchMB, 10)} ${c(r.reup, 5)}`);
 }
+console.log(`\nuploaded again after Pixi's texture GC dropped them: ${rows.at(-1).reupWhat || 'none'}`);
 console.log(`\nbattle at speed 1: ${(total / 2 ** 20 / 10).toFixed(2)} MB/s allocated, about ${frames} frames/s in headless Chrome`);
 for (const [site, bytes] of [...bySite].sort((a, b) => b[1] - a[1]).slice(0, 20)) console.log(`${(bytes / 2 ** 20 / 10).toFixed(3).padStart(7)} MB/s  ${site}`);
 

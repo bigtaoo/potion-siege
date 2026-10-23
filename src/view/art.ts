@@ -41,6 +41,16 @@ const LATER = [
 export const ART_TIERS = { FIRST, SOON, LATER } as const;
 
 const textures = new Map<string, Texture>();
+
+/** Keeps a loaded texture's GPU copy for the session. Pixi's texture GC unloads an image source
+ *  that no frame drew for a minute, and the next frame that draws it uploads it again, mid-battle:
+ *  the home screen's potions after a battle, a boss's sheet from one boss wave to the next, a field
+ *  on a chapter's second stage. Every file here is held for the whole session anyway (none is ever
+ *  freed), so the GC only ever trades the same few MB for a hitch. */
+function keep(t: Texture): Texture {
+  t.source.autoGarbageCollect = false;
+  return t;
+}
 let rest: Promise<void> = Promise.resolve();
 let first: Promise<void> | undefined;
 
@@ -49,7 +59,7 @@ function load(files: readonly string[]): Promise<void> {
   return Promise.all(
     files.map(async (f) => {
       try {
-        textures.set(f, await Assets.load<Texture>(`${base}art/${f}.webp`));
+        textures.set(f, keep(await Assets.load<Texture>(`${base}art/${f}.webp`)));
       } catch (err) {
         console.warn(`art: ${f} failed to load, keeping the placeholder`, err);
       }
@@ -183,7 +193,7 @@ export function loadField(key: string): Promise<Texture | undefined> {
   let p = fetching.get(key);
   if (!p) {
     p = Assets.load<Texture>(`${import.meta.env.BASE_URL}art/${key}.webp`).then(
-      (t) => (textures.set(key, t), t),
+      (t) => (textures.set(key, keep(t)), t),
       (err) => (console.warn(`art: ${key} failed to load, keeping the first field`, err), undefined),
     );
     fetching.set(key, p);

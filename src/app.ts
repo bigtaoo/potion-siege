@@ -6,7 +6,7 @@
 // taps (homeActions.ts), the challenge and endless modes (modes.ts); boot()'s helpers in
 // startup.ts.
 
-import { Application, Container, Graphics } from 'pixi.js';
+import { Application, Container, Graphics, TexturePool } from 'pixi.js';
 import type { Analytics } from './analytics/analytics';
 import { Heartbeat, watchPage } from './analytics/heartbeat';
 import { languageProps } from './analytics/languages';
@@ -302,7 +302,8 @@ export class Game {
     this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
-    if (this.run) this.perf.start();
+    // a run also frees the textures the menu's or result screen's texts gave back to Pixi's TexturePool, which keeps them on the GPU for good; after the caller has torn that screen down (docs/perf.md)
+    if (this.run) { this.perf.start(); queueMicrotask(() => TexturePool.clear()); }
     this.revived = false;
     this.stars = null;
     this.ended = false;
