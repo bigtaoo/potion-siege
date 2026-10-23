@@ -37,7 +37,7 @@
 <main>
 <article id="en" lang="en">
   <h1>Privacy Policy</h1>
-  <p class="meta">Last updated: 2026-10-22 &nbsp;·&nbsp; Potion Siege &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#zh" lang="zh-Hans">中文</a></p>
+  <p class="meta">Last updated: 2026-10-23 &nbsp;·&nbsp; Potion Siege &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#zh" lang="zh-Hans">中文</a></p>
 
   <p>This policy explains what data the game Potion Siege collects, why, and what you can do about it. It applies wherever you play the game: on our own site (p.gamestao.com), on game sites such as CrazyGames, itch.io or Newgrounds, and in the iPhone app. We follow the EU General Data Protection Regulation (GDPR) and the applicable data protection law.</p>
 
@@ -56,6 +56,12 @@
       <td data-h="Exactly">A fixed list of game events, sent to our server at <code>ps.gamestao.com</code>: the game starting (how long it took to load, your language and the list of languages your browser and the portal or phone report, the screen size, whether the screen is a touch screen, and a rough description of the device: memory size class, number of processor cores, the graphics chip as one of "software", "weak", "other" or "hidden", pixel density and the renderer); a battle starting and ending (stage, mode, the potions you took and their levels, the wave reached, won or lost, time played); the tutorial's steps; your first summon, merge and win; skills picked, upgrades and crystals spent, daily rewards and tasks claimed; which menu screens you open; an optional ad offered and whether it was watched; in the iPhone app, buying or restoring the Ad-free card (only whether it went through, never any payment details); the frame rate and memory use when the game runs slowly; a check-in once a minute while the game is on screen (how long it has been on screen, and where you are in the game: the screen, stage and wave); the game closing (how long it was open and how long on screen); and error messages from the game's own code. Each event comes with the random install ID (§4), a random ID for that launch, the time, how many days since you first played and how many times you have played, the platform (web, CrazyGames or iPhone), the game version, and where you first came from: a short tag in the link you followed (such as <code>?src=…</code>) or the name of the site that linked to the game, never the full address. <strong>The list and its fields are fixed in the game's code.</strong></td>
       <td data-h="Why">Seeing which parts of the game are played, where new players get stuck and whether they come back, to balance and improve the game and fix crashes</td>
       <td data-h="Legal basis">In the EEA, the UK and Switzerland: your consent (Art. 6(1)(a) GDPR). The game asks on the home screen after your first battle; until you tap <em>Allow</em>, nothing is sent and no install ID is stored, and if you never answer, nothing is ever sent. Everywhere else: our legitimate interest in improving the game (Art. 6(1)(f) GDPR). In both cases the <em>Share stats</em> switch in Settings turns it off.</td>
+    </tr>
+    <tr>
+      <td>Battle replays</td>
+      <td data-h="Exactly">Only while play statistics are on, with the same install ID: for each battle, the record the game itself needs to play it again: the stage and its setup (the potions and their levels, the wall, the upgrades), the random seed, and each of your moves in it (summon, merge, skill picked, commander cast, revive) with its moment in the battle. Sent when the battle ends, when you leave it, and when the game goes to the background mid-battle. Nothing else: no device details, no text.</td>
+      <td data-h="Why">Playing battles again on our side to see where and why they are lost, what damages the wall, and which merges and skills are used, to balance the game</td>
+      <td data-h="Legal basis">The same as play statistics: your consent in the EEA, the UK and Switzerland, our legitimate interest elsewhere; the <em>Share stats</em> switch turns it off</td>
     </tr>
     <tr>
       <td>Load counts</td>
@@ -117,9 +123,10 @@
 
   <h2>8. How long we keep it</h2>
   <!-- The 14 months are KEEP_MONTHS in scripts/collector.mjs, which deletes the older day files
-       itself; change both together. TODO(owner): check what Cloudflare logs for ps.gamestao.com
+       itself; the 15 days are KEEP_DAYS in scripts/replayShelf.mjs; the 30 days of backups are
+       PS_BACKUP_DAYS in server/docker-compose.yml. Change each with its text. TODO(owner): check what Cloudflare logs for ps.gamestao.com
        on this plan. -->
-  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>Each day's file is deleted automatically after 14 months</strong>, sooner if you ask us to delete yours (§9). The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
+  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>Each day's file is deleted automatically after 14 months</strong>, sooner if you ask us to delete yours (§9). A daily backup copy of each day's file is kept on the same server for 30 days. <strong>Battle replays are deleted automatically after 15 days</strong>, or sooner when the space set aside for them is full (the oldest first), and are not backed up. The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
 
   <h2>9. Your rights</h2>
   <p>You can ask for access to your data, correction, deletion, restriction and a portable copy, and you can object to processing based on our legitimate interest at any time. Consent you gave by allowing play statistics or by sending feedback can be withdrawn at any time, without affecting what was sent before.</p>
@@ -139,7 +146,7 @@
 
 <article id="zh" lang="zh-Hans">
   <h1>隐私政策</h1>
-  <p class="meta">更新日期：2026-10-22 &nbsp;·&nbsp; 药水围城（Potion Siege） &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#en" lang="en">English</a></p>
+  <p class="meta">更新日期：2026-10-23 &nbsp;·&nbsp; 药水围城（Potion Siege） &nbsp;·&nbsp; <a href="mailto:support@gamestao.com">support@gamestao.com</a> &nbsp;·&nbsp; <a href="#en" lang="en">English</a></p>
 
   <p>本政策说明游戏《药水围城》收集哪些数据、为什么收集，以及你可以怎么做。无论你在我们自己的网站（p.gamestao.com）、CrazyGames、itch.io、Newgrounds 等游戏网站还是 iPhone 应用里玩，本政策都适用。我们遵守欧盟《通用数据保护条例》（GDPR）及适用的数据保护法律。如中英文版本有出入，以英文版为准。</p>
 
@@ -158,6 +165,12 @@
       <td data-h="具体内容">一份固定的游戏事件清单，发送到我们的服务器 <code>ps.gamestao.com</code>：游戏启动（加载用时、语言、浏览器和门户网站或手机报告的语言列表、屏幕尺寸、是否触屏，以及对设备的粗略描述：内存大小档位、处理器核数、显卡只分“软件渲染”“较弱”“其他”“不可见”四类、像素密度和渲染方式）；一场战斗的开始和结束（关卡、模式、带上的药剂及其等级、到达的波次、胜负、时长）；新手引导的各步；第一次召唤、合成和胜利；选择的技能、升级和花费的水晶、领取的每日奖励和任务；打开了哪些菜单界面；可选广告的弹出以及是否看完；在 iPhone 应用里购买或恢复“免广告”卡（只记是否成功，绝不含任何支付信息）；游戏卡顿时的帧率和内存占用；游戏显示在屏幕上时每分钟一次的在线报到（已在屏幕上显示多久，以及你在游戏里的位置：界面、关卡和波次）；游戏关闭（开了多久、在屏幕上显示了多久）；以及游戏自身代码的报错信息。每条附带随机安装 ID（见第 4 节）、本次启动的随机 ID、时间、距第一次游玩的天数和游玩次数、平台（网页、CrazyGames 或 iPhone）、游戏版本，以及你最初从哪里来：你点开的链接里的简短标记（例如 <code>?src=…</code>）或链接到游戏的网站名称，绝不含完整网址。<strong>事件清单和字段都写死在游戏代码里。</strong></td>
       <td data-h="用途">了解游戏的哪些部分有人玩、新玩家卡在哪里、是否回来再玩，以便平衡和改进游戏、修复崩溃</td>
       <td data-h="法律依据">在欧洲经济区、英国和瑞士：你的同意（GDPR 第 6 条第 1 款 a 项）。游戏会在你打完第一场战斗后的主界面上询问；在你点“允许”之前，不发送任何数据，也不保存安装 ID，如果你一直不回答，就永远不会发送。其他地区：我们改进游戏的正当利益（GDPR 第 6 条第 1 款 f 项）。无论哪种情况，都可以用“设置”里的“分享统计”开关关闭。</td>
+    </tr>
+    <tr>
+      <td>战斗回放</td>
+      <td data-h="具体内容">只在游戏统计开启时发送，附带同一个安装 ID：每场战斗中游戏自己重演这场战斗所需的记录：关卡及其配置（带上的药剂及其等级、城墙、升级）、随机种子，以及你在其中的每一步操作（召唤、合成、选择的技能、指挥官施法、复活）和它在战斗中的时刻。在战斗结束、你离开战斗、或游戏在战斗中转到后台时发送。除此之外没有别的：不含设备信息，也不含文字。</td>
+      <td data-h="用途">在我们这边重演战斗，看清在哪里、为什么输掉，城墙被什么打掉，以及哪些合成和技能被使用，用来平衡游戏</td>
+      <td data-h="法律依据">与游戏统计相同：在欧洲经济区、英国和瑞士是你的同意，其他地区是我们的正当利益；“设置”里的“分享统计”开关可以关闭</td>
     </tr>
     <tr>
       <td>加载计数</td>
@@ -218,7 +231,7 @@
   <p>Cloudflare 和 Hetzner 依据数据处理协议代我们处理数据。若在欧洲经济区以外处理数据，则依据欧盟委员会的标准合同条款进行。</p>
 
   <h2>8. 保存多久</h2>
-  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>每天的文件保存 14 个月后自动删除</strong>；你要求删除你的数据时会更早删除（见第 9 节）。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
+  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>每天的文件保存 14 个月后自动删除</strong>；你要求删除你的数据时会更早删除（见第 9 节）。每天的文件在同一台服务器上另有一份备份，保留 30 天。<strong>战斗回放 15 天后自动删除</strong>，为它们预留的空间满了时会更早删除（最旧的先删），且不做备份。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
 
   <h2>9. 你的权利</h2>
   <p>你可以要求查阅、更正、删除、限制处理你的数据，或获取一份可携带的副本，也可以随时反对基于我们正当利益的处理。你通过允许游戏统计或发送反馈给出的同意可以随时撤回，撤回不影响之前已发送的数据。</p>

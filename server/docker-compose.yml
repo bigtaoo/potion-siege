@@ -14,7 +14,7 @@ services:
     restart: unless-stopped
     mem_limit: 128m
     volumes:
-      # one NDJSON file per UTC day (deploy user = uid 1000 = the image's `node`)
+      # one NDJSON file per UTC day and replays/ (deploy user = uid 1000 = the image's `node`)
       - ./data:/data
     logging: &logging
       driver: json-file
@@ -42,3 +42,37 @@ services:
         condition: service_healthy
     mem_limit: 128m
     logging: *logging
+
+  # A nightly gzipped copy of the day before's event file in ./backups (server/README.md
+  # "Backups"), each kept PS_BACKUP_DAYS (30) days. It reads ./data only and nothing depends on
+  # it. The replays are not copied: they live 15 days and can go.
+  backup:
+    image: node:22.23.4-alpine
+    container_name: ps-backup
+    restart: unless-stopped
+    user: "1000:1000"
+    environment:
+      PS_BACKUP_DAYS: ${PS_BACKUP_DAYS:-30}
+    volumes:
+      - ./data:/data:ro
+      - ./backups:/backups
+    mem_limit: 32m
+    logging: *logging
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        while :; do
+          now=$$(date -u +%s); next=$$(date -u -d "$$(date -u +%F) 03:00" +%s)
+          [ "$$next" -gt "$$now" ] || next=$$((next + 86400))
+          sleep $$((next - now))
+          day=$$(date -u -d @$$(($$(date -u +%s) - 86400)) +%F)
+          src=/data/events-$$day.ndjson; f=/backups/events-$$day.ndjson.gz
+          if [ ! -f "$$src" ]; then
+            echo "backup: no $$src"
+          elif gzip -c "$$src" > "$$f.part"; then
+            mv "$$f.part" "$$f"; echo "backup $$f $$(du -h "$$f" | cut -f1)"
+          else
+            rm -f "$$f.part"; echo "backup of $$src failed" >&2
+          fi
+          find /backups -name 'events-*.ndjson.gz' -mtime +$$PS_BACKUP_DAYS -delete
+        done

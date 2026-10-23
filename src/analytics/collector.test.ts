@@ -1,141 +1,18 @@
-// scripts/collector.mjs, run in-process: node:http hands its request handler to the test
-// instead of opening a port, and node:fs writes to a map. (No @types/node here, so the little
-// of node the test touches is declared by hand.)
+// scripts/collector.mjs, run in-process (collectorHarness.ts): the day files, the events and
+// load checkpoints it keeps, and the per-address budgets. Bodies and /health: collectorLimits.test.ts;
+// replays: collectorReplays.test.ts.
 
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { dayFile, DIR, lines, load, NOON, request, resetState, state, TODAY } from './collectorHarness';
 
-declare const process: { argv: string[] };
-
-type Handler = (req: FakeReq, res: FakeRes) => void;
-
-const state = vi.hoisted(() => ({
-  handler: null as Handler | null,
-  port: 0,
-  files: new Map<string, string>(),
-  /** Size statSync reports instead of the real one, e.g. to stand for a full file. */
-  sizeOverride: null as number | null,
-  dirs: [] as string[],
-}));
-
-vi.mock('node:http', () => ({
-  createServer: (handler: Handler) => {
-    state.handler = handler;
-    return {
-      listen: (port: number, cb?: () => void) => {
-        state.port = port;
-        cb?.();
-      },
-    };
-  },
-}));
-
-// paths with / on every OS: node:path's join gives \ on Windows
-vi.mock('node:fs', () => ({
-  mkdirSync: (dir: string) => {
-    state.dirs.push(dir.replace(/\\/g, '/'));
-  },
-  appendFileSync: (file: string, text: string) => {
-    const key = file.replace(/\\/g, '/');
-    state.files.set(key, (state.files.get(key) ?? '') + text);
-  },
-  readdirSync: (dir: string) => {
-    const prefix = `${dir.replace(/\\/g, '/')}/`;
-    return [...state.files.keys()].filter((f) => f.startsWith(prefix)).map((f) => f.slice(prefix.length));
-  },
-  unlinkSync: (file: string) => {
-    state.files.delete(file.replace(/\\/g, '/'));
-  },
-  statSync: (file: string) => {
-    if (state.sizeOverride !== null) return { size: state.sizeOverride };
-    const text = state.files.get(file.replace(/\\/g, '/'));
-    if (text === undefined) throw new Error('ENOENT');
-    return { size: text.length };
-  },
-}));
-
-class FakeReq {
-  readonly socket = { remoteAddress: '10.0.0.1' };
-  readonly destroy = vi.fn();
-  private readonly listeners = new Map<string, ((chunk?: string) => void)[]>();
-  constructor(
-    readonly method: string,
-    readonly url: string,
-    readonly headers: Record<string, string> = {},
-  ) {}
-  setEncoding(): void {}
-  on(event: string, fn: (chunk?: string) => void): this {
-    this.listeners.set(event, [...(this.listeners.get(event) ?? []), fn]);
-    return this;
-  }
-  emit(event: string, chunk?: string): void {
-    for (const fn of this.listeners.get(event) ?? []) fn(chunk);
-  }
-}
-
-class FakeRes {
-  status = 0;
-  headers: Record<string, string> = {};
-  body: string | undefined;
-  ended = false;
-  writeHead(status: number, headers: Record<string, string> = {}): this {
-    this.status = status;
-    this.headers = headers;
-    return this;
-  }
-  end(body?: string): this {
-    this.body = body;
-    this.ended = true;
-    return this;
-  }
-}
-
-const NOON = Date.UTC(2026, 9, 18, 12);
-const DIR = '/data';
-const dayFile = (day: string) => `${DIR}/events-${day}.ndjson`;
-const TODAY = dayFile('2026-10-18');
-
-/** Loads a fresh copy of the collector (new rate-limit state) with these env and argv. */
-async function load(env: { COLLECTOR_DIR?: string; PORT?: string } = { COLLECTOR_DIR: DIR }, argv: string[] = []) {
-  vi.resetModules();
-  state.handler = null;
-  vi.stubEnv('COLLECTOR_DIR', env.COLLECTOR_DIR);
-  vi.stubEnv('PORT', env.PORT);
-  const saved = process.argv;
-  process.argv = ['node', 'collector.mjs', ...argv];
-  try {
-    await import('../../scripts/collector.mjs');
-  } finally {
-    process.argv = saved;
-  }
-  if (!state.handler) throw new Error('collector did not create a server');
-  return state.handler;
-}
-
-/** Sends one request, with `body` (POST) in the given chunks, and returns the response. */
-function request(handler: Handler, method: string, url: string, body?: string | string[], headers?: Record<string, string>) {
-  const req = new FakeReq(method, url, headers);
-  const res = new FakeRes();
-  handler(req, res);
-  if (body !== undefined) {
-    for (const chunk of Array.isArray(body) ? body : [body]) req.emit('data', chunk);
-    req.emit('end');
-  }
-  return { req, res };
-}
-
-const lines = (file: string) =>
-  (state.files.get(file) ?? '')
-    .split('\n')
-    .filter(Boolean)
-    .map((l) => JSON.parse(l) as Record<string, unknown>);
+vi.mock('node:http', async () => (await import('./collectorHarness')).fakeHttp);
+vi.mock('node:fs', async () => (await import('./collectorHarness')).fakeFs);
 
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ['Date'] });
   vi.setSystemTime(NOON);
   vi.spyOn(console, 'log').mockImplementation(() => {});
-  state.files.clear();
-  state.dirs.length = 0;
-  state.sizeOverride = null;
+  resetState();
 });
 
 afterEach(() => {
@@ -148,7 +25,7 @@ describe('collector setup', () => {
   it('writes one file per UTC day under COLLECTOR_DIR, on PORT', async () => {
     const handler = await load({ COLLECTOR_DIR: DIR, PORT: '9001' });
     expect(state.port).toBe(9001);
-    expect(state.dirs).toEqual([DIR]);
+    expect(state.dirs).toEqual([DIR, `${DIR}/replays`]);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     vi.setSystemTime(NOON + 86_400_000);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_end', uid: 'u' }]));
@@ -159,14 +36,14 @@ describe('collector setup', () => {
   it('defaults to port 8787 and a single file, or takes both from the command line', async () => {
     const handler = await load({});
     expect(state.port).toBe(8787);
-    expect(state.dirs).toEqual(['telemetry']);
+    expect(state.dirs).toEqual(['telemetry', 'telemetry/replays']);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('telemetry/events.ndjson')).toHaveLength(1);
 
     state.dirs.length = 0;
     const custom = await load({}, ['9100', 'out/x.ndjson']);
     expect(state.port).toBe(9100);
-    expect(state.dirs).toEqual(['out']);
+    expect(state.dirs).toEqual(['out', 'out/replays']);
     request(custom, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('out/x.ndjson')).toHaveLength(1);
   });
@@ -242,14 +119,15 @@ describe('collector POST /e', () => {
     expect(state.files.size).toBe(0);
   });
 
-  it('cuts off a body over 64 KB', async () => {
+  it('cuts off a body over 64 KB with a 413', async () => {
     const handler = await load();
     const { req, res } = request(handler, 'POST', '/e');
     req.emit('data', 'x'.repeat(60 * 1024));
     expect(req.destroy).not.toHaveBeenCalled();
     req.emit('data', 'x'.repeat(5 * 1024));
     expect(req.destroy).toHaveBeenCalled();
-    expect(res.ended).toBe(false);
+    expect(res.status).toBe(413);
+    expect(res.headers.Connection).toBe('close');
   });
 
   it('stops writing to a day file that is already full, and says so once', async () => {

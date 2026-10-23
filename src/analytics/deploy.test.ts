@@ -1,4 +1,4 @@
-// The collector's deploy (server/ci-deploy.sh): CI sends collector.mjs alone, and the box builds
+// The collector's deploy (server/ci-deploy.sh): CI sends the collector's own files alone, and the box builds
 // with the Dockerfile and compose file installed there by hand, which the script checks by
 // hash. This keeps those hashes equal to server/'s copies (as committed: LF line ends).
 
@@ -20,10 +20,20 @@ describe('collector deploy', () => {
     expect(deployScript).toContain(`COMPOSE_SHA256=${await sha256(compose)}`);
   });
 
-  it('takes collector.mjs alone from CI, which sends nothing else', () => {
-    expect(deployScript).toMatch(/tar xzf - -C "\$STAGE" [^\n]*collector\.mjs \|\|/);
+  it("takes the collector's three files alone from CI, which sends nothing else", () => {
+    const files = 'collector.mjs collectorLimits.mjs replayShelf.mjs';
+    expect(deployScript).toContain(`FILES="${files}"`);
+    expect(deployScript).toMatch(/tar xzf - -C "\$STAGE" [^\n]*\$FILES \|\|/);
     expect(deployScript).not.toMatch(/cp "\$STAGE\/(Dockerfile|docker-compose)/);
-    expect(ciWorkflow).toContain('tar czf - -C scripts collector.mjs |');
+    expect(ciWorkflow).toContain(`tar czf - -C scripts ${files} |`);
     expect(ciWorkflow).not.toMatch(/tar czf[^\n]*(Dockerfile|docker-compose)/);
+    expect(dockerfile).toContain(`COPY ${files} ./`);
+  });
+
+  it('pins every image to one release', () => {
+    for (const image of [...dockerfile.matchAll(/^FROM (\S+)/gm), ...compose.matchAll(/^\s+image: (\S+)/gm)].map((m) => m[1])) {
+      if (image === 'potion-siege-collector') continue;
+      expect(image).toMatch(/:\d+\.\d+\.\d+(-[a-z]+)?$/);
+    }
   });
 });

@@ -85,9 +85,9 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           # pinned, never StrictHostKeyChecking=no: the key and payload go only to this box
           echo "$SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
-          # the forced command on the box reads this tar.gz from stdin and takes collector.mjs alone;
-          # the Dockerfile and compose file stay as installed by hand there (server/ci-deploy.sh)
-          tar czf - -C scripts collector.mjs |
+          # the forced command on the box reads this tar.gz from stdin and takes the collector's three
+          # files alone; the Dockerfile and compose file stay as installed by hand there (server/ci-deploy.sh)
+          tar czf - -C scripts collector.mjs collectorLimits.mjs replayShelf.mjs |
             ssh -T -i ~/.ssh/deploy_key -o IdentitiesOnly=yes deploy@62.238.1.182
       - name: verify from the outside
         if: steps.tip.outputs.go == '1'

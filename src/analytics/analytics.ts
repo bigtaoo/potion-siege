@@ -6,6 +6,7 @@
 
 import type { KeyValueStore } from '../platform/types';
 import type { Sharing } from './privacy';
+import type { ReplayUpload } from './replayUpload';
 import { UNKNOWN_SOURCE } from './source';
 
 const PLAYER_KEY = 'mb.player';
@@ -80,6 +81,8 @@ export class Analytics {
   private readonly startedAt: number;
   /** Events waiting for the player's answer. */
   private held: TrackedEvent[] = [];
+  /** Where the battles' replays go, under the same consent (createAnalytics); none in dev and autoplay. */
+  replays: ReplayUpload | null = null;
 
   constructor(
     private readonly store: KeyValueStore,
