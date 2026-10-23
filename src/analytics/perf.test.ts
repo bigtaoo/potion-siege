@@ -3,7 +3,7 @@ import { coresBucket, perfSummary, printPerf } from '../../scripts/perfSummary.m
 import type { Props } from './analytics';
 import { countNodes, heapMB, textureStats, type MemSample } from './memProbe';
 import { gpuClass, PERF_MID_MAX, PERF_MID_SECS, PerfMeter, perfTrouble } from './perfMeter';
-import { ANOMALY_CAP, ANOMALY_TOTAL, Anomalies, deviceProps, errorProps, LongTasks, PerfReport } from './perfReport';
+import { ANOMALY_CAP, ANOMALY_TOTAL, Anomalies, deviceProps, errorProps, LongTasks, PerfReport, stackTop } from './perfReport';
 
 const noLongTasks = () => new LongTasks(undefined);
 
@@ -126,6 +126,24 @@ describe('Anomalies', () => {
     for (const k of ['error', 'rejection', 'webgl_lost'] as const) for (let i = 0; i < 5; i++) an.report(k);
     expect(a.events).toHaveLength(ANOMALY_TOTAL);
   });
+
+  it('reports a frame that threw with its message and the top of its stack', () => {
+    const a = fakeTrack();
+    const an = new Anomalies(a, () => ({ place: 'run', wave: 2 }));
+    const err = new Error('b.enemies is undefined');
+    err.stack = 'TypeError: b.enemies is undefined\n    at tick (https://h.example/assets/index-abc.js?v=2:1:2345)\n    at update (https://h.example/assets/index-abc.js:1:99)';
+    an.error(err);
+    an.error('plain');
+    expect(a.events.map((e) => e.props)).toEqual([
+      { kind: 'error', place: 'run', wave: 2, msg: 'b.enemies is undefined', src: 'index-abc.js:1:2345', frame: 1 },
+      { kind: 'error', place: 'run', wave: 2, msg: 'plain', frame: 1 },
+    ]);
+  });
+
+  it('reads Safari stacks too', () => {
+    expect(stackTop('tick@https://h.example/assets/index-abc.js:1:77\nupdate@https://h.example/assets/index-abc.js:1:5')).toEqual({ file: 'https://h.example/assets/index-abc.js', line: 1, col: 77 });
+    expect(stackTop('no positions here')).toBeNull();
+  });
 });
 
 describe('PerfReport', () => {
@@ -207,6 +225,24 @@ describe('PerfReport', () => {
     lt.add(80);
     r.end();
     expect(a.events[0].props).toMatchObject({ longMs: 200, longN: 2 });
+  });
+
+  it('sends the chapter and the ms from the tap to the first battle frame', () => {
+    const { a, r } = setup(() => ({ tex: 1, texMB: 1, nodes: 1 }));
+    r.start(3, performance.now() - 400);
+    for (let i = 0; i < 50; i++) r.tick(16, false, 0); // the scene still building
+    for (let i = 0; i < 400; i++) r.tick(16, true, 0);
+    r.end();
+    const p = a.events[0].props;
+    expect(p.chapter).toBe(3);
+    expect(p.ready).toBeGreaterThanOrEqual(400);
+    expect(p.ready).toBeLessThan(5000);
+    // a run no tap started (the first battle, autoplay) has no `ready`
+    r.start(1);
+    for (let i = 0; i < 400; i++) r.tick(16, true, 0);
+    r.end();
+    expect(a.events[1].props).toMatchObject({ chapter: 1 });
+    expect(a.events[1].props).not.toHaveProperty('ready');
   });
 });
 

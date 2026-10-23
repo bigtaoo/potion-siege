@@ -3,6 +3,7 @@
 
 import type { Application } from 'pixi.js';
 import { Analytics, type Sink } from '../analytics/analytics';
+import { languageProps } from '../analytics/languages';
 import { deviceProps } from '../analytics/perfReport';
 import type { PrivacyChoice } from '../analytics/privacy';
 import { BeaconSink, ConsoleSink, MemorySink } from '../analytics/sinks';
@@ -63,7 +64,6 @@ export function device(app: Application): DeviceInfo {
     cores: nav.hardwareConcurrency || 0,
     memoryGB: nav.deviceMemory || 0,
     gpu,
-    dpr: window.devicePixelRatio || 1,
   };
 }
 
@@ -84,4 +84,30 @@ export function createAnalytics(platform: Platform, params: URLSearchParams, pri
   if (url && !params.has('autoplay')) sinks.push(new BeaconSink(url));
   // a first visit records where the player came from (analytics/source.ts)
   return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__), privacy.sharing());
+}
+
+/** `session_start` once the game is up, and the page's size once it has one (a portal's iframe can have none at boot). */
+export function trackSessionStart(analytics: Analytics, platform: Platform, app: Application, lang: Locale): void {
+  analytics.track('session_start', {
+    loadMs: Math.round(performance.now()),
+    lang,
+    ...languageProps(platform, navigator.languages),
+    w: window.innerWidth,
+    h: window.innerHeight,
+    touch: navigator.maxTouchPoints > 0,
+    // the beacons' test, so players and launches split the same way
+    device: pointerKind(),
+    ...safeDevice(app),
+    ...platform.sessionProps?.(),
+  });
+  // inside a portal's iframe the page can have no size yet at boot: the size once it has one
+  if (!(window.innerWidth > 0 && window.innerHeight > 0)) {
+    const sized = () => {
+      if (!(window.innerWidth > 0 && window.innerHeight > 0)) return;
+      window.removeEventListener('resize', sized);
+      analytics.track('viewport', { w: window.innerWidth, h: window.innerHeight, t: analytics.sessionSeconds });
+    };
+    window.addEventListener('resize', sized);
+    requestAnimationFrame(() => requestAnimationFrame(sized));
+  }
 }

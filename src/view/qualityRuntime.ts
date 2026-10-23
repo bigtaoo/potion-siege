@@ -1,12 +1,17 @@
 import type { Application, Renderer } from 'pixi.js';
-import { FrameGate, FrameGovernor, LEVELS, targetFps, type LevelRange, type LevelSettings } from './quality';
+import { FrameClock } from './frameClock';
+import { FrameGate, FrameGovernor, frameResolution, LEVELS, refreshCap, targetFps, type LevelRange, type LevelSettings } from './quality';
 
 // Drives the frame loop and applies quality levels (ported from standing's
 // client/src/game/qualityRuntime.ts). Pixi's own ticker.maxFPS cannot be used: it still
 // measures each frame's delta from the last skipped animation frame, so a 60 fps cap on a
 // 120 Hz screen would run the game at half speed. Instead the ticker is stopped and stepped
 // from our own requestAnimationFrame loop behind a FrameGate. Calm screens (no battle moving)
-// get a lower cap, and their frames are left out of the governor's measure.
+// get a lower cap, and their frames are left out of the governor's measure. The ticker runs on a
+// FrameClock (as standing's), so the battle and the view step whole refreshes however late the
+// frame's callback ran. Screens with no battle draw at the canvas's full density and battles at
+// their level's resolution: the canvas is resized as the player goes in or out of a battle, never
+// mid-battle (frameResolution). A frame that throws goes to onFault (game/faultRecover.ts).
 
 /** The WebGL renderer string, '' when the browser hides it. */
 export function gpuName(renderer: Renderer): string {
@@ -23,8 +28,12 @@ export function gpuName(renderer: Renderer): string {
 export class QualityRuntime {
   governor: FrameGovernor;
   private readonly gate: FrameGate;
+  private readonly clock = new FrameClock();
   private readonly maxResolution: number;
   private last = 0;
+  private wasCalm = true;
+  /** A frame threw; must not throw itself. */
+  onFault: (err: unknown) => void = (err) => console.error(err);
   /** Stops the loop for good (a newer tab took the game over, game/tabLock.ts). */
   stopped = false;
 
@@ -33,6 +42,8 @@ export class QualityRuntime {
     range: LevelRange,
     /** True while nothing fast is on screen: the menus, or a battle that is not moving. */
     private readonly calm: () => boolean = () => false,
+    /** True while no battle is on screen (home, title, results): drawn at full density. */
+    private readonly sharp: () => boolean = () => false,
   ) {
     this.governor = new FrameGovernor(range);
     this.maxResolution = app.renderer.resolution;
@@ -47,10 +58,18 @@ export class QualityRuntime {
       const calm = this.calm();
       this.gate.fps = targetFps(this.settings, calm);
       if (!this.gate.pass(now)) return;
-      // calm frames come slower on purpose and say nothing about the load
-      if (this.last > 0 && !calm && this.governor.sample((now - this.last) / 1000)) this.apply();
+      // calm frames come slower on purpose and say nothing about the load, nor does the first
+      // battle frame after them (its time runs from a calm frame)
+      if (this.last > 0 && !calm && !this.wasCalm) this.governor.sample((now - this.last) / 1000, refreshCap(this.gate.vsync));
       this.last = now;
-      app.ticker.update(now);
+      this.wasCalm = calm;
+      // a throw in any of the frame's listeners or the render goes to onFault, which recovers
+      try {
+        this.apply();
+        app.ticker.update(this.clock.tick(now, this.gate.vsync));
+      } catch (err) {
+        this.onFault(err);
+      }
     };
     requestAnimationFrame(loop);
   }
@@ -59,8 +78,9 @@ export class QualityRuntime {
     return LEVELS[this.governor.level];
   }
 
+  /** Sizes the canvas for this frame's screen; a no-op unless a battle came or went or the level moved. */
   private apply(): void {
-    const res = Math.min(this.maxResolution, this.settings.resolution);
+    const res = frameResolution(this.sharp(), this.settings, this.maxResolution);
     const r = this.app.renderer;
     if (r.resolution !== res) r.resize(this.app.screen.width, this.app.screen.height, res);
   }
