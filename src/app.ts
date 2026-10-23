@@ -19,7 +19,6 @@ import { detectLocale, loadLocale, setLocale, t } from './i18n';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
-import { recordEvents } from './sim/achievements';
 import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, gameDay, rollDay } from './sim/daily';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
@@ -27,7 +26,7 @@ import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
 import { suggestSkill } from './sim/suggest';
 import { Tutorial, type TutorialStep } from './sim/tutorial';
-import { BALANCE, type BattleEvent, type HeroKind } from './sim/types';
+import type { BattleEvent, HeroKind } from './sim/types';
 import { loadArt, restOfArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud, VETERAN_MERGES } from './view/Hud';
@@ -44,9 +43,13 @@ import { topPick } from './view/nudges';
 import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
+import { shakeOn } from './view/media';
+import { countEvents } from './game/countEvents';
 import { finish } from './game/ending';
+import { Haptics } from './game/haptics';
 import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
+import { openPause, pauseFrame, PauseLayer } from './game/pause';
 import { urlSwitches } from './game/switches';
 import { createAnalytics, device, loadedBeacon, pointerKind, safeDevice, showLocale } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
@@ -161,6 +164,9 @@ export class Game {
   readonly hud: Hud;
   /** On the whole screen like the menus, over the battle. */
   readonly overlay = new Overlay();
+  /** The pause panel and the upright cover, over everything (game/pause.ts). */
+  readonly pause = new PauseLayer();
+  private readonly haptics: Haptics;
   /** The first battle's tutorial, over everything in the battle. */
   readonly lessons = new TutorialLayer(() => endTutorial(this, true));
   tutorial: Tutorial | null = null;
@@ -251,10 +257,13 @@ export class Game {
     this.hud = new Hud(
       () => this.battle?.summon(),
       () => this.battle?.upgrade(),
+      () => openPause(this),
     );
+    this.haptics = new Haptics(platform.vibrate, () => this.save.sound.haptics);
+    this.view.shakes = () => shakeOn(this.save.sound.shake);
     this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
-    app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu);
+    app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu, this.pause);
     app.ticker.add((ticker) => {
       this.tick(Math.min(ticker.deltaMS / 1000, 0.1));
       this.perf.tick(ticker.deltaMS, this.measured(), this.battle?.enemies.length ?? 0);
@@ -325,7 +334,7 @@ export class Game {
   /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */
   private measured(): boolean {
     const b = this.battle;
-    return !!(this.run && b && !b.paused && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
+    return !!(this.run && b && !b.paused && !this.pause.open && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
   }
 
   /** Nothing fast on screen: the frame loop drops to its calm rate. */
@@ -350,6 +359,7 @@ export class Game {
     const m = fitMenu(this.app.screen.width, this.app.screen.height);
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);
+    pauseFrame(this, dt, m);
     this.sideWall(fit.x, m);
     this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt);
     // the workshop tune on the menus and the title, the battle loop while a battle runs
@@ -369,7 +379,7 @@ export class Game {
 
     const b = this.battle;
     let events: BattleEvent[] = [];
-    if (b && !this.overlay.visible && !this.ended) {
+    if (b && !this.overlay.visible && !this.ended && !this.pause.open) {
       // the bot picks its cards at once, so autoplay never stops for an offer
       if (this.autoplay && b.choices) botAct(b);
       if (!b.paused) {
@@ -382,16 +392,17 @@ export class Game {
       }
       events = b.drain();
       this.run?.onEvents(events);
-      if (this.run && !this.autoplay) this.countDaily(events);
+      if (this.run && !this.autoplay) countEvents(this.save, events);
       this.view.react(events);
       this.audio.battle(events);
+      this.haptics.react(events);
       this.hud.react(events);
       // an offer made on the tick's last step (or by the bot's own upgrade) would otherwise open the overlay
       if (this.autoplay && b.choices) botAct(b);
       if (b.choices) this.showSkills(b);
       else if (b.result) finish(this, b);
     }
-    lesson(this, b, events, m, dt);
+    lesson(this, b, events, m, this.pause.open ? 0 : dt);
     this.overlay.tick(dt);
     this.view.update(dt, this.loop.alpha);
     this.hud.update(dt);
@@ -474,22 +485,6 @@ export class Game {
   artIn(): void {
     this.refresh();
     this.overlay.rebuild();
-  }
-
-  /** Counts this battle's events toward today's tasks and the achievements. */
-  private countDaily(events: BattleEvent[]): void {
-    const m = this.save;
-    recordEvents(m, events);
-    for (const ev of events) {
-      if (ev.type === 'summon') addProgress(m, 'summon');
-      else if (ev.type === 'merge') {
-        addProgress(m, 'merge');
-        if (ev.star === BALANCE.maxStar) addProgress(m, 'ultimate');
-      } else if (ev.type === 'kill') {
-        addProgress(m, 'kill');
-        if (ev.boss) addProgress(m, 'boss');
-      }
-    }
   }
 
   /** Ads silence the game while they play. */

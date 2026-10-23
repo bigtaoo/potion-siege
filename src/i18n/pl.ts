@@ -153,7 +153,9 @@ export const pl: Table = {
   allDone: 'Premia za komplet',
   allDoneCount: 'Odebrano {n}/{total}',
   lang: { name: 'Polski' },
-  sound: { language: 'Język', settings: 'Ustawienia', music: 'Muzyka', sfx: 'Dźwięk', on: 'WŁ.', off: 'WYŁ.', privacy: 'Prywatność reklam', policy: 'Polityka prywatności', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Język', settings: 'Ustawienia', music: 'Muzyka', sfx: 'Dźwięk', shake: 'Wstrząsy ekranu', haptics: 'Wibracje', on: 'WŁ.', off: 'WYŁ.', privacy: 'Prywatność reklam', policy: 'Polityka prywatności', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Pauza', resume: 'Wznów', giveUp: 'Poddaj się', confirm: 'Dotknij ponownie, by się poddać' },
+  rotate: 'Obróć telefon pionowo',
   privacy: {
     title: 'Statystyki gry',
     ask: 'Czy możemy liczyć, jak grasz? Gra wysyła anonimowe dane (osiągnięta fala, długość bitew, połączenia) z losowym ID, abyśmy mogli ją zbalansować. Bez imienia, bez profilu reklamowego. Możesz to zmienić w Ustawieniach w każdej chwili.',

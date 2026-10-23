@@ -154,7 +154,9 @@ export const en = {
   allDoneCount: '{n}/{total} claimed',
   /** The language's own name, for the picker. */
   lang: { name: 'English' },
-  sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', shake: 'Screen shake', haptics: 'Vibration', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Paused', resume: 'Resume', giveUp: 'Give up', confirm: 'Tap again to give up' },
+  rotate: 'Turn your phone upright',
   /** The consent panel and the play statistics part of the settings (analytics/privacy.ts). */
   privacy: {
     title: 'Play statistics',

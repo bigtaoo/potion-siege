@@ -153,7 +153,9 @@ export const ja: Table = {
   allDone: '全達成ボーナス',
   allDoneCount: '受け取り済み {n}/{total}',
   lang: { name: '日本語' },
-  sound: { language: '言語', settings: '設定', music: '音楽', sfx: '効果音', on: 'オン', off: 'オフ', privacy: '広告のプライバシー設定', policy: 'プライバシーポリシー', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: '言語', settings: '設定', music: '音楽', sfx: '効果音', shake: '画面の揺れ', haptics: '振動', on: 'オン', off: 'オフ', privacy: '広告のプライバシー設定', policy: 'プライバシーポリシー', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: '一時停止', resume: '再開', giveUp: 'あきらめる', confirm: 'もう一度タップであきらめる' },
+  rotate: 'スマホを縦向きにしてください',
   privacy: {
     title: 'プレイ統計',
     ask: 'プレイ状況を集計してもよいですか？ゲームバランス調整のため、匿名のプレイデータ（到達ウェーブ、バトル時間、合成回数）をランダムなIDとともに送信します。名前や広告用プロフィールは含みません。設定でいつでも変更できます。',

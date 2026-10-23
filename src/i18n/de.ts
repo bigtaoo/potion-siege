@@ -153,7 +153,9 @@ export const de: Table = {
   allDone: 'Komplettbonus',
   allDoneCount: '{n}/{total} abgeholt',
   lang: { name: 'Deutsch' },
-  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', shake: 'Bildschirmwackeln', haptics: 'Vibration', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Pause', resume: 'Weiter', giveUp: 'Aufgeben', confirm: 'Nochmal tippen zum Aufgeben' },
+  rotate: 'Bitte das Handy hochkant halten',
   privacy: {
     title: 'Spielstatistik',
     ask: 'Dürfen wir zählen, wie du spielst? Das Spiel sendet anonyme Spieldaten (erreichte Welle, Kampfdauer, Mischungen) mit einer zufälligen Spieler-ID, damit wir es ausbalancieren können. Kein Name, kein Werbeprofil. Du kannst das jederzeit in den Einstellungen ändern.',

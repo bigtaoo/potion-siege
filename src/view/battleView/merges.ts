@@ -28,6 +28,8 @@ interface Merge {
 
 export class MergeAnims {
   private list: Merge[] = [];
+  /** The system asks for reduced motion: the white glow and flash at a fraction. */
+  soft = false;
 
   /** `fx`: where the ripples, flashes and splashes go. */
   constructor(private readonly fx: FxLayer) {}
@@ -122,7 +124,7 @@ export class MergeAnims {
         over.poly(pts, false).stroke({ width: 15, color: INK, cap: 'round', join: 'round' });
         over.poly(pts, false).stroke({ width: 8, color: rc, cap: 'round', join: 'round' });
       });
-      over.circle(c.x, cy - 10, 40 + 50 * e).fill({ color: 0xffffff, alpha: 0.5 * e * e });
+      over.circle(c.x, cy - 10, 40 + 50 * e).fill({ color: 0xffffff, alpha: (this.soft ? 0.2 : 0.5) * e * e });
     }
     for (const m of this.list) if (t - m.start >= FUSE) this.fused(b, m.slot);
     this.list = this.list.filter((m) => t - m.start < FUSE);
@@ -137,6 +139,7 @@ export class MergeAnims {
     const x = c.x;
     const y = c.y - 20;
     const ttl = 0.25;
+    const white = this.soft ? 0.35 : 1;
     this.fx.push({
       ttl,
       max: ttl,
@@ -144,8 +147,8 @@ export class MergeAnims {
       draw: (g, life) => {
         const s = 1 - life;
         // the disc is gone in a few frames so the new potion is seen popping out; the ring runs on
-        g.circle(x, y, 50 + 90 * s).fill({ color: 0xffffff, alpha: 0.9 * life ** 4 });
-        g.circle(x, y, 60 + 130 * s).stroke({ width: 14 * life, color: 0xffffff, alpha: life });
+        g.circle(x, y, 50 + 90 * s).fill({ color: 0xffffff, alpha: 0.9 * white * life ** 4 });
+        g.circle(x, y, 60 + 130 * s).stroke({ width: 14 * life, color: 0xffffff, alpha: white * life });
         for (let i = 0; i < 8; i++) {
           const a = (i * Math.PI) / 4 + 0.2;
           const r0 = 70 + 90 * s;

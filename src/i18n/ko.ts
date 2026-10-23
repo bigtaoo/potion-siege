@@ -153,7 +153,9 @@ export const ko: Table = {
   allDone: '모든 임무 완료 보너스',
   allDoneCount: '{n}/{total} 받음',
   lang: { name: '한국어' },
-  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', shake: '화면 흔들림', haptics: '진동', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: '일시 정지', resume: '계속하기', giveUp: '포기', confirm: '한 번 더 누르면 포기' },
+  rotate: '휴대폰을 세로로 돌려 주세요',
   privacy: {
     title: '플레이 통계',
     ask: '플레이 방식을 집계해도 될까요? 밸런스 조정을 위해 익명 플레이 데이터(도달한 웨이브, 전투 시간, 합성 횟수)를 무작위 ID와 함께 보내요. 이름이나 광고 프로필은 포함되지 않아요. 설정에서 언제든 바꿀 수 있어요.',

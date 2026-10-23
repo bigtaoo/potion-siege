@@ -85,17 +85,18 @@ describe('mix', () => {
 });
 
 describe('the toggles in the save', () => {
-  it('default on, and an old save without them gets them on', () => {
-    expect(parseMeta(null).sound).toEqual({ music: true, sfx: true });
-    expect(parseMeta(JSON.stringify({ runs: 3 })).sound).toEqual({ music: true, sfx: true });
+  it('default on, shake following the system, and an old save without them gets the same', () => {
+    const on = { music: true, sfx: true, shake: null, haptics: true };
+    expect(parseMeta(null).sound).toEqual(on);
+    expect(parseMeta(JSON.stringify({ runs: 3 })).sound).toEqual(on);
   });
 
   it('round-trips', () => {
     const m = parseMeta(null);
     m.sound.music = false;
-    expect(parseMeta(JSON.stringify(m)).sound).toEqual({ music: false, sfx: true });
-    m.sound = { music: true, sfx: false };
-    expect(parseMeta(JSON.stringify(m)).sound).toEqual({ music: true, sfx: false });
+    expect(parseMeta(JSON.stringify(m)).sound).toEqual({ music: false, sfx: true, shake: null, haptics: true });
+    m.sound = { music: true, sfx: false, shake: false, haptics: false };
+    expect(parseMeta(JSON.stringify(m)).sound).toEqual({ music: true, sfx: false, shake: false, haptics: false });
   });
 });
 

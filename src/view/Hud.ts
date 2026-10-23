@@ -1,4 +1,4 @@
-// The battle's heads-up display: wave and gold at the top, the upgrade and summon buttons on
+// The battle's heads-up display: wave, gold and the pause button at the top, the upgrade and summon buttons on
 // either side of the commander at the bottom.
 
 import { Container, Graphics, Sprite } from 'pixi.js';
@@ -11,7 +11,7 @@ import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKi
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
-import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, modifierIcon, P } from './kit';
+import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
@@ -47,6 +47,8 @@ export class Hud extends Container {
   private readonly mods = new Container();
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
+  /** Top right, the stage line to its left: opens the pause panel. */
+  private readonly pauseButton: Container;
   private bannerTime = 0;
   /** The banner's size before its pop: small enough that a long line stays on the board at the pop's peak. */
   private bannerFit = 1;
@@ -75,15 +77,19 @@ export class Hud extends Container {
   /** The summon button's shake after a tap on it while grey. */
   private shake = 0;
 
-  constructor(onSummon: () => void, onUpgrade: () => void) {
+  constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
+    this.pauseButton = tappable(new Container(), onPause);
+    this.pauseButton.label = 'pause';
+    this.pauseButton.position.set(DESIGN_W - 62, 62);
+    this.pauseButton.addChild(medal(44), new Graphics().roundRect(-15, -17, 11, 34, 3).roundRect(4, -17, 11, 34, 3).fill(P.cream).stroke({ width: 4, color: P.line }));
     this.upgradeButton = new Button('', BUTTON.w, BUTTON.h, 0x7a4fd0, onUpgrade, 46);
     this.upgradeButton.position.set(190, BUTTON.y);
     this.summonButton = new Button('', BUTTON.w, BUTTON.h, COLORS.button, onSummon, 46, () => this.blocked());
     this.summonButton.position.set(DESIGN_W - 190, BUTTON.y);
     this.waveText.position.set(DESIGN_W / 2, 60);
     this.stageText.anchor.set(1, 0.5);
-    this.stageText.position.set(DESIGN_W - 50, 60);
+    this.stageText.position.set(DESIGN_W - 125, 60);
     this.coin.circle(90, 60, 26).fill(COLORS.gold).stroke({ width: 5, color: 0x0a1320 });
     this.goldText.anchor.set(0, 0.5);
     this.goldText.position.set(130, 60);
@@ -100,7 +106,7 @@ export class Hud extends Container {
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
     this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
-    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton);
   }
 
   attach(battle: Battle): void {
@@ -124,6 +130,9 @@ export class Hud extends Container {
     const top = Math.min(k, 1.25);
     this.waveText.scale.set(top);
     this.stageText.scale.set(top);
+    this.pauseButton.scale.set(top);
+    this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
+    this.stageText.x = DESIGN_W - 125 * top;
     this.goldText.scale.set(top);
     this.goldText.x = 130 + (top - 1) * 30;
     this.coin.scale.set(top);
@@ -222,6 +231,8 @@ export class Hud extends Container {
     if (!b) return;
     this.waveText.text = this.waveLabel(b.wave);
     this.goldText.text = `${b.gold}`;
+    // nothing to pause once the battle is over
+    this.pauseButton.visible = !b.result;
     // a full grid says so on the button, and what to do about it, rather than just going grey
     const full = !b.paused && !b.result && b.freeSlots().length === 0;
     const pair = full ? mergeablePair(b) : null;

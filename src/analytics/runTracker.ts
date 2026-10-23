@@ -95,11 +95,12 @@ export class RunTracker {
     if (this.battle.result === 'won') this.a.first('first_win', { run: this.run });
   }
 
-  /** Called when a fresh run replaces this one, or the page goes away mid-run. */
-  close(reason: 'again' | 'pagehide'): void {
+  /** Called when a fresh run replaces this one, the player gives up, or the page goes away mid-run. */
+  close(reason: 'again' | 'pagehide' | 'giveup'): void {
     if (this.ended) return;
     this.ended = true;
-    if (reason === 'pagehide' && !this.battle.result) this.a.track('run_quit', this.summary());
+    // given up on the pause panel, or the page left with the battle still on
+    if (reason !== 'again' && !this.battle.result) this.a.track('run_quit', { ...this.summary(), giveUp: reason === 'giveup' });
   }
 
   /** The page came back from the back/forward cache with the battle still on: it can quit again. */

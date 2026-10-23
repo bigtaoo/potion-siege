@@ -45,6 +45,9 @@ export interface Platform {
   sessionProps?(): Record<string, string | boolean>;
   /** Puts `text` on the clipboard, from a tap; false when the host refused. Absent where there is none. */
   copyText?(text: string): Promise<boolean>;
+  /** A short buzz, `strong` for a big moment; absent where the device has none (desktops, iOS,
+   *  whose web view has no navigator.vibrate and whose app has no haptics plugin yet). */
+  readonly vibrate?: (strong: boolean) => void;
 }
 
 /**

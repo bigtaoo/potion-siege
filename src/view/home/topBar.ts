@@ -3,13 +3,13 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { canClaimLogin, tasksClaimable } from '../../sim/daily';
 import type { MetaSave } from '../../sim/meta';
 import { calendarIcon, fit as fitText, gearIcon, ink, LIGHT, medal, redDot, scrollIcon, tappable } from '../kit';
 import { gem } from '../ui';
 import type { HomeActions } from './types';
 
-export function topBar(root: Container, m: MetaSave, act: HomeActions, today: string, left: number, w: number, wide: boolean): void {
+/** `dots`: the login's and the tasks' red dots (view/homeDots.ts). */
+export function topBar(root: Container, m: MetaSave, act: HomeActions, left: number, w: number, wide: boolean, dots: { login: boolean; tasks: boolean }): void {
   const y = wide ? 70 : 80;
   const button = (x: number, icon: Container, text: string, dot: boolean, onTap: () => void) => {
     const c = tappable(new Container(), onTap);
@@ -26,8 +26,8 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, today: st
     if (dot) redDot(c, 42, -42);
     root.addChild(c);
   };
-  button(left + 90, calendarIcon(), t('login'), canClaimLogin(m, today), () => act.panel('login'));
-  button(left + 240, scrollIcon(), t('tasks'), tasksClaimable(m), () => act.panel('tasks'));
+  button(left + 90, calendarIcon(), t('login'), dots.login, () => act.panel('login'));
+  button(left + 240, scrollIcon(), t('tasks'), dots.tasks, () => act.panel('tasks'));
   button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
 
   // the crystals in a dark inset, top right
