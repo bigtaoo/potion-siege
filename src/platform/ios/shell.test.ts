@@ -10,6 +10,7 @@ import adMob from '../../../ios/App/App/AdMob.swift?raw';
 import privacy from '../../../ios/App/App/PrivacyInfo.xcprivacy?raw';
 import sceneDelegate from '../../../ios/App/App/SceneDelegate.swift?raw';
 import storeSwift from '../../../ios/App/App/Store.swift?raw';
+import notifications from '../../../ios/App/App/Notifications.swift?raw';
 import storyboard from '../../../ios/App/App/Base.lproj/Main.storyboard?raw';
 import { AD_FREE_ID } from './storeKit';
 
@@ -35,7 +36,7 @@ describe('iOS shell', () => {
   });
 
   it('compiles every Swift file and ships the privacy manifest', () => {
-    for (const file of ['AppDelegate.swift', 'SceneDelegate.swift', 'PSBridgeViewController.swift', 'KeyStore.swift', 'AdMob.swift', 'Store.swift']) {
+    for (const file of ['AppDelegate.swift', 'SceneDelegate.swift', 'PSBridgeViewController.swift', 'KeyStore.swift', 'AdMob.swift', 'Store.swift', 'Notifications.swift']) {
       expect(pbx).toContain(`/* ${file} in Sources */,`);
     }
     expect(pbx).not.toContain('GameCenter.swift');
@@ -57,16 +58,19 @@ describe('iOS shell', () => {
       '_adState: ad.push', '_adEvent: adEvent.push',
       'store: store.get', 'onStore: store.on', 'onStoreResult: storeResult.on', 'buy: function', 'restore: function',
       '_store: store.push', '_storeResult: storeResult.push',
+      'notify: notify.get', 'onNotify: notify.on', 'notifyAsk: function', 'notifySchedule: function', 'notifyCancel: function',
+      '_notify: notify.push',
     ]) {
       expect(bridge).toContain(member);
     }
     // the page asks for the states as it loads, and the shell pushes them back by name
     expect(bridge).toContain("post({ op: 'adState' });");
     expect(bridge).toContain("post({ op: 'store' });");
-    for (const op of ['"adState"', '"showAd"', '"adPrivacy"', '"store"', '"buy"', '"restore"']) {
+    expect(bridge).toContain("post({ op: 'notifyState' });");
+    for (const op of ['"adState"', '"showAd"', '"adPrivacy"', '"store"', '"buy"', '"restore"', '"notifyState"', '"notifyAsk"', '"notifySchedule"', '"notifyCancel"']) {
       expect(bridge).toContain(`case ${op}:`);
     }
-    for (const receiver of ['_adState', '_adEvent', '_store', '_storeResult']) expect(bridge).toContain(`push("${receiver}"`);
+    for (const receiver of ['_adState', '_adEvent', '_store', '_storeResult', '_notify']) expect(bridge).toContain(`push("${receiver}"`);
     expect(bridge).toContain('window.PSNative.\\(receiver)(');
     // admob.ts reads these keys and these values
     for (const key of ['"status": status', '"rewarded": rewarded', '"interstitial": interstitial', '"privacyOptions": privacyOptions', '"error": error']) {
@@ -79,6 +83,11 @@ describe('iOS shell', () => {
     expect(storeSwift).toContain('["id": $0, "price": prices[$0] ?? ""]');
     expect(storeSwift).toContain('"owned": owned.sorted(), "canPay": canPay');
     expect(bridge).toContain('["op": op, "outcome": outcome]');
+    // notify.ts reads this version and these states
+    expect(bridge).toContain('static let bridgeVersion = 2');
+    expect(bridge).toContain('["status": status.rawValue]');
+    const states = notifications.split('enum Status: String {')[1].split('}')[0];
+    expect(states.match(/case [a-z]+/g)).toEqual(['case unknown', 'case on', 'case off']);
     for (const outcome of ['"owned"', '"cancelled"', '"pending"', '"failed"', '"none"']) expect(storeSwift).toContain(outcome);
   });
 

@@ -24,6 +24,7 @@ import { TICK_RATE } from '../src/sim/math/fixed';
 import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, doublesLeft, heroCost, heroUnlocked, newMeta, Purse, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
 import { bookStars, hardReward, hardSetup, runStars } from '../src/sim/stars';
 import { BALANCE, HERO_KINDS } from '../src/sim/types';
+import { claimWelcome } from '../src/sim/welcome';
 import { offFrontier } from './economyStars';
 
 function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
@@ -51,8 +52,8 @@ const OVERHEAD = 0.4;
 const AD_MIN = 0.5;
 const ENDLESS_MIN = 6;
 
-type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'endless';
-const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'endless'];
+type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'endless' | 'welcome';
+const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'endless', 'welcome'];
 
 interface Day {
   day: number;
@@ -191,6 +192,7 @@ it('economy', () => {
       const claimAll = () => {
         for (let i = 0; i < m.daily.tasks.length; i++) book('tasks', claimTask(m, i));
         book('tasks', claimBonus(m));
+        book('welcome', claimWelcome(m, today)?.crystals ?? 0);
         for (const id of TRACK_IDS) while (true) {
           const c = claimTier(m, id);
           if (!c) break;
@@ -201,6 +203,7 @@ it('economy', () => {
       rollDay(m, today);
       book('login', claimLogin(m, today));
       book('chest', claimChest(m, today));
+      book('welcome', claimWelcome(m, today)?.crystals ?? 0);
       if (ads)
         for (let i = 0; i < 3; i++) {
           book('ads', claimAd(m, today));

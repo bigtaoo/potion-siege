@@ -170,15 +170,16 @@ describe('daily challenge', () => {
     expect(bookAttempt(m, 3).crystals).toBe(C.tiers[0].reward);
   });
 
-  it('counts days in a row and pays the streak bonus every seventh', () => {
+  it('counts days in a row and pays a capped bonus each day from the second', () => {
     const m = newMeta();
     const bonuses: number[] = [];
     for (let n = 1; n <= 14; n++) bonuses.push(beginAttempt(m, day(n), false)!);
     expect(streak(m, day(14))).toBe(14);
     expect(streak(m, day(15))).toBe(14);
-    expect(bonuses.filter((b) => b > 0)).toEqual([C.streakReward, C.streakReward]);
-    expect(bonuses[C.streakDays - 1]).toBe(C.streakReward);
-    expect(m.crystals).toBe(2 * C.streakReward);
+    expect(bonuses.slice(0, 3)).toEqual([0, 2 * C.streakStep, 3 * C.streakStep]);
+    expect(bonuses[13]).toBe(C.streakCap * C.streakStep);
+    expect(m.crystals).toBe(bonuses.reduce((a, b) => a + b, 0));
+    expect(m.challenge.bestStreak).toBe(14);
     // the ad retry does not move the streak
     beginAttempt(m, day(14), true);
     expect(m.challenge.streak).toBe(14);
@@ -186,6 +187,7 @@ describe('daily challenge', () => {
     expect(streak(m, day(16))).toBe(0);
     beginAttempt(m, day(16), false);
     expect(m.challenge.streak).toBe(1);
+    expect(m.challenge.bestStreak).toBe(14);
   });
 
   it('knows the day before across months and years, and the time to midnight', () => {
@@ -197,7 +199,9 @@ describe('daily challenge', () => {
 
   it('reads stored challenge parts safely', () => {
     expect(parseChallenge(undefined)).toEqual(newChallenge());
-    expect(parseChallenge({ date: '2026-10-16', attempts: 9, best: -3, streak: 'x' })).toEqual({ date: '2026-10-16', attempts: C.attempts + C.adAttempts, best: 0, streak: 0 });
+    expect(parseChallenge({ date: '2026-10-16', attempts: 9, best: -3, streak: 'x' })).toEqual({ date: '2026-10-16', attempts: C.attempts + C.adAttempts, best: 0, streak: 0, bestStreak: 0 });
+    // a save from before bestStreak takes the streak it has
+    expect(parseChallenge({ date: '2026-10-16', streak: 5 }).bestStreak).toBe(5);
     const m = newMeta();
     beginAttempt(m, '2026-10-16', false);
     bookAttempt(m, 6);

@@ -14,6 +14,8 @@ async function start(): Promise<void> {
   // approval comes in; AdMob once a rewarded ad has loaded (the shop's ad offer waits for one)
   platform.storeKit.onChange = () => game.refresh();
   platform.admob.onChange = () => game.refresh();
+  // the notification permission, answered on the sheet or changed in the phone's settings
+  if (platform.notify) platform.notify.onChange = () => game.refresh();
   void checkOta();
 }
 

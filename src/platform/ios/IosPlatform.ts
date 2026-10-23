@@ -1,8 +1,10 @@
-import { SafeStore, type AdPrivacy, type Platform } from '../types';
+import { SafeStore, type AdPrivacy, type Notifier, type Platform } from '../types';
+import { devNotifier } from '../fakeNotifier';
 import { WebPlatform, browserStorage } from '../web';
 import { AdMob } from './admob';
 import { psNative, type PSNative } from './bridge';
 import { MirrorStore } from './mirrorStore';
+import { nativeNotifier } from './notify';
 import { StoreKit } from './storeKit';
 
 // The iOS app (docs/ios.md): the browser host inside the Capacitor shell's WKWebView, with the
@@ -24,6 +26,8 @@ export class IosPlatform extends WebPlatform implements Platform {
   /** main.ios.ts redraws the home screen on its and the store's `onChange`. */
   readonly admob: AdMob;
   readonly storeKit: StoreKit;
+  /** The reminders' notifications, on a shell of bridge v2 or later (else ?notify=fake's, in dev). */
+  override readonly notify: Notifier | null;
 
   constructor(private readonly native: Partial<PSNative> | null = psNative(), doc: Document = document) {
     super();
@@ -37,6 +41,7 @@ export class IosPlatform extends WebPlatform implements Platform {
     const admob = this.admob;
     this.adPrivacy = { offered: () => admob.privacyOffered(), open: () => admob.openPrivacy() };
     this.mount = safeAreaMount(doc);
+    this.notify = nativeNotifier(native) ?? devNotifier();
     // game sound obeys the silent switch and mixes with the player's music (iOS 17+; the shell
     // sets the same AVAudioSession category for older systems)
     const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;

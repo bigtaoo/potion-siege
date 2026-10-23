@@ -1,8 +1,8 @@
-import type { AdState, PSNative, StoreState } from './bridge';
+import type { AdState, NotifyState, PSNative, StoreState } from './bridge';
 
 // A stand-in for the shell's bridge in a desktop browser (`npm run dev:ios`, then `?native=1`):
-// ads that load after a second and play for one, a store that sells the card at once and EEA
-// privacy options, so the shop strip and the settings button can be laid out without a Mac.
+// ads that load after a second and play for one, a store that sells the card at once, EEA
+// privacy options and a notification sheet that says yes, so the shop strip and the settings button can be laid out without a Mac.
 // `?native=owned` starts with the card owned. Development builds only (main.ios.ts).
 export function installFakeNative(mode: string, scope: Record<string, unknown> = window as unknown as Record<string, unknown>): void {
   if (scope.PSNative) return;
@@ -10,6 +10,8 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
   const eventCbs: Parameters<PSNative['onAdEvent']>[0][] = [];
   const storeCbs: ((s: StoreState) => void)[] = [];
   const resultCbs: Parameters<PSNative['onStoreResult']>[0][] = [];
+  const notifyCbs: ((s: NotifyState) => void)[] = [];
+  let notify: NotifyState = { status: 'unknown' };
   let ad: AdState = { status: 'pending', rewarded: false, interstitial: false, privacyOptions: true, error: null };
   let store: StoreState = { products: [{ id: 'com.gamestao.potionsiege.adfree', price: 'US$3.99' }], owned: mode === 'owned' ? ['com.gamestao.potionsiege.adfree'] : [], canPay: true };
   const pushAd = (next: Partial<AdState>) => {
@@ -22,7 +24,7 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
   };
   setTimeout(() => pushAd({ status: 'on', rewarded: true, interstitial: true }), 1000);
   const native: PSNative = {
-    v: 1,
+    v: 2,
     saved: {},
     save: () => {},
     openUrl: (url) => void window.open(url, '_blank'),
@@ -48,6 +50,15 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
       resultCbs.forEach((cb) => cb({ op: 'buy', outcome: 'owned' }));
     },
     restore: () => resultCbs.forEach((cb) => cb({ op: 'restore', outcome: store.owned.length ? 'owned' : 'none' })),
+    notify: () => notify,
+    onNotify: (cb) => void notifyCbs.push(cb),
+    notifyAsk: () =>
+      setTimeout(() => {
+        notify = { status: 'on' };
+        notifyCbs.forEach((cb) => cb(notify));
+      }, 400),
+    notifySchedule: (id, at, title, body) => console.info('[fake native] reminder', id, new Date(at).toString(), title, body),
+    notifyCancel: (id) => console.info('[fake native] reminder off', id),
   };
   scope.PSNative = native;
 }

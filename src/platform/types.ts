@@ -45,6 +45,24 @@ export interface Platform {
   sessionProps?(): Record<string, string | boolean>;
   /** Puts `text` on the clipboard, from a tap; false when the host refused. Absent where there is none. */
   copyText?(text: string): Promise<boolean>;
+  /** Local notifications (the iOS app's reminders, game/reminderBook.ts); absent where the host
+   *  has none. */
+  readonly notify?: Notifier | null;
+}
+
+/**
+ * Local notifications booked on the device (docs/ios.md "Reminders"). The permission is the
+ * system's: 'unknown' until asked, and asked only from a tap of the player's.
+ */
+export interface Notifier {
+  status(): 'unknown' | 'on' | 'off';
+  /** The system's permission sheet, from a tap; resolves with the answer. */
+  ask(): Promise<'on' | 'off'>;
+  /** Books one at `at` (ms since 1970), replacing the one with the same id; ignored unless on. */
+  schedule(id: string, at: number, title: string, body: string): void;
+  cancel(id: string): void;
+  /** Called whenever the permission changes (the settings redraw their switch). */
+  onChange?: () => void;
 }
 
 /**

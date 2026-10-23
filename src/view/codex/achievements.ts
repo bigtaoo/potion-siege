@@ -223,6 +223,9 @@ function trackIcon(id: TrackId, size: number): Container {
     case 'challenge':
       add(stopwatchIcon());
       break;
+    case 'streak':
+      add(stopwatchIcon());
+      break;
     case 'endless':
       add(infinityIcon());
       break;

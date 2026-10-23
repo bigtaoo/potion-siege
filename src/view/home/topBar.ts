@@ -1,11 +1,12 @@
-// The home screen's top bar: the daily login, the daily tasks and the settings as medals, and
-// the crystals top right.
+// The home screen's top bar: the daily login, the daily tasks, the settings and (in the first
+// week) the welcome gifts as medals, and the crystals top right.
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { canClaimLogin, tasksClaimable } from '../../sim/daily';
 import type { MetaSave } from '../../sim/meta';
-import { calendarIcon, fit as fitText, gearIcon, ink, LIGHT, medal, redDot, scrollIcon, tappable } from '../kit';
+import { canClaimWelcome, welcomeOn } from '../../sim/welcome';
+import { calendarIcon, chestIcon, fit as fitText, gearIcon, ink, LIGHT, medal, redDot, scrollIcon, tappable } from '../kit';
 import { gem } from '../ui';
 import type { HomeActions } from './types';
 
@@ -29,6 +30,8 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, today: st
   button(left + 90, calendarIcon(), t('login'), canClaimLogin(m, today), () => act.panel('login'));
   button(left + 240, scrollIcon(), t('tasks'), tasksClaimable(m), () => act.panel('tasks'));
   button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
+  // the welcome week's gifts, while there are any left
+  if (welcomeOn(m)) button(left + 540, chestIcon(), t('welcome.button'), canClaimWelcome(m, today), () => act.panel('welcome'));
 
   // the crystals in a dark inset, top right
   const count = ink(String(m.crystals), 50, { fill: LIGHT.crystal });

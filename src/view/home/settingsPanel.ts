@@ -8,7 +8,8 @@ import { fit as fitText, ink, inkWrapped, LIGHT, lightTile, medal, P, PillButton
 import { label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
-import type { HomeActions, PlayData } from './types';
+import { remindRow } from './remindPanel';
+import type { HomeActions, PlayData, RemindState } from './types';
 
 /** The player ID tile's height under the play data switch. */
 const ID_H = 190;
@@ -17,12 +18,12 @@ const ID_H = 190;
  *  the player ID, then a button each for Google's consent form again where it applies (iOS in
  *  the EEA/UK) and our privacy policy where the host allows a link out (App Review 5.1.1 wants
  *  it inside the app). */
-export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean, data: PlayData | null): Container {
+export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean, data: PlayData | null, remind: RemindState | null = null): Container {
   const buttons: [string, () => void][] = [];
   if (privacy) buttons.push([t('sound.privacy'), act.adPrivacy]);
   if (policy) buttons.push([t('sound.policy'), act.privacyPolicy]);
   const extra = buttons.length ? 30 + buttons.length * 130 : 0;
-  const rows = data ? 190 + ID_H + 20 : 0;
+  const rows = (data ? 190 + ID_H + 20 : 0) + (remind ? 190 : 0);
   const h = 750 + extra + rows;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
   const top = -h / 2 + 200 - (extra ? 10 : 0);
@@ -61,7 +62,8 @@ export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, priva
   pick.position.set(255, -4);
   r.addChild(lightTile(860, 160), icon, name, pick);
   box.addChild(r);
-  if (data) playDataRows(box, act, data, top + 3 * 190);
+  if (remind) remindRow(box, act, remind, top + 3 * 190, toggle);
+  if (data) playDataRows(box, act, data, top + (remind ? 4 : 3) * 190);
   return panel;
 }
 

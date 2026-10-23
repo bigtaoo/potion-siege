@@ -29,6 +29,8 @@ import { shopTab } from './home/shopTab';
 import { tasksPanel } from './home/tasksPanel';
 import { topBar } from './home/topBar';
 import type { HomeActions, HomeExtras, HomePanel, HomeTab } from './home/types';
+import { remindPanel } from './home/remindPanel';
+import { welcomePanel } from './home/welcomePanel';
 import { workshopTab } from './home/workshopTab';
 
 export { HOME_TABS } from './home/types';
@@ -66,8 +68,10 @@ export function buildHome(
   dots[tab] = false;
   nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
+  else if (panel === 'welcome') root.addChild(welcomePanel(m, act, today, fit));
+  else if (panel === 'remind') root.addChild(remindPanel(act, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
-  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy, extras.data ?? null));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy, extras.data ?? null, extras.remind ?? null));
   else if (panel === 'privacy') root.addChild(consentPanel(act, fit, !!extras.policy));
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));

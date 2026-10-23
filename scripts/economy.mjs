@@ -12,8 +12,8 @@ const DIR = process.env.OUT_DIR ?? 'ref/balance/economy';
 const PROFILES = (process.env.PROFILES ?? 'casual,regular,heavy').split(',');
 const DAYS = { casual: Number(process.env.DAYS_CASUAL ?? 180), regular: Number(process.env.DAYS_REGULAR ?? 120), heavy: Number(process.env.DAYS_HEAVY ?? 60) };
 const PLAYERS = Number(process.env.PLAYERS ?? 3);
-const SOURCES = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'endless'];
-const SOURCE_NAMES = { runs: '战斗', double: '×2', login: '登录', tasks: '任务', chest: '宝箱', ads: '广告', challenge: '挑战', achievements: '成就', chapter: '章节', endless: '无尽' };
+const SOURCES = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'endless', 'welcome'];
+const SOURCE_NAMES = { runs: '战斗', double: '×2', login: '登录', tasks: '任务', chest: '宝箱', ads: '广告', challenge: '挑战', achievements: '成就', chapter: '章节', endless: '无尽', welcome: '欢迎' };
 
 function runShard(env) {
   return new Promise((resolve, reject) => {

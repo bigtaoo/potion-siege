@@ -317,6 +317,11 @@
       "endless": { "n": 1, "reward": 75 }
     }
   },
+  "welcome": {
+    "gifts": [200, 300, 300, 400, 400, 500, 600],
+    "potion": "wind"
+  },
+  "reminders": { "dailyHour": 19, "gapHours": 6, "quietFrom": 22, "quietTo": 8, "askAfterRuns": 3 },
   "challenge": {
     "minStage": 3,
     "stageAhead": 2,
@@ -328,8 +333,8 @@
       { "wave": 6, "reward": 80 },
       { "wave": 10, "reward": 150 }
     ],
-    "streakDays": 7,
-    "streakReward": 200,
+    "streakStep": 10,
+    "streakCap": 7,
     "mods": {
       "swift": { "speed": 1.3, "hp": 0.8 },
       "ironWall": { "wall": 1.5 },
