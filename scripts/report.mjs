@@ -203,7 +203,7 @@ for (const [id, n] of [...offers].sort((a, b) => (picks.get(b[0]) ?? 0) / b[1] -
 }
 const adOffers = events.filter((e) => e.name === 'ad_offer').length;
 const adOk = events.filter((e) => e.name === 'ad_result' && e.props.ok).length;
-console.log(`\n== Ads ==\nrevive offered ${adOffers}, watched ${adOk} (${pct(adOk, adOffers)}), midgame ${events.filter((e) => e.name === 'ad_midgame').length}`);
+console.log(`\n== Ads ==\nrevive offered ${adOffers}, watched ${adOk} (${pct(adOk, adOffers)}), midgame ${events.filter((e) => e.name === 'ad_midgame').length}, paced away ${events.filter((e) => e.name === 'ad_paced').length}`);
 
 printPerf(perfSummary(events));
 

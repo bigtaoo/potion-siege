@@ -16,10 +16,10 @@ import { PerfReport } from './analytics/perfReport';
 import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
 import { detectLocale, loadLocale, setLocale, t } from './i18n';
+import { AdPacing } from './platform/adPacing';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
-import { recordEvents } from './sim/achievements';
 import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, gameDay, rollDay } from './sim/daily';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
@@ -27,7 +27,7 @@ import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
 import { suggestSkill } from './sim/suggest';
 import { Tutorial, type TutorialStep } from './sim/tutorial';
-import { BALANCE, type BattleEvent, type HeroKind } from './sim/types';
+import type { BattleEvent, HeroKind } from './sim/types';
 import { loadArt, restOfArt } from './view/art';
 import { BattleView } from './view/BattleView';
 import { Hud, VETERAN_MERGES } from './view/Hud';
@@ -44,6 +44,7 @@ import { topPick } from './view/nudges';
 import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
+import { countDaily } from './game/countDaily';
 import { finish } from './game/ending';
 import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
@@ -202,6 +203,8 @@ export class Game {
   /** A rewarded ad was watched since the battle ended (the ×2): the portal wants no midgame ad
    *  chained after it in the same break. */
   rewardedSinceEnd = false;
+  /** Battle play since the last ad, which paces the interstitials (platform/adPacing.ts). */
+  readonly pacing = new AdPacing();
   /** The day the login panel last opened by itself. */
   loginShown = '';
   /** The consent panel opened by itself this session (once is enough; the settings have the switch). */
@@ -258,6 +261,7 @@ export class Game {
     app.ticker.add((ticker) => {
       this.tick(Math.min(ticker.deltaMS / 1000, 0.1));
       this.perf.tick(ticker.deltaMS, this.measured(), this.battle?.enemies.length ?? 0);
+      if (this.measured()) this.pacing.played(ticker.deltaMS);
     });
   }
 
@@ -382,7 +386,7 @@ export class Game {
       }
       events = b.drain();
       this.run?.onEvents(events);
-      if (this.run && !this.autoplay) this.countDaily(events);
+      if (this.run && !this.autoplay) countDaily(this.save, events);
       this.view.react(events);
       this.audio.battle(events);
       this.hud.react(events);
@@ -476,24 +480,9 @@ export class Game {
     this.overlay.rebuild();
   }
 
-  /** Counts this battle's events toward today's tasks and the achievements. */
-  private countDaily(events: BattleEvent[]): void {
-    const m = this.save;
-    recordEvents(m, events);
-    for (const ev of events) {
-      if (ev.type === 'summon') addProgress(m, 'summon');
-      else if (ev.type === 'merge') {
-        addProgress(m, 'merge');
-        if (ev.star === BALANCE.maxStar) addProgress(m, 'ultimate');
-      } else if (ev.type === 'kill') {
-        addProgress(m, 'kill');
-        if (ev.boss) addProgress(m, 'boss');
-      }
-    }
-  }
-
-  /** Ads silence the game while they play. */
+  /** Ads silence the game while they play; one on screen starts the interstitials' clock over. */
   mute(on: boolean): void {
+    if (on) this.pacing.shown();
     this.audio.ad(on);
   }
 }
