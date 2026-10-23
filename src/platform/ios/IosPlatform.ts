@@ -1,8 +1,11 @@
-import { SafeStore, type AdPrivacy, type Platform } from '../types';
+import { urlSwitches } from '../../game/switches';
+import { updatesSwitch } from '../fakeUpdates';
+import { SafeStore, type AdPrivacy, type AppUpdates, type Platform } from '../types';
 import { WebPlatform, browserStorage } from '../web';
 import { AdMob } from './admob';
 import { psNative, type PSNative } from './bridge';
 import { MirrorStore } from './mirrorStore';
+import { otaUpdates } from './ota';
 import { StoreKit } from './storeKit';
 
 // The iOS app (docs/ios.md): the browser host inside the Capacitor shell's WKWebView, with the
@@ -24,6 +27,8 @@ export class IosPlatform extends WebPlatform implements Platform {
   /** main.ios.ts redraws the home screen on its and the store's `onChange`. */
   readonly admob: AdMob;
   readonly storeKit: StoreKit;
+  /** Hot updates, offered on the home screen (ota.ts); ?ota=fake stands in during development. */
+  override readonly updates: AppUpdates = updatesSwitch(urlSwitches(location.search)) ?? otaUpdates();
 
   constructor(private readonly native: Partial<PSNative> | null = psNative(), doc: Document = document) {
     super();

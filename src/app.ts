@@ -45,18 +45,13 @@ import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 import { finish } from './game/ending';
+import { gameHandle, type GameHandle } from './game/handle';
 import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { urlSwitches } from './game/switches';
 import { createAnalytics, device, loadedBeacon, pointerKind, safeDevice, showLocale } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
 import { beginTutorial, endTutorial, lesson } from './game/tutorialFlow';
-
-/** What a host's entry can do with the game once it is up. */
-export interface GameHandle {
-  /** Draws the home screen again if it is up: the store or the ads changed (iOS). */
-  refresh(): void;
-}
 
 export async function boot(platform: Platform): Promise<GameHandle> {
   // the URL switches; a release build reads only ?lang (game/switches.ts)
@@ -148,7 +143,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
       loadedBeacon(platform.name, analytics);
     }),
   );
-  return { refresh: () => game.refresh() };
+  return gameHandle(game, platform.updates);
 }
 
 /** Exported for the modules in src/game/ that run its flows, and for the ad-flow tests, which

@@ -104,6 +104,7 @@ A release build (web, CrazyGames, iOS) reads only `?lang`; the rest are dropped 
 | `?speed=N` | Runs the game N times faster. |
 | `?ads=fake` | Web build only: one-second pretend ads, so revive, ×2 and reroll can be tried. |
 | `?track` | Logs the analytics events to the console. |
+| `?ota=fake` or `?ota=fail` | A pretend hot update on the home screen, whose download finishes (and reloads) or fails at 60% (docs/ios.md "Hot updates"). |
 
 In dev, `window.__game` exposes the running game.
 
@@ -117,7 +118,7 @@ In dev, `window.__game` exposes the running game.
   - runs: `run_start`, `wave_start`, `skill_pick`, `run_end`, `run_quit`, `endless_start`, `endless_end`, `challenge_start`, `challenge_end`
   - menus and economy: `home_view`, `dialog`, `battle_start_tap`, `result_shown`, `result_action`, `crystals`, `meta_buy`, `lineup`, `daily_claim`
   - ads: `ad_offer`, `ad_result`, `ad_midgame`, `ad_shop`, `ad_challenge`
-  - client health: `perf` (one small event per run) and `anomaly` (an uncaught error, a lost WebGL context or a stalled frame; capped per session)
+  - client health: `perf` (one small event per run) and `anomaly` (an uncaught error, a lost WebGL context or a stalled frame; on iOS also a launch that never finished, `boot_fail`, and a hot update rolled back, `ota_fail`; capped per session)
 - Every event carries `day` (calendar days since the first session), `session` (1 is the first ever) and `build`.
 - **Build stamp**: `scripts/buildId.mjs` builds the id, `version+commit` (for example `0.0.1+61b33eb`, with `-dirty` when tracked files had uncommitted changes). Vite injects it as `__PS_BUILD__`; every event and beacon carries it, so the report can tell releases apart.
 - **Beacons**: two anonymous counts with no player id, sent to `GET /b` on the collector. They are skipped on `localhost` and under `?autoplay`.

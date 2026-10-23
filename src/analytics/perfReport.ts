@@ -21,7 +21,7 @@ export const ANOMALY_TOTAL = 8;
 /** Longest `msg` an `error` anomaly carries. */
 export const MSG_MAX = 64;
 
-export type AnomalyKind = 'error' | 'rejection' | 'webgl_lost' | 'stall';
+export type AnomalyKind = 'error' | 'rejection' | 'webgl_lost' | 'stall' | 'boot_fail' | 'ota_fail';
 
 /** A `perf` event's props: the snapshot, what the game holds now and since the run's first battle frame. */
 export interface PerfProps extends PerfSnapshot {
@@ -96,7 +96,8 @@ export class Anomalies {
     const n = this.sent.get(kind) ?? 0;
     const at = this.where();
     const out: Props = { kind, place: at.place, ...props };
-    if (at.wave !== undefined) out.wave = at.wave;
+    // a report that names its own place (a launch report) is not about the wave on screen
+    if (at.wave !== undefined && props.place === undefined) out.wave = at.wave;
     // a development build prints every one, past the cap too
     devPrint('anomaly', out);
     if (n >= ANOMALY_CAP || this.total >= ANOMALY_TOTAL) return;

@@ -5,18 +5,28 @@ import wrangler from '../../../wrangler/ota.jsonc?raw';
 import capConfig from '../../../capacitor.config.ts?raw';
 import podfile from '../../../ios/App/Podfile?raw';
 import privacy from '../../../ios/App/App/PrivacyInfo.xcprivacy?raw';
-import { applyDownloaded, BUNDLE_ORIGIN, checkOta, isNewer, MANIFEST_URL, pickDownloaded, wantsDownload, type Bundle, type Updater } from './ota';
+import { applyDownloaded, BUNDLE_ORIGIN, FAILED_KEY, failedOta, findOta, installOta, isNewer, MANIFEST_URL, pickDownloaded, readyOta, wantsDownload, type Bundle, type Updater } from './ota';
 
 const manifest = { version: '1.0.18.2', url: 'https://ps-ota.gamestao.com/1.0.18.2.zip', checksum: 'ab12', minNativeVersion: '1.0' };
 
-function fakeUpdater(bundles: Bundle[] = [], native = '1.0'): Updater & { calls: string[] } {
+function fakeUpdater(bundles: Bundle[] = [], native = '1.0', fail = false): Updater & { calls: string[] } {
   const calls: string[] = [];
+  let onDownload: ((e: { percent: number }) => void) | undefined;
   return {
     calls,
     notifyAppReady: async () => { calls.push('ready'); },
     current: async () => ({ native }),
     list: async () => ({ bundles }),
-    download: async (o) => { calls.push(`download ${o.version} ${o.checksum}`); return { id: 'x', version: o.version, status: 'pending' }; },
+    download: async (o) => {
+      calls.push(`download ${o.version} ${o.checksum}`);
+      if (fail) throw new Error('offline');
+      onDownload?.({ percent: 50 });
+      return { id: 'x', version: o.version, status: 'pending' };
+    },
+    addListener: async (_e, cb) => {
+      onDownload = cb;
+      return { remove: async () => { calls.push('unlisten'); } };
+    },
     set: async (o) => { calls.push(`set ${o.id}`); },
   };
 }
@@ -67,19 +77,35 @@ describe('pickDownloaded', () => {
 });
 
 describe('the updater calls', () => {
-  it('confirm the bundle, then download a newer one for the next launch', async () => {
+  it('confirm the bundle that booted, and find a newer one without touching the device', async () => {
     const u = fakeUpdater();
-    expect(await checkOta('1.0.18', true, u, async () => manifest)).toBe('downloaded');
-    expect(u.calls).toEqual(['ready', 'download 1.0.18.2 ab12']);
+    await readyOta('1.0.18', true, u);
+    expect(await findOta('1.0.18', true, u, async () => manifest)).toEqual(manifest);
+    expect(u.calls).toEqual(['ready']);
+  });
+
+  it('download with its progress, then switch to the new bundle', async () => {
+    const u = fakeUpdater();
+    const seen: number[] = [];
+    await installOta(manifest, (f) => seen.push(f), u);
+    expect(seen).toEqual([0.5, 1]);
+    expect(u.calls).toEqual(['download 1.0.18.2 ab12', 'set x', 'unlisten']);
+  });
+
+  it('leave the running bundle when the download fails', async () => {
+    const u = fakeUpdater([], '1.0', true);
+    await expect(installOta(manifest, () => {}, u)).rejects.toThrow('offline');
+    expect(u.calls).toEqual(['download 1.0.18.2 ab12', 'unlisten']);
   });
 
   it('do nothing in development, in a browser, or when the manifest fails', async () => {
     const u = fakeUpdater();
-    expect(await checkOta('0.0.0', true, u, async () => manifest)).toBe('none');
-    expect(await checkOta('1.0.18', false, u, async () => manifest)).toBe('none');
+    await readyOta('0.0.0', true, u);
+    expect(await findOta('0.0.0', true, u, async () => manifest)).toBeNull();
+    expect(await findOta('1.0.18', false, u, async () => manifest)).toBeNull();
     expect(u.calls).toEqual([]);
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
-    expect(await checkOta('1.0.18', true, u, async () => { throw new Error('offline'); })).toBe('none');
+    expect(await findOta('1.0.18', true, u, async () => { throw new Error('offline'); })).toBeNull();
     warn.mockRestore();
   });
 
@@ -89,6 +115,19 @@ describe('the updater calls', () => {
     expect(u.calls).toEqual(['set c']);
     expect(await applyDownloaded('1.0.18.2', true, fakeUpdater())).toBe(false);
     expect(await applyDownloaded('0.0.0', true, u)).toBe(false);
+  });
+
+  it('tell each rolled-back bundle once', async () => {
+    const store = new Map<string, string>();
+    const kv = { getItem: (k: string) => store.get(k) ?? null, setItem: (k: string, v: string) => void store.set(k, v) };
+    const u = fakeUpdater([
+      { id: 'a', version: '1.0.18.1', status: 'error' },
+      { id: 'b', version: '1.0.18.2', status: 'success' },
+    ]);
+    expect(await failedOta('1.0.18', true, u, kv)).toEqual(['1.0.18.1']);
+    expect(await failedOta('1.0.18', true, u, kv)).toEqual([]);
+    expect(store.get(FAILED_KEY)).toBe('["1.0.18.1"]');
+    expect(await failedOta('0.0.0', true, u, kv)).toEqual([]);
   });
 });
 
