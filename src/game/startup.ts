@@ -6,6 +6,7 @@ import { Analytics, type Sink } from '../analytics/analytics';
 import { languageProps } from '../analytics/languages';
 import { deviceProps } from '../analytics/perfReport';
 import type { PrivacyChoice } from '../analytics/privacy';
+import { replayUrl, ReplayUpload } from '../analytics/replayUpload';
 import { BeaconSink, ConsoleSink, MemorySink } from '../analytics/sinks';
 import { sourceOf } from '../analytics/source';
 import { t, type Locale } from '../i18n';
@@ -75,15 +76,19 @@ export function safeDevice(app: Application): ReturnType<typeof deviceProps> {
   }
 }
 
-/** Console with `?track`, an in-memory log in dev, and the collector when VITE_ANALYTICS_URL is set. */
+/** Console with `?track`, an in-memory log in dev, and the collector when VITE_ANALYTICS_URL is
+ *  set, which also takes the battles' replays. */
 export function createAnalytics(platform: Platform, params: URLSearchParams, privacy: PrivacyChoice): Analytics {
   const sinks: Sink[] = [];
   if (import.meta.env.DEV) sinks.push(new MemorySink());
   if (params.has('track')) sinks.push(new ConsoleSink());
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
-  if (url && !params.has('autoplay')) sinks.push(new BeaconSink(url));
+  const collect = !!url && !params.has('autoplay');
+  if (collect) sinks.push(new BeaconSink(url));
   // a first visit records where the player came from (analytics/source.ts)
-  return new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__), privacy.sharing());
+  const analytics = new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__), privacy.sharing());
+  if (collect) analytics.replays = new ReplayUpload(replayUrl(url), analytics, BUILD, platform.name).listen(document, window);
+  return analytics;
 }
 
 /** `session_start` once the game is up, and the page's size once it has one (a portal's iframe can have none at boot). */

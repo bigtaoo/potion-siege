@@ -9,7 +9,8 @@
 // With COLLECTOR_DIR set (the container does) it writes one file per UTC day instead,
 // <dir>/events-YYYY-MM-DD.ndjson, and deletes the day files older than 14 months (the period
 // public/privacy.html §8 promises), checked on the first request of each UTC day, so the
-// container's healthcheck alone keeps it going. GET /health answers 200 for that healthcheck.
+// container's healthcheck alone keeps it going. GET /health answers 200 while the directory is
+// writable with MIN_FREE left on its disk, 503 otherwise, so the healthcheck sees a full disk.
 //
 // GET /b?h=<host>&s=<step>&b=<build>[&ms=<n>][&n=0|1][&r=<source>] counts an anonymous load
 // checkpoint, no id: `open_*` from the page's inline script before anything else downloads
@@ -21,26 +22,29 @@
 // (EVENTS) and TrackedEvent's fields (src/analytics/analytics.ts), each of its type, with props
 // of the shapes Props allows. Unknown keys are dropped, strings lose their control characters and
 // stop at 200 characters (the feedback line's own limit), and an event still over 4 KB is dropped.
+//
+// POST /r keeps one battle's replay, sent by the game only while the player shares statistics
+// (src/analytics/replayUpload.ts), in <dir>/replays for 15 days (scripts/replayShelf.mjs);
+// `npm run replays` plays them again. Every route but /health is charged to a per-address budget
+// before its body is read (scripts/collectorLimits.mjs).
 
-import { appendFileSync, mkdirSync, readdirSync, statSync, unlinkSync } from 'node:fs';
+import { accessSync, appendFileSync, constants, mkdirSync, readdirSync, statfsSync, statSync, unlinkSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
+import { addressOf, BodyGate, declared, Limits, MAX_BODY, MAX_REPLAY, rateOf, readBody, STATUS } from './collectorLimits.mjs';
+import { cleanReplay, MAX_BYTES, ReplayShelf } from './replayShelf.mjs';
 
 const port = Number(process.env.PORT) || Number(process.argv[2]) || 8787;
 const dir = process.env.COLLECTOR_DIR;
 const single = process.argv[3] || 'telemetry/events.ndjson';
-/** sendBeacon and fetch's keepalive both stop at 64 KB, so no batch the game sends is larger. */
-const MAX_BODY = 64 * 1024;
-/** Body bytes per client address per minute, so one address cannot fill a day's file. */
-const BYTES_PER_MINUTE = 1024 * 1024;
 /** One stored line, at most. */
 const MAX_EVENT = 4096;
 /** Any string in an event's props, at most. */
 const MAX_TEXT = 200;
 /** A day's file stops growing past this, so a flood cannot fill the disk. */
 const MAX_FILE = 512 * 1024 * 1024;
-/** Requests per client address per minute; a client sends one every 15 s, and players can share an address. */
-const PER_MINUTE = 240;
+/** Free disk below this and /health answers 503. */
+const MIN_FREE = 256 * 1024 * 1024;
 /** Day files are kept this many months (privacy policy §8). */
 const KEEP_MONTHS = 14;
 mkdirSync(dir ?? dirname(single), { recursive: true });
@@ -75,6 +79,16 @@ function prune(now) {
   }
 }
 prune(Date.now());
+
+const shelf = new ReplayShelf(join(dir ?? dirname(single), 'replays'), Number(process.env.COLLECTOR_REPLAY_BYTES) || MAX_BYTES);
+let replaysPrunedAt = -1;
+/** Drops the replays past their days, once an hour. */
+function pruneReplays(now) {
+  const hour = Math.floor(now / 3600_000);
+  if (hour === replaysPrunedAt) return;
+  replaysPrunedAt = hour;
+  shelf.prune(now);
+}
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
 const HOSTS = ['crazygames', 'web', 'ios'];
@@ -173,39 +187,11 @@ const cors = {
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
   'Access-Control-Allow-Headers': 'Content-Type',
 };
+/** A refusal that leaves the client's body unread: the connection goes with it. */
+const refuse = (res, status, extra = {}) => res.writeHead(status, { ...cors, ...extra, Connection: 'close' }).end();
 
-// requests and body bytes per address in the current minute; behind the tunnel the address is
-// CF-Connecting-IP. The log says when a limit is hit, never for which address.
-let minute = 0;
-let counts = new Map();
-let bytes = new Map();
-let overBudget = 0;
-const addressOf = (req) => String(req.headers['cf-connecting-ip'] ?? req.socket.remoteAddress ?? '');
-const tick = () => {
-  const now = Math.floor(Date.now() / 60_000);
-  if (now === minute) return;
-  if (overBudget) console.log(`collector: ${overBudget} address(es) sent over ${BYTES_PER_MINUTE} bytes in a minute`);
-  minute = now;
-  counts = new Map();
-  bytes = new Map();
-  overBudget = 0;
-};
-const limited = (req) => {
-  tick();
-  const ip = addressOf(req);
-  const n = (counts.get(ip) ?? 0) + 1;
-  counts.set(ip, n);
-  return n > PER_MINUTE || (bytes.get(ip) ?? 0) > BYTES_PER_MINUTE;
-};
-/** Counts `n` body bytes against the address; true once it is over this minute's budget. */
-const spend = (ip, n) => {
-  tick();
-  const was = bytes.get(ip) ?? 0;
-  bytes.set(ip, was + n);
-  if (was + n <= BYTES_PER_MINUTE) return false;
-  if (was <= BYTES_PER_MINUTE) overBudget++;
-  return true;
-};
+const limits = new Limits();
+const bigReads = new BodyGate();
 
 let fullFile = '';
 /** Appends `lines` to the day's file unless it is full, which it says once per file. */
@@ -216,47 +202,77 @@ function append(file, lines) {
   console.log(`collector: ${file} reached ${MAX_FILE} bytes, dropping events until the next file`);
 }
 
-createServer((req, res) => {
-  prune(Date.now());
-  if (req.method === 'GET' && req.url === '/health') return res.writeHead(200, { 'Content-Type': 'text/plain' }).end('ok');
-  if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
-  if (req.method === 'GET' && req.url?.startsWith('/b?')) {
-    if (limited(req)) return res.writeHead(429, cors).end();
+/** Whether the collector can keep what it is sent: its directory writable, with room on the disk. */
+function healthy() {
+  const target = dir ?? dirname(single);
+  try {
+    accessSync(target, constants.W_OK);
+    const fs = statfsSync(target);
+    return fs.bavail * fs.bsize >= MIN_FREE;
+  } catch {
+    return false;
+  }
+}
+
+/** POST /e: an array of events, each kept as one line of the day's file. */
+function events(text, res) {
+  try {
+    const list = JSON.parse(text);
+    if (!Array.isArray(list)) throw new Error('not an array');
     const received = Date.now();
-    const line = beaconLine(req.url, received);
+    const lines = list.map((e) => cleanEvent(e, received)).filter(Boolean);
+    if (lines.length) append(fileFor(received), lines.join('\n') + '\n');
+    res.writeHead(204, cors).end();
+  } catch {
+    res.writeHead(400, cors).end();
+  }
+}
+
+/** POST /r: one battle's replay, kept on the shelf. */
+function replay(text, res) {
+  let doc = null;
+  try {
+    doc = cleanReplay(JSON.parse(text), Date.now());
+  } catch {
+    // not JSON
+  }
+  if (!doc) return res.writeHead(400, cors).end();
+  try {
+    shelf.put(doc);
+  } catch (err) {
+    console.log(`collector: could not keep a replay: ${err}`);
+    return res.writeHead(503, cors).end();
+  }
+  res.writeHead(204, cors).end();
+}
+
+createServer((req, res) => {
+  const now = Date.now();
+  prune(now);
+  pruneReplays(now);
+  if (req.method === 'GET' && req.url === '/health') {
+    const ok = healthy();
+    return res.writeHead(ok ? 200 : 503, { 'Content-Type': 'text/plain' }).end(ok ? 'ok' : 'unhealthy');
+  }
+  if (req.method === 'OPTIONS') return res.writeHead(204, cors).end();
+  const rate = rateOf(req.method, req.url);
+  if (!rate) return res.writeHead(404, cors).end();
+  const ip = addressOf(req);
+  const length = declared(req);
+  if (!limits.allow(rate, ip, length)) return refuse(res, 429);
+  if (req.method === 'GET') {
+    const line = beaconLine(req.url, now);
     if (!line) return res.writeHead(400, cors).end();
-    append(fileFor(received), JSON.stringify(line) + '\n');
+    append(fileFor(now), JSON.stringify(line) + '\n');
     return res.writeHead(204, cors).end();
   }
-  if (req.method !== 'POST' || req.url !== '/e') return res.writeHead(404, cors).end();
-  if (limited(req)) return res.writeHead(429, cors).end();
-  const ip = addressOf(req);
-  let body = '';
-  let cut = false;
-  req.setEncoding('utf8');
-  req.on('data', (chunk) => {
-    if (cut) return;
-    body += chunk;
-    if (spend(ip, Buffer.byteLength(chunk))) {
-      cut = true;
-      res.writeHead(429, cors).end();
-      req.destroy();
-    } else if (body.length > MAX_BODY) {
-      cut = true;
-      req.destroy();
-    }
-  });
-  req.on('end', () => {
-    if (cut) return;
-    try {
-      const events = JSON.parse(body);
-      if (!Array.isArray(events)) throw new Error('not an array');
-      const received = Date.now();
-      const lines = events.map((e) => cleanEvent(e, received)).filter(Boolean);
-      if (lines.length) append(fileFor(received), lines.join('\n') + '\n');
-      res.writeHead(204, cors).end();
-    } catch {
-      res.writeHead(400, cors).end();
-    }
+  const big = rate === 'replays';
+  const limit = big ? MAX_REPLAY : MAX_BODY;
+  if (length > limit) return refuse(res, 413);
+  if (big && !bigReads.take()) return refuse(res, 503, { 'Retry-After': '5' });
+  readBody(req, { limit, over: (n) => limits.spend(rate, ip, n) }, (err, text) => {
+    if (big) bigReads.give();
+    if (err) return err in STATUS ? refuse(res, STATUS[err]) : undefined;
+    (big ? replay : events)(text, res);
   });
 }).listen(port, () => console.log(`collector on :${port}/e -> ${dir ? join(dir, 'events-<day>.ndjson') : single}`));

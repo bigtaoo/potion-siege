@@ -40,7 +40,8 @@
     "contextloss": "node scripts/contextLoss.mjs",
     "sweep": "vitest run --config scripts/vitest.sweep.config.js",
     "targeting": "vitest run --config scripts/vitest.targeting.config.js",
-    "smoke": "node scripts/smoke.mjs"
+    "smoke": "node scripts/smoke.mjs",
+    "replays": "vitest run --config scripts/vitest.replays.config.js"
   },
   "dependencies": {
     "@capacitor/core": "^8.5.3",

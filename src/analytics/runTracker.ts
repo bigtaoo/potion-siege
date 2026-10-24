@@ -25,6 +25,7 @@ export class RunTracker {
   ) {
     const { lineup, heroLevels } = battle.setup;
     a.track('run_start', { run, cause, stage: battle.setup.stage, seed: battle.seed, lineup: [...lineup], levels: lineup.map((k) => heroLevels[k]) });
+    a.replays?.start(run, battle);
   }
 
   /** The tutorial just did `step` for the player; its event comes with the next drain. */
@@ -93,6 +94,7 @@ export class RunTracker {
   onEnd(): void {
     this.a.track('run_end', this.summary());
     if (this.battle.result === 'won') this.a.first('first_win', { run: this.run });
+    this.a.replays?.end(this.run, this.battle);
   }
 
   /** Called when a fresh run replaces this one, or the page goes away mid-run. */
@@ -100,6 +102,8 @@ export class RunTracker {
     if (this.ended) return;
     this.ended = true;
     if (reason === 'pagehide' && !this.battle.result) this.a.track('run_quit', this.summary());
+    // a hidden page sends its replay itself (ReplayUpload.listen)
+    if (reason === 'again') this.a.replays?.end(this.run, this.battle);
   }
 
   /** The page came back from the back/forward cache with the battle still on: it can quit again. */

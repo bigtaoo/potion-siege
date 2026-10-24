@@ -17,11 +17,64 @@ ssh blightbloom 'cat /home/deploy/potion-siege/data/events-*.ndjson' > telemetry
 npm run report -- telemetry/events.ndjson
 ```
 
+## Battle replays
+
+While a player shares statistics the game also posts each battle's replay to `POST /r`
+(`src/analytics/replayUpload.ts`): at its end, when it is left, and when the page goes to the
+background mid-battle. The collector keeps one gzipped `<uid>-<run>.json.gz` per install and
+battle in `data/replays` (`scripts/replayShelf.mjs`), a later upload of the same battle over the
+earlier, and deletes each 15 days after it came (`KEEP_DAYS`, privacy policy §8), or the oldest
+first once the shelf passes 1 GiB (`COLLECTOR_REPLAY_BYTES` in the compose file's environment
+changes that). To play them again and see where the wall falls, what bites it, the merges, the
+skill picks and the commander's casts:
+
+```bash
+rsync -a blightbloom:/home/deploy/potion-siege/data/replays/ telemetry/replays/
+npm run replays
+```
+
+`REPLAYS=<dir>` reads another folder, `DAYS=7` only the last week's uploads, `BUILD=<prefix>`
+only those builds. Replays from before a change to the battle (`REPLAY_VERSION`) are counted
+apart and left out; one that does not play back to its hash is a desync, worth a look.
+
+A deletion request (privacy policy §9) covers the replays too:
+
+```bash
+ssh blightbloom 'rm -f /home/deploy/potion-siege/data/replays/<id>-*.json.gz'
+```
+
+## Limits and health
+
+`scripts/collectorLimits.mjs` charges each address from the request's headers, before a byte of
+the body is read: 240 event requests and 1 MB a minute, 20 replays and 4 MB a minute; bytes past
+the declared `Content-Length` are charged as they come. Bodies over 64 KB (events) or 256 KB (a
+replay) get 413, at most 32 replay bodies are read at once (503 with `Retry-After` past that), and
+a body not done in 20 s gets 408. Once a minute the log says how many addresses went over a byte
+budget.
+
+`GET /health` answers 200 `ok` while the data folder takes writes and the disk has 256 MB free,
+503 `unhealthy` otherwise; it is never rate limited. Point an uptime monitor at
+https://ps.gamestao.com/health (e.g. UptimeRobot, every 5 minutes, alert on anything but 200).
+
+## Backups
+
+The `ps-backup` container gzips each finished day's `events-YYYY-MM-DD.ndjson` into
+`/home/deploy/potion-siege/backups` at 03:00 UTC and deletes the copies older than
+`PS_BACKUP_DAYS` (30 unless set in `.env`). They sit on the same disk: they guard against a
+file deleted or broken by mistake, not against losing the box; copy them off now and then if that
+matters. Replays are not backed up. A deletion request must clean the backups too, or wait out
+the 30 days (privacy policy §8):
+
+```bash
+ssh blightbloom 'cd /home/deploy/potion-siege/backups && for f in events-*.ndjson.gz; do gzip -dc "$f" | grep -v "\"<id>\"" | gzip > "$f.new" && mv "$f.new" "$f"; done'
+```
+
 ## Deploy from CI
 
 Every green push to `main` deploys it (`.github/workflows/ci.yml`, job `deploy-server`, before
 the web build goes out); a push that leaves the collector unchanged restarts nothing. CI sends
-`collector.mjs` and nothing else: the `Dockerfile` and `docker-compose.yml` say what runs and
+the collector's three files (`collector.mjs`, `collectorLimits.mjs`, `replayShelf.mjs`) and
+nothing else: the `Dockerfile` and `docker-compose.yml` say what runs and
 what is mounted, so a leaked key that could send them could take the box. They are installed by
 hand, and `ci-deploy.sh` refuses to build unless both hash to the values written in it
 (`src/analytics/deploy.test.ts` keeps those equal to this folder's copies).
@@ -45,7 +98,11 @@ tr -d '\r' < server/ci-deploy.sh | ssh blightbloom 'install -o deploy -g deploy 
 
 After editing the `Dockerfile` or `docker-compose.yml` (and so the hashes in `ci-deploy.sh`),
 install all three by hand before the push reaches `main`; root owns the two, so nothing running
-as `deploy` can change them:
+as `deploy` can change them. The order matters when CI starts sending a new file (as when
+`collectorLimits.mjs` and `replayShelf.mjs` came): an old script would copy `collector.mjs`
+alone and build an image without the others, which then fails at start, while the new script on
+an old push only refuses to deploy. Then create the backup folder once:
+`ssh blightbloom 'mkdir -p /home/deploy/potion-siege/backups'` (`ci-deploy.sh` also makes it).
 
 ```bash
 for f in Dockerfile docker-compose.yml; do
