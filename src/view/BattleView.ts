@@ -21,6 +21,7 @@ import { EnemyLayer } from './battleView/enemies';
 import { FieldArt, fieldOf } from './battleView/field';
 import { FIGURES, drawCell, type FigureAnim } from './battleView/figures';
 import { Floaters } from './battleView/floaters';
+import { KillFx } from './battleView/killFx';
 import { FxLayer } from './battleView/fxLayer';
 import { MergeAnims } from './battleView/merges';
 import { ShotLayer } from './battleView/shots';
@@ -68,6 +69,8 @@ export class BattleView extends Container {
   private readonly wallText: Text;
   private readonly cmd = new CommanderArt();
   private readonly floaters = new Floaters();
+  /** The coins flying off each kill and the kill streak; `kills.landed` is the HUD's to set. */
+  readonly kills = new KillFx();
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
   private shake = 0;
@@ -82,7 +85,7 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
-    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.kills, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
     this.field.build(this);
@@ -110,6 +113,7 @@ export class BattleView extends Container {
     this.shots.clear();
     this.merges.clear();
     this.floaters.hideAll();
+    this.kills.clear();
   }
 
   /** Grows the wall's numbers and the commander's count for a small board. */
@@ -157,8 +161,10 @@ export class BattleView extends Container {
         }
         case 'kill':
           this.fx.effect(ev.boss ? 0.9 : 0.6, (g, life) => gearBurst(g, ev.x, ev.y, ev.boss, 1 - life));
-          if (ev.gold > 0) this.floaters.show(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
-          if (ev.boss) this.shake = 0.5;
+          if (ev.boss) {
+            if (ev.gold > 0) this.floaters.show(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
+            this.shake = 0.5;
+          } else if (this.kills.kill(ev.x, ev.y, ev.gold)) this.shake = Math.max(this.shake, 0.12);
           break;
         case 'summon': {
           const c = slotCenter(ev.slot);
@@ -305,6 +311,7 @@ export class BattleView extends Container {
     this.fx.update(dt);
     for (const v of b.vortices) vortexSwirl(this.fx.ground, v.x / FP, v.y / FP, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / TICK_RATE / 0.4));
     this.floaters.update(dt);
+    this.kills.update(dt);
 
     const g = this.grid.clear();
     const ho = this.heroOver.clear();

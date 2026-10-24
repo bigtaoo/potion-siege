@@ -83,7 +83,8 @@ describe('the horde (wave 1)', () => {
   });
 
   it('leaves the later waves as they were', () => {
-    for (const s of planWave(2, new Prng(4), 1)) expect([s.heft, s.size, s.lane]).toEqual([undefined, undefined, undefined]);
+    // past the first chapter, where firstCrowd (firstCrowd.test.ts) makes the crowd lighter too
+    for (const s of planWave(2, new Prng(4), BALANCE.waves.earlyHpTo + 1)) expect([s.heft, s.size, s.lane]).toEqual([undefined, undefined, undefined]);
   });
 
   it('comes in small, behind the top edge by its rank, inside its lane', () => {
