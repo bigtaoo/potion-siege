@@ -90,10 +90,11 @@ stdin, and `ssh -tt` gets `PTY allocation request failed`). Repo Variables:
 against `/etc/ssh/ssh_host_ed25519_key.pub`).
 
 The live script sits outside the deploy target so a deploy cannot replace it; after editing
-`ci-deploy.sh`, install it again:
+`ci-deploy.sh`, install it again. The file goes through a temp file first: on the box `sudo`
+gets no stdin, so `sudo install … /dev/stdin` fails with `No such file or directory`.
 
 ```bash
-tr -d '\r' < server/ci-deploy.sh | ssh blightbloom 'install -o deploy -g deploy -m 700 /dev/stdin /home/deploy/potion-siege-ci-deploy.sh'
+tr -d '\r' < server/ci-deploy.sh | ssh blightbloom 't=$(mktemp) && cat > $t && sudo install -o deploy -g deploy -m 700 $t /home/deploy/potion-siege-ci-deploy.sh; rm -f $t'
 ```
 
 After editing the `Dockerfile` or `docker-compose.yml` (and so the hashes in `ci-deploy.sh`),
@@ -102,11 +103,12 @@ as `deploy` can change them. The order matters when CI starts sending a new file
 `collectorLimits.mjs` and `replayShelf.mjs` came): an old script would copy `collector.mjs`
 alone and build an image without the others, which then fails at start, while the new script on
 an old push only refuses to deploy. Then create the backup folder once:
-`ssh blightbloom 'mkdir -p /home/deploy/potion-siege/backups'` (`ci-deploy.sh` also makes it).
+`ssh blightbloom 'sudo install -d -o deploy -g deploy /home/deploy/potion-siege/backups'`
+(`ci-deploy.sh` also makes it; `ps-backup` writes there as uid 1000, so not root-owned).
 
 ```bash
 for f in Dockerfile docker-compose.yml; do
-  tr -d '\r' < server/$f | ssh blightbloom "sudo install -o root -g root -m 644 /dev/stdin /home/deploy/potion-siege/$f"
+  tr -d '\r' < server/$f | ssh blightbloom "t=\$(mktemp) && cat > \$t && sudo install -o root -g root -m 644 \$t /home/deploy/potion-siege/$f; rm -f \$t"
 done
 ssh blightbloom 'cd /home/deploy/potion-siege && sha256sum Dockerfile docker-compose.yml'
 ```
