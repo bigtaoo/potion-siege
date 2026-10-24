@@ -1,5 +1,6 @@
 import { urlSwitches } from '../game/switches';
-import { SafeStore, type KeyValueStore, type Platform } from './types';
+import { updatesSwitch } from './fakeUpdates';
+import { SafeStore, type AppUpdates, type KeyValueStore, type Platform } from './types';
 
 export function browserStorage(): KeyValueStore | null {
   try {
@@ -9,11 +10,13 @@ export function browserStorage(): KeyValueStore | null {
   }
 }
 
-/** Plain web: local storage, no portal, and with `?ads=fake` (dev builds) a pretend ad that lasts a second. */
+/** Plain web: local storage, no portal, and with `?ads=fake` (dev builds) a pretend ad that lasts a
+ *  second; `?ota=fake` (or `fail`) stands in for the iOS app's hot updates. */
 export class WebPlatform implements Platform {
   readonly name: string = 'web';
   storage = new SafeStore(browserStorage());
   private readonly fakeAds = urlSwitches(location.search).get('ads') === 'fake';
+  readonly updates?: AppUpdates = updatesSwitch(urlSwitches(location.search));
   /** A new tab; inside a portal's iframe too, since it comes from a tap. */
   readonly openUrl: ((url: string) => void) | undefined = (url) => void window.open(url, '_blank', 'noopener');
 

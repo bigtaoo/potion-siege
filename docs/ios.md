@@ -94,11 +94,31 @@ Windows compiles the Swift.
 
 The web layer (`dist-ios`) can change without App Review:
 
-- Once the game is up, `checkOta` calls `notifyAppReady` (a bundle that does not get there
-  within 30 s is rolled back), reads `https://ps-ota.gamestao.com/manifest.json` and downloads a
-  newer bundle. At the next launch, before anything boots, `applyDownloaded` switches to it. It
-  never arms one with `next()`, which would swap it in whenever the app goes to the background
-  and throw away a battle in progress.
+- **When**: once the game is up, `readyOta` calls `notifyAppReady` (a bundle that does not get
+  there within 30 s is rolled back). The manifest
+  `https://ps-ota.gamestao.com/manifest.json` is read only on the home screen with nothing over
+  it (no battle, panel, pointing hand or stale-tab notice): once per launch and once per return
+  from the background (`game/updateFlow.ts`, drawn by `view/updatePrompt.ts`, wired in
+  `game/handle.ts`). `findOta` applies the gates below; a newer bundle the device wants shows
+  "Update available" with Update and Later. A failed or offline read shows nothing. Later shows
+  nothing more until the next check. Update runs `installOta`: the download with a progress bar
+  (Capgo's `download` events), then `set()`, which restarts the game into it. A failed download
+  (or one silent for 45 s) says so with Retry and Close, and the game stays playable. A bundle
+  downloaded but not switched to (the older web layer downloaded silently) is still switched to
+  by `applyDownloaded` at the next launch, before anything boots. It never arms one with
+  `next()`, which would swap it in whenever the app goes to the background and throw away a
+  battle in progress. Shells in the field run a web layer that still downloads silently, so the
+  prompt reaches them only after one more update lands that way. In development `?ota=fake` (or
+  `?ota=fail`) fakes the offer and its download, in the browser too (`npm run dev:ios`,
+  `?native=1&ota=fake`).
+- **Launch reports** (`platform/ios/bootTrail.ts`, `main.ios.ts`): each launch writes how far it
+  got to `localStorage` as it goes (`script`, `platform`, `boot`, `up`) with the first errors
+  caught, and clears it once `readyOta` has run (or `applyDownloaded` reloads into a new bundle).
+  A launch that finds an uncleared record (a throw, the web view killed for memory, a rollback)
+  sends it as a `boot_fail` anomaly (stage, ms, bundle, build, msg, errors); bundles the updater
+  holds with status `error` go out once each as `ota_fail` (bundle, msg `running <bundle>`).
+  Both wait in `ps.boot.pending` until a launch gets the game up. Read them from the events
+  (`anomaly`, `p.kind`; `scripts/perfSummary.mjs` counts them by kind).
 - Versions: a shell's own bundle is `<MARKETING_VERSION>.<release run number>` (`1.0.12`); its
   hot updates are `1.0.12.1`, `1.0.12.2`, … so an update outranks its shell and the next shell
   outranks every update for the one before (`resetWhenUpdate` drops them after an App Store

@@ -45,6 +45,20 @@ export interface Platform {
   sessionProps?(): Record<string, string | boolean>;
   /** Puts `text` on the clipboard, from a tap; false when the host refused. Absent where there is none. */
   copyText?(text: string): Promise<boolean>;
+  /** A newer game the player can be asked to take (the iOS app's hot updates); absent elsewhere. */
+  readonly updates?: AppUpdates;
+}
+
+/** Hot updates of the game itself (docs/ios.md "Hot updates"), offered on the home screen (view/updatePrompt.ts). */
+export interface AppUpdates {
+  /** The update this device wants, or null: none, offline, or the manifest unreadable. */
+  check(): Promise<UpdateOffer | null>;
+}
+
+export interface UpdateOffer {
+  readonly version: string;
+  /** Downloads it, reporting 0..1, then restarts the game into it. Rejects when that fails. */
+  install(progress: (f: number) => void): Promise<void>;
 }
 
 /**
