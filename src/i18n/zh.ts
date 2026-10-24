@@ -153,7 +153,9 @@ export const zh: Table = {
   allDoneCount: '已领取 {n}/{total}',
   /** The language's own name, for the picker. */
   lang: { name: '简体中文' },
-  sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
+  sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', shake: '屏幕震动', haptics: '手机振动', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
+  pause: { title: '已暂停', resume: '继续', giveUp: '放弃', confirm: '再点一次放弃' },
+  rotate: '请竖屏握持手机',
   privacy: {
     title: '游戏统计',
     ask: '可以统计你的玩法吗？游戏会发送匿名游玩数据（到达的波次、战斗时长、合成次数）和一个随机玩家 ID，用来调整平衡。不含姓名，不做广告画像。随时可在设置中更改。',

@@ -16,6 +16,7 @@ import { buildHome, HOME_TABS, type HomeActions, type HomePanel } from '../Home'
 import { CODEX_PAGES, scrollFeats, setCodexPage } from '../codex';
 import { Overlay } from '../Overlay';
 import { Hud } from '../Hud';
+import { pausePanel, uprightCover, type PauseActions } from '../pausePanel';
 import { PillButton } from '../kit';
 import { Button } from '../ui';
 import { DESIGN_H, DESIGN_W, type MenuFit } from '../viewport';
@@ -60,6 +61,7 @@ function homeScreens(): Screen[] {
           adFree: { price: '$4.99', owned: false, note: t('store.adFree.failed') },
           privacy: true,
           policy: true,
+          vibrate: true,
         });
       const at = `${fitName}/${saveName}`;
       for (const tab of HOME_TABS) if (tab !== 'codex') out.push({ name: `${at}/${tab}`, w: fit.w, h: fit.h, build: home(tab, null) });
@@ -171,7 +173,7 @@ function hudScreens(): Screen[] {
     w: DESIGN_W,
     h: DESIGN_H,
     build: () => {
-      const h = new Hud(() => {}, () => {});
+      const h = new Hud(() => {}, () => {}, () => {});
       const b = setup();
       h.attach(b);
       go(h, b);
@@ -194,13 +196,27 @@ function hudScreens(): Screen[] {
   return out;
 }
 
+/** The pause panel, with every switch and Give up as it first shows and waiting for its
+ *  second tap, and the upright cover on a phone held sideways. */
+function pauseScreens(): Screen[] {
+  const out: Screen[] = [];
+  const act = noop as unknown as PauseActions;
+  for (const [fitName, fit] of Object.entries(FITS)) {
+    for (const confirming of [false, true]) {
+      out.push({ name: `pause/${fitName}${confirming ? ' confirm' : ''}`, w: fit.w, h: fit.h, build: () => pausePanel(rich(), act, fit, true, true, confirming) });
+    }
+  }
+  out.push({ name: 'upright', w: FITS.wide.w, h: FITS.wide.h, build: () => uprightCover(FITS.wide) });
+  return out;
+}
+
 describe('every language fits its boxes', () => {
   for (const l of LOCALES) {
     it(l, async () => {
       expect(await loadLocale(l)).toBe(true);
       setLocale(l);
       const found: string[] = [];
-      for (const s of [...homeScreens(), ...overlayScreens(), ...hudScreens()]) {
+      for (const s of [...homeScreens(), ...overlayScreens(), ...hudScreens(), ...pauseScreens()]) {
         const root = s.build();
         for (const o of overflows(root, { x: 0, y: 0, width: s.w, height: s.h }, [PillButton, Button])) {
           found.push(`${s.name}: ${JSON.stringify(o.text)} ${o.side === 'button' ? 'runs into a button by' : `sticks out ${o.side} by`} ${o.by}px`);

@@ -153,7 +153,9 @@ export const pt: Table = {
   allDone: 'Bônus completo',
   allDoneCount: '{n}/{total} resgatadas',
   lang: { name: 'Português' },
-  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Som', on: 'LIG', off: 'DESL', privacy: 'Privacidade de anúncios', policy: 'Política de privacidade', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Som', shake: 'Tremor de tela', haptics: 'Vibração', on: 'LIG', off: 'DESL', privacy: 'Privacidade de anúncios', policy: 'Política de privacidade', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Pausa', resume: 'Continuar', giveUp: 'Desistir', confirm: 'Toque de novo para desistir' },
+  rotate: 'Vire o celular na vertical',
   privacy: {
     title: 'Estatísticas de jogo',
     ask: 'Podemos contar como você joga? O jogo envia dados anônimos (onda alcançada, duração das batalhas, fusões) com um ID aleatório, para equilibrá-lo. Sem nome, sem perfil de anúncios. Você pode mudar isso a qualquer momento nas Configurações.',

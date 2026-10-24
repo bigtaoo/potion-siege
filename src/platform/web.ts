@@ -19,6 +19,9 @@ export class WebPlatform implements Platform {
   readonly updates?: AppUpdates = updatesSwitch(urlSwitches(location.search));
   /** A new tab; inside a portal's iframe too, since it comes from a tap. */
   readonly openUrl: ((url: string) => void) | undefined = (url) => void window.open(url, '_blank', 'noopener');
+  /** A phone's browser; desktop Chrome has the call too but nothing to buzz. */
+  readonly vibrate: ((strong: boolean) => void) | undefined =
+    typeof navigator.vibrate === 'function' && navigator.maxTouchPoints > 0 ? (strong) => void navigator.vibrate(strong ? 40 : 15) : undefined;
 
   async copyText(text: string): Promise<boolean> {
     try {

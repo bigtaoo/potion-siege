@@ -153,7 +153,9 @@ export const es: Table = {
   allDone: 'Premio por todas',
   allDoneCount: '{n}/{total} recogidas',
   lang: { name: 'Español' },
-  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Sonido', on: 'SÍ', off: 'NO', privacy: 'Privacidad de anuncios', policy: 'Política de privacidad', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Sonido', shake: 'Temblor de pantalla', haptics: 'Vibración', on: 'SÍ', off: 'NO', privacy: 'Privacidad de anuncios', policy: 'Política de privacidad', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Pausa', resume: 'Seguir', giveUp: 'Rendirse', confirm: 'Toca otra vez para rendirte' },
+  rotate: 'Pon el móvil en vertical',
   privacy: {
     title: 'Estadísticas de juego',
     ask: '¿Podemos contar cómo juegas? El juego envía datos anónimos (oleada alcanzada, duración de las batallas, fusiones) con un ID aleatorio, para equilibrarlo. Sin nombre ni perfil publicitario. Puedes cambiarlo cuando quieras en Ajustes.',

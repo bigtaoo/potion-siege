@@ -6,6 +6,7 @@ import type { Locale } from '../../i18n';
 import type { TrackId } from '../../sim/achievements';
 import type { WorkshopId } from '../../sim/meta';
 import type { EnemyKind, HeroKind } from '../../sim/types';
+import type { SoundSwitch } from '../soundSwitches';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
@@ -43,8 +44,8 @@ export interface HomeActions {
   challengeAd(): void;
   /** An endless run. */
   endless(): void;
-  /** Flips the music or the sound effects toggle. */
-  sound(which: 'music' | 'sfx'): void;
+  /** Flips a switch: music, sound effects, screen shake or vibration. */
+  sound(which: SoundSwitch): void;
   /** A language picked on the language panel. */
   language(locale: Locale): void;
   /** The ad-free card: Apple's purchase sheet, and Restore. */
@@ -69,6 +70,8 @@ export interface HomeExtras {
   adsHosted?: boolean;
   privacy?: boolean;
   policy?: boolean;
+  /** The device can vibrate: the settings get the vibration switch. */
+  vibrate?: boolean;
   /** Play statistics: the settings switch and the player ID. */
   data?: PlayData;
 }

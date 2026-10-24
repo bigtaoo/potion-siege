@@ -11,6 +11,7 @@ const BUTTON = {
   green: [P.green, P.greenDark],
   brass: [P.brass, P.brassDark],
   purple: [0x8f5ce0, 0x5a35a0],
+  red: [P.red, 0x9a2a2e],
   off: [0xa8987f, 0x6e604f],
 } as const;
 export type ButtonKind = Exclude<keyof typeof BUTTON, 'off'>;

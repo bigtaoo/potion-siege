@@ -153,7 +153,9 @@ export const id: Table = {
   allDone: 'Bonus Semua Tugas',
   allDoneCount: '{n}/{total} diklaim',
   lang: { name: 'Bahasa Indonesia' },
-  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', shake: 'Getar layar', haptics: 'Getaran', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Jeda', resume: 'Lanjut', giveUp: 'Menyerah', confirm: 'Ketuk lagi untuk menyerah' },
+  rotate: 'Putar ponsel ke posisi tegak',
   privacy: {
     title: 'Statistik permainan',
     ask: 'Bolehkah kami menghitung cara kamu bermain? Game mengirim data anonim (gelombang yang dicapai, durasi pertempuran, penggabungan) dengan ID acak, untuk menyeimbangkan game. Tanpa nama, tanpa profil iklan. Kamu bisa mengubahnya kapan saja di Pengaturan.',

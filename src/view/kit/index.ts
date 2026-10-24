@@ -8,6 +8,7 @@
 // - icons.ts: potion bottles, enemy art, tags and the drawn icons
 // - modifierIcons.ts: the daily challenge's modifier icons
 // - stageStars.ts: a stage's stars
+// - toggle.ts: the on/off switch
 
 export * from './palette';
 export * from './text';
@@ -17,3 +18,4 @@ export * from './icons';
 export * from './modifierIcons';
 
 export * from './stageStars';
+export * from './toggle';

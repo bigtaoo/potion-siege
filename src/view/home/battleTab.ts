@@ -14,7 +14,7 @@ import { onStage } from '../../sim/waves';
 import { commanderTexture } from '../art';
 import type { HomeActions } from './types';
 import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, infinityIcon, ink, LIGHT, medal, P, PillButton, plate, redDot, tappable } from '../kit';
-import { anyChestWaiting, challengeShown } from '../nudges';
+import { challengeShown } from '../nudges';
 import { gem, label } from '../ui';
 import { hardToggle, plateStars, TOGGLE_ROOM, toggleShown } from './hardToggle';
 import { chapterTitle, type Area } from './shared';
@@ -23,10 +23,10 @@ import { chapterTitle, type Area } from './shared';
  *  with the four fielded potions in front, and the big button into battle low down where a
  *  thumb reaches it, today's challenge and endless mode as round buttons beside it once they
  *  are open. A wide page keeps the same column in the middle. */
-export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string): void {
+export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, chestDot: boolean): void {
   const cx = a.x + a.w / 2;
   const sy = a.y + (a.wide ? 70 : 80);
-  stageCard(root, m, act, cx, sy);
+  stageCard(root, m, act, cx, sy, chestDot);
   // clear of the battle medallion that rises out of the tab bar
   const by = a.wide ? a.y + a.h - 110 : a.y + a.h - 50 - START_H / 2;
   const challenge = challengeShown(m);
@@ -51,8 +51,9 @@ const CARD_BOTTOM = 268;
 
 /** The stage plate between its arrows; under it one light line with the stage's chapter (its
  *  name, a pip a stage and the progress), a row of the enemies it sends and its twist as one
- *  small tag. Tapping the line or the enemies opens the chapters. */
-function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, ax = 340): void {
+ *  small tag. Tapping the line or the enemies opens the chapters; `chestDot` puts the red dot
+ *  of a waiting chapter chest on it. */
+function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y: number, chestDot: boolean, ax = 340): void {
   const arrow = (dx: number, text: string, on: boolean, d: number) => {
     const c = tappable(new Container(), () => on && act.stage(d));
     c.position.set(x + dx, y);
@@ -96,7 +97,7 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
     }
     card.addChild(pips);
   }
-  if (anyChestWaiting(m)) redDot(card, cw / 2 - 6, ly - 26);
+  if (chestDot) redDot(card, cw / 2 - 6, ly - 26);
   const row = new Container();
   row.position.set(0, ly + 74);
   kinds.forEach((kind, i) => {

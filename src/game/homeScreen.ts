@@ -11,6 +11,7 @@ import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
 import { setHardMode, stageOpen, stepStage } from '../sim/stars';
 import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
 import { loginPops, markSeen, upgradeHintKind } from '../view/nudges';
+import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu } from '../view/viewport';
 import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
 import { challengeAd, playChallenge, playEndless } from './modes';
@@ -131,7 +132,7 @@ export function home(g: Game, panel: HomePanel = null): void {
     challengeAd: () => void challengeAd(g),
     endless: () => playEndless(g),
     sound: (which) => {
-      g.save.sound[which] = !g.save.sound[which];
+      flipSwitch(g.save, which);
       g.audio.prefs(g.save.sound);
       g.store();
       home(g, 'settings');
@@ -182,6 +183,7 @@ export function extras(g: Game): HomeExtras {
     adsHosted: !g.autoplay && (g.platform.rewardedHosted?.() ?? g.platform.rewardedAvailable()),
     privacy: g.platform.adPrivacy?.offered() ?? false,
     policy: !!g.platform.openUrl,
+    vibrate: !!g.platform.vibrate,
     data: { sending: g.analytics.sending, id: g.analytics.playerId, copy: !!g.platform.copyText, note: g.idNote },
   };
 }

@@ -20,6 +20,9 @@ import { StoreKit } from './storeKit';
 // refund takes effect at the next offer.
 export class IosPlatform extends WebPlatform implements Platform {
   override readonly name: string = 'ios';
+  /** No buzz yet: WKWebView has no navigator.vibrate and the app ships no haptics plugin
+   *  (@capacitor/haptics would be the way, a native change for a later build). */
+  override readonly vibrate = undefined;
   override storage: SafeStore;
   readonly mount: HTMLElement;
   readonly store: StoreKit | null;

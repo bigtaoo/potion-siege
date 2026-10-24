@@ -11,7 +11,7 @@ import type { MetaSave } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
 import { buildCodex, enemyPanel, isEnemy } from './codex';
 import { workshopWall } from './kit';
-import { navDots } from './nudges';
+import { homeDots } from './homeDots';
 import type { MenuFit } from './viewport';
 import { battleTab } from './home/battleTab';
 import { challengePanel } from './home/challengePanel';
@@ -55,19 +55,18 @@ export function buildHome(
   const left = wide ? RAIL : 0;
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
-  if (tab === 'battle') battleTab(root, m, act, area, today);
+  // the red-dot rules are in nudges.ts and homeDots.ts; never on the tab already open
+  const dots = homeDots(m, today, tab, hint !== null);
+  if (tab === 'battle') battleTab(root, m, act, area, today, dots.battle);
   else if (tab === 'potions') potionsTab(root, m, act, area, picked, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier, act.panel));
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
-  topBar(root, m, act, today, left, w, wide);
-  // the red-dot rule is in nudges.ts; never on the tab already open
-  const dots: Partial<Record<HomeTab, boolean>> = navDots(m, today, hint !== null);
-  dots[tab] = false;
-  nav(root, act, tab, fit, dots, hint !== null && tab !== 'potions' && !panel);
+  topBar(root, m, act, left, w, wide, dots);
+  nav(root, act, tab, fit, { ...dots, [tab]: false }, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'tasks') root.addChild(tasksPanel(m, act, fit));
-  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy, extras.data ?? null));
+  else if (panel === 'settings') root.addChild(settingsPanel(m, act, fit, !!extras.privacy, !!extras.policy, extras.data ?? null, !!extras.vibrate));
   else if (panel === 'privacy') root.addChild(consentPanel(act, fit, !!extras.policy));
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));

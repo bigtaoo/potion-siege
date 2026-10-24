@@ -26,6 +26,7 @@ import { MergeAnims } from './battleView/merges';
 import { ShotLayer } from './battleView/shots';
 import { starMark } from './battleView/starMark';
 import { BAR_H, BAR_Y, WALL_TOP, drawWallTop } from './battleView/wall';
+import { reducedMotion } from './media';
 
 const F = BALANCE.field;
 const G = BALANCE.grid;
@@ -70,6 +71,8 @@ export class BattleView extends Container {
   private dragFrom: number | null = null;
   private dragPos = { x: 0, y: 0 };
   private shake = 0;
+  /** Whether the screen shakes at all: the player's setting (view/media.shakeOn). */
+  shakes: () => boolean = () => true;
   /** When the rushes of the horde (the first wave) come in, each with a cloud of dust. */
   private rushes = new RushWatch();
   private battle: Battle | null = null;
@@ -272,7 +275,9 @@ export class BattleView extends Container {
       this.fx.effect(DUST_TIME, hordeDust, true);
     }
     this.shake = Math.max(0, this.shake - dt);
-    this.position.set((Math.random() - 0.5) * this.shake * 40, (Math.random() - 0.5) * this.shake * 40);
+    const k = this.shakes() ? this.shake * 40 : 0;
+    this.position.set((Math.random() - 0.5) * k, (Math.random() - 0.5) * k);
+    this.merges.soft = reducedMotion();
 
     this.time += dt;
     this.field.update(dt);

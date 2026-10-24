@@ -153,7 +153,9 @@ export const tr: Table = {
   allDone: 'Tüm Görevler Bonusu',
   allDoneCount: '{n}/{total} alındı',
   lang: { name: 'Türkçe' },
-  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', shake: 'Ekran sarsıntısı', haptics: 'Titreşim', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
+  pause: { title: 'Duraklatıldı', resume: 'Devam', giveUp: 'Pes et', confirm: 'Pes etmek için tekrar dokun' },
+  rotate: 'Telefonu dik tutun',
   privacy: {
     title: 'Oyun istatistikleri',
     ask: 'Nasıl oynadığını sayabilir miyiz? Oyun, dengeyi ayarlamak için anonim oyun verilerini (ulaşılan dalga, savaş süresi, birleştirmeler) rastgele bir kimlikle gönderir. İsim yok, reklam profili yok. Bunu Ayarlar’dan istediğin zaman değiştirebilirsin.',
