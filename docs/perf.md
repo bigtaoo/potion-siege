@@ -83,6 +83,21 @@ Graphics redrawn every frame:
 During the horde these account for 32, 18, 15, about 10 each, and 7 shapes per frame. The wall and
 the field ground are drawn once.
 
+### Kill coins and streak counter (73e79f2)
+
+`view/battleView/killFx.ts` redraws the coins in flight (48 at most) and the ⚙×N streak gear every
+frame. Horde, 10 s, 3 runs each, builds alternated, 86bf404 vs d3bbaa5:
+
+| horde | before | after |
+|---|---|---|
+| script per frame (median of 3) | 8.44 ms (7.84–10.63) | 9.54 ms (8.68–10.21) |
+| contexts / shapes rebuilt per frame | 12.8 / 130 | 14.6 / 140 |
+| interval median / p95 | 16.7 / 16.8 ms | 16.7 / 16.8 ms |
+
+So about 1 ms of script and 10 shapes a frame, with no frames lost. Chapter 1's waves 2–10 now send
+twice the crowd at half the hit points each (`waves.firstCrowd`). `horde` and `endless` (wave 20)
+don't cover those waves, so they are not measured here.
+
 ## GPU texture memory: texture GC, TexturePool and context loss
 
 Three fixes from another Pixi 8 game (standing 00b54ee, 64ac1bc, df4e646), checked against this
