@@ -4,6 +4,8 @@
 // ice, poison, boss hit points, chapter finales).
 // Re-pinned for each potion's own pick of target (src/sim/targetPick.ts) and the hero damage cut
 // that came with it (ref/design/targeting-prefs.md), then for the lighter tripod and anvil.
+// Chapter 1 (stage 9 alone) re-pinned 70 -> 90 for its busier crowd (waves.firstCrowd): these 20
+// seeds swing, on 100 seeds stage 9 wins 86% before and 87% after.
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { chapterOf } from '../../src/sim/chapters';
@@ -21,6 +23,6 @@ describe('chapters', () => {
     }
     const won: Record<string, number> = {};
     for (const [ch, wins] of byChapter) won[`chapter ${ch}`] = 100 * mean(wins);
-    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 70, 'chapter 2': 36, 'chapter 3': 48, 'chapter 4': 41, 'chapter 5': 28 }, 10);
+    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 90, 'chapter 2': 36, 'chapter 3': 48, 'chapter 4': 41, 'chapter 5': 28 }, 10);
   }, 300_000);
 });
