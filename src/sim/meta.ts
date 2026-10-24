@@ -7,6 +7,7 @@ import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import { newStars, parseStars, type StarSave } from './stars';
+import { newWelcome, parseWelcome, type WelcomeSave } from './welcome';
 import { carry, int } from './parse';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
 import type { SkillId } from './skills';
@@ -18,7 +19,7 @@ const S = BALANCE.shop;
 
 /** The save's format. A build reading a save of a higher version (an OTA rollback) keeps what it
  *  does not know and never lowers what the newer one may allow higher (cleared, hero levels). */
-export const SAVE_VERSION = 1;
+export const SAVE_VERSION = 2;
 
 export const WORKSHOP_IDS = ['wall', 'startGold', 'crystals'] as const;
 export type WorkshopId = (typeof WORKSHOP_IDS)[number];
@@ -47,6 +48,8 @@ export interface MetaSave {
   /** The home screen's one-time pointer at the first affordable potion upgrade was seen. */
   upgradeHint: boolean;
   challenge: ChallengeSave;
+  /** The welcome week's gifts (welcome.ts). */
+  welcome: WelcomeSave;
   /** Endless mode's best wave and the milestones it has paid. */
   endless: EndlessSave;
   /** The settings' music and sound effects toggles, the screen shake (null: as the system's
@@ -130,6 +133,7 @@ export function newMeta(): MetaSave {
     tutorial: false,
     upgradeHint: false,
     challenge: newChallenge(),
+    welcome: newWelcome(),
     endless: newEndless(),
     sound: { music: true, sfx: true, shake: null, haptics: true },
     achievements: newAchievements(),
@@ -178,6 +182,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
   out.upgradeHint = data.upgradeHint === undefined ? out.runs > 0 : data.upgradeHint === true;
   out.challenge = parseChallenge(data.challenge);
+  out.welcome = parseWelcome(data.welcome, out.runs);
   out.endless = parseEndless(data.endless);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
   out.sound = { music: sound.music !== false, sfx: sound.sfx !== false, shake: typeof sound.shake === 'boolean' ? sound.shake : null, haptics: sound.haptics !== false };

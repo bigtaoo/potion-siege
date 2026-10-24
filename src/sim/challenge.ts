@@ -22,6 +22,8 @@ export interface ChallengeSave {
   best: number;
   /** Days in a row played, up to `date`. */
   streak: number;
+  /** The longest streak there has been (the streak achievements). */
+  bestStreak: number;
 }
 
 /** One day's challenge for one player: the run's seed and modifiers are the day's, the stage
@@ -48,7 +50,7 @@ export interface ChallengeResult {
 }
 
 export function newChallenge(): ChallengeSave {
-  return { date: '', attempts: 0, best: 0, streak: 0 };
+  return { date: '', attempts: 0, best: 0, streak: 0, bestStreak: 0 };
 }
 
 /** Reads the stored challenge part, dropping anything that does not fit. */
@@ -61,6 +63,7 @@ export function parseChallenge(v: unknown): ChallengeSave {
   out.attempts = n(d.attempts, BALANCE.challenge.attempts + BALANCE.challenge.adAttempts);
   out.best = n(d.best, 999);
   out.streak = n(d.streak, Number.MAX_SAFE_INTEGER);
+  out.bestStreak = Math.max(out.streak, n(d.bestStreak, Number.MAX_SAFE_INTEGER));
   return out;
 }
 
@@ -153,8 +156,14 @@ export function streak(m: MetaSave, today: string): number {
   return today <= s.date || s.date === prevDay(today) ? s.streak : 0;
 }
 
+/** The bonus the first attempt of a day pays on a `days` streak: a little more each day in a
+ *  row from the second, up to STREAK_CAP days' worth. */
+export function streakBonus(days: number): number {
+  return days >= 2 ? C.streakStep * Math.min(days, C.streakCap) : 0;
+}
+
 /** Starts an attempt (`ad`: the one a rewarded ad bought). The first of a day moves the streak
- *  on, and pays its bonus every seven days. Returns the bonus paid, or null when the attempt is
+ *  on and pays its bonus (streakBonus). Returns the bonus paid, or null when the attempt is
  *  not on offer. */
 export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | null {
   if (ad ? !canPlayAd(m, today) : !canPlayFree(m, today)) return null;
@@ -165,7 +174,8 @@ export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | 
     s.date = today;
     s.attempts = 0;
     s.best = 0;
-    if (s.streak % C.streakDays === 0) bonus = C.streakReward;
+    s.bestStreak = Math.max(s.bestStreak, s.streak);
+    bonus = streakBonus(s.streak);
   }
   s.attempts++;
   m.crystals += bonus;
@@ -196,8 +206,8 @@ export function bookAttempt(m: MetaSave, wave: number): ChallengeResult {
 
 /** The reward tiers, for the screens. */
 export const CHALLENGE_TIERS: readonly { wave: number; reward: number }[] = C.tiers;
-export const STREAK_DAYS = C.streakDays;
-export const STREAK_REWARD = C.streakReward;
+export const STREAK_STEP = C.streakStep;
+export const STREAK_CAP = C.streakCap;
 
 /** Milliseconds from `now` to the next local midnight, when a new challenge is drawn. */
 export function msToTomorrow(now: Date): number {

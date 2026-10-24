@@ -46,10 +46,11 @@ calling `window.PSNative._<name>(json)`. Every member is feature-detected on the
 
 | Member | |
 |---|---|
-| `v`, `saved`, `save(k, v)` | bridge version 1; the mirrored key store |
+| `v`, `saved`, `save(k, v)` | bridge version (2 since the reminders); the mirrored key store |
 | `openUrl(url)`, `languages`, `device` | links in Safari; the phone's languages; model + iOS version |
 | `adState()`, `onAdState`, `onAdEvent`, `showAd(kind)`, `adPrivacy()` | AdMob (below) |
 | `store()`, `onStore`, `onStoreResult`, `buy(id)`, `restore()` | StoreKit (below) |
+| `notify()`, `onNotify`, `notifyAsk()`, `notifySchedule(id, at, title, body)`, `notifyCancel(id)` | local reminders (v2, below) |
 
 `src/platform/ios/shell.test.ts` pins both sides of this contract as text, since nothing on
 Windows compiles the Swift.
@@ -89,6 +90,30 @@ Windows compiles the Swift.
 - Analytics: `iap` `{op: buy|restore, outcome, run}`. An owner's rewarded offers still log
   `ad_result ok: true` without an ad; leave out players with an owned `iap` when reading ad
   numbers.
+
+## Reminders (local notifications)
+
+`Notifications.swift` wraps `UNUserNotificationCenter`; nothing is pushed from a server. Off until
+the player says yes: on the card offered once after a battle from run 3 (never at launch), or on
+the switch in the settings. Only then does the system's permission sheet show. `sim/reminders.ts`
+picks at most one reminder: the next welcome gift while that week runs, else today's challenge
+if it is still open, at 19:00 local time, at least 6 h after the game was last open, never in
+the quiet hours 22:00-08:00 (`balance.json` `reminders`). `game/reminderBook.ts` books it when
+the home screen opens and when the page is hidden. Refused in the phone's settings, the switch
+turns into a note. Bridge v2, so it needs a new native build (and `MARKETING_VERSION`) before an
+OTA update can use it; older shells just lack the switch. `?notify=fake` (development builds)
+fakes the host on the web.
+
+To check on a device:
+
+- [ ] The project builds with `Notifications.swift` (added to the App target in the pbxproj by hand).
+- [ ] The card shows after a battle on run 3+, not at launch; Yes brings up the permission sheet,
+      No never asks again; the settings switch does the same.
+- [ ] Allowed: a reminder arrives at about 19:00 the next day (gift) or the same evening (challenge);
+      none between 22:00 and 08:00; opening the game moves it.
+- [ ] Denied in the sheet or later in iOS Settings: the row shows the note; turning it back on in
+      iOS Settings and returning to the game (didBecomeActive) shows the switch again.
+- [ ] Layout: the card and the settings row on a small phone, the welcome button in the top bar.
 
 ## Hot updates
 

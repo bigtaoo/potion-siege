@@ -1,6 +1,7 @@
 import { urlSwitches } from '../game/switches';
+import { devNotifier } from './fakeNotifier';
 import { updatesSwitch } from './fakeUpdates';
-import { SafeStore, type AppUpdates, type KeyValueStore, type Platform } from './types';
+import { SafeStore, type AppUpdates, type KeyValueStore, type Notifier, type Platform } from './types';
 
 export function browserStorage(): KeyValueStore | null {
   try {
@@ -11,12 +12,14 @@ export function browserStorage(): KeyValueStore | null {
 }
 
 /** Plain web: local storage, no portal, and with `?ads=fake` (dev builds) a pretend ad that lasts a
- *  second; `?ota=fake` (or `fail`) stands in for the iOS app's hot updates. */
+ *  second; `?ota=fake` (or `fail`) stands in for the iOS app's hot updates and `?notify=fake`
+ *  sends its reminders to the console. */
 export class WebPlatform implements Platform {
   readonly name: string = 'web';
   storage = new SafeStore(browserStorage());
   private readonly fakeAds = urlSwitches(location.search).get('ads') === 'fake';
   readonly updates?: AppUpdates = updatesSwitch(urlSwitches(location.search));
+  readonly notify: Notifier | null = devNotifier();
   /** A new tab; inside a portal's iframe too, since it comes from a tap. */
   readonly openUrl: ((url: string) => void) | undefined = (url) => void window.open(url, '_blank', 'noopener');
   /** A phone's browser; desktop Chrome has the call too but nothing to buzz. */

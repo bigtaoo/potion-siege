@@ -1,10 +1,12 @@
 import { urlSwitches } from '../../game/switches';
+import { devNotifier } from '../fakeNotifier';
 import { updatesSwitch } from '../fakeUpdates';
-import { SafeStore, type AdPrivacy, type AppUpdates, type Platform } from '../types';
+import { SafeStore, type AdPrivacy, type AppUpdates, type Notifier, type Platform } from '../types';
 import { WebPlatform, browserStorage } from '../web';
 import { AdMob } from './admob';
 import { psNative, type PSNative } from './bridge';
 import { MirrorStore } from './mirrorStore';
+import { nativeNotifier } from './notify';
 import { otaUpdates } from './ota';
 import { StoreKit } from './storeKit';
 
@@ -32,6 +34,8 @@ export class IosPlatform extends WebPlatform implements Platform {
   readonly storeKit: StoreKit;
   /** Hot updates, offered on the home screen (ota.ts); ?ota=fake stands in during development. */
   override readonly updates: AppUpdates = updatesSwitch(urlSwitches(location.search)) ?? otaUpdates();
+  /** The reminders' notifications, on a shell of bridge v2 or later (else ?notify=fake's, in dev). */
+  override readonly notify: Notifier | null;
 
   constructor(private readonly native: Partial<PSNative> | null = psNative(), doc: Document = document) {
     super();
@@ -45,6 +49,7 @@ export class IosPlatform extends WebPlatform implements Platform {
     const admob = this.admob;
     this.adPrivacy = { offered: () => admob.privacyOffered(), open: () => admob.openPrivacy() };
     this.mount = safeAreaMount(doc);
+    this.notify = nativeNotifier(native) ?? devNotifier();
     // game sound obeys the silent switch and mixes with the player's music (iOS 17+; the shell
     // sets the same AVAudioSession category for older systems)
     const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;

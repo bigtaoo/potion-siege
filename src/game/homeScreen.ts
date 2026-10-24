@@ -1,5 +1,5 @@
 // The home screen built over an idle battle: the panels that open by themselves (consent,
-// login), the upgrade pointer, and what each of its buttons does.
+// welcome gifts, login), the upgrade pointer, and what each of its buttons does.
 
 import type { Game } from '../app';
 import { CONSENT_AFTER_RUNS } from '../analytics/privacy';
@@ -15,6 +15,8 @@ import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu } from '../view/viewport';
 import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
 import { challengeAd, playChallenge, playEndless } from './modes';
+import { reminderBook } from './reminderBook';
+import { claimWelcomeGift, enterHome, remindAnswer, welcomePops, welcomeVisit } from './returnHooks';
 import { beginTutorial } from './tutorialFlow';
 
 /** The home screen over an idle battle of the chosen stage; the login reward opens by itself
@@ -23,7 +25,11 @@ export function home(g: Game, panel: HomePanel = null): void {
   const today = gameDay(g.save, new Date());
   rollDay(g.save, today);
   const entering = !g.menu.visible;
-  if (entering) g.consentVisit = false;
+  if (entering) {
+    g.consentVisit = false;
+    enterHome(g);
+    reminderBook(g)?.sync();
+  }
   // the play statistics question, from the first home screen on (never in the first battle,
   // which starts live), ahead of the login reward
   if (panel === null && g.privacy.asking() && g.save.runs >= CONSENT_AFTER_RUNS && !g.autoplay && !g.consentShown) {
@@ -31,13 +37,18 @@ export function home(g: Game, panel: HomePanel = null): void {
     g.consentShown = true;
     g.consentVisit = true;
   }
+  // the welcome week's gift, from the first home screen after a battle, once a day
+  if (panel === null && !g.consentVisit && welcomePops(g, today)) panel = 'welcome';
   // not between the first battles: once a few runs are in, the first time each day, and not
-  // on the visit the consent panel opened (it keeps its place: events wait for its answer)
-  if (panel === null && !g.consentVisit && loginPops(g.save) && canClaimLogin(g.save, today) && g.loginShown !== today) {
+  // on the visit the consent or welcome panel opened (consent keeps its place: events wait for
+  // its answer)
+  if (panel === null && !g.consentVisit && !welcomeVisit(g) && loginPops(g.save) && canClaimLogin(g.save, today) && g.loginShown !== today) {
     panel = 'login';
     g.loginShown = today;
     g.analytics.track('dialog', { id: 'login', action: 'open', auto: true, run: g.save.runs });
   }
+  // the reminders' card, once after a battle, on a visit nothing else opened by itself
+  if (panel === null && entering && reminderBook(g)?.offer()) panel = 'remind';
   if (entering) g.analytics.track('home_view', { tab: g.tab, from: 'enter', run: g.save.runs });
   g.newBattle(null);
   g.panel = panel;
@@ -76,6 +87,7 @@ export function home(g: Game, panel: HomePanel = null): void {
       g.analytics.track('dialog', { id: 'login', action: 'claim', run: g.save.runs });
       claimed(g, 'login', n, null, at);
     },
+    claimWelcome: (at) => claimWelcomeGift(g, today, at),
     claimTask: (i, at) => {
       const id = g.save.daily.tasks[i]?.id;
       const n = claimTask(g.save, i);
@@ -150,6 +162,7 @@ export function home(g: Game, panel: HomePanel = null): void {
       g.analytics.track('privacy', { on, from: asked ? 'ask' : 'settings', run: g.save.runs });
       home(g, asked ? null : 'settings');
     },
+    remind: (on) => remindAnswer(g, on, panel === 'remind'),
     copyId: () => {
       const id = g.analytics.playerId;
       if (!id || !g.platform.copyText) return;
@@ -185,5 +198,6 @@ export function extras(g: Game): HomeExtras {
     policy: !!g.platform.openUrl,
     vibrate: !!g.platform.vibrate,
     data: { sending: g.analytics.sending, id: g.analytics.playerId, copy: !!g.platform.copyText, note: g.idNote },
+    remind: reminderBook(g)?.state(),
   };
 }

@@ -1,5 +1,5 @@
-// The URL switches (README "URL switches"): ?autoplay, ?speed, ?ads=fake, ?ota, ?track, ?quality and
-// ?lang. A release build (web, CrazyGames, iOS) reads only ?lang, which changes nothing but the
+// The URL switches (README "URL switches"): ?autoplay, ?speed, ?ads=fake, ?ota, ?notify=fake, ?track,
+// ?quality and ?lang. A release build (web, CrazyGames, iOS) reads only ?lang, which changes nothing but the
 // words: the others let anyone on the live page farm crystals at ?speed, get free rewarded ads
 // or run the bot into their save. Same rule as D:\standing's 5958f85.
 

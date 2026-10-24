@@ -46,7 +46,7 @@ const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** The day the game runs on: the device's date, or the latest day this save has seen when the
  *  clock was turned back (rollDay keeps `daily.day` at that latest day). */
 export function gameDay(m: MetaSave, now: Date): string {
-  const seen = [m.daily.day, m.daily.lastClaim, m.shop.chestDay, m.shop.adDay, m.challenge.date];
+  const seen = [m.daily.day, m.daily.lastClaim, m.shop.chestDay, m.shop.adDay, m.challenge.date, m.welcome.day];
   return seen.reduce((latest, d) => (DAY.test(d) && d > latest ? d : latest), dayOf(now));
 }
 

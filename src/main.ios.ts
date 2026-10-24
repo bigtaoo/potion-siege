@@ -39,6 +39,8 @@ async function start(): Promise<void> {
   }
   for (const p of trail.take()) game.report(p.kind, p.props);
   void readyOta().then(finished);
+  // the notification permission, answered on the sheet or changed in the phone's settings
+  if (platform.notify) platform.notify.onChange = () => game.refresh();
 }
 
 start().catch((err) => {

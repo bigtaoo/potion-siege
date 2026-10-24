@@ -36,9 +36,9 @@ describe('meta', () => {
   });
 
   it('gives old saves a fresh daily challenge and keeps a stored one', () => {
-    expect(newMeta().challenge).toEqual({ date: '', attempts: 0, best: 0, streak: 0 });
+    expect(newMeta().challenge).toEqual({ date: '', attempts: 0, best: 0, streak: 0, bestStreak: 0 });
     expect(parseMeta('{"runs":3,"crystals":50}').challenge).toEqual(newMeta().challenge);
-    const kept = { date: '2026-10-16', attempts: 1, best: 7, streak: 5 };
+    const kept = { date: '2026-10-16', attempts: 1, best: 7, streak: 5, bestStreak: 6 };
     expect(parseMeta(JSON.stringify({ ...newMeta(), challenge: kept })).challenge).toEqual(kept);
     expect(parseMeta(JSON.stringify({ ...newMeta(), challenge: 'x' })).challenge).toEqual(newMeta().challenge);
   });

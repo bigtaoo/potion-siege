@@ -103,6 +103,7 @@ A release build (web, CrazyGames, iOS) reads only `?lang`; the rest are dropped 
 | `?autoplay` | The bot plays. |
 | `?speed=N` | Runs the game N times faster. |
 | `?ads=fake` | Web build only: one-second pretend ads, so revive, ×2 and reroll can be tried. |
+| `?notify=fake` | Dev build only: the iOS reminders in a browser. The card after the third battle and the settings switch work; the permission sheet says yes after 0.4 s and bookings go to the console. |
 | `?track` | Logs the analytics events to the console. |
 | `?ota=fake` or `?ota=fail` | A pretend hot update on the home screen, whose download finishes (and reloads) or fails at 60% (docs/ios.md "Hot updates"). |
 
