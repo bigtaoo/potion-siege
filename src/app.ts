@@ -6,10 +6,11 @@
 // taps (homeActions.ts), the challenge and endless modes (modes.ts); boot()'s helpers in
 // startup.ts.
 
+// first, so errors thrown while the rest loads are caught (reported once the anomalies listen)
+import { takeEarlyErrors } from './analytics/earlyErrors';
 import { Application, Container, Graphics, TexturePool } from 'pixi.js';
 import type { Analytics } from './analytics/analytics';
 import { Heartbeat, watchPage } from './analytics/heartbeat';
-import { languageProps } from './analytics/languages';
 import { memProbe } from './analytics/memProbe';
 import { deviceTimeZone, PrivacyChoice, privacyRegion } from './analytics/privacy';
 import { PerfReport } from './analytics/perfReport';
@@ -22,6 +23,7 @@ import { Battle } from './sim/battle';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
 import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, gameDay, rollDay } from './sim/daily';
+import { chapterOf } from './sim/chapters';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
@@ -41,15 +43,16 @@ import { SideInfo } from './view/SideInfo';
 import { FixedStep } from './view/fixedStep';
 import { patchGraphicsDestroy } from './view/graphicsDestroy';
 import { topPick } from './view/nudges';
-import { levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
+import { IOS_RESOLUTION, levelRange, MAX_RESOLUTION, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
 import { countDaily } from './game/countDaily';
 import { finish } from './game/ending';
+import { faultHandler } from './game/faultRecover';
 import { home } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { urlSwitches } from './game/switches';
-import { createAnalytics, device, loadedBeacon, pointerKind, safeDevice, showLocale } from './game/startup';
+import { createAnalytics, device, loadedBeacon, showLocale, trackSessionStart } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
 import { beginTutorial, endTutorial, lesson } from './game/tutorialFlow';
 
@@ -71,8 +74,9 @@ export async function boot(platform: Platform): Promise<GameHandle> {
 
   patchGraphicsDestroy();
   const app = new Application();
-  // the quality levels lower it (view/quality.ts); 3 is a 3x phone's own pixels
-  const resolution = Math.min(window.devicePixelRatio || 1, 3);
+  // a 3x phone's own pixels for the screens around a battle, which draws at its level's (view/quality.ts);
+  // the iOS app stays at 2, as standing's after its 3x build never booted on an iPhone 15
+  const resolution = Math.min(window.devicePixelRatio || 1, platform.name === 'ios' ? IOS_RESOLUTION : MAX_RESOLUTION);
   await app.init({
     background: COLORS.bg,
     resizeTo: platform.mount ?? window,
@@ -95,32 +99,13 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   const game = new Game(app, platform, params, analytics, privacy);
   // our own frame loop from here on: a frame rate and resolution the device keeps up with
   const mode = params.get('quality') as QualityMode;
-  const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm());
+  const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm(), () => game.place().place !== 'run');
+  quality.onFault = game.fault;
   if (import.meta.env.DEV) Object.assign(window, { __game: game });
   platform.loaded();
-  analytics.track('session_start', {
-    loadMs: Math.round(performance.now()),
-    lang,
-    ...languageProps(platform, navigator.languages),
-    w: window.innerWidth,
-    h: window.innerHeight,
-    touch: navigator.maxTouchPoints > 0,
-    // the beacons' test, so players and launches split the same way
-    device: pointerKind(),
-    ...safeDevice(app),
-    ...platform.sessionProps?.(),
-  });
-  // inside a portal's iframe the page can have no size yet at boot: the size once it has one
-  if (!(window.innerWidth > 0 && window.innerHeight > 0)) {
-    const sized = () => {
-      if (!(window.innerWidth > 0 && window.innerHeight > 0)) return;
-      window.removeEventListener('resize', sized);
-      analytics.track('viewport', { w: window.innerWidth, h: window.innerHeight, t: analytics.sessionSeconds });
-    };
-    window.addEventListener('resize', sized);
-    requestAnimationFrame(() => requestAnimationFrame(sized));
-  }
+  trackSessionStart(analytics, platform, app, lang);
   game.perf.anomalies.listen(window, app.canvas);
+  for (const e of takeEarlyErrors()) game.perf.anomalies.report(e.kind, { ...e.props, place: 'boot' });
   // the first tap or key ever: the player is really there (the battle is already live by then)
   const input = () => {
     analytics.first('first_input', { t: analytics.sessionSeconds });
@@ -232,6 +217,8 @@ export class Game {
   readonly audio = new GameAudio();
   /** The `perf` and `anomaly` telemetry: battle frames only, see analytics/perfReport. */
   readonly perf: PerfReport;
+  /** A frame threw: reported, the battle settled, home afresh (game/faultRecover.ts). */
+  readonly fault: (err: unknown) => void;
   /** Seconds on screen and the `alive` beat (analytics/heartbeat.ts). */
   readonly beat: Heartbeat;
 
@@ -246,6 +233,7 @@ export class Game {
     this.autoplay = params.has('autoplay');
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
     this.perf = new PerfReport(analytics, memProbe(app), () => this.place(), this.speed);
+    this.fault = faultHandler(this);
     this.beat = new Heartbeat(analytics, () => ({ ...this.place(), ...(this.run && this.battle ? { stage: this.battle.setup.stage } : {}) }), undefined, document.visibilityState !== 'hidden');
     this.audio.attach();
     this.audio.prefs(this.save.sound);
@@ -259,7 +247,11 @@ export class Game {
     this.menu.visible = false;
     app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu);
     app.ticker.add((ticker) => {
-      this.tick(Math.min(ticker.deltaMS / 1000, 0.1));
+      try {
+        this.tick(Math.min(ticker.deltaMS / 1000, 0.1));
+      } catch (err) {
+        this.fault(err);
+      }
       this.perf.tick(ticker.deltaMS, this.measured(), this.battle?.enemies.length ?? 0);
       if (this.measured()) this.pacing.played(ticker.deltaMS);
     });
@@ -306,8 +298,13 @@ export class Game {
     this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
-    // a run also frees the textures the menu's or result screen's texts gave back to Pixi's TexturePool, which keeps them on the GPU for good; after the caller has torn that screen down (docs/perf.md)
-    if (this.run) { this.perf.start(); queueMicrotask(() => TexturePool.clear()); }
+    // `ready` runs from here (past any break ad) for the runs a tap started; a run also frees the
+    // textures the menu's or result screen's texts gave back to Pixi's TexturePool, which keeps them
+    // on the GPU for good, after the caller has torn that screen down (docs/perf.md)
+    if (this.run) {
+      this.perf.start(ch || cause === 'endless' ? 0 : chapterOf(this.battle.setup.stage), cause === 'first' || cause === 'autoplay' ? null : performance.now());
+      queueMicrotask(() => TexturePool.clear());
+    }
     this.revived = false;
     this.stars = null;
     this.ended = false;
@@ -338,8 +335,8 @@ export class Game {
     return !this.measured();
   }
 
-  /** Where the player is, for an `anomaly`. */
-  private place(): { place: string; wave?: number } {
+  /** Where the player is, for an `anomaly`; anything but `run` is drawn at full density. */
+  place(): { place: string; wave?: number } {
     if (this.menu.visible) return { place: 'home' };
     if (!this.run || !this.battle) return { place: 'title' };
     return { place: this.ended ? 'results' : 'run', wave: this.battle.wave };

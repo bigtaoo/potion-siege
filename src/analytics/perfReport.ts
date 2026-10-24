@@ -42,6 +42,11 @@ export interface PerfProps extends PerfSnapshot {
   /** Display objects on stage, and their change since the run started. */
   nodes: number;
   nodesUp: number;
+  /** The run's chapter (sim/chapters.ts chapterOf), 0 for a challenge or endless run. */
+  chapter: number;
+  /** Ms from the run's start (the player's tap, past any break ad) to its first battle frame: the
+   *  scene built and drawn. Absent for runs no tap started (the first battle, autoplay). */
+  ready?: number;
 }
 
 /** Sums the long tasks seen while `active` (the battle is measured); a no-op where the browser has no 'longtask' entries. */
@@ -109,6 +114,15 @@ export class Anomalies {
     this.a.track('anomaly', out);
   }
 
+  /** A frame threw (game/faultRecover.ts): an `error` with `frame: 1`, its source from the stack. */
+  error(err: unknown): void {
+    this.safe(() => {
+      const e = err instanceof Error ? err : null;
+      const at = stackTop(e?.stack ?? '');
+      this.report('error', { ...errorProps(e ? e.message : String(err), at?.file, at?.line, at?.col), frame: 1 });
+    });
+  }
+
   /** Listens for uncaught errors and rejections on `win` and a lost context on `canvas`. */
   listen(win: Pick<Window, 'addEventListener'>, canvas?: Pick<HTMLCanvasElement, 'addEventListener'>): void {
     win.addEventListener('error', (e) => {
@@ -129,6 +143,15 @@ export class Anomalies {
       /* telemetry must never break the game */
     }
   }
+}
+
+/** The first frame of a stack that names a script position (`at f (https://h/a/index-abc.js:1:2345)`, or Safari's `f@https://h/a/index-abc.js:1:2345`). */
+export function stackTop(stack: string): { file: string; line: number; col: number } | null {
+  for (const l of stack.split('\n')) {
+    const m = /(?:\(|@|\s|^)([^\s()@]+):(\d+):(\d+)\)?\s*$/.exec(l);
+    if (m) return { file: m[1], line: Number(m[2]), col: Number(m[3]) };
+  }
+  return null;
 }
 
 function cut(s: string): string {
@@ -172,6 +195,10 @@ export class PerfReport {
   private nth = 0;
   /** What the game held at the run's first battle frame, once its scene is built. */
   private base: MemSample | null = null;
+  private chapter = 0;
+  /** When the run started from a tap, and the ms from then to its first battle frame. */
+  private startAt: number | null = null;
+  private ready: number | null = null;
   /** The tab was hidden since the last frame: the next frame's length is the gap, not the load. */
   private gap = false;
   private off = false;
@@ -187,12 +214,15 @@ export class PerfReport {
     this.anomalies = new Anomalies(a, where, probe);
   }
 
-  /** A run starts. */
-  start(): void {
+  /** A run of `chapter` starts; `tapAt` (a performance.now() time) when the player's tap started it. */
+  start(chapter = 0, tapAt: number | null = null): void {
     this.guard(() => {
       this.nth++;
       this.meter = new PerfMeter();
       this.base = null;
+      this.chapter = chapter;
+      this.startAt = tapAt;
+      this.ready = null;
       this.longTasks.take();
     });
   }
@@ -205,7 +235,11 @@ export class PerfReport {
       this.longTasks.active = battle && !!this.meter;
       if (!battle || !this.meter || gap) return;
       if (ms >= STALL_MS && ms < STALL_MAX_MS) this.anomalies.report('stall', { ms: Math.round(ms) });
-      this.base ??= this.probe();
+      if (!this.base) {
+        this.base = this.probe();
+        if (this.startAt !== null) this.ready = Math.round(performance.now() - this.startAt);
+        this.startAt = null;
+      }
       this.meter.frame(ms, mobs);
       if (!this.meter.midDue()) return;
       const snap = this.meter.snapshot('mid', true);
@@ -250,8 +284,9 @@ export class PerfReport {
     const base = this.base!;
     const props: PerfProps = {
       ...snap, nth: this.nth, ...(takeLong ? this.longTasks.take() : {}), speed: this.speed,
-      tex: now.tex, texUp: now.tex - base.tex, texMB: now.texMB, nodes: now.nodes, nodesUp: now.nodes - base.nodes,
+      tex: now.tex, texUp: now.tex - base.tex, texMB: now.texMB, nodes: now.nodes, nodesUp: now.nodes - base.nodes, chapter: this.chapter,
     };
+    if (this.ready !== null) props.ready = this.ready;
     if (now.heap !== undefined) {
       props.heap = now.heap;
       if (base.heap !== undefined) props.heapUp = now.heap - base.heap;
