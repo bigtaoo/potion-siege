@@ -2,6 +2,7 @@
 // the purse in the top bar, its count ticking up and the purse bouncing as each one lands.
 
 import { Container, Graphics, type Text } from 'pixi.js';
+import { formatAmount } from '../i18n';
 import { gem } from './ui';
 
 /** Seconds of the burst, of each crystal's flight, and between one crystal and the next. */
@@ -14,7 +15,7 @@ const STAGGER = 0.06;
 export function flyCrystals(layer: Container, from: { x: number; y: number }, purse: Container, count: Text, before: number, after: number): void {
   const to = layer.toLocal(purse.getGlobalPosition());
   const n = Math.min(12, Math.max(5, Math.round((after - before) / 15)));
-  count.text = String(before);
+  count.text = formatAmount(before);
   const fx = new Container();
   fx.eventMode = 'none';
   layer.addChild(fx);
@@ -59,7 +60,7 @@ export function flyCrystals(layer: Container, from: { x: number; y: number }, pu
         p.g.visible = false;
         landed++;
         lastLand = t;
-        count.text = String(Math.round(before + ((after - before) * landed) / n));
+        count.text = formatAmount(Math.round(before + ((after - before) * landed) / n));
       }
     }
     // the purse swells a little with each crystal and settles back
@@ -67,7 +68,7 @@ export function flyCrystals(layer: Container, from: { x: number; y: number }, pu
     purse.scale.set(1 + 0.14 * Math.max(0, 1 - since / 0.18));
     if (landed === n && since > 0.2) {
       purse.scale.set(1);
-      count.text = String(after);
+      count.text = formatAmount(after);
       fx.onRender = null;
       fx.visible = false;
       queueMicrotask(() => fx.destroyed || fx.destroy({ children: true }));

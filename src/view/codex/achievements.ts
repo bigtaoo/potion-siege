@@ -4,7 +4,7 @@
 // scrolled to and slides the rows to their new places.
 
 import { Container, Graphics } from 'pixi.js';
-import { t } from '../../i18n';
+import { formatAmount, t } from '../../i18n';
 import { nextTier, TRACK_IDS, TRACKS, trackProgress, trackReady, type TrackId } from '../../sim/achievements';
 import { CHALLENGE_TIERS } from '../../sim/challenge';
 import type { MetaSave } from '../../sim/meta';
@@ -152,7 +152,7 @@ function featRow(m: MetaSave, id: TrackId, rw: number, rh: number, claim: (at: C
   const bar = new Graphics().roundRect(tx, barY, room, barH, barH / 2).fill(LIGHT.inset);
   if (frac > 0) bar.roundRect(tx, barY, Math.max(barH, room * frac), barH, barH / 2).fill(P.green);
   r.addChild(bar.roundRect(tx, barY, room, barH, barH / 2).stroke({ width: 4, color: P.line }));
-  const count = fit(label(next === null ? t('ach.done') : `${have}/${goal}`, barH * 0.65, { stroke: { color: P.line, width: 6 } }), room - 30);
+  const count = fit(label(next === null ? t('ach.done') : `${formatAmount(have)}/${formatAmount(goal)}`, barH * 0.65, { stroke: { color: P.line, width: 6 } }), room - 30);
   count.position.set(tx + room / 2, rh * 0.27);
   r.addChild(count);
 
