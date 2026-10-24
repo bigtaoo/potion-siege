@@ -247,6 +247,7 @@ export class Game {
     );
     this.haptics = new Haptics(platform.vibrate, () => this.save.sound.haptics);
     this.view.shakes = () => shakeOn(this.save.sound.shake);
+    this.view.kills.landed = () => this.hud.coinLanded();
     this.root.addChild(this.view, this.hud);
     this.menu.visible = false;
     app.stage.addChild(this.wall, this.side, this.root, this.overlay, this.lessons, this.menu, this.pause);

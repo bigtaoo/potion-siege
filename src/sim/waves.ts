@@ -203,7 +203,16 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
   const boss = isBossWave(wave, bossWaves, endless);
   // the first waves send a bigger crowd of weaker enemies: the same hit points and gold in all,
   // but more of them on the road (permille)
-  const crowd = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  const early = Math.round((w.earlyCrowd[wave - 1] ?? 1) * 1000);
+  // and after the horde the first chapter's stages (up to `earlyHpTo`; endless mode's first ten
+  // waves, which are its stage's own, too) send `firstCrowd` times that again, each of them that share of one at the wall, for the commander
+  // and the on-kill skills too, so the road is busy while the wave weighs what it did
+  const first = stage <= w.earlyHpTo && wave <= w.count && !isHordeWave(wave) ? Math.round(w.firstCrowd * 1000) : 1000;
+  const crowd = Math.round((early * first) / 1000);
+  const firstHeft = Math.round(1_000_000 / first);
+  // many weak ones bite harder than few strong ones (less overkill), so past the waves `earlyHp`
+  // tunes for the idle player the busier crowd keeps `firstHp` of their hit points
+  const firstHp = wave > w.earlyHp.length ? Math.round(w.firstHp * 1000) : 1000;
   // the first wave is the horde: some fifty of them in three rushes, smaller, and each a share
   // of one at the wall, for the commander and for the on-kill skills as it is in gold, so the
   // wave weighs what a plain one of `baseCount` would. Its hit points are `horde.hp` of that:
@@ -244,6 +253,10 @@ export function planWave(wave: number, rng: Prng, stage = 1, mods: WaveMods = {}
       spawn.gold = heft;
     }
     if (horde) joinHorde(spawn, heft);
+    if (first !== 1000) {
+      spawn.heft = firstHeft;
+      spawn.hp = Math.round((spawn.hp * firstHp) / 1000);
+    }
     if (tough !== 1000) {
       spawn.hp = Math.round((spawn.hp * tough) / 1000);
       spawn.gold = Math.round(((spawn.gold ?? 1000) * toughGold) / 1000);

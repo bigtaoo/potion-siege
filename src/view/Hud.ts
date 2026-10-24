@@ -54,6 +54,8 @@ export class Hud extends Container {
   private bannerFit = 1;
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
+  /** 1 as a coin of a kill lands on the counter, settling back to 0 (coinLanded). */
+  private coinPop = 0;
   private newcomerTime = 0;
   /** A new chapter boss's card: its art, name, what it does and what it is weak to. */
   private readonly bossCard = new Container();
@@ -135,8 +137,7 @@ export class Hud extends Container {
     this.stageText.x = DESIGN_W - 125 * top;
     this.goldText.scale.set(top);
     this.goldText.x = 130 + (top - 1) * 30;
-    this.coin.scale.set(top);
-    this.coin.position.set(90 * (1 - top), 60 * (1 - top));
+    this.sizeCoin();
     this.hintBox.scale.set(Math.min(k, 1.3));
     this.hintBox.y = 118 + (top - 1) * 40;
     this.hintText.style.wordWrapWidth = 940 / Math.min(k, 1.3) - 80;
@@ -226,9 +227,25 @@ export class Hud extends Container {
     c.position.set(DESIGN_W / 2, BOSS_CARD_Y);
   }
 
+  /** A coin flying off a kill (BattleView's kills) reached the counter: the coin bumps. */
+  coinLanded(): void {
+    this.coinPop = 1;
+  }
+
+  /** The coin at the board's size, bumped by `coinPop`, its centre staying at (90, 60). */
+  private sizeCoin(): void {
+    const k = Math.min(this.boost, 1.25) * (1 + 0.3 * this.coinPop);
+    this.coin.scale.set(k);
+    this.coin.position.set(90 * (1 - k), 60 * (1 - k));
+  }
+
   update(dt: number): void {
     const b = this.battle;
     if (!b) return;
+    if (this.coinPop > 0) {
+      this.coinPop = Math.max(0, this.coinPop - dt * 6);
+      this.sizeCoin();
+    }
     this.waveText.text = this.waveLabel(b.wave);
     this.goldText.text = `${b.gold}`;
     // nothing to pause once the battle is over
