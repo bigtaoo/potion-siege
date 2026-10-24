@@ -4,11 +4,15 @@
 import '../view/layout/measure';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { t } from '../i18n';
+import { INTERSTITIAL_MINUTES } from '../platform/adPacing';
 import { dayOf } from '../sim/daily';
 import { doublesLeft } from '../sim/meta';
 import { buttons, englishPage, flush, play, playToEnd, tap, texts, veteran, world, type World } from './testWorld';
 
 beforeAll(englishPage);
+
+/** A full gap of battle play (platform/adPacing.ts): the test battles run in a blink. */
+const PACED = INTERSTITIAL_MINUTES * 60_000;
 
 describe('the result screen', () => {
   it('revives the battle when the ad was watched', async () => {
@@ -99,6 +103,7 @@ describe('the result screen', () => {
 
   it('plays the midgame ad after a loss with no revive on offer', async () => {
     const w = world(veteran(), (h) => (h.available = false));
+    w.game.pacing.played(PACED);
     play(w);
     playToEnd(w);
     expect(texts(w.stage)).not.toContain(t('adBlocked'));
@@ -112,6 +117,7 @@ describe('the result screen', () => {
       h.available = false;
       h.midgameBreaks = true;
     });
+    w.game.pacing.played(PACED);
     play(w);
     playToEnd(w);
     tap(w.stage, t('continue'));
@@ -119,6 +125,38 @@ describe('the result screen', () => {
     expect(w.host.midgames).toBe(1);
     expect(w.game['menu'].visible).toBe(true);
     expect(w.game.audio.mix.ad).toBe(false);
+  });
+
+  it('holds the midgame ad back until a few minutes of battle play went by', async () => {
+    const w = world(veteran(), (h) => (h.available = false));
+    w.game.pacing.played(PACED - 1);
+    play(w);
+    playToEnd(w);
+    tap(w.stage, t('continue'));
+    await flush();
+    expect(w.host.midgames).toBe(0);
+    expect(w.game['menu'].visible).toBe(true);
+    expect(w.events('ad_paced')).toEqual([{ run: w.save().runs, secs: Math.round((PACED - 1) / 1000) }]);
+    // the clock goes on across battles: the next break has the gap
+    w.game.pacing.played(1);
+    play(w);
+    playToEnd(w);
+    tap(w.stage, t('continue'));
+    await flush();
+    expect(w.host.midgames).toBe(1);
+    // and the ad on screen starts it over
+    expect(w.game.pacing.due()).toBe(false);
+  });
+
+  it('counts a rewarded ad on screen as the last ad', async () => {
+    const w = world();
+    w.game.pacing.played(PACED);
+    play(w);
+    playToEnd(w);
+    w.host.answers = ['closed'];
+    tap(w.stage, t('revive'));
+    await flush();
+    expect(w.game.pacing.due()).toBe(false);
   });
 
   it('says an adblocker took the revive away instead of just leaving it out', () => {

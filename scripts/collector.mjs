@@ -99,7 +99,7 @@ function beaconLine(url, received) {
 // Every event name the game sends (src/analytics/collectorSchema.test.ts checks); first_star<n>
 // is the one family.
 const EVENTS = new Set([
-  'ad_challenge', 'ad_midgame', 'ad_offer', 'ad_result', 'ad_shop', 'alive', 'anomaly', 'battle_start_tap',
+  'ad_challenge', 'ad_midgame', 'ad_offer', 'ad_paced', 'ad_result', 'ad_shop', 'alive', 'anomaly', 'battle_start_tap',
   'challenge_end', 'challenge_start', 'crystals', 'daily_claim', 'dialog', 'endless_end', 'endless_start',
   'feedback', 'feedback_shown', 'feedback_skip', 'first_input', 'first_merge', 'first_summon', 'first_ultimate',
   'first_upgrade', 'first_win', 'hint_upgrade_button', 'hint_upgrade_done', 'hint_upgrade_tab', 'home_view', 'iap',

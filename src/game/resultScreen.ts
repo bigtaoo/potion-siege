@@ -98,12 +98,17 @@ export async function nextStage(g: Game, b: Battle): Promise<void> {
   g.platform.gameplayStart();
 }
 
-/** The portal's midgame ad between battles: never after the very first one, nor right after
- *  a rewarded one, nor after a loss whose revive was on offer: an interstitial straight after
- *  the player passed on (or tried) an ad reads as a punishment for it. */
+/** The midgame ad between battles: never after the very first one, nor right after a rewarded
+ *  one, nor after a loss whose revive was on offer: an interstitial straight after the player
+ *  passed on (or tried) an ad reads as a punishment for it. On top, on every host, at most one
+ *  per few minutes of battle play (platform/adPacing.ts); one held back by that is `ad_paced`. */
 export async function breakAd(g: Game): Promise<void> {
   try {
     if (g.save.runs > 1 && !g.rewardedSinceEnd && !g.offered.revive) {
+      if (!g.pacing.due()) {
+        g.analytics.track('ad_paced', { run: g.save.runs, secs: g.pacing.seconds });
+        return;
+      }
       await g.platform.midgame(() => g.mute(true));
       g.analytics.track('ad_midgame', { run: g.save.runs });
     }

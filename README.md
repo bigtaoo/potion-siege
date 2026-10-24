@@ -116,7 +116,7 @@ In dev, `window.__game` exposes the running game.
   - onboarding firsts: `first_input`, `first_summon`, `first_merge`, `first_star3`, `first_upgrade`, `first_win`, and the `tutorial_step`, `tutorial_assist` and `tutorial_end` events
   - runs: `run_start`, `wave_start`, `skill_pick`, `run_end`, `run_quit`, `endless_start`, `endless_end`, `challenge_start`, `challenge_end`
   - menus and economy: `home_view`, `dialog`, `battle_start_tap`, `result_shown`, `result_action`, `crystals`, `meta_buy`, `lineup`, `daily_claim`
-  - ads: `ad_offer`, `ad_result`, `ad_midgame`, `ad_shop`, `ad_challenge`
+  - ads: `ad_offer`, `ad_result`, `ad_midgame`, `ad_paced` (a midgame held back by the 3-minute pacing), `ad_shop`, `ad_challenge`
   - client health: `perf` (one small event per run) and `anomaly` (an uncaught error, a lost WebGL context or a stalled frame; capped per session)
 - Every event carries `day` (calendar days since the first session), `session` (1 is the first ever) and `build`.
 - **Build stamp**: `scripts/buildId.mjs` builds the id, `version+commit` (for example `0.0.1+61b33eb`, with `-dirty` when tracked files had uncommitted changes). Vite injects it as `__PS_BUILD__`; every event and beacon carries it, so the report can tell releases apart.

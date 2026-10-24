@@ -65,6 +65,8 @@ Windows compiles the Swift.
   (`AdMob.onChange`). `rewarded` resolves true only when the reward was earned, after the ad has
   closed; `midgame` plays the interstitial if one is loaded, never waits for one. The `started`
   callback mutes the game as on CrazyGames. An ad not on screen 10 s after the ask is given up.
+  AdMob has no cooldown of its own: the game's pacing (`src/platform/adPacing.ts`, every host)
+  allows one interstitial per 3 minutes of battle play at most.
 - **Ids.** Our app id is in `Info.plist` and our two units in `AdMob.swift` (created
   2026-10-19), as Google advises for testing: the real app id, its demo units. `live = false`
   serves the demo units, since ours have no fill before the app is on the store; going live is
