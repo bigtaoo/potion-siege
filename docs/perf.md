@@ -82,3 +82,60 @@ Graphics redrawn every frame:
 
 During the horde these account for 32, 18, 15, about 10 each, and 7 shapes per frame. The wall and
 the field ground are drawn once.
+
+## GPU texture memory: texture GC, TexturePool and context loss
+
+Three fixes from another Pixi 8 game (standing 00b54ee, 64ac1bc, df4e646), checked against this
+one. Measured with `npm run memruns` (430×932 at 2x, headless Chrome), which now also prints GPU
+texture MB by kind (`artMB` loaded art, `textMB` live text, `scratchMB` sources with nothing behind
+them: text textures given back to Pixi's TexturePool) and `reup`, how many art uploads were
+repeats. `PORT` and `CDP_PORT` move memruns, framecost and contextloss off their default ports.
+
+**1. Texture GC off on loaded art: applies, ported.** Pixi's GC unloads an image source that no
+frame drew for 60 s; the next frame that draws it uploads it again, mid-battle. `art.ts` now sets
+`autoGarbageCollect = false` on every texture it loads (first, soon, later art and fields). All of
+it is held for the session already and nothing in the game frees art by hand, so there was nothing
+to free instead.
+
+| memruns | before | after |
+|---|---|---|
+| 12 runs at speed 8: art re-uploads | 3 (enemy_flyer, enemy_winder ×2) | 0 |
+| 5 runs at speed 2 (≈130 s each): art re-uploads | 4 / 10 / 12 / 16 / 22 after runs 1–5 | 0 |
+| what went up again at speed 2 | potion arcane, lightning, fire, ice_ult ×4, poison, wind_ult ×3 | – |
+
+`artMB` stays at 13.5–14.5 MB in both.
+
+**2. TexturePool cleared at battle start: applies, through Text, not filters.** The game uses no
+filters or render targets, but every Pixi Text texture comes from the same TexturePool, and a text
+destroyed with its screen gives its texture back to the pool, which keeps it on the GPU for good.
+`newBattle` now clears the pool once the menu or result screen is torn down.
+
+| | before | after |
+|---|---|---|
+| 12 runs at speed 8: GPU textures after a run | 48 at start → 118–143 | 39 → 61–65 (stage), 87–89 (endless) |
+| scratchMB after a run | 15.5–19 (stage), 10.5–11 (endless) | 0–0.5 |
+| 5 runs at speed 2: GPU textures / scratchMB | 93–125 / 15–19.5 | 45–46 (72 endless) / 0–0.5 |
+| mid-battle at speed 1, 25 s in (2 runs): GPU textures / scratchMB | 92, 98 / 15.5, 17 | 39, 40 / 0, 2 |
+
+JS heap after a run (14.4–22.7 MB before, 15.3–22 after) and allocation in a battle (135.6 vs
+131.9 MB/s at speed 8; 104.7 vs 147.2 at speed 2, which is noise between runs) do not move.
+
+**3. Redraw baked render textures on context restore: does not apply.** The game bakes nothing
+into render textures (no `generateTexture`, no `RenderTexture`), Pixi 8.22 regenerates Text after a
+context comes back, and the one canvas texture (the enemy mark disc) uploads again from its canvas.
+`npm run contextloss` checks it: it freezes the game's tick, takes two screenshots (noise), loses
+the context with `WEBGL_lose_context`, restores it and compares; same for the home screen.
+
+| contextloss | battle | home |
+|---|---|---|
+| noise between two frames | 0% | 0% |
+| while lost (shows the test can tell) | 97.9% off, mean 161.8 | 97.7% off |
+| after restore | 0%, mean 0 | 0% |
+
+Same result before and after fixes 1 and 2.
+
+**Frame cost.** `npm run framecost` on the horde (10 s, wave 1, 4x CPU), builds alternated: before
+11.42 / 11.55 ms script per frame (a first, cold run at 16.47 left out), after 10.85 / 9.68 (one
+run did not start);
+interval median 17.4 vs 17.3–17.5 ms, p95 18.1 vs 18.0–18.1. The fixes are about memory and
+hitches after a minute, which a 10 s bench does not reach, so this only shows no cost.

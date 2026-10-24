@@ -20,12 +20,14 @@ const server = createServer((req, res) => {
   res.writeHead(200, { 'content-type': T[extname(f)] ?? 'application/octet-stream' });
   createReadStream(f).pipe(res);
 });
-await new Promise((r) => server.listen(5299, '127.0.0.1', r));
+// PORT and CDP_PORT move it off 5299 and 9339 when another measurement is running beside it
+const PORT = Number(process.env.PORT ?? 5299), CDP = Number(process.env.CDP_PORT ?? 9339);
+await new Promise((r) => server.listen(PORT, '127.0.0.1', r));
 const prof = mkdtempSync(join(tmpdir(), 'ps-fc-'));
-const chrome = spawn(process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', ['--remote-debugging-port=9339', `--user-data-dir=${prof}`, '--headless=new', '--no-first-run', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
+const chrome = spawn(process.env.CHROME ?? 'C:/Program Files/Google/Chrome/Application/chrome.exe', [`--remote-debugging-port=${CDP}`, `--user-data-dir=${prof}`, '--headless=new', '--no-first-run', '--autoplay-policy=no-user-gesture-required', 'about:blank'], { stdio: 'ignore' });
 let wsUrl;
 for (let i = 0; i < 50 && !wsUrl; i++) {
-  try { wsUrl = (await (await fetch('http://127.0.0.1:9339/json/list')).json()).find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {}
+  try { wsUrl = (await (await fetch(`http://127.0.0.1:${CDP}/json/list`)).json()).find((t) => t.type === 'page')?.webSocketDebuggerUrl; } catch {}
   await new Promise((r) => setTimeout(r, 200));
 }
 const ws = new WebSocket(wsUrl);
@@ -43,7 +45,7 @@ await send('Emulation.setDeviceMetricsOverride', { width: 390, height: 844, devi
 await send('Emulation.setTouchEmulationEnabled', { enabled: true, maxTouchPoints: 5 });
 // mulberry32: the same seed and effects in both builds
 await send('Page.addScriptToEvaluateOnNewDocument', { source: `(()=>{let a=12345;Math.random=()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}})()` });
-await send('Page.navigate', { url: 'http://127.0.0.1:5299/?autoplay&quality=high' });
+await send('Page.navigate', { url: `http://127.0.0.1:${PORT}/?autoplay&quality=high` });
 for (let i = 0; i < 300; i++) { await sleep(200); try { if (await ev(`!!window.__game?.battle`)) break; } catch {} }
 await sleep(2000);
 

@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { LINEUP } from '../sim/types';
 import { ART_TIERS } from './art';
 
@@ -15,5 +15,23 @@ describe('art tiers', () => {
 
   it('wait for what the first battle shows at once, and only that', () => {
     expect([...ART_TIERS.FIRST].sort()).toEqual(['bg_field', 'commander', 'enemy_grunt', 'tutorial_hand', ...LINEUP.map((k) => `potion_${k}_body`)].sort());
+  });
+});
+
+describe('loaded art', () => {
+  it('opts out of Pixi\'s texture GC, first battle, rest and chapter fields alike', async () => {
+    const { Assets } = await import('pixi.js');
+    const { loadArt, loadField, restOfArt } = await import('./art');
+    const made: { source: { autoGarbageCollect: boolean } }[] = [];
+    vi.spyOn(Assets, 'load').mockImplementation(async () => {
+      const t = { source: { autoGarbageCollect: true }, height: 1 };
+      made.push(t);
+      return t as never;
+    });
+    await loadArt();
+    await restOfArt();
+    await loadField('bg_snow');
+    expect(made.length).toBe(ART_TIERS.FIRST.length + ART_TIERS.SOON.length + ART_TIERS.LATER.length + 1);
+    expect(made.every((t) => !t.source.autoGarbageCollect)).toBe(true);
   });
 });

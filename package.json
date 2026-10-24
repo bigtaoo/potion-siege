@@ -37,6 +37,7 @@
     "framecost": "node scripts/frameCost.mjs",
     "chapters": "vitest run --config scripts/vitest.chapters.config.js",
     "memruns": "node scripts/memRuns.mjs",
+    "contextloss": "node scripts/contextLoss.mjs",
     "sweep": "vitest run --config scripts/vitest.sweep.config.js",
     "targeting": "vitest run --config scripts/vitest.targeting.config.js",
     "smoke": "node scripts/smoke.mjs"
