@@ -213,7 +213,7 @@ export function enemyTexture(kind: EnemyKind, e?: { shieldMax?: number; shield?:
   return textures.get(`enemy_${look}`) ?? textures.get(`enemy_${kind}`);
 }
 
-/** The tutorial's pointing glove, fingertip up and to the right (see Tutorial.ts). */
+/** The tutorial's pointing glove, back of the hand, fingertip straight up (see Tutorial.ts). */
 export function handTexture(): Texture | undefined {
   return textures.get('tutorial_hand');
 }
