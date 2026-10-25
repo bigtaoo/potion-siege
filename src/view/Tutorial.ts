@@ -170,7 +170,8 @@ export class TutorialLayer extends Container {
       this.hand.scale.set(cycle < 0.15 ? 1.08 - cycle * 0.5 : 1);
     } else {
       const bob = Math.abs(Math.sin(s * 4)) * 26;
-      this.hand.position.set(lesson.from.x + Math.sin(0.35) * bob, lesson.from.y - bob);
+      // taps along the finger: back up toward the wrist, then down onto the target
+      this.hand.position.set(lesson.from.x - Math.sin(0.35) * bob, lesson.from.y - Math.cos(0.35) * bob);
       this.hand.alpha = 1;
       this.hand.scale.set(1);
     }
@@ -182,10 +183,9 @@ function handArt(): Sprite | undefined {
   const tex = handTexture();
   if (!tex) return undefined;
   const art = new Sprite(tex);
-  // the fingertip, in the art's own pixels; the painting points up and to the right
-  art.anchor.set(334 / tex.width, 18 / tex.height);
-  art.rotation = -1.03;
-  art.scale.set(0.68 * (343 / tex.width));
+  // the fingertip, in the art's own pixels; the painting points straight up, back of the hand to the viewer
+  art.anchor.set(147 / tex.width, 14 / tex.height);
+  art.scale.set(0.58 * (417 / tex.height));
   return art;
 }
 
