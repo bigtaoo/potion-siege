@@ -156,6 +156,14 @@ export interface Flask {
   damage: number;
 }
 
+/** One enemy a landed flask burst on, in field pixels: where, what it took, whether it fell. */
+export interface FlaskHit {
+  x: number;
+  y: number;
+  damage: number;
+  killed: boolean;
+}
+
 /** A whirlwind left where a wind shot killed (the vortex skill): it pulls the enemies around it
  *  in until it dies down. */
 export interface Vortex {
@@ -176,7 +184,7 @@ export type BattleEvent =
   /** The commander cast a skill: the flask aimed at (x, y), or the brew (x, y unused). */
   | { type: 'cast'; skill: CommanderSkill; x: number; y: number; flight: number }
   /** The commander's flask burst on (x, y). */
-  | { type: 'flask'; x: number; y: number; radius: number }
+  | { type: 'flask'; x: number; y: number; radius: number; hits: FlaskHit[] }
   /** Enough summons for the commander to build a new cell onto the wall. */
   | { type: 'cellOpen'; slot: number; last: boolean }
   | { type: 'wave'; wave: number; boss: boolean }

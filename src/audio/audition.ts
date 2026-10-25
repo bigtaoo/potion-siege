@@ -23,6 +23,7 @@ const SOUNDS: [group: string, id: SfxId, name: string, note: string][] = [
   ['hit', 'hitPoison', '腐蚀 Corrosion', '滋滋 fizz'],
   ['hit', 'hitWind', '风 Wind', '一阵风 gust'],
   ['battle', 'kill', '敌人倒下 Kill', '发条零件散落'],
+  ['battle', 'blast', '炼金爆瓶 Blast', '闷响 + 火焰 + 碎玻璃'],
   ['battle', 'wallHit', '城墙受击 Wall hit', '石头闷响'],
   ['battle', 'wave', '新一波 Wave', '铜号 + 钟'],
   ['battle', 'boss', 'BOSS 来袭', '低音号 + 锣 + 齿轮'],

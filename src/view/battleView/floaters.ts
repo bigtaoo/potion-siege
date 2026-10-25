@@ -4,8 +4,9 @@ import { Container, type Text } from 'pixi.js';
 import { label } from '../ui';
 
 export class Floaters extends Container {
-  /** A note floating up from (x, y) and fading, on a hidden one when there is one; at most 31. */
-  show(text: string, x: number, y: number, color: number): void {
+  /** A note floating up from (x, y) and fading, on a hidden one when there is one; at most 31.
+   *  `size` scales it up for a note that matters more. */
+  show(text: string, x: number, y: number, color: number, size = 1): void {
     let shown = 0;
     let free: Text | null = null;
     for (const f of this.children as Text[]) {
@@ -21,6 +22,7 @@ export class Floaters extends Container {
       free.visible = true;
     }
     free.position.set(x, y - 30);
+    free.scale.set(size);
     // the newest on top, as when each was new
     this.addChild(free);
   }
