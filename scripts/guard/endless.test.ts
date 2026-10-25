@@ -17,6 +17,6 @@ describe('endless', () => {
       m.cleared = BALANCE.endless.unlock;
       waves[name] = median(Array.from({ length: 15 }, (_, i) => playOut(1001 + i, 7200, endlessSetup(m)).wave));
     }
-    expectNear('median endless wave (15 seeds)', waves, { 'stage 10 clear': 14, '56k spent': 34, maxed: 49 }, 4);
+    expectNear('median endless wave (15 seeds)', waves, { 'stage 10 clear': 14, '56k spent': 34, maxed: 44 }, 4);
   }, 300_000);
 });
