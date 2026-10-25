@@ -30,7 +30,6 @@ export const en = {
     more: 'No matching pair yet: tap Summon for one more potion',
     upgrade: 'Enough gold for an upgrade: tap it to learn a skill',
     pick: 'Pick one of the three skill cards. It lasts for the whole battle, and picking the same skill again levels it up',
-    helped: { summon: 'Brewed one for you', merge: 'Fused them for you', upgrade: 'Upgraded for you' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Tap to cast',

@@ -118,7 +118,7 @@ In dev, `window.__game` exposes the running game.
 
 - **Events**:
   - sessions: `session_start`, `session_end`, `viewport`
-  - onboarding firsts: `first_input`, `first_summon`, `first_merge`, `first_star3`, `first_upgrade`, `first_win`, and the `tutorial_step`, `tutorial_assist` and `tutorial_end` events
+  - onboarding firsts: `first_input`, `first_summon`, `first_merge`, `first_star3`, `first_upgrade`, `first_win`, and the `tutorial_step` (with `waitS`, the real seconds the held battle waited) and `tutorial_end` events; `tutorial_assist` only comes from builds before the tutorial held the battle
   - runs: `run_start`, `wave_start`, `skill_pick`, `run_end`, `run_quit`, `endless_start`, `endless_end`, `challenge_start`, `challenge_end`
   - menus and economy: `home_view`, `dialog`, `battle_start_tap`, `result_shown`, `result_action`, `crystals`, `meta_buy`, `lineup`, `daily_claim`
   - ads: `ad_offer`, `ad_result`, `ad_midgame`, `ad_paced` (a midgame held back by the 3-minute pacing), `ad_shop`, `ad_challenge`

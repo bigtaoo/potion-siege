@@ -9,6 +9,8 @@
 
 ## 步骤表
 
+下表是当时（还有 8 s 代打）的走查记录；2026-10-25 起教学改为停住战斗等玩家，不再代打，见文末「第三轮」。
+
 | # | 步骤 | 时间 | 结果 | 说明 |
 |---|------|------|------|------|
 | 1 | 首次加载 → 直接进战斗 | 0 s | ✅ | 没有标题页点击，战斗直接开始（符合 b15f071） |
@@ -73,7 +75,7 @@ en 4:28 / 4:19 / 4:17）；隐私面板之后没有签到，签到在第三局�
 
 - `src/sim/tutorial.ts`：合成这一步场上没有一对时，`showing` 返回新的提示 `'more'`（指着召唤）；`assist` 对它只等
   `PAIR_WAIT_SECONDS = 2` 秒就召唤。第一次自动召唤还在 8 s，第二次从 16 s 提前到约 10 s，自动合成从 24 s 提前到约 18 s。
-  照样不冻结战斗，8 s 的 assist 没变；seed 609 的 stage 1、`scripts/first-seed.test.ts` 和 guard 都不受影响。
+  照样不冻结战斗，8 s 的 assist 没变（第三轮已整个去掉 assist，改为停住等玩家）；seed 609 的 stage 1、`scripts/first-seed.test.ts` 和 guard 都不受影响。
 - `src/view/Tutorial.ts` / `src/game/tutorialFlow.ts`：`'more'` 算在 2/4，手指着召唤按钮。15 种语言加 `tutorial.more`。
 - `src/game/homeScreen.ts` + `src/app.ts`（`consentVisit`）：这次进主页弹过隐私面板，签到就等下一次进主页。
   隐私面板仍然先弹，因为事件要等它答了才发。测试在 `src/game/homeEntry.test.ts`。
@@ -86,3 +88,25 @@ en 4:28 / 4:19 / 4:17）；隐私面板之后没有签到，签到在第三局�
 
 1. 指引做完后，主页一下子亮 4–5 个红点（第 15 步）。每个都是真的，但如果还嫌多，可以只亮最便宜或者最该做的那一个。
    这牵涉红点规则的整体取舍，先不动。
+
+## 第三轮：教学不再代打，改成停住等玩家（分支 claude/tutorial-pause-f83408，2026-10-25）
+
+作者试玩新手局后决定：玩家不操作时不替他操作，而是停住战斗，等他按提示做。
+
+- `src/sim/tutorial.ts`：去掉 `assist`、`ASSIST_SECONDS`、`PAIR_WAIT_SECONDS`。新增 `holds(b)`：提示指着召唤、
+  "再召唤"（`'more'`）、合成、强化时为真；选卡本来就靠 `b.paused` 停，不算。
+- `src/game/tutorialFlow.ts` 的 `held(g, b)` + `src/app.ts` 主循环：停住时既不跑 tick，也不往 `FixedStep` 里加时间，
+  所以敌人、城墙、波次计时、画面插值全都不动；提示手指和卡片照常画、照常能点。每个 tick 之前都检查一次，
+  一帧里中途变成"强化买得起"也会正好停在那一 tick。自动战斗（autoplay）不停。
+- 暂停从哪开始：`HOLD_AFTER_SECONDS = 2`。开局第 0 秒就有 19 个敌人站在最上面，但站着不动的画面看不出"它们正冲过来"。
+  先走 2 秒（走到大约五分之一的路，离城墙还有约 13 秒），停下时玩家看到的是一群正在逼近的敌人，召唤按钮的意义一眼就懂；
+  2 秒也短到不会有人在这之前就走神。后面几步一出现就停。
+- 回放和种子：停住是外壳不调用 `b.step()`，sim 里没有任何新状态，回放只记录玩家自己的指令（tick 不同而已），
+  `checkReplay` 照样对得上（测试里验证了）。FIRST_SEED 609 的波次和敌人骰子与玩家操作无关，平衡守卫用 bot、不开教学，
+  `npm run check:balance:quick` 不受影响。
+- 埋点：`tutorial_assist` 不再发；`first_summon` / `first_merge` / `first_upgrade` 去掉 `by`；`tutorial_step` 去掉 `by`，
+  加 `waitS`（真实秒数，因为战斗停着时 battle 秒不走，`doneT - shownT` 总是约 0）。collector 继续接收
+  `tutorial_assist`，给还缓存着旧版的页面；report 有 `waitS` 时用它算"median s on screen"，旧数据里有 assist 时才显示 assist 比例。
+- 15 种语言删掉 `tutorial.helped.*`（"帮你召唤了一瓶"之类），layout 测试里对应的三项一起删。
+- 测试：`src/sim/tutorial.test.ts`（seed 609 放着不动 120 s 场面完全不变、无任何指令；每步操作后继续、下一步再停；
+  停住期间下的指令回放一致；跳过后不再停），`src/game/tutorialFlow.test.ts`（autoplay 不停，`waitS` 的记录）。

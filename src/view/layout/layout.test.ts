@@ -184,7 +184,6 @@ function hudScreens(): Screen[] {
   const stage = (n: number) => () => new Battle(1, battleSetup(rich(), n));
   out.push(hud('opening', stage(38), () => {}));
   out.push(hud('endless', () => new Battle(1, endlessSetup(rich())), (h) => h.react([{ type: 'wave', wave: 47, boss: true }])));
-  for (const step of ['summon', 'merge', 'upgrade'] as const) out.push(hud(`said ${step}`, stage(1), (h) => h.say(t(`tutorial.helped.${step}`))));
   for (const kind of ENEMY_KINDS) {
     if (FIRST_STAGE[kind] <= 1) continue;
     out.push(hud(`first ${kind}`, stage(FIRST_STAGE[kind]), (h) => h.react([{ type: 'wave', wave: FIRST_WAVE[kind], boss: FIRST_WAVE[kind] === 10 }])));

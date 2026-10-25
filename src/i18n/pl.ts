@@ -32,7 +32,6 @@ export const pl: Table = {
     more: 'Nie ma jeszcze pary: dotknij „Przyzwij” po kolejną miksturę',
     upgrade: 'Masz złoto na ulepszenie: dotknij „Ulepsz”, by poznać umiejętność',
     pick: 'Wybierz jedną z trzech kart umiejętności. Działa przez całą walkę, a ponowny wybór tej samej ją ulepsza',
-    helped: { summon: 'Uwarzono jedną za ciebie', merge: 'Połączono je za ciebie', upgrade: 'Ulepszono za ciebie' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Dotknij i rzuć',

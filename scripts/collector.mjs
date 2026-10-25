@@ -111,7 +111,8 @@ function beaconLine(url, received) {
 }
 
 // Every event name the game sends (src/analytics/collectorSchema.test.ts checks); first_star<n>
-// is the one family.
+// is the one family. tutorial_assist is only sent by builds from before the tutorial held the
+// battle (2026-10-25); kept so their cached pages still land.
 const EVENTS = new Set([
   'ad_challenge', 'ad_midgame', 'ad_offer', 'ad_paced', 'ad_result', 'ad_shop', 'alive', 'anomaly', 'battle_start_tap',
   'challenge_end', 'challenge_start', 'crystals', 'daily_claim', 'dialog', 'endless_end', 'endless_start',

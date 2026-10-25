@@ -111,6 +111,7 @@ for (const step of ['session_start', 'first_input', 'first_summon', 'first_merge
   console.log(label.padEnd(16), pct(set.size, newUids.size).padStart(7), `  (${set.size})`);
 }
 
+// builds before the tutorial held the battle did idle steps for the player (tutorial_assist)
 const assists = events.filter((e) => e.name === 'tutorial_assist');
 if (assists.length) {
   const by = new Map();
@@ -129,8 +130,12 @@ for (const step of ['summon', 'merge', 'upgrade', 'pick']) {
   const rows = s1.filter((e) => e.name === 'tutorial_step' && e.props.step === step);
   if (!rows.length) continue;
   const helped = rows.filter((e) => e.props.by === 'assist').length;
-  const secs = median(rows.flatMap((e) => (e.props.shownT === null ? [] : [e.props.doneT - e.props.shownT])));
-  funnelRow(`tutorial ${step}`, new Set(rows.map((e) => e.uid)), `  assist ${pct(helped, rows.length)}, median ${secs}s on screen`);
+  // waitS: real seconds the held battle waited for the player; older builds only had battle seconds
+  const held = rows.filter((e) => typeof e.props.waitS === 'number');
+  const secs = held.length
+    ? median(held.map((e) => e.props.waitS))
+    : median(rows.flatMap((e) => (e.props.shownT === null ? [] : [e.props.doneT - e.props.shownT])));
+  funnelRow(`tutorial ${step}`, new Set(rows.map((e) => e.uid)), `${helped ? `  assist ${pct(helped, rows.length)},` : ''}  median ${secs}s on screen`);
 }
 const run1 = reached((e) => e.name === 'run_end' && e.props.run === 1);
 funnelRow('run 1 end', run1);

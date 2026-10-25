@@ -12,9 +12,6 @@ export class RunTracker {
   private revives = 0;
   private picks: SkillId[] = [];
   private ended = false;
-  /** Commands the tutorial did for the player, not drained yet: the first summon, merge or
-   *  upgrade they bring counts as the assist's (`by: 'assist'`). */
-  private assisted = new Set<'summon' | 'merge' | 'upgrade'>();
 
   constructor(
     private readonly a: Analytics,
@@ -28,25 +25,16 @@ export class RunTracker {
     a.replays?.start(run, battle);
   }
 
-  /** The tutorial just did `step` for the player; its event comes with the next drain. */
-  onAssist(step: 'summon' | 'merge' | 'upgrade'): void {
-    this.assisted.add(step);
-  }
-
-  private by(step: 'summon' | 'merge' | 'upgrade'): 'player' | 'assist' {
-    return this.assisted.delete(step) ? 'assist' : 'player';
-  }
-
   onEvents(events: BattleEvent[]): void {
     for (const ev of events) {
       switch (ev.type) {
         case 'summon':
-          this.a.first('first_summon', { t: this.a.sessionSeconds, by: this.by('summon') });
+          this.a.first('first_summon', { t: this.a.sessionSeconds });
           break;
         case 'merge':
           this.merges++;
           this.maxStar = Math.max(this.maxStar, ev.star);
-          this.a.first('first_merge', { t: this.a.sessionSeconds, wave: this.battle.wave, by: this.by('merge') });
+          this.a.first('first_merge', { t: this.a.sessionSeconds, wave: this.battle.wave });
           if (ev.star >= 3) this.a.first(`first_star${ev.star}`, { t: this.a.sessionSeconds, run: this.run });
           break;
         case 'wave':
@@ -54,7 +42,7 @@ export class RunTracker {
           this.a.track('wave_start', { run: this.run, wave: ev.wave, boss: ev.boss, wall: this.wallPct() });
           break;
         case 'offer':
-          this.a.first(`first_${ev.reason}`, { t: this.a.sessionSeconds, wave: this.battle.wave, ...(ev.reason === 'upgrade' ? { by: this.by('upgrade') } : {}) });
+          this.a.first(`first_${ev.reason}`, { t: this.a.sessionSeconds, wave: this.battle.wave });
           break;
       }
     }

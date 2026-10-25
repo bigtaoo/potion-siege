@@ -1,9 +1,9 @@
 // The first battle's tutorial: summon, merge, then the first 强化 and its skill pick, each shown
-// when its moment comes. Pure rules over the battle. The battle never stands still for it: a
-// step the player leaves alone for ASSIST_SECONDS is done for them (through the same commands,
-// so the replay has it), and the pick pauses the battle by itself. While the merge step has no
-// pair yet it points at 召唤 instead and summons after a short PAIR_WAIT_SECONDS. The view draws
-// the pointer.
+// when its moment comes. Pure rules over the battle. Nothing is ever done for the player: while a
+// step points, the shell holds the battle (no ticks run, so the replay only sees the player's own
+// commands, just later) until the player does it, and the pick pauses the battle by itself. The
+// first hold waits HOLD_AFTER_SECONDS so the crowd is seen walking in. While the merge step has no
+// pair yet it points at 召唤 instead. The view draws the pointer.
 
 import { SLOT_COUNT, type Battle } from './battle';
 import { TICK_RATE } from './math/fixed';
@@ -15,13 +15,9 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
  *  召唤, so the wait after the first summon is never empty). */
 export type TutorialCue = TutorialStep | 'more';
 
-/** How long a step points before the tutorial does it itself: long enough to read the card,
- *  well before the first enemies reach the wall (about 22 s into stage 1). */
-export const ASSIST_SECONDS = 8;
-
-/** How long 'more' points before the tutorial summons the next potion itself: the first auto
- *  summon at 8 s brings the second at about 10 s, and its pair the auto merge at about 18 s. */
-export const PAIR_WAIT_SECONDS = 2;
+/** Battle seconds before the first hold: the opening crowd walks a fifth of the way down (the
+ *  wall is about 15 s off), so the frozen board shows what is coming, not a still picture. */
+export const HOLD_AFTER_SECONDS = 2;
 
 /** The first two slots that could merge, or null. */
 export function mergeablePair(b: Battle): [number, number] | null {
@@ -32,9 +28,6 @@ export function mergeablePair(b: Battle): [number, number] | null {
 export class Tutorial {
   /** The step waiting to be done; null when all are done or skipped. */
   step: TutorialStep | null = 'summon';
-  /** The step on screen and the battle tick it came up on, for the assist. */
-  private shown: TutorialCue | null = null;
-  private shownAt = 0;
 
   get done(): boolean {
     return this.step === null;
@@ -65,35 +58,13 @@ export class Tutorial {
     }
     if (this.step === 'upgrade' && b.choices && b.choiceReason === 'upgrade') this.step = 'pick';
     else if (this.step === 'pick' && !b.choices) this.step = null;
-    // the clock restarts whenever the pointer goes away or moves to another step
-    const s = this.showing(b);
-    if (s !== this.shown) {
-      this.shown = s;
-      this.shownAt = b.time;
-    }
   }
 
-  /** Does the step on screen for the player once it has waited ASSIST_SECONDS (PAIR_WAIT_SECONDS
-   *  for 'more', which summons one more); returns the step it did ('summon' for 'more'), or null.
-   *  Never the pick: that one waits for the player's own choice. */
-  assist(b: Battle): TutorialStep | null {
-    const s = this.shown;
-    const wait = s === 'more' ? PAIR_WAIT_SECONDS : ASSIST_SECONDS;
-    if (!s || s === 'pick' || this.showing(b) !== s || b.time - this.shownAt < wait * TICK_RATE) return null;
-    let ok = false;
-    if (s === 'summon' || s === 'more') ok = b.summon();
-    else if (s === 'upgrade') ok = b.upgrade();
-    else {
-      const pair = mergeablePair(b);
-      ok = !!pair && b.move(pair[0], pair[1]);
-    }
-    if (!ok) return null;
-    this.shownAt = b.time; // one try per wait, even if the event is not drained yet
-    // done now rather than when its event drains, so the same frame never points at it again
-    // (after the merge, the pair is gone and 'more' would flash on 召唤)
-    if (s === 'summon') this.step = 'merge';
-    else if (s === 'merge') this.step = 'upgrade';
-    return s === 'more' ? 'summon' : s;
+  /** The battle stands still: a step points and waits for the player (the pick pauses the
+   *  battle by itself). Checked before every tick, so a step that comes up mid-frame holds there. */
+  holds(b: Battle): boolean {
+    const s = this.showing(b);
+    return s !== null && s !== 'pick' && b.time >= HOLD_AFTER_SECONDS * TICK_RATE;
   }
 
   skip(): void {
