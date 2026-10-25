@@ -31,7 +31,6 @@ export const zh: Table = {
     more: '还没有相同的一对：再点召唤，多召来一瓶药剂',
     upgrade: '金币够了：点击强化，学一个技能',
     pick: '三张卡选一张，技能整局有效；以后再选到同一个会升级',
-    helped: { summon: '帮你召唤了一瓶药剂', merge: '帮你合成了一瓶', upgrade: '帮你强化了一次' },
   },
   commanderNext: '{n}/{total}',
   castTap: '点我施法',

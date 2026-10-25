@@ -1,8 +1,8 @@
-// The first battle's tutorial as the game runs it: begun and ended, moved on each frame, its
-// steps logged, and the page rect each step points at.
+// The first battle's tutorial as the game runs it: begun and ended, moved on each frame, the
+// battle held while a step waits for the player, its steps logged, and the page rect each step
+// points at.
 
 import type { Game } from '../app';
-import { t } from '../i18n';
 import { slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair, Tutorial } from '../sim/tutorial';
 import { BALANCE, type BattleEvent } from '../sim/types';
@@ -14,9 +14,14 @@ import { DESIGN_H, DESIGN_W, type MenuFit } from '../view/viewport';
 export function beginTutorial(g: Game): void {
   if (g.autoplay || g.save.tutorial || g.battle?.setup.stage !== 1) return;
   g.tutorial = new Tutorial();
-  g.tutLog = { step: 'summon', shownT: null, assisted: false };
+  g.tutLog = { step: 'summon', shownT: null, shownS: null };
   g.hud.hint = false;
   g.hud.nudge = false;
+}
+
+/** The battle stands still before its next tick: a tutorial step waits for the player. */
+export function held(g: Game, b: Battle): boolean {
+  return !g.autoplay && !!g.tutorial?.holds(b);
 }
 
 /** Done or skipped: never again on this save. */
@@ -38,15 +43,6 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
     tut.update(b, events);
     logStep(g, tut, b);
     if (tut.done) endTutorial(g, false);
-    // a step left alone is done for the player, and the banner says so
-    const helped = !tut.done && !g.overlay.visible && !g.ended ? tut.assist(b) : null;
-    if (helped) {
-      const step = helped as 'summon' | 'merge' | 'upgrade';
-      g.hud.say(t(`tutorial.helped.${step}`));
-      g.analytics.track('tutorial_assist', { step, t: Math.round(b.seconds) });
-      g.run?.onAssist(step);
-      if (g.tutLog?.step === step) g.tutLog.assisted = true;
-    }
   }
   const step = g.tutorial && b && g.root.visible ? g.tutorial.showing(b) : null;
   // the pick shows over the skill cards, every other step over the battle itself
@@ -55,15 +51,20 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
   g.lessons.show(step && up && b ? lessonFor(g, step, b, m) : null, m.w, m.h, m.wide, dt);
 }
 
-/** `tutorial_step` once a step is done: when it first showed and was done (battle seconds),
- *  and whether the player or the assist did it. */
+/** `tutorial_step` once a step is done: when it first showed and was done (battle seconds, the
+ *  same while the battle was held for it) and how long the player took over it (`waitS`, session
+ *  seconds). */
 export function logStep(g: Game, tut: Tutorial, b: Battle): void {
   const log = g.tutLog;
   if (!log) return;
-  if (log.shownT === null && tut.showing(b) === log.step) log.shownT = Math.round(b.seconds);
+  if (log.shownT === null && tut.showing(b) === log.step) {
+    log.shownT = Math.round(b.seconds);
+    log.shownS = g.analytics.sessionSeconds;
+  }
   if (tut.step === log.step) return;
-  g.analytics.track('tutorial_step', { step: log.step, shownT: log.shownT, doneT: Math.round(b.seconds), by: log.assisted ? 'assist' : 'player' });
-  g.tutLog = tut.step ? { step: tut.step, shownT: null, assisted: false } : null;
+  const waitS = log.shownS === null ? null : Math.round(g.analytics.sessionSeconds - log.shownS);
+  g.analytics.track('tutorial_step', { step: log.step, shownT: log.shownT, doneT: Math.round(b.seconds), waitS });
+  g.tutLog = tut.step ? { step: tut.step, shownT: null, shownS: null } : null;
 }
 
 export function lessonFor(g: Game, step: NonNullable<ReturnType<Tutorial['showing']>>, b: Battle, m: MenuFit): Lesson {

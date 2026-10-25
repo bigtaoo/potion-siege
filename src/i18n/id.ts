@@ -32,7 +32,6 @@ export const id: Table = {
     more: 'Belum ada pasangan: ketuk Panggil untuk satu ramuan lagi',
     upgrade: 'Emas cukup untuk memperkuat: ketuk Perkuat untuk mempelajari skill',
     pick: 'Pilih satu dari tiga kartu skill. Berlaku sepanjang pertempuran, dan memilih skill yang sama lagi akan menaikkan levelnya',
-    helped: { summon: 'Satu sudah diracik untukmu', merge: 'Sudah digabung untukmu', upgrade: 'Sudah diperkuat untukmu' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Ketuk untuk pakai',

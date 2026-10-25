@@ -19,11 +19,9 @@ function setup(store = new SafeStore(null), run = 1) {
 const named = (sink: MemorySink, name: string) => sink.events.filter((e) => e.name === name).map((e) => e.props);
 
 describe('RunTracker onEvents', () => {
-  it('reports onboarding firsts once, crediting the tutorial for the step it did', () => {
+  it('reports onboarding firsts once, the player doing every one (the tutorial never acts)', () => {
     const { sink, b, tracker } = setup();
     b.wave = 2;
-    tracker.onAssist('summon');
-    tracker.onAssist('upgrade');
     tracker.onEvents([
       { type: 'summon', slot: 0 },
       { type: 'summon', slot: 1 },
@@ -33,10 +31,9 @@ describe('RunTracker onEvents', () => {
     ]);
 
     expect(sink.events.map((e) => e.name)).toEqual(['first_summon', 'first_merge', 'first_upgrade', 'first_ultimate']);
-    expect(sink.events[0].props).toMatchObject({ by: 'assist' });
-    expect(sink.events[1].props).toMatchObject({ wave: 2, by: 'player' });
-    expect(sink.events[2].props).toMatchObject({ wave: 2, by: 'assist' });
-    expect(sink.events[3].props).not.toHaveProperty('by');
+    expect(sink.events[1].props).toMatchObject({ wave: 2 });
+    expect(sink.events[2].props).toMatchObject({ wave: 2 });
+    for (const e of sink.events) expect(e.props).not.toHaveProperty('by');
   });
 
   it('reports star 3+ firsts and counts merges and the best star in the summary', () => {

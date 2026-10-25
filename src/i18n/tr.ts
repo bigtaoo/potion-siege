@@ -32,7 +32,6 @@ export const tr: Table = {
     more: 'Henüz eş yok: bir iksir daha için Çağır düğmesine dokun',
     upgrade: 'Güçlendirmeye yetecek altın var: Güçlendir düğmesine dokun ve bir yetenek öğren',
     pick: 'Üç yetenek kartından birini seç. Tüm savaş boyunca sürer; aynı yeteneği yine seçersen seviyesi artar',
-    helped: { summon: 'Senin için bir iksir çağırdık', merge: 'Senin için birleştirdik', upgrade: 'Senin için güçlendirdik' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Dokun, kullan',

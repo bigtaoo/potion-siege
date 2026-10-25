@@ -32,7 +32,6 @@ export const de: Table = {
     more: 'Noch kein gleiches Paar: Tippe noch einmal auf Brauen',
     upgrade: 'Genug Gold: Tippe auf Aufwerten und lerne eine Fähigkeit',
     pick: 'Wähle eine der drei Fähigkeitskarten. Sie gilt den ganzen Kampf, und wählst du sie erneut, steigt sie auf',
-    helped: { summon: 'Hab dir einen gebraut', merge: 'Für dich gemischt', upgrade: 'Für dich aufgewertet' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Antippen!',

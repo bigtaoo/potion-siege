@@ -2,23 +2,28 @@ import { describe, expect, it } from 'vitest';
 import { Battle, WALL_ROW } from './battle';
 import { TICK_RATE } from './math/fixed';
 import { BASE_SETUP, FIRST_SEED } from './meta';
-import { ASSIST_SECONDS, mergeablePair, PAIR_WAIT_SECONDS, Tutorial } from './tutorial';
+import { checkReplay, takeReplay } from './replay';
+import { HOLD_AFTER_SECONDS, mergeablePair, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
 
-/** Steps the battle `secs` seconds, the tutorial watching (and assisting) as the shell does. */
-function run(b: Battle, tut: Tutorial, secs: number): (string | null)[] {
-  const helped: (string | null)[] = [];
+/** Runs `secs` seconds of frames as the shell does: a tick only while the tutorial does not hold
+ *  the battle, the tutorial moved on after each. Returns the ticks that ran. */
+function run(b: Battle, tut: Tutorial, secs: number): number {
+  let ran = 0;
   for (let i = 0; i < secs * TICK_RATE && !b.paused; i++) {
-    b.step();
-    tut.update(b, b.drain());
-    const s = tut.assist(b);
-    if (s) helped.push(s);
+    if (!tut.holds(b)) {
+      b.step();
+      ran++;
+    }
     tut.update(b, b.drain());
   }
-  return helped;
+  return ran;
 }
+
+/** Where everything that moves on its own stands: the enemies, the wall, the clock. */
+const board = (b: Battle) => ({ t: b.time, wall: b.wall, enemies: b.enemies.map((e) => [e.x, e.y, e.hp]), pending: b.pending.length });
 
 describe('tutorial', () => {
   it('walks through summon, merge, the first upgrade and its pick', () => {
@@ -29,7 +34,7 @@ describe('tutorial', () => {
     b.summon();
     tut.update(b, b.drain());
     expect(tut.step).toBe('merge');
-    // no pair yet: the battle plays on and the hand goes to 召唤 for one more
+    // no pair yet: the hand goes to 召唤 for one more
     b.slots.fill(null);
     expect(tut.showing(b)).toBe('more');
     b.gold = 0;
@@ -58,100 +63,82 @@ describe('tutorial', () => {
     expect(tut.showing(b)).toBeNull();
   });
 
-  it('never holds the battle: it keeps ticking while a step points', () => {
-    const b = new Battle(1);
+  it('lets the crowd walk in for HOLD_AFTER_SECONDS, then holds the first battle for an idle player for good', () => {
+    const b = new Battle(FIRST_SEED, BASE_SETUP);
     const tut = new Tutorial();
-    tut.update(b, b.drain());
-    expect(tut.showing(b)).toBe('summon');
-    run(b, tut, 2);
-    expect(b.seconds).toBeGreaterThanOrEqual(2);
+    expect(tut.holds(b)).toBe(false);
+    run(b, tut, 10);
+    expect(b.time).toBe(HOLD_AFTER_SECONDS * TICK_RATE);
+    expect(tut.holds(b)).toBe(true);
+    const before = board(b);
+    expect(run(b, tut, 120)).toBe(0);
+    // nothing moved, nothing hit the wall, no wave came, and nothing was done for the player
+    expect(board(b)).toEqual(before);
+    expect(b.commands).toEqual([]);
+    expect(b.summons).toBe(0);
     expect(tut.step).toBe('summon');
   });
 
-  it('does a step itself once the player has left it alone long enough', () => {
-    const b = new Battle(1);
-    const tut = new Tutorial();
-    tut.update(b, b.drain());
-    expect(run(b, tut, ASSIST_SECONDS - 1)).toEqual([]);
-    expect(run(b, tut, 2)).toEqual(['summon']);
-    expect(tut.step).toBe('merge');
-    expect(b.summons).toBe(1);
-  });
-
-  it('keeps summoning for an idle player until there is a pair to merge', () => {
-    const b = new Battle(1);
-    const tut = new Tutorial();
-    tut.update(b, b.drain());
-    const helped = run(b, tut, 60);
-    expect(helped[0]).toBe('summon');
-    expect(helped).toContain('merge');
-    expect(b.summons).toBeGreaterThanOrEqual(2);
-  });
-
-  it('points at 召唤 while there is no pair and summons the next one after a short wait', () => {
-    const b = new Battle(1);
-    const tut = new Tutorial();
-    b.summon();
-    tut.update(b, b.drain());
-    b.slots.fill(null);
-    b.gold = 1e5;
-    tut.update(b, b.drain());
-    expect(tut.showing(b)).toBe('more');
-    expect(run(b, tut, PAIR_WAIT_SECONDS - 0.5)).toEqual([]);
-    expect(run(b, tut, 1)).toEqual(['summon']);
-    expect(tut.step).toBe('merge');
-  });
-
-  it('times the first battle for an idle player: summons at 8 and 10 s, merge at 18 s, upgrade at 28 s', () => {
+  it('goes on the moment the player does the step, and holds again at the next one', () => {
     const b = new Battle(FIRST_SEED, BASE_SETUP);
     const tut = new Tutorial();
-    const at: string[] = [];
-    for (let i = 0; i < 40 * TICK_RATE && !b.choices; i++) {
-      b.step();
-      tut.update(b, b.drain());
-      const s = tut.assist(b);
-      if (s) at.push(`${s}@${Math.round(b.seconds)}`);
-      tut.update(b, b.drain());
-    }
-    expect(at).toEqual(['summon@8', 'summon@10', 'merge@18', 'upgrade@28']); // 32 s before the fire threw at the thickest crowd
-    expect(tut.step).toBe('pick');
-  });
-
-  it('merges and upgrades for an idle player, but leaves the pick to them', () => {
-    const b = new Battle(1);
-    const tut = new Tutorial();
-    b.summon();
-    tut.update(b, b.drain());
-    b.slots[W] = { id: 91, kind: 'fire', star: 1, slot: W, cooldown: 1 };
-    b.slots[W + 1] = { id: 92, kind: 'fire', star: 1, slot: W + 1, cooldown: 1 };
-    tut.update(b, b.drain());
-    expect(run(b, tut, ASSIST_SECONDS + 1)).toContain('merge');
-    expect(tut.step).toBe('upgrade');
-    b.gold = 1e5;
-    tut.update(b, b.drain());
-    expect(run(b, tut, ASSIST_SECONDS + 1)).toEqual(['upgrade']);
-    expect(tut.step).toBe('pick');
-    expect(b.choices).not.toBeNull();
-    expect(tut.assist(b)).toBeNull();
-  });
-
-  it('restarts the wait when the player acts before it runs out', () => {
-    const b = new Battle(1);
-    const tut = new Tutorial();
-    tut.update(b, b.drain());
-    run(b, tut, ASSIST_SECONDS - 2);
+    run(b, tut, 10);
     b.summon();
     tut.update(b, b.drain());
     expect(tut.step).toBe('merge');
-    expect(b.summons).toBe(1);
+    // the summon left gold for another: the hand moves to 召唤 and the battle waits for it
+    expect(tut.showing(b)).toBe('more');
+    expect(run(b, tut, 5)).toBe(0);
+    // summon until there is a pair, then merge it: the battle waits on each step in turn
+    while (!mergeablePair(b)) {
+      expect(b.summon()).toBe(true);
+      tut.update(b, b.drain());
+    }
+    expect(tut.showing(b)).toBe('merge');
+    expect(run(b, tut, 5)).toBe(0);
+    const [from, to] = mergeablePair(b)!;
+    b.move(from, to);
+    tut.update(b, b.drain());
+    expect(tut.step).toBe('upgrade');
+    // 强化 is not affordable yet: the battle plays on until it is, then holds there
+    expect(tut.holds(b)).toBe(false);
+    const ran = run(b, tut, 60);
+    expect(ran).toBeGreaterThan(0);
+    expect(tut.showing(b)).toBe('upgrade');
+    expect(tut.holds(b)).toBe(true);
+    expect(run(b, tut, 5)).toBe(0);
+    b.upgrade();
+    tut.update(b, b.drain());
+    // the pick pauses the battle by itself; the tutorial does not hold on it
+    expect(tut.step).toBe('pick');
+    expect(b.paused).toBe(true);
+    expect(tut.holds(b)).toBe(false);
   });
 
-  it('stops pointing once skipped', () => {
+  it('keeps the replay whole: commands given during a hold play back to the same battle', () => {
+    const b = new Battle(FIRST_SEED, BASE_SETUP);
+    const tut = new Tutorial();
+    run(b, tut, 10);
+    while (!mergeablePair(b)) {
+      b.summon();
+      tut.update(b, b.drain());
+    }
+    const [from, to] = mergeablePair(b)!;
+    b.move(from, to);
+    tut.update(b, b.drain());
+    run(b, tut, 30);
+    expect(b.commands.every((c) => c.tick === HOLD_AFTER_SECONDS * TICK_RATE)).toBe(true);
+    expect(checkReplay(takeReplay(b))).toBe(true);
+  });
+
+  it('holds nothing once skipped', () => {
     const b = new Battle(1);
     const tut = new Tutorial();
+    run(b, tut, HOLD_AFTER_SECONDS + 1);
+    expect(tut.holds(b)).toBe(true);
     tut.skip();
     expect(tut.done).toBe(true);
     expect(tut.showing(b)).toBeNull();
-    expect(tut.assist(b)).toBeNull();
+    expect(tut.holds(b)).toBe(false);
   });
 });

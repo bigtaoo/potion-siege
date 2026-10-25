@@ -32,7 +32,6 @@ export const fr: Table = {
     more: 'Pas encore de paire : touche Invoquer pour une autre potion',
     upgrade: 'Assez d’or pour une amélioration : touche Améliorer pour apprendre une compétence',
     pick: 'Choisis une des trois cartes. Elle dure tout le combat, et reprendre la même compétence la fait monter de niveau',
-    helped: { summon: 'Préparée pour toi', merge: 'Fusionnées pour toi', upgrade: 'Amélioré pour toi' },
   },
   commanderNext: '{n}/{total}',
   castTap: 'Touche pour lancer',
