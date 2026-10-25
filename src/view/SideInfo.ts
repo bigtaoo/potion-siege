@@ -9,7 +9,8 @@ import { SKILL_IDS, skillHeroes, skillMax, type SkillId } from '../sim/skills';
 import { BALANCE, isBoss, type EnemyKind, type HeroKind } from '../sim/types';
 import { isBossWave, waveKinds, type WaveMods } from '../sim/waves';
 import { cardIcon } from './overlay/skillCard';
-import { bossTag, bottle, enemySprite, fit, ink, inset, LIGHT, lightPanel, lightTile, P, plate } from './kit';
+import { bossTag, bottle, enemySprite, fit, ink, P } from './kit';
+import { REST_ALPHA, SIDE, sideHead, sidePanel, sideTile } from './sideLook';
 import { HERO_COLORS, label } from './ui';
 import type { MenuFit } from './viewport';
 
@@ -108,10 +109,10 @@ export class SideInfo extends Container {
  *  The pips and the damage rows are left empty for refresh() to fill. */
 function skillsBoard(b: Battle, w: number, h: number): { board: Container; live: Live } {
   const c = new Container();
-  c.addChild(lightPanel(w, h));
+  c.addChild(sidePanel(w, h));
   const top = -h / 2;
   const iw = w - 90;
-  const head = plate(t('side.skills'), 38, Math.min(320, w - 120));
+  const head = sideHead(t('side.skills'));
   head.y = top + 4;
   c.addChild(head);
 
@@ -122,7 +123,7 @@ function skillsBoard(b: Battle, w: number, h: number): { board: Container; live:
   const listBottom = h / 2 - 50 - dmgH;
   const taken = SKILL_IDS.filter((id) => b.skills[id] > 0);
   if (taken.length === 0) {
-    const none = fit(ink(t('side.noSkills'), 28, { fill: P.inkSoft, wordWrap: true, wordWrapWidth: iw - 20, align: 'center' }), iw);
+    const none = fit(ink(t('side.noSkills'), 28, { fill: SIDE.soft, wordWrap: true, wordWrapWidth: iw - 20, align: 'center' }), iw);
     none.y = (listTop + listBottom) / 2;
     c.addChild(none);
   }
@@ -130,7 +131,7 @@ function skillsBoard(b: Battle, w: number, h: number): { board: Container; live:
   const row = Math.min(78, (listBottom - listTop) / Math.max(1, taken.length));
   taken.forEach((id, i) => {
     const y = listTop + row * i + row / 2;
-    const tile = lightTile(iw, row - 10, 18);
+    const tile = sideTile(iw, row - 10, 18);
     tile.y = y;
     // a potion's own skill shows that potion, a recipe both, like on the cards
     const { hero, with: other } = skillHeroes(id);
@@ -140,7 +141,7 @@ function skillsBoard(b: Battle, w: number, h: number): { board: Container; live:
       icon.scale.set(size / (hero ? 200 : 160));
       icon.position.set(-iw / 2 + 12 + size / 2, y - 3);
     }
-    const name = fit(ink(t(`skill.${id}.name`), Math.min(30, row * 0.42)), iw - size - 170);
+    const name = fit(ink(t(`skill.${id}.name`), Math.min(30, row * 0.42), { fill: SIDE.ink }), iw - size - 170);
     name.anchor.set(0, 0.5);
     name.position.set(-iw / 2 + size + 28, y - 3);
     c.addChild(tile, ...(icon ? [icon] : []), name);
@@ -151,12 +152,13 @@ function skillsBoard(b: Battle, w: number, h: number): { board: Container; live:
 
   // each potion of the lineup: its bottle, a bar in its colour against the best, the share
   const dTop = h / 2 - 40 - dmgH;
-  const title = ink(t('damage'), 32, { fill: P.brassDark });
+  const title = ink(t('damage'), 32, { fill: SIDE.accent });
   title.y = dTop + 24;
-  c.addChild(title, inset(iw, dmgH - 56, dTop + 50, 22));
+  const well = new Graphics().roundRect(-iw / 2, dTop + 50, iw, dmgH - 56, 22).fill(SIDE.inset).stroke({ width: 4, color: SIDE.insetEdge });
+  c.addChild(title, well);
   const rows: Live['rows'] = new Map();
   for (const kind of b.setup.lineup) {
-    const r = { bar: new Graphics(), bottle: bottle(kind, rh - 8), pct: ink('', 30) };
+    const r = { bar: new Graphics(), bottle: bottle(kind, rh - 8), pct: ink('', 30, { fill: SIDE.ink }) };
     r.bottle.x = -iw / 2 + 38;
     r.pct.anchor.set(1, 0.5);
     r.pct.x = iw / 2 - 16;
@@ -187,8 +189,8 @@ function refresh(b: Battle, live: Live, order: HeroKind[]): void {
     const r = live.rows.get(kind);
     if (!r) return;
     const y = live.top + i * live.rh;
-    const g = r.bar.clear().roundRect(bx, y - 14, bw, 28, 14).fill({ color: P.ink, alpha: 0.12 });
-    if (b.dealt[kind] > 0) g.roundRect(bx, y - 14, Math.max(28, (bw * b.dealt[kind]) / best), 28, 14).fill(HERO_COLORS[kind]).stroke({ width: 3, color: LIGHT.edge });
+    const g = r.bar.clear().roundRect(bx, y - 14, bw, 28, 14).fill({ color: SIDE.track, alpha: 0.12 });
+    if (b.dealt[kind] > 0) g.roundRect(bx, y - 14, Math.max(28, (bw * b.dealt[kind]) / best), 28, 14).fill(HERO_COLORS[kind]).stroke({ width: 3, color: P.line });
     r.bottle.y = y;
     const pct = total > 0 ? `${Math.round((100 * b.dealt[kind]) / total)}%` : '–';
     if (r.pct.text !== pct) r.pct.text = pct;
@@ -199,7 +201,7 @@ function refresh(b: Battle, live: Live, order: HeroKind[]): void {
 /** What a skill's level is drawn on: pips, or ×n for the repair that has no real cap. */
 function pips(max: number): Graphics | Text {
   if (max <= 6) return new Graphics();
-  const n = ink('', 30, { fill: P.brassDark });
+  const n = ink('', 30, { fill: SIDE.accent });
   n.anchor.set(1, 0.5);
   return n;
 }
@@ -214,7 +216,7 @@ function drawPips(on: Graphics | Text, level: number, max: number, x: number, y:
   on.clear();
   for (let i = 0; i < max; i++) {
     const px = x - 10 - (max - 1 - i) * 24;
-    on.circle(px, y, 9).fill(i < level ? P.brass : LIGHT.inset).stroke({ width: 3, color: LIGHT.edge });
+    on.circle(px, y, 9).fill(i < level ? P.brass : SIDE.pip).stroke({ width: 3, color: P.brassDark });
   }
 }
 
@@ -222,10 +224,10 @@ function drawPips(on: Graphics | Text, level: number, max: number, x: number, y:
  *  on a kind's first wave and the boss tag; the boss countdown along the bottom. */
 function wavesBoard(b: Battle, w: number, h: number): Container {
   const c = new Container();
-  c.addChild(lightPanel(w, h));
+  c.addChild(sidePanel(w, h));
   const top = -h / 2;
   const iw = w - 90;
-  const head = plate(t('side.waves'), 38, Math.min(320, w - 120));
+  const head = sideHead(t('side.waves'));
   head.y = top + 4;
   c.addChild(head);
 
@@ -243,20 +245,24 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
   shown.forEach((wave, i) => {
     const y = listTop + rh * i + rh / 2;
     const now = wave === b.wave;
-    const tile = lightTile(iw, rh - 14, 22);
+    // this wave in full, the ones still to come a step back
+    const row = new Container();
+    row.alpha = now ? 1 : REST_ALPHA;
+    c.addChild(row);
+    const tile = sideTile(iw, rh - 14, 22);
     tile.y = y;
-    c.addChild(tile);
-    if (now) c.addChild(new Graphics().roundRect(-iw / 2 - 6, y - (rh - 14) / 2 - 6, iw + 12, rh - 2, 26).stroke({ width: 6, color: P.brass }));
-    const name = ink(t('side.wave', { n: wave }), 32, { fill: now ? P.ink : P.inkSoft });
+    row.addChild(tile);
+    if (now) row.addChild(new Graphics().roundRect(-iw / 2 - 6, y - (rh - 14) / 2 - 6, iw + 12, rh - 2, 26).stroke({ width: 6, color: P.brass }));
+    const name = ink(t('side.wave', { n: wave }), 32, { fill: now ? SIDE.ink : SIDE.soft });
     name.anchor.set(0, 0.5);
     name.position.set(-iw / 2 + 22, y - rh / 2 + 34);
-    c.addChild(name);
+    row.addChild(name);
     const tag = wave === count ? t('side.last') : now ? t('side.now') : '';
     if (tag) {
-      const s = ink(tag, 28, { fill: P.brassDark });
-      s.anchor.set(1, 0.5);
-      s.position.set(iw / 2 - 22, y - rh / 2 + 34);
-      c.addChild(s);
+      const note = ink(tag, 28, { fill: SIDE.accent });
+      note.anchor.set(1, 0.5);
+      note.position.set(iw / 2 - 22, y - rh / 2 + 34);
+      row.addChild(note);
     }
     const before = new Set<EnemyKind>(wave > 1 ? waveKinds(wave - 1, stage, mods, endless) : []);
     const kinds = waveKinds(wave, stage, mods, endless);
@@ -264,19 +270,19 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
     kinds.forEach((kind, k) => {
       const x = -iw / 2 + 24 + size / 2 + k * (size + 8);
       const ey = y + 22;
-      c.addChild(placed(enemySprite(kind, size, size), x, ey));
+      row.addChild(placed(enemySprite(kind, size, size), x, ey));
       if (isBoss(kind)) {
         const bt = bossTag(14);
         bt.position.set(x, ey + size / 2 - 4);
-        c.addChild(bt);
+        row.addChild(bt);
       } else if (wave > 1 && !before.has(kind)) {
         const chip = label(t('side.fresh'), 24, { fill: P.cream, stroke: { color: P.line, width: 4 } });
         const cw = chip.width + 16;
-        const bg = new Graphics().roundRect(-cw / 2, -14, cw, 28, 12).fill(0x3f9b4c).stroke({ width: 3, color: P.line });
+        const bg = new Graphics().roundRect(-cw / 2, -14, cw, 28, 12).fill(P.greenOn).stroke({ width: 3, color: P.line });
         const ch = new Container();
         ch.addChild(bg, chip);
         ch.position.set(x + size / 2 - 10, ey - size / 2 + 6);
-        c.addChild(ch);
+        row.addChild(ch);
       }
     });
   });
@@ -287,7 +293,7 @@ function wavesBoard(b: Battle, w: number, h: number): Container {
   if (next !== undefined) {
     const n = next - Math.max(1, b.wave);
     const text = n === 0 ? t('side.bossNow') : n === 1 ? t('side.bossNext') : t('side.bossIn', { n });
-    const line = ink(text, 32, { fill: isBossWave(b.wave, bossWaves, endless) ? P.red : P.brassDark });
+    const line = ink(text, 32, { fill: isBossWave(b.wave, bossWaves, endless) ? P.red : SIDE.accent });
     line.y = h / 2 - 80;
     c.addChild(line);
   }

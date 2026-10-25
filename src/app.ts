@@ -8,7 +8,7 @@
 
 // first, so errors thrown while the rest loads are caught (reported once the anomalies listen)
 import { takeEarlyErrors } from './analytics/earlyErrors';
-import { Application, Container, Graphics, TexturePool } from 'pixi.js';
+import { Application, Container, TexturePool } from 'pixi.js';
 import type { Analytics } from './analytics/analytics';
 import { Heartbeat, watchPage } from './analytics/heartbeat';
 import { memProbe } from './analytics/memProbe';
@@ -35,11 +35,12 @@ import { BattleView } from './view/BattleView';
 import { Hud, VETERAN_MERGES } from './view/Hud';
 import type { HomePanel, HomeTab } from './view/Home';
 import type { FeedbackAsk } from './view/feedback';
-import { uiSound, workshopWall } from './view/kit';
+import { uiSound } from './view/kit';
 import { Overlay } from './view/Overlay';
 import { TutorialLayer } from './view/Tutorial';
 import { COLORS } from './view/ui';
 import { SideInfo } from './view/SideInfo';
+import { sideBackdrop } from './view/sideLook';
 import { FixedStep } from './view/fixedStep';
 import { patchGraphicsDestroy } from './view/graphicsDestroy';
 import { topPick } from './view/nudges';
@@ -414,11 +415,7 @@ export class Game {
     this.wallSize = size;
     this.wall.removeChildren().forEach((c) => c.destroy());
     this.wall.scale.set(m.scale);
-    const x0 = boardX / m.scale;
-    const x1 = m.w - x0;
-    const shade = new Graphics();
-    for (let i = 1; i <= 6; i++) shade.rect(x0 - i * 14, 0, x1 - x0 + i * 28, m.h).fill({ color: 0x000000, alpha: 0.09 });
-    this.wall.addChild(workshopWall(m.w, m.h), shade);
+    this.wall.addChild(sideBackdrop(m.w, m.h, boardX / m.scale));
   }
 
   private showSkills(b: Battle): void {
