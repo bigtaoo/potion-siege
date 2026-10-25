@@ -14,9 +14,12 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
   the alchemist builds six more as you summon (one every 5 summons).
 - **Commander skills**: the alchemist has no plain attack. Every kill charges him (a boss kill charges
   him more). Once he is full, tap him to cast. The casts alternate: the flask bomb, then the potion brew.
-  - Flask bomb: a flask lands on the thickest crowd. It bursts for 0.6 s of the board's damage
-    (at least 40), and slows what it hits for 2 s.
-  - Potion brew: all potions shoot 30% faster for 2 seconds.
+  - Flask bomb: a flask lands on the thickest crowd far enough down the road to be seen (below the HUD),
+    aimed where its mark will be when it comes down. With nobody that far down it goes to the enemy
+    nearest the wall and bursts a little below one still coming in. It bursts for 0.6 s of the board's
+    damage (at least 40), and slows what it hits for 2 s. A mark shows where it will land; the burst
+    flashes every enemy caught with what it took, counts them, shakes the screen and has its own boom.
+  - Potion brew: all potions shoot 30% faster for 2 seconds; each one shows +30%.
   - If he stays full for 8 seconds he casts by himself.
 - **Potions**: Arcane, Fire, Frost and Storm Tonics from the start. Corrosion opens at stage 5 and Gale at
   stage 10, or earlier for crystals in the shop. Each has its own skills and its own strong matchups.
