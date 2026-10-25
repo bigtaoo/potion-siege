@@ -164,6 +164,8 @@ describe('the new kinds in battle', () => {
     w.speed = perTick(100);
     w.windTime = ticks(99);
     enemy(b, 700, 550, 1e6);
+    // the last wave: two on the field would call in the next one (waves.callAt)
+    b.wave = BALANCE.waves.count;
     for (let i = 0; i < 300; i++) b.step();
     expect(u(w.y)).toBeCloseTo(550 - BALANCE.winder.gap);
     expect(w.atWall).toBe(false);
