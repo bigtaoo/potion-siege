@@ -115,7 +115,7 @@
 
 | 项 | 结果 | 标记 |
 |---|---|---|
-| 新存档 | 没有标题点击，直接进第一场活的战斗；教程从不卡住战斗；8 秒提示会自动帮做一步 | ✅ |
+| 新存档 | 没有标题点击，直接进第一场活的战斗；教程从不卡住战斗；8 秒提示会自动帮做一步（2026-10-25 起改为：开局 2 s 后提示一出现就停住战斗，等玩家做完这一步，不再代打，见 onboarding-check.md 第三轮） | ✅ |
 | 第 1–3 场 | 赢了出“下一关”，连打第 1–3 关正常 | ✅ |
 | 指挥官技能 | 击杀充能、点击施法、充满 8 秒自动释放都正常 | ✅ |
 | 章节 / Boss | 主页第 2 章卡片显示钟 Boss；第 11 关第 5 波 Boss 出场，有“落地钟巨人”介绍卡 | ✅ |
@@ -172,7 +172,8 @@
 | `?autoplay` 写存档 | 机器人的战斗只改内存里的存档，`store()` 不再写入 | 🔧 4dd8093 |
 | `chapter-report.mjs` | ad7347b 里已经补上了，引用没问题。没有分片时改成提示先跑 `npm run chapters`，不再抛 ENOENT | 🔧 4dd8093 |
 | CrazyGames 会话统计 | `session_start` 带上 `app`（SDK 的 `applicationType`：web / google_play_store / apple_store / pwa）和 `basic`（是否在 Basic Launch），对应 standing 的 00b3a0f。报表还没按 `app` 分列 | 🔧 本次提交 |
-| iOS shell 测试 | Windows 检出（CRLF）时 `shell.test.ts` 的 AdMob live 开关正则不匹配，改成接受 `?
+| iOS shell 测试 | Windows 检出（CRLF）时 `shell.test.ts` 的 AdMob live 开关正则不匹配，改成接受 `
+?
 ` | 🔧 本次提交 |
 
 关于插屏的取舍：门户允许在自然停顿处放插屏，所以这条不是硬性要求。代价是：有广告时每一局失败都会出现复活，于是失败后的插屏全部没了，插屏收入大约少一半。Basic Launch 期间本来就没有广告，所以对上架评估没有影响；Full Launch 后如果插屏收入不够，可以改成“只在没点复活时跳过”。

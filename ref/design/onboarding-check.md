@@ -9,6 +9,8 @@
 
 ## 步骤表
 
+下表是当时（还有 8 s 代打）的走查记录；2026-10-25 起教学改为停住战斗等玩家，不再代打，见文末「第三轮」。
+
 | # | 步骤 | 时间 | 结果 | 说明 |
 |---|------|------|------|------|
 | 1 | 首次加载 → 直接进战斗 | 0 s | ✅ | 没有标题页点击，战斗直接开始（符合 b15f071） |
@@ -73,7 +75,7 @@ en 4:28 / 4:19 / 4:17）；隐私面板之后没有签到，签到在第三局�
 
 - `src/sim/tutorial.ts`：合成这一步场上没有一对时，`showing` 返回新的提示 `'more'`（指着召唤）；`assist` 对它只等
   `PAIR_WAIT_SECONDS = 2` 秒就召唤。第一次自动召唤还在 8 s，第二次从 16 s 提前到约 10 s，自动合成从 24 s 提前到约 18 s。
-  照样不冻结战斗，8 s 的 assist 没变；seed 609 的 stage 1、`scripts/first-seed.test.ts` 和 guard 都不受影响。
+  照样不冻结战斗，8 s 的 assist 没变（第三轮已整个去掉 assist，改为停住等玩家）；seed 609 的 stage 1、`scripts/first-seed.test.ts` 和 guard 都不受影响。
 - `src/view/Tutorial.ts` / `src/game/tutorialFlow.ts`：`'more'` 算在 2/4，手指着召唤按钮。15 种语言加 `tutorial.more`。
 - `src/game/homeScreen.ts` + `src/app.ts`（`consentVisit`）：这次进主页弹过隐私面板，签到就等下一次进主页。
   隐私面板仍然先弹，因为事件要等它答了才发。测试在 `src/game/homeEntry.test.ts`。
