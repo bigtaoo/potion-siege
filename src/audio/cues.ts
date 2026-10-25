@@ -53,7 +53,8 @@ export function battleCues(events: readonly BattleEvent[]): Cue[] {
         out.push(ev.skill === 'bomb' ? { id: 'merge', rate: 0.75 } : { id: 'levelup' });
         break;
       case 'flask':
-        out.push({ id: 'hitFire', pan: pan(ev.x), rate: 0.6, gain: 1 });
+        // a boom of its own, not a fire potion's whoosh lost among the others
+        out.push({ id: 'blast', pan: pan(ev.x) });
         break;
       case 'cellOpen':
         out.push({ id: 'crystal' });

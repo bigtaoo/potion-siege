@@ -6,7 +6,7 @@ import { master, midi, noise, pluck, rng, tone } from './dsp';
 export const SFX_IDS = [
   'tap', 'summon', 'merge', 'levelup',
   'hitArcane', 'hitFire', 'hitIce', 'hitLightning', 'hitPoison', 'hitWind',
-  'kill', 'boss', 'wallHit', 'wave', 'horde', 'win', 'lose', 'crystal', 'chest',
+  'kill', 'blast', 'boss', 'wallHit', 'wave', 'horde', 'win', 'lose', 'crystal', 'chest',
 ] as const;
 export type SfxId = (typeof SFX_IDS)[number];
 
@@ -134,6 +134,16 @@ export const SFX: Record<SfxId, SfxSpec> = {
       noise(o, sr, { at: 0, dur: 0.05, gain: 0.5, decay: 0.01, band: [1800], q: 1, seed: 2 });
       for (let i = 0; i < 4; i++) noise(o, sr, { at: 0.09 + i * 0.045, dur: 0.012, gain: 0.35 - i * 0.06, decay: 0.003, band: [3200], q: 2, seed: 30 + i });
       tone(o, sr, { at: 0, dur: 0.15, freq: 140, to: 70, gain: 0.3, decay: 0.04 });
+    },
+  },
+  // the commander's flask bursts: a deep boom, a roar of flame and the glass flying
+  blast: {
+    len: 0.9, gain: 0.62, limit: 2, gap: 0.1, vary: 0.04,
+    draw(o, sr) {
+      tone(o, sr, { at: 0, dur: 0.6, freq: 110, to: 34, gain: 0.9, attack: 0.002, decay: 0.16 });
+      noise(o, sr, { at: 0, dur: 0.5, gain: 0.7, attack: 0.004, decay: 0.12, band: [900, 260], mode: 'lp', seed: 40 });
+      noise(o, sr, { at: 0, dur: 0.08, gain: 0.45, decay: 0.02, band: [2400], q: 0.8, seed: 41 });
+      for (let i = 0; i < 6; i++) bell(o, sr, 0.05 + i * 0.04, 96 + ((i * 5) % 9), 0.05 - i * 0.006, 0.25);
     },
   },
   // the boss arrives: a low horn, a gong and grinding gears

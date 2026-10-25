@@ -36,6 +36,9 @@ export const K = {
   idleCooldown: cool(0.07),
   bombRadius: toFp(C.bomb.radius),
   bombMin: toFp(C.bomb.min),
+  /** How far down the road a crowd has to be for the flask to burst on it in plain view (below
+   *  the HUD and the lesson's banner), and how far down it lands at most to show itself. */
+  bombFloor: toFp(B.field.top + C.bomb.radius * 0.75),
   /** The brew's quickening in permille of the potions' own speed. */
   brew: 1000 + pm(C.brew.speed),
   /** Each hero kind's shot interval at each level. */

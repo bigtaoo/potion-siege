@@ -6,7 +6,7 @@ import { discharge, harm, slow, splash } from './damage';
 import { K } from './field';
 import { FP, muldiv, TICK_RATE, ticks, times } from './math/fixed';
 import { within } from './targets';
-import { BALANCE, type Enemy } from './types';
+import { BALANCE, type Enemy, type FlaskHit } from './types';
 
 const B = BALANCE;
 const C = B.commander;
@@ -19,8 +19,14 @@ export function doCast(b: Battle): boolean {
     // nothing on the field to throw at: the charge waits
     if (!target) return false;
     const flight = ticks(C.bomb.flight);
-    b.flasks.push({ x: target.x, y: target.y, time: flight, damage: Math.max(K.bombMin, muldiv(boardDps(b), Math.round(C.bomb.seconds * 1000), 1000)) });
-    b.events.push({ type: 'cast', skill, x: target.x / FP, y: target.y / FP, flight: C.bomb.flight });
+    // thrown where the mark will be once the flask comes down, not where it stood, and on a mark
+    // still coming in at the top, a little below it (still well within reach), so the burst is
+    // seen down the road rather than under the HUD
+    const step = target.freezeTime > 0 ? 0 : target.slowTime > 0 ? times(target.speed, target.slowFactor) : target.speed;
+    const lead = Math.min(b.wallFront(target.x) - target.radius, target.y + step * flight);
+    const y = Math.max(target.y, lead, Math.min(target.y + muldiv(K.bombRadius, 3, 4), K.bombFloor));
+    b.flasks.push({ x: target.x, y, time: flight, damage: Math.max(K.bombMin, muldiv(boardDps(b), Math.round(C.bomb.seconds * 1000), 1000)) });
+    b.events.push({ type: 'cast', skill, x: target.x / FP, y: y / FP, flight: C.bomb.flight });
   } else {
     b.brewTime = ticks(C.brew.time);
     b.events.push({ type: 'cast', skill, x: 0, y: 0, flight: 0 });
@@ -31,12 +37,19 @@ export function doCast(b: Battle): boolean {
   return true;
 }
 
-/** The enemy with the most others within the flask's reach, the one nearer the wall on a tie. */
+/** The enemy with the most others within the flask's reach, the one nearer the wall on a tie.
+ *  A crowd far enough down the road for the whole burst to be seen comes first: one still coming
+ *  in at the top is under the HUD, and a flask thrown there looked like it did nothing. With
+ *  nobody that far down, the one nearest the wall. */
 export function thickest(b: Battle): Enemy | null {
   let best: Enemy | null = null;
   let most = 0;
   for (const e of b.enemies) {
     if (e.hp <= 0) continue;
+    if (e.y < K.bombFloor) {
+      if (most === 0 && (!best || e.y > best.y)) best = e;
+      continue;
+    }
     let n = 0;
     for (const o of b.enemies) if (o.hp > 0 && within(o, e.x, e.y, K.bombRadius)) n++;
     if (n > most || (n === most && best && e.y > best.y)) {
@@ -73,13 +86,19 @@ export function stepFlasks(b: Battle): void {
   const R = C.bomb;
   b.flasks = b.flasks.filter((f) => {
     if (--f.time > 0) return true;
+    // what each one took, for the view's numbers (the events are not hashed)
+    const hits: FlaskHit[] = [];
     for (const e of b.enemies) {
       if (e.hp <= 0 || !within(e, f.x, f.y, K.bombRadius)) continue;
+      const hp = e.hp;
       harm(b, e, times(f.damage, splash(e)), undefined);
       discharge(b, e);
       if (e.hp > 0) slow(e, R.slow, ticks(R.slowTime));
+      // a fallen one shows the flask's whole blow, not the sliver it had left
+      const took = e.hp <= 0 ? Math.max(hp, times(f.damage, splash(e))) : hp - e.hp;
+      hits.push({ x: e.x / FP, y: e.y / FP, damage: Math.round(took / FP), killed: e.hp <= 0 });
     }
-    b.events.push({ type: 'flask', x: f.x / FP, y: f.y / FP, radius: R.radius });
+    b.events.push({ type: 'flask', x: f.x / FP, y: f.y / FP, radius: R.radius, hits });
     return false;
   });
 }

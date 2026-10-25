@@ -18,6 +18,7 @@ import { P } from './kit/palette';
 import { DESIGN_W } from './viewport';
 import { BADGE, BOMB_COLOR, BREW_COLOR, CMD, CommanderArt, onCommander } from './battleView/commander';
 import { EnemyLayer } from './battleView/enemies';
+import { brewLift, flaskBurst, landingMark } from './battleView/castFx';
 import { FieldArt, fieldOf } from './battleView/field';
 import { FIGURES, drawCell, type FigureAnim } from './battleView/figures';
 import { Floaters } from './battleView/floaters';
@@ -85,7 +86,7 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
-    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.floaters, this.kills, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
     this.field.build(this);
@@ -184,29 +185,24 @@ export class BattleView extends Container {
           const color = bomb ? BOMB_COLOR : BREW_COLOR;
           this.cmd.cast = { at: this.time, skill: ev.skill };
           this.fx.burst(BADGE.x, BADGE.y, 110, color, 0.4);
-          if (bomb) this.cmd.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight });
-          else {
+          if (bomb) {
+            this.cmd.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight });
+            landingMark(this.fx, ev.x, ev.y, BALANCE.commander.bomb.radius, ev.flight);
+          } else {
             this.fx.effect(0.7, (g, life) => {
               g.circle(CMD.x, CMD.feet - CMD.height / 2, 120 + (1 - life) * 700).stroke({ width: 18 * life, color, alpha: life * 0.6 });
             }, true);
+            const b = this.battle;
+            if (b) brewLift(this.floaters, b.slots.flatMap((h, s) => (h && b.isOpen(s) ? [slotCenter(s)] : [])), Math.round(BALANCE.commander.brew.speed * 100));
           }
           this.floaters.show(tr(bomb ? 'castBomb' : 'castBrew'), DESIGN_W / 2, WALL_TOP - 60, color);
           break;
         }
         case 'flask': {
-          // the flask bursts: a fireball, a ring and glass
-          const { x, y, radius } = ev;
+          // the flask bursts: a flash, a fireball, a ring, glass, and what each enemy took
           this.cmd.thrown.shift();
-          this.fx.effect(0.6, (g, life) => {
-            const k = 1 - life;
-            g.circle(x, y, radius * (0.4 + k * 0.7)).fill({ color: BOMB_COLOR, alpha: life * 0.35 });
-            g.circle(x, y, radius * (0.2 + k * 0.5)).fill({ color: 0xffe08a, alpha: life * 0.5 });
-          }, true);
-          this.fx.effect(0.5, (g, life) => {
-            g.circle(x, y, radius * (0.3 + (1 - life) * 0.9)).stroke({ width: 14 * life, color: 0xfff3c0, alpha: life });
-          });
-          this.fx.effect(0.6, (g, life) => glassShards(g, x, y, 1 - life));
-          this.shake = Math.max(this.shake, 0.25);
+          flaskBurst(this.fx, this.floaters, ev.x, ev.y, ev.radius, ev.hits);
+          this.shake = Math.max(this.shake, ev.hits.length > 0 ? 0.4 : 0.25);
           break;
         }
         case 'cellOpen': {
