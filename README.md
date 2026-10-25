@@ -9,7 +9,9 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
 ## The game
 
 - **Battle**: each stage is 10 waves, with boss waves at 5 and 10. Enemies walk down the road to the wall,
-  and gold from kills pays for summons and upgrades. Every upgrade offers three skill cards; one reroll
+  and the road is never left empty: once two or fewer are left, the wave's next ones (and then the next
+  wave) come in at once instead of on their timer; a boss holds the next wave until it falls. Gold
+  from kills pays for summons and upgrades. Every upgrade offers three skill cards; one reroll
   is paid with an ad. The ultimate potion grants a bonus skill. The wall starts with a row of cells, and
   the alchemist builds six more as you summon (one every 5 summons).
 - **Commander skills**: the alchemist has no plain attack. Every kill charges him (a boss kill charges
@@ -94,6 +96,7 @@ move was meant, copy the numbers it prints over the pins in `scripts/guard/*.tes
 | `npm run chapters` | First-try win rate of every stage of the five chapters for the median player's save, with each stage's twists |
 | `npm run bosses` | Each chapter boss against the Steam Tank on the same stages and seeds: win rate, wall lost, how long the boss lived |
 | `npm run endless` | How far endless runs get at three points of the campaign (stage 10 cleared, mid-game, maxed), and what a run pays |
+| `npm run gaps` | How long the field stands empty in a battle (stages 1-10 and the new player's first one): empty seconds, longest stretch, battle length |
 | `npm run economy` | Simulates casual, regular and heavy players day by day, with and without ads, and reports how fast crystals are earned and spent |
 
 ## URL switches (dev builds only)

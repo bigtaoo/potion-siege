@@ -127,13 +127,20 @@ describe('commander skills', () => {
   });
 
   it('casts by itself once the charge has waited, but only with something to throw at', () => {
-    const b = charged();
-    for (let i = 0; i < ticks(C.autoCast) + 5; i++) b.step();
-    expect(b.casts).toBe(0);
-    b.enemies.push(grunt(1, 500, 400, 1e6));
-    b.step();
-    expect(b.casts).toBe(1);
-    expect(b.charge).toBe(0);
+    // an empty field calls in the next wave at once (waves.callAt): keep it empty
+    const callAt = BALANCE.waves.callAt;
+    BALANCE.waves.callAt = -1;
+    try {
+      const b = charged();
+      for (let i = 0; i < ticks(C.autoCast) + 5; i++) b.step();
+      expect(b.casts).toBe(0);
+      b.enemies.push(grunt(1, 500, 400, 1e6));
+      b.step();
+      expect(b.casts).toBe(1);
+      expect(b.charge).toBe(0);
+    } finally {
+      BALANCE.waves.callAt = callAt;
+    }
   });
 
   it('replays a tapped cast', () => {

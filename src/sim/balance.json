@@ -185,6 +185,7 @@
     "count": 10,
     "spawnWindow": 20,
     "gap": 4,
+    "callAt": 2,
     "baseCount": 14,
     "earlyCrowd": [4, 1.6, 1.5, 1.3, 1.15],
     "firstCrowd": 2,

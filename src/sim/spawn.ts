@@ -21,12 +21,18 @@ export function startWave(b: Battle, wave: number): void {
   b.events.push({ type: 'wave', wave, boss: isBossWave(wave, bossWaves, endless) });
 }
 
+/** Brings in what is due, and keeps the field busy: with `waves.callAt` or fewer enemies left,
+ *  the wave's next spawn (a whole rush of the horde) comes now, and once the wave is all out the
+ *  next one starts without waiting out `spawnWindow + gap`. Only the times move: the plans and the
+ *  spawns draw from the enemies' dice in the same order as before. */
 export function stepWaves(b: Battle): void {
   b.waveTime++;
-  while (b.pending.length > 0 && b.pending[0].at <= b.waveTime) spawn(b, b.pending.shift()!);
   const w = B.waves;
+  const thin = b.enemies.length <= w.callAt;
+  if (thin && b.pending.length > 0 && b.pending[0].at > b.waveTime) b.waveTime = b.pending[0].at;
+  while (b.pending.length > 0 && b.pending[0].at <= b.waveTime) spawn(b, b.pending.shift()!);
   const bossAlive = b.enemies.some((e) => isBoss(e.kind));
-  if ((b.setup.endless || b.wave < w.count) && b.pending.length === 0 && b.waveTime >= ticks(w.spawnWindow + w.gap) && !bossAlive) {
+  if ((b.setup.endless || b.wave < w.count) && b.pending.length === 0 && (thin || b.waveTime >= ticks(w.spawnWindow + w.gap)) && !bossAlive) {
     startWave(b, b.wave + 1);
   }
 }
