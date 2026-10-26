@@ -1,10 +1,10 @@
 // The battle's pause: the HUD's button and a phone turned sideways open it, Resume closes it,
 // Give up (a second tap within GIVE_UP_WAIT) leaves the battle for the home screen without
-// booking it. The upright cover goes over everything while a touch device is held sideways.
+// booking it. The upright cover goes over everything while a phone is held sideways.
 
 import { Container } from 'pixi.js';
 import type { Game } from '../app';
-import { touchOnly, wantsUpright } from '../view/media';
+import { isPhone, wantsUpright } from '../view/media';
 import { pausePanel, uprightCover } from '../view/pausePanel';
 import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu, type MenuFit } from '../view/viewport';
@@ -21,7 +21,8 @@ export class PauseLayer extends Container {
   confirm = 0;
   readonly panel = new Container();
   readonly cover = new Container();
-  readonly touch = touchOnly();
+  /** Only a phone is held upright; a tablet plays either way round. */
+  readonly phone = isPhone();
   /** The screen size the panel and the cover were laid out for. */
   size = '';
   sideways = false;
@@ -77,7 +78,7 @@ function giveUp(g: Game): void {
 export function pauseFrame(g: Game, dt: number, m: MenuFit): void {
   const p = g.pause;
   p.scale.set(m.scale);
-  const sideways = wantsUpright(g.app.screen.width, g.app.screen.height, p.touch);
+  const sideways = wantsUpright(g.app.screen.width, g.app.screen.height, p.phone);
   const size = `${Math.round(m.w)}x${Math.round(m.h)}`;
   const resized = size !== p.size;
   p.size = size;
