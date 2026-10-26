@@ -35,9 +35,10 @@ export function pointerKind(): 'touch' | 'desktop' {
 
 /** The anonymous `loaded` count beside the page's inline `open` one (scripts/openBeacon.mjs):
  *  no id, sent whatever the privacy state, split by touch/desktop, new player or not, and source. */
-export function loadedBeacon(host: string, analytics: Analytics): void {
+export function loadedBeacon(platform: Platform, analytics: Analytics): void {
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
-  if (!url || urlSwitches(location.search).has('autoplay')) return;
+  if (!url || platform.collectorBlocked || urlSwitches(location.search).has('autoplay')) return;
+  const host = platform.name;
   // a local preview of a production build counts nothing, like the open beacon (the iOS app's
   // page is capacitor://localhost, and does count)
   const h = location.hostname;
@@ -76,15 +77,16 @@ export function safeDevice(app: Application): ReturnType<typeof deviceProps> {
   }
 }
 
-/** Console with `?track`, an in-memory log in dev, and the collector when VITE_ANALYTICS_URL is
- *  set, which also takes the battles' replays. */
+/** Console with `?track`, an in-memory log in dev, the collector when VITE_ANALYTICS_URL is set
+ *  and the host lets it through, which also takes the battles' replays, and the host's own. */
 export function createAnalytics(platform: Platform, params: URLSearchParams, privacy: PrivacyChoice): Analytics {
   const sinks: Sink[] = [];
   if (import.meta.env.DEV) sinks.push(new MemorySink());
   if (params.has('track')) sinks.push(new ConsoleSink());
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
-  const collect = !!url && !params.has('autoplay');
+  const collect = !!url && !params.has('autoplay') && !platform.collectorBlocked;
   if (collect) sinks.push(new BeaconSink(url));
+  if (platform.hostSink) sinks.push(platform.hostSink);
   // a first visit records where the player came from (analytics/source.ts)
   const analytics = new Analytics(platform.storage, sinks, BUILD, platform.name, undefined, () => sourceOf(location.search, document.referrer, location.hostname, __PS_DEFAULT_SRC__), privacy.sharing());
   if (collect) analytics.replays = new ReplayUpload(replayUrl(url), analytics, BUILD, platform.name).listen(document, window);

@@ -10,9 +10,7 @@ import { t } from '../i18n';
 import type { Notifier } from '../platform/types';
 import { offerReminders, REMINDER_IDS, reminders, type ReminderId } from '../sim/reminders';
 import { challengeOpen } from '../view/nudges';
-
-/** The device's answer: reminders wanted, and whether the card was answered. */
-const KEY = 'ps.reminders';
+import { REMINDERS_KEY } from './keys';
 
 export type ReminderState = 'on' | 'off' | 'blocked';
 
@@ -30,7 +28,7 @@ export class ReminderBook {
 
   private load(): { on: boolean; asked: boolean } {
     try {
-      const r = JSON.parse(this.g.platform.storage.getItem(KEY) ?? '{}') as { on?: unknown; asked?: unknown } | null;
+      const r = JSON.parse(this.g.platform.storage.getItem(REMINDERS_KEY) ?? '{}') as { on?: unknown; asked?: unknown } | null;
       return { on: r?.on !== false, asked: r?.asked === true };
     } catch {
       return { on: true, asked: false };
@@ -38,7 +36,7 @@ export class ReminderBook {
   }
 
   private keep(on: boolean): void {
-    this.g.platform.storage.setItem(KEY, JSON.stringify({ on, asked: true }));
+    this.g.platform.storage.setItem(REMINDERS_KEY, JSON.stringify({ on, asked: true }));
   }
 
   /** Books what is due from now and cancels the rest. */

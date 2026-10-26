@@ -130,7 +130,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       performance.mark('first_frame');
-      loadedBeacon(platform.name, analytics);
+      loadedBeacon(platform, analytics);
     }),
   );
   return gameHandle(game, platform.updates);

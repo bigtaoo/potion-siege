@@ -1,6 +1,7 @@
 node_modules/
 dist/
 dist-crazygames/
+dist-playgama/
 dist-itch/
 dist-newgrounds/
 dist-ios/

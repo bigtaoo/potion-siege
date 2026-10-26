@@ -34,6 +34,20 @@
       "port": 4186
     },
     {
+      "name": "playgama-dist",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": [
+        "vite",
+        "preview",
+        "--config",
+        "vite.playgama.config.js",
+        "--port",
+        "4175",
+        "--strictPort"
+      ],
+      "port": 4175
+    },
+    {
       "name": "ios",
       "runtimeExecutable": "npm",
       "runtimeArgs": [

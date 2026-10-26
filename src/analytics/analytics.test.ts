@@ -44,6 +44,21 @@ describe('Analytics', () => {
     const a = new Analytics(store, [{ send: () => { throw new Error('boom'); } }], '1', 'web');
     expect(() => a.track('x')).not.toThrow();
   });
+
+  it("gives a host's own sink the events before the player answers, and only once", () => {
+    const collector = new MemorySink();
+    const host = Object.assign(new MemorySink(), { beforeConsent: true });
+    const a = new Analytics(new SafeStore(null), [collector, host], '1', 'web', undefined, undefined, 'hold');
+    a.track('run_start');
+    expect([collector.events.length, host.events.length]).toEqual([0, 1]);
+    a.setSharing('send');
+    a.track('run_end');
+    expect(collector.events.map((e) => e.name)).toEqual(['run_start', 'run_end']);
+    expect(host.events.map((e) => e.name)).toEqual(['run_start', 'run_end']);
+    a.setSharing('off');
+    a.track('run_quit');
+    expect(host.events).toHaveLength(2);
+  });
 });
 
 describe('RunTracker', () => {

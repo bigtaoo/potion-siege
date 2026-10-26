@@ -9,7 +9,7 @@ import type { Sharing } from './privacy';
 import type { ReplayUpload } from './replayUpload';
 import { UNKNOWN_SOURCE } from './source';
 
-const PLAYER_KEY = 'mb.player';
+export const PLAYER_KEY = 'mb.player';
 const DAY_MS = 86_400_000;
 /** Events kept in memory while the player has not answered; later ones are dropped. */
 const HOLD_MAX = 1000;
@@ -40,6 +40,9 @@ export interface Sink {
   send(events: TrackedEvent[]): void;
   /** Called when the page is going away; must not wait for anything. */
   flush?(): void;
+  /** Gets events at once while the player has not answered the privacy question (a portal's own
+   *  telemetry, which runs then anyway); never once they said no. */
+  readonly beforeConsent?: boolean;
 }
 
 interface PlayerRecord {
@@ -139,7 +142,8 @@ export class Analytics {
     const held = this.held;
     this.held = [];
     for (const ev of held) ev.uid ||= this.player.id;
-    if (held.length) this.deliver(held);
+    // a sink that took them before the answer already has them
+    if (held.length) this.deliver(held, (s) => !s.beforeConsent);
   }
 
   /** Seconds since this session started. */
@@ -161,11 +165,15 @@ export class Analytics {
       props,
     };
     if (this.sharing === 'send') this.deliver([ev]);
-    else if (this.sharing === 'hold' && this.held.length < HOLD_MAX) this.held.push(ev);
+    else if (this.sharing === 'hold') {
+      this.deliver([ev], (s) => !!s.beforeConsent);
+      if (this.held.length < HOLD_MAX) this.held.push(ev);
+    }
   }
 
-  private deliver(events: TrackedEvent[]): void {
+  private deliver(events: TrackedEvent[], to: (s: Sink) => boolean = () => true): void {
     for (const s of this.sinks) {
+      if (!to(s)) continue;
       try {
         s.send(events);
       } catch {

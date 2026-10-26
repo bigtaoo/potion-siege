@@ -1,3 +1,5 @@
+import type { Sink } from '../analytics/analytics';
+
 /** A key/value store that behaves like localStorage. */
 export interface KeyValueStore {
   getItem(key: string): string | null;
@@ -53,6 +55,11 @@ export interface Platform {
   /** Local notifications (the iOS app's reminders, game/reminderBook.ts); absent where the host
    *  has none. */
   readonly notify?: Notifier | null;
+  /** The host's page admits no request to our collector (Playgama's sandbox CSP): no play
+   *  statistics, replays or beacons are sent there. */
+  readonly collectorBlocked?: boolean;
+  /** The host's own telemetry, one more analytics sink (Playgama's Bridge events). */
+  readonly hostSink?: Sink;
 }
 
 /** Hot updates of the game itself (docs/ios.md "Hot updates"), offered on the home screen (view/updatePrompt.ts). */
