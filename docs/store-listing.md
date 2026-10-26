@@ -90,6 +90,7 @@ CrazyGames needs three covers with the same look. Rules: no borders, the title i
 | Landscape | 1920x1080 (16:9) | `ref/store/cover_landscape_1920x1080_{en,zh}.png` |
 | Portrait | 800x1200 (2:3) | `ref/store/cover_portrait_800x1200_{en,zh}.png` |
 | Square | 800x800 (1:1) | `ref/store/cover_square_800x800_{en,zh}.png` |
+| Portrait 9:16 (Playgama) | 1080x1920 | `ref/store/cover_portrait_1080x1920_en.png`: the 800x1200 cover scaled to 1080x1620 over a blurred, darkened fill |
 
 How the candidates were made: composed with PIL from the game's own art (the PNG/JPEG sources, now in `art/web/`; `public/art/` ships WebP made from them):
 - the field and the wall from the battle background
@@ -139,3 +140,18 @@ How to record:
 - Notes:
   - In Basic Launch the portal serves no ads. The game then grants revive, ×2 and reroll without one, which is by design.
   - The main JS chunk is 533 kB (Pixi plus the game; the zip is 2.4 MB in 38 files). It is fine for the portal's size limits, but code-splitting would speed up the first load.
+
+## Playgama
+
+The form is filled by hand at developer.playgama.com, under app `cmvpgdscx066aqz0hdg590l59`. It has been in the sandbox since 2026-10-26 on build 0.0.1+183a0a1: https://playgama.ai/play/phz4f742hcbir2
+
+- **Texts**: the description and How to play are in English and say "mouse only, tap on phones". They follow `store/en/crazygames/`.
+- **Settings**: Desktop, iOS and Android; Portrait only, since the desktop side boards are landscape padding around a portrait game; no features; all 15 languages.
+- **Covers**: square 800x800, portrait 9:16 1080x1920 and landscape 1920x1080.
+- **Distribution**: the box that lets Playgama put the game on partner platforms was unticked, to keep CrazyGames and other portals for ourselves. Decide this before the catalog review.
+- **Upload steps**:
+  1. Run `npm run build:playgama` from a clean tree. Always zip with Python, because a PowerShell zip fails the Bridge check.
+  2. Update Game, drop the zip, Save Changes.
+  3. Continue, pick the build, Publish/Update in Sandbox.
+- **Catalog review**: it opens at 100 qualifying plays (each over 30 s) with a 5:00 average.
+- **Data**: our collector is off in the sandbox, so its data is only in Playgama's console and the events bridgeSink sends.
