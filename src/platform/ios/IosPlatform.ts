@@ -50,10 +50,6 @@ export class IosPlatform extends WebPlatform implements Platform {
     this.adPrivacy = { offered: () => admob.privacyOffered(), open: () => admob.openPrivacy() };
     this.mount = safeAreaMount(doc);
     this.notify = nativeNotifier(native) ?? devNotifier();
-    // game sound obeys the silent switch and mixes with the player's music (iOS 17+; the shell
-    // sets the same AVAudioSession category for older systems)
-    const session = (navigator as Navigator & { audioSession?: { type: string } }).audioSession;
-    if (session) session.type = 'ambient';
   }
 
   /** The phone's languages: WKWebView's navigator.language only knows the app's own localisations. */

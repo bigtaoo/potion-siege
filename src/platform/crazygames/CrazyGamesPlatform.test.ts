@@ -1,4 +1,4 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CrazyGamesPlatform } from './CrazyGamesPlatform';
 import { CrazyGamesSdk, type CgGlobal } from './sdk';
 
@@ -153,5 +153,16 @@ describe('CrazyGamesPlatform ads', () => {
     await p.midgame(() => started++);
     expect(started).toBe(1);
     expect(asked).toEqual(['midgame']);
+  });
+
+  it("asks Safari for the ambient session, so the player's music keeps playing", async () => {
+    const session = { type: 'auto' };
+    vi.stubGlobal('navigator', { languages: [], language: 'en', maxTouchPoints: 0, audioSession: session });
+    try {
+      await platform('crazygames');
+      expect(session.type).toBe('ambient');
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });

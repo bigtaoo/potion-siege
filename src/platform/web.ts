@@ -1,4 +1,5 @@
 import { urlSwitches } from '../game/switches';
+import { shareSpeaker } from './audioSession';
 import { devNotifier } from './fakeNotifier';
 import { updatesSwitch } from './fakeUpdates';
 import { SafeStore, type AppUpdates, type KeyValueStore, type Notifier, type Platform } from './types';
@@ -25,6 +26,10 @@ export class WebPlatform implements Platform {
   /** A phone's browser; desktop Chrome has the call too but nothing to buzz. */
   readonly vibrate: ((strong: boolean) => void) | undefined =
     typeof navigator.vibrate === 'function' && navigator.maxTouchPoints > 0 ? (strong) => void navigator.vibrate(strong ? 40 : 15) : undefined;
+
+  constructor() {
+    shareSpeaker();
+  }
 
   async copyText(text: string): Promise<boolean> {
     try {
