@@ -115,6 +115,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   document.addEventListener('visibilitychange', () => {
     if (document.visibilityState === 'hidden') {
       game.perf.hidden();
+      game.run?.hidden();
       analytics.flush();
     }
   });

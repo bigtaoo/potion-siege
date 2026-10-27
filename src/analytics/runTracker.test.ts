@@ -184,6 +184,21 @@ describe('RunTracker close', () => {
     expect(replaced.sink.events).toEqual([]);
   });
 
+  it('reports a hidden page mid-run once, the run going on, and not after it ended', () => {
+    const { sink, b, tracker } = setup();
+    b.wave = 2;
+    tracker.hidden();
+    tracker.hidden();
+    expect(named(sink, 'run_hidden')).toEqual([expect.objectContaining({ run: 1, wave: 2 })]);
+    tracker.close('pagehide');
+    expect(named(sink, 'run_quit')).toHaveLength(1);
+
+    const ended = setup();
+    ended.b.result = 'lost';
+    ended.tracker.hidden();
+    expect(named(ended.sink, 'run_hidden')).toEqual([]);
+  });
+
   it('can quit again once the page came back from the back/forward cache', () => {
     const { sink, b, tracker } = setup();
     b.wave = 2;
