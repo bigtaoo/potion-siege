@@ -13,7 +13,7 @@ import type { PotionLook } from './potion';
 const FIRST = ['bg_field', 'commander', 'tutorial_hand', 'enemy_grunt', ...LINEUP.map((k) => `potion_${k}_body`)];
 /** Fetched right after: what the first battle comes to next (the skill cards show the
  *  ultimates and icons, runners and brutes walk in from waves 2 and 4), the grunt walking on a
- *  field turned on its side, and the other potions. */
+ *  field turned on its side with the runners and brutes in profile too, and the other potions. */
 const SOON = [
   ...LINEUP.map((k) => `potion_${k}_ult`),
   'icon_allDamage',
@@ -24,6 +24,8 @@ const SOON = [
   'enemy_runner',
   'enemy_brute',
   'enemy_grunt_side',
+  'enemy_runner_side',
+  'enemy_brute_side',
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_body`),
 ];
 /** Then the rest: the later stages' enemies, the bosses and the other ultimates. */
@@ -31,6 +33,8 @@ const LATER = [
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_ult`),
   'enemy_flyer',
   'enemy_winder',
+  'enemy_flyer_side',
+  'enemy_winder_side',
   'enemy_boss',
   'enemy_clock',
   'enemy_tripod',
