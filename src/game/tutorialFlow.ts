@@ -1,5 +1,5 @@
 // The first battle's tutorial as the game runs it: begun and ended, moved on each frame, the
-// battle held while a step waits for the player, its steps logged, and the page rect each step
+// battle slowed while a step waits for the player, its steps logged, and the page rect each step
 // points at.
 
 import type { Game } from '../app';
@@ -19,9 +19,10 @@ export function beginTutorial(g: Game): void {
   g.hud.nudge = false;
 }
 
-/** The battle stands still before its next tick: a tutorial step waits for the player. */
-export function held(g: Game, b: Battle): boolean {
-  return !g.autoplay && !!g.tutorial?.holds(b);
+/** The battle's speed before its next tick: below 1 while a tutorial step waits for the player
+ *  (see Tutorial.pace), 0 when it stands still. */
+export function pace(g: Game, b: Battle): number {
+  return g.autoplay || !g.tutorial ? 1 : g.tutorial.pace(b);
 }
 
 /** Done or skipped: never again on this save. */
@@ -47,12 +48,13 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
   const step = g.tutorial && b && g.root.visible ? g.tutorial.showing(b) : null;
   // the pick shows over the skill cards, every other step over the battle itself
   const up = step === 'pick' ? g.overlay.visible : !g.overlay.visible;
+  g.hud.pulse = up && (step === 'summon' || step === 'more');
   g.lessons.scale.set(m.scale);
   g.lessons.show(step && up && b ? lessonFor(g, step, b, m) : null, m.w, m.h, m.wide, dt);
 }
 
 /** `tutorial_step` once a step is done: when it first showed and was done (battle seconds, the
- *  same while the battle was held for it) and how long the player took over it (`waitS`, session
+ *  same while the battle crept on slowly for it) and how long the player took over it (`waitS`, session
  *  seconds). */
 export function logStep(g: Game, tut: Tutorial, b: Battle): void {
   const log = g.tutLog;

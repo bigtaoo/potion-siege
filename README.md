@@ -57,8 +57,9 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
 - **Crystals**: a result screen offers an ad to double the crystals, up to 3 times a day. After a loss
   it first offers a revive, once per battle.
 - **First minute**: a new player lands straight in a live first battle, with no title tap. The tutorial
-  (summon, merge, upgrade, skill pick) never stops the battle: a step you leave alone for 8 seconds
-  is done for you. Until the first win, stage 1 plays on a fixed seed, so every new player sees the same opening.
+  (summon, merge, upgrade, skill pick) never plays for you: while a step points, the battle runs in
+  slow motion (0.2x) and stops a cell short of the wall, so waiting cannot lose it, and 召唤 pulses while
+  the hand points at it. Until the first win, stage 1 plays on a fixed seed, so every new player sees the same opening.
 - **Sound**: effects and two music loops synthesized in code (`src/audio/`). They stay silent during
   ads and while the tab is hidden, and there is a music/sound toggle on the home screen.
 - **Wide screens**: a landscape embed shows side boards next to the board: this run's skills with
@@ -121,7 +122,7 @@ In dev, `window.__game` exposes the running game.
 
 - **Events**:
   - sessions: `session_start`, `session_end`, `viewport`
-  - onboarding firsts: `first_input`, `first_summon`, `first_merge`, `first_star3`, `first_upgrade`, `first_win`, and the `tutorial_step` (with `waitS`, the real seconds the held battle waited) and `tutorial_end` events; `tutorial_assist` only comes from builds before the tutorial held the battle
+  - onboarding firsts: `first_input`, `first_summon`, `first_merge`, `first_star3`, `first_upgrade`, `first_win`, and the `tutorial_step` (with `waitS`, the real seconds the player took while the battle was slowed) and `tutorial_end` events; `tutorial_assist` only comes from builds before the tutorial held the battle
   - runs: `run_start`, `wave_start`, `skill_pick`, `run_end`, `run_quit` (given up, or the page went away mid-run on pagehide), `run_hidden` (the page hidden mid-run, once per run; mobile browsers often skip pagehide, and the player may come back), `endless_start`, `endless_end`, `challenge_start`, `challenge_end`
   - menus and economy: `home_view`, `dialog`, `battle_start_tap`, `result_shown`, `result_action`, `crystals`, `meta_buy`, `lineup`, `daily_claim`
   - ads: `ad_offer`, `ad_result`, `ad_midgame`, `ad_paced` (a midgame held back by the 3-minute pacing), `ad_shop`, `ad_challenge`

@@ -59,7 +59,7 @@ import { openPause, pauseFrame, PauseLayer } from './game/pause';
 import { urlSwitches } from './game/switches';
 import { createAnalytics, device, loadedBeacon, showLocale, trackSessionStart } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
-import { beginTutorial, endTutorial, held, lesson } from './game/tutorialFlow';
+import { beginTutorial, endTutorial, lesson, pace } from './game/tutorialFlow';
 
 export async function boot(platform: Platform): Promise<GameHandle> {
   // the URL switches; a release build reads only ?lang (game/switches.ts)
@@ -203,7 +203,7 @@ export class Game {
   /** How the last copy of the player ID went, shown on its button until the settings close. */
   idNote: 'copied' | 'failed' | null = null;
   /** The tutorial step on screen for `tutorial_step`: when it first showed (battle seconds, and
-   *  session seconds for how long the player looked at it while the battle was held). */
+   *  session seconds for how long the player looked at it while the battle crept on). */
   tutLog: { step: TutorialStep; shownT: number | null; shownS: number | null } | null = null;
   /** When this battle's result screen first came up (ms), for `result_action`; 0 before. */
   resultAt = 0;
@@ -334,7 +334,7 @@ export class Game {
   /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */
   private measured(): boolean {
     const b = this.battle;
-    return !!(this.run && b && !b.paused && !held(this, b) && !this.pause.open && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
+    return !!(this.run && b && !b.paused && pace(this, b) === 1 && !this.pause.open && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
   }
 
   /** Nothing fast on screen: the frame loop drops to its calm rate. */
@@ -382,12 +382,14 @@ export class Game {
     if (b && !this.overlay.visible && !this.ended && !this.pause.open) {
       // the bot picks its cards at once, so autoplay never stops for an offer
       if (this.autoplay && b.choices) botAct(b);
-      // a tutorial step held up front adds no time, so the drawn board stands still too
-      if (!b.paused && !held(this, b)) {
-        const steps = this.loop.advance(dt * 1000, this.speed);
+      // a tutorial step slows the battle (the same ticks, fewer a second) or, short of the wall,
+      // stops it up front: no time added, so the drawn board stands still too
+      const p = b.paused ? 0 : pace(this, b);
+      if (p > 0) {
+        const steps = this.loop.advance(dt * 1000, this.speed * p);
         for (let i = 0; i < steps; i++) {
           if (this.autoplay) botAct(b);
-          if (b.paused || held(this, b)) break;
+          if (b.paused || pace(this, b) < p) break;
           b.step();
         }
       }
