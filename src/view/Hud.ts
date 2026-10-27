@@ -93,6 +93,9 @@ export class Hud extends Container {
   private band: number | null = null;
   /** The summon button's x before its shake. */
   private summonX = DESIGN_W - 190;
+  /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
+  pulse = false;
+  private pulseTime = 0;
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
@@ -316,6 +319,8 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = this.summonX + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
+    this.pulseTime = this.pulse ? this.pulseTime + dt : 0;
+    this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
     this.pointAt(this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null, dt);

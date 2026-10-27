@@ -12,6 +12,7 @@ export class RunTracker {
   private revives = 0;
   private picks: SkillId[] = [];
   private ended = false;
+  private hiddenSent = false;
 
   constructor(
     private readonly a: Analytics,
@@ -93,6 +94,14 @@ export class RunTracker {
     if (reason !== 'again' && !this.battle.result) this.a.track('run_quit', { ...this.summary(), giveUp: reason === 'giveup' });
     // a hidden page sends its replay itself (ReplayUpload.listen)
     if (reason !== 'pagehide') this.a.replays?.end(this.run, this.battle);
+  }
+
+  /** The page was hidden with the battle still on: a tab switch, or the first sign of a close
+   *  (mobile browsers often skip pagehide). `run_hidden` once per run; the player may come back. */
+  hidden(): void {
+    if (this.hiddenSent || this.ended || this.battle.result) return;
+    this.hiddenSent = true;
+    this.a.track('run_hidden', this.summary());
   }
 
   /** The page came back from the back/forward cache with the battle still on: it can quit again. */
