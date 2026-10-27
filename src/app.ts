@@ -218,7 +218,7 @@ export class Game {
   hintHand: Container | null = null;
   readonly autoplay: boolean;
   private readonly speed: number;
-  /** How the battle uses a wide screen (?wide=, a prototype; view/wideLayout.ts). */
+  /** Whether a wide screen turns the battle field on its side (?wide=off keeps it upright; view/wideLayout.ts). */
   readonly wide: WideMode;
   /** Turns frame time into battle ticks, `speed` times over, and says how far into the next
    *  tick the view is. */
@@ -358,12 +358,12 @@ export class Game {
 
   private tick(dt: number): void {
     const m = fitMenu(this.app.screen.width, this.app.screen.height);
-    const fit = placeBattle(this, m);
+    const fit = placeBattle(this);
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);
     pauseFrame(this, dt, m);
     this.sideWall(fit.x, m);
-    this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt, fit.reserve);
+    this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt);
     // the workshop tune on the menus and the title, the battle loop while a battle runs
     this.audio.music(this.menu.visible || !this.run ? 'workshop' : this.ended ? null : 'battle');
 

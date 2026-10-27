@@ -4,6 +4,7 @@ import type { Graphics } from 'pixi.js';
 import { isBoss, type Enemy, type HeroKind } from '../sim/types';
 import { COLORS, HERO_COLORS } from './ui';
 import { LIGHT } from './kit/palette';
+import { drawUpright, isLand } from './landView';
 
 function polygon(cx: number, cy: number, r: number, sides: number, turn = -Math.PI / 2): number[] {
   const pts: number[] = [];
@@ -61,10 +62,15 @@ export function drawEnemy(g: Graphics, e: Enemy, art: 'under' | 'over' | null = 
   // a flyer's shadow is smaller and fainter, cast from up in the air
   if (!art) g.ellipse(x, y + r * 0.8, r * (fly ? 0.7 : 0.9), r * (fly ? 0.22 : 0.3)).fill({ color: 0x000000, alpha: fly ? 0.2 : 0.3 });
   // an elite stands in a gold ring
-  if (e.elite && art !== 'over') g.ellipse(x, y + r * 0.8, r * 1.15, r * 0.4).stroke({ width: 6, color: COLORS.gold, alpha: 0.9 });
+  if (e.elite && art !== 'over') {
+    drawUpright(g, x, y, (ox, oy) => g.ellipse(ox, oy + r * 0.8, r * 1.15, r * 0.4).stroke({ width: 6, color: COLORS.gold, alpha: 0.9 }));
+  }
   if (art === 'under') return;
   if (art) {
-    if (e.elite) eliteFrame(g, enemyBarBox(e, artBarTop(e)));
+    if (e.elite) {
+      const box = enemyBarBox(e, artBarTop(e));
+      drawUpright(g, x, y, (ox, oy) => eliteFrame(g, { ...box, x: box.x - x + ox, top: box.top - y + oy }));
+    }
     return;
   }
   if (e.kind === 'runner') g.poly(polygon(x, y, r * 1.1, 3, Math.PI / 2));
@@ -97,8 +103,8 @@ export function barsShown(e: Enemy): boolean {
 
 /** The HP bar's centre, width and top, for an enemy whose bars would start at `top`. */
 export function enemyBarBox(e: Enemy, top: number): { x: number; w: number; top: number } {
-  // never over the wave title in the top bar
-  return { x: e.x, w: Math.max(60, e.radius * 1.6), top: Math.max(104, top) };
+  // never over the wave title in the top bar (upright: on a lying field the top bar is beside it)
+  return { x: e.x, w: Math.max(60, e.radius * 1.6), top: isLand() ? top : Math.max(104, top) };
 }
 
 function eliteFrame(g: Graphics, { x, w, top }: { x: number; w: number; top: number }): void {

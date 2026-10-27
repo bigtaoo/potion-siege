@@ -10,11 +10,13 @@ import { iceShell } from '../effects';
 import { poseEnemy } from '../enemyPose';
 import { lerpX, lerpY } from '../fixedStep';
 import { hordeFade } from '../hordeFx';
+import { drawUpright, isLand } from '../landView';
 import { ENEMY_ART, drawEnemy } from '../shapes';
 import { EnemyMarks } from './enemyMarks';
 
-/** Farther enemies first, so nearer ones overlap them. */
+/** Farther enemies first (higher on the screen), so nearer ones overlap them. */
 const byDepth = (p: Enemy, q: Enemy): number => p.y - q.y;
+const byDepthLand = (p: Enemy, q: Enemy): number => p.x - q.x;
 
 export class EnemyLayer {
   /** The enemies' art; goes into the view at its place in the drawing order. */
@@ -44,7 +46,7 @@ export class EnemyLayer {
       o.radius = e.radius / FP;
       depth.push(o);
     }
-    depth.sort(byDepth);
+    depth.sort(isLand() ? byDepthLand : byDepth);
     for (const e of depth) {
       const fade = hordeFade(e);
       if (fade <= 0) continue;
@@ -62,7 +64,9 @@ export class EnemyLayer {
         }
       }
       const s = poseEnemy(this.art, tex, e, t, b.seconds);
-      if (e.freezeTime > 0) iceShell(w, e.x, e.y + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92);
+      if (e.freezeTime > 0) {
+        drawUpright(w, e.x, e.y, (ox, oy) => iceShell(w, ox, oy + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92));
+      }
       s.alpha = fade;
       s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
     }

@@ -24,10 +24,6 @@ const BANNER_Y = 270;
 const BOSS_BANNER_Y = 620;
 const BOSS_CARD_Y = 850;
 const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
-/** The buttons' size out in a side column, where there is room for bigger ones. */
-const OUT_SCALE = 1.25;
-/** The top of the gold and buttons out in a side column, in design y: the boards there stop above it. */
-export const OUT_TOP = BUTTON.y - (BUTTON.h * OUT_SCALE) / 2 - 130;
 /** How long the grid stays full with a pair to fuse and gold for a summon before the board
  *  points at the pair by itself. */
 const NUDGE_AFTER = 2;
@@ -83,16 +79,10 @@ export class Hud extends Container {
   private nudgeTime = 0;
   /** The summon button's shake after a tap on it while grey. */
   private shake = 0;
-  /** The top row, the hint and the challenge chips, moved down to the screen's top edge when the
-   *  field's top is cut off (wideLayout.ts). */
-  private readonly upper = new Container();
-  /** The design y at the screen's top edge, and how far out the buttons sit in the side columns. */
-  private top = 0;
-  private out: number | null = null;
   /** The design y of the band under a field turned on its side, where the gold and buttons go. */
   private band: number | null = null;
-  /** The summon button's x before its shake. */
-  private summonX = DESIGN_W - 190;
+  /** The battle view, to find the cells on a field turned on its side. */
+  field: Container | null = null;
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
@@ -125,47 +115,24 @@ export class Hud extends Container {
     for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
-    this.upper.addChild(this.waveText, this.stageText, this.hintBox, this.mods, this.pauseButton);
-    this.addChild(this.upper, this.coin, this.goldText, this.banner, this.newcomer, this.bossCard);
-    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton);
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton);
   }
 
-  /** Lays the HUD out for the screen: `top` is the design y at its top edge, `out` how far out
-   *  from the board's edges the side columns' middles are when the buttons and gold go there. */
-  place(top: number, out: number | null, band: number | null = null): void {
-    if (top === this.top && out === this.out && band === this.band) return;
-    this.top = top;
-    this.out = out;
+  /** Lays the HUD out for the screen: `band` is the design y of the band under a field turned on
+   *  its side (wideLayout.ts), where the gold and the buttons go, or null on the upright board. */
+  place(band: number | null): void {
+    if (band === this.band) return;
     this.band = band;
-    this.upper.y = top;
-    const k = out === null ? 1 : OUT_SCALE;
-    this.upgradeButton.scale.set(k);
-    this.summonButton.scale.set(k);
     const y = band ?? BUTTON.y;
-    this.upgradeButton.position.set(out === null ? 190 : -out, y);
-    this.summonX = out === null ? DESIGN_W - 190 : DESIGN_W + out;
-    this.summonButton.position.set(this.summonX, y);
-    // the banners come down with the field's top, the boss card staying clear of the grid
-    this.newcomer.y = 370 + this.lift();
-    this.bossCard.y = this.bossY() + BOSS_CARD_Y - BOSS_BANNER_Y;
+    this.upgradeButton.position.set(190, y);
+    this.summonButton.position.set(DESIGN_W - 190, y);
     this.legible(this.boost, true);
   }
 
-  /** How far the banners come down the field for its cut top. */
-  private lift(): number {
-    return this.top <= 200 ? this.top : this.top * 0.75;
-  }
-
-  private bossY(): number {
-    return Math.max(BOSS_BANNER_Y, this.top + 150);
-  }
-
-  /** Where the coin's centre is: top left of the board, or over the summon button out in its column. */
+  /** Where the coin's centre is: top left of the board, or left of the buttons in the band. */
   private coinAt(): { x: number; y: number } {
-    const top = Math.min(this.boost, 1.25);
-    if (this.band !== null) return { x: -150, y: this.band };
-    if (this.out === null) return { x: 90, y: this.top + 60 * top };
-    return { x: DESIGN_W + this.out - 70 * top, y: BUTTON.y - (BUTTON.h * OUT_SCALE) / 2 - 60 * top };
+    return this.band === null ? { x: 90, y: 60 * Math.min(this.boost, 1.25) } : { x: -150, y: this.band };
   }
 
   attach(battle: Battle): void {
@@ -238,7 +205,7 @@ export class Hud extends Container {
       // the merge hint has done its job once the player merges
       if (ev.type === 'merge') this.hint = false;
       if (ev.type !== 'wave') continue;
-      this.show(ev.boss ? t('bossWave') : isHordeWave(ev.wave) ? t('hordeWave') : this.waveLabel(ev.wave), ev.boss ? this.bossY() : undefined);
+      this.show(ev.boss ? t('bossWave') : isHordeWave(ev.wave) ? t('hordeWave') : this.waveLabel(ev.wave), ev.boss ? BOSS_BANNER_Y : BANNER_Y);
       const stage = this.battle?.setup.stage;
       // endless mode brings in every other chapter's boss in turn: each gets its card on its first lap
       const visitor = this.battle?.setup.endless && ev.boss ? endlessBoss(ev.wave) : undefined;
@@ -285,7 +252,7 @@ export class Hud extends Container {
       c.addChild(l);
     });
     // under the BOSS WAVE banner
-    c.position.set(DESIGN_W / 2, this.bossY() + BOSS_CARD_Y - BOSS_BANNER_Y);
+    c.position.set(DESIGN_W / 2, BOSS_CARD_Y);
   }
 
   /** A coin flying off a kill (BattleView's kills) reached the counter: the coin bumps. */
@@ -318,7 +285,7 @@ export class Hud extends Container {
     this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}\n● ${b.summonCost()}`;
     this.summonButton.setEnabled(b.canSummon());
     this.shake = Math.max(0, this.shake - dt);
-    this.summonButton.x = this.summonX + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
+    this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     this.pulseTime = this.pulse ? this.pulseTime + dt : 0;
     this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
     if (!full) this.asked = false;
@@ -373,15 +340,18 @@ export class Hud extends Container {
       this.nudgeHand.addChild(pointingHand());
     }
     const s = (this.nudgeTime += dt);
-    const g = BALANCE.grid;
-    const [from, to] = pair.map((slot) => slotCenter(slot));
+    // the cells where they lie: on a field turned on its side, turned with it
+    const field = this.band === null ? null : this.field;
+    const cellW = field ? BALANCE.grid.cellH : BALANCE.grid.cellW;
+    const cellH = field ? BALANCE.grid.cellW : BALANCE.grid.cellH;
+    const [from, to] = pair.map((slot) => (field ? this.toLocal(field.toGlobal(slotCenter(slot))) : slotCenter(slot)));
     const pulse = 0.5 + 0.5 * Math.sin(s * 5);
     const r = this.nudgeRings.clear();
     for (const c of [from, to]) {
-      const x = c.x - g.cellW / 2 - 10;
-      const y = c.y - g.cellH / 2 - 10;
-      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 10, color: P.brassLight, alpha: 0.35 + 0.55 * pulse });
-      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 3, color: LIGHT.edge, alpha: 0.6 });
+      const x = c.x - cellW / 2 - 10;
+      const y = c.y - cellH / 2 - 10;
+      r.roundRect(x, y, cellW + 20, cellH + 20, 30).stroke({ width: 10, color: P.brassLight, alpha: 0.35 + 0.55 * pulse });
+      r.roundRect(x, y, cellW + 20, cellH + 20, 30).stroke({ width: 3, color: LIGHT.edge, alpha: 0.6 });
     }
     const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 60 - 0.25 * Math.hypot(to.x - from.x, to.y - from.y) };
     drawArc(this.nudgeArc.clear(), from, mid, to);
@@ -410,7 +380,7 @@ export class Hud extends Container {
     const b = which === 'summon' ? this.summonButton : this.upgradeButton;
     const w = BUTTON.w * b.scale.x;
     const h = BUTTON.h * b.scale.y;
-    const x = which === 'summon' ? this.summonX : b.x;
+    const x = which === 'summon' ? DESIGN_W - 190 : b.x;
     return { x: this.x + x - w / 2, y: b.y - h / 2, w, h };
   }
 
@@ -419,7 +389,7 @@ export class Hud extends Container {
     this.show(text);
   }
 
-  private show(text: string, y = BANNER_Y + this.lift()): void {
+  private show(text: string, y = BANNER_Y): void {
     this.banner.text = text;
     this.banner.y = y;
     this.banner.scale.set(1);

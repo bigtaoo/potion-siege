@@ -1,6 +1,6 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { keepUpright, turnView } from './landView';
+import { aside, drawUpright, keepUpright, turnView } from './landView';
 
 const QUARTER = Math.PI / 2;
 
@@ -52,5 +52,37 @@ describe('landView', () => {
     turnView(v, false);
     keepUpright(v, wall);
     expect([figure.rotation, words.rotation, v.pivot.y]).toEqual([0, 0, 0]);
+  });
+
+  it('puts a screen offset beside a figure: as given upright, turned with a lying field', () => {
+    const { v } = view();
+    turnView(v, false);
+    expect({ ...aside(100, 300, 10, -40) }).toEqual({ x: 110, y: 260 });
+    turnView(v, true);
+    const p = aside(100, 300, 10, -40);
+    // on the screen: 10 right of and 40 above where (100, 300) lands
+    const from = v.toGlobal({ x: 100, y: 300 });
+    const to = v.toGlobal({ x: p.x, y: p.y });
+    expect(to.x - from.x).toBeCloseTo(10);
+    expect(to.y - from.y).toBeCloseTo(-40);
+    turnView(v, false);
+  });
+
+  it('draws upright about a point: in place upright, about the origin turned back on a lying field', () => {
+    const { v } = view();
+    const g = new Graphics();
+    const origins: number[][] = [];
+    turnView(v, false);
+    drawUpright(g, 100, 300, (ox, oy) => origins.push([ox, oy]));
+    turnView(v, true);
+    drawUpright(g, 100, 300, (ox, oy) => {
+      origins.push([ox, oy]);
+      g.rect(ox, oy - 40, 10, 40).fill(0xffffff);
+    });
+    turnView(v, false);
+    expect(origins).toEqual([[100, 300], [0, 0]]);
+    // the bar 40 tall drawn upward lies along the view's x, toward the left of the field
+    const b = g.bounds;
+    expect([b.minX, b.maxX, b.minY, b.maxY].map(Math.round)).toEqual([60, 100, 290, 300]);
   });
 });

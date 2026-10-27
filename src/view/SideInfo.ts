@@ -56,9 +56,8 @@ export class SideInfo extends Container {
     this.addChild(this.left, this.right);
   }
 
-  /** `boardX` is where the board starts, in page units; the columns are either side of it, ending
-   *  `reserve` above the bottom when the gold and buttons sit under them. */
-  update(b: Battle | null, boardX: number, m: MenuFit, show: boolean, dt: number, reserve = 0): void {
+  /** `boardX` is where the board starts, in page units; the columns are either side of it. */
+  update(b: Battle | null, boardX: number, m: MenuFit, show: boolean, dt: number): void {
     const pw = Math.min(MAX_W, boardX - 64);
     this.visible = show && !!b && pw >= MIN_COLUMN - 64;
     if (!this.visible || !b) {
@@ -72,19 +71,18 @@ export class SideInfo extends Container {
     this.wait -= dt;
     // a new layout, wave or skill at once; a new level at once, without a rebuild; the damage
     // shares at most every REFRESH
-    const key = `${this.keyOf(b, boardX, m)}:${Math.round(reserve)}`;
+    const key = this.keyOf(b, boardX, m);
     const levels = SKILL_IDS.map((id) => b.skills[id]).join('');
     const shown = `${levels}|${this.shares(b)}`;
     if (key !== this.key || b !== this.battle) {
       this.key = key;
       this.battle = b;
       // room above for the name plate that sits on the top edge
-      const room = m.h - reserve;
-      const ph = Math.min(room - 150, 1500);
+      const ph = Math.min(m.h - 150, 1500);
       const left = skillsBoard(b, pw, ph);
       this.live = left.live;
-      this.rebuild(this.left, left.board, boardX / 2, room / 2 + 30);
-      this.rebuild(this.right, wavesBoard(b, pw, ph), m.w - boardX / 2, room / 2 + 30);
+      this.rebuild(this.left, left.board, boardX / 2, m.h / 2 + 30);
+      this.rebuild(this.right, wavesBoard(b, pw, ph), m.w - boardX / 2, m.h / 2 + 30);
     } else if (shown === this.shown || (levels === this.levels && this.wait > 0)) {
       return;
     }

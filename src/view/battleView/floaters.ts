@@ -1,6 +1,7 @@
 // The gold and the notes that float up over the battle and fade; hidden ones are reused.
 
 import { Container, type Text } from 'pixi.js';
+import { aside, isLand } from '../landView';
 import { label } from '../ui';
 
 export class Floaters extends Container {
@@ -21,7 +22,8 @@ export class Floaters extends Container {
       free.alpha = 1;
       free.visible = true;
     }
-    free.position.set(x, y - 30);
+    const p = aside(x, y, 0, -30);
+    free.position.set(p.x, p.y);
     free.scale.set(size);
     // the newest on top, as when each was new
     this.addChild(free);
@@ -31,7 +33,9 @@ export class Floaters extends Container {
   update(dt: number): void {
     for (const f of this.children) {
       if (!f.visible) continue;
-      f.y -= 120 * dt;
+      // up the screen
+      if (isLand()) f.x -= 120 * dt;
+      else f.y -= 120 * dt;
       f.alpha -= dt * 1.2;
       if (f.alpha <= 0) f.visible = false;
     }
