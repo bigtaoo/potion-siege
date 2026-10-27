@@ -28,7 +28,8 @@ const SOON = [
   'enemy_brute_side',
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_body`),
 ];
-/** Then the rest: the later stages' enemies, the bosses and the other ultimates. */
+/** Then the rest: the later stages' enemies, the bosses (in profile too, but for the tank, already
+ *  three-quarter facing left, and the gear king, a cog rolling left face-on) and the other ultimates. */
 const LATER = [
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_ult`),
   'enemy_flyer',
@@ -42,6 +43,11 @@ const LATER = [
   'enemy_anvil',
   'enemy_gear',
   'enemy_gear_core',
+  'enemy_clock_side',
+  'enemy_tripod_side',
+  'enemy_tripod_bare_side',
+  'enemy_anvil_side',
+  'enemy_gear_core_side',
 ];
 
 /** The three in fetch order, for art.test.ts (every file in public/art once). */
