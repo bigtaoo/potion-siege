@@ -6,6 +6,7 @@ import { slotCenter, type Battle } from '../../sim/battle';
 import type { HeroKind } from '../../sim/types';
 import { potionLook, type SpriteLayer } from '../art';
 import { INK, type PotionLayer } from '../potion';
+import { aside } from '../landView';
 import { COLORS } from '../ui';
 import { drawCell, STILL, type FigureAnim } from './figures';
 import type { FxLayer } from './fxLayer';
@@ -107,7 +108,8 @@ export class MergeAnims {
       const squash = k < FLY ? -0.1 * (k / FLY) : 0.32 * Math.cos(e * Math.PI * 3) * (1 - e);
       const spin = 0.2 * Math.sin(e * Math.PI * 4) * (1 - e);
       const anim = (i: number): FigureAnim => ({ ...STILL, squash, spin: i % 2 ? -spin : spin });
-      drawCell(time, under, over, art, potions, m.kind, m.star, c.x, c.y - 10, 1 - 0.4 * e * e, 1, m.slot, false, anim);
+      const mid = aside(c.x, c.y, 0, -10);
+      drawCell(time, under, over, art, potions, m.kind, m.star, mid.x, mid.y, 1 - 0.4 * e * e, 1, m.slot, false, anim);
       if (e <= 0) continue;
       // three ribbons of liquid spiralling in round it, and a white glow swelling over it
       const cy = c.y - 20;

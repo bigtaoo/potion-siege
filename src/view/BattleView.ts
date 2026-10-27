@@ -16,7 +16,7 @@ import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
 import { COLORS, label } from './ui';
 import { P } from './kit/palette';
 import { DESIGN_W } from './viewport';
-import { BADGE, BOMB_COLOR, BREW_COLOR, CMD, CommanderArt, onCommander } from './battleView/commander';
+import { BOMB_COLOR, BREW_COLOR, CommanderArt, badgeAt, commanderMid, landNumbersAt, onCommander } from './battleView/commander';
 import { EnemyLayer } from './battleView/enemies';
 import { brewLift, flaskBurst, landingMark } from './battleView/castFx';
 import { FieldArt, fieldOf } from './battleView/field';
@@ -29,7 +29,7 @@ import { ShotLayer } from './battleView/shots';
 import { starMark } from './battleView/starMark';
 import { BAR_H, BAR_Y, WALL_TOP, drawWallTop } from './battleView/wall';
 import { reducedMotion } from './media';
-import { keepUpright } from './landView';
+import { aside, isLand, keepUpright } from './landView';
 
 const F = BALANCE.field;
 const G = BALANCE.grid;
@@ -120,7 +120,8 @@ export class BattleView extends Container {
 
   /** Grows the wall's numbers and the commander's count for a small board. */
   legible(k: number): void {
-    this.wallText.scale.set(Math.min(k, 1.4));
+    // on a turned field they stand in the strip behind the bar, no wider than it
+    this.wallText.scale.set(Math.min(k, isLand() ? 1.1 : 1.4));
     this.cmd.legible(k);
   }
 
@@ -185,13 +186,15 @@ export class BattleView extends Container {
           const bomb = ev.skill === 'bomb';
           const color = bomb ? BOMB_COLOR : BREW_COLOR;
           this.cmd.cast = { at: this.time, skill: ev.skill };
-          this.fx.burst(BADGE.x, BADGE.y, 110, color, 0.4);
+          const badge = badgeAt();
+          this.fx.burst(badge.x, badge.y, 110, color, 0.4);
           if (bomb) {
             this.cmd.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight });
             landingMark(this.fx, ev.x, ev.y, BALANCE.commander.bomb.radius, ev.flight);
           } else {
+            const mid = commanderMid();
             this.fx.effect(0.7, (g, life) => {
-              g.circle(CMD.x, CMD.feet - CMD.height / 2, 120 + (1 - life) * 700).stroke({ width: 18 * life, color, alpha: life * 0.6 });
+              g.circle(mid.x, mid.y, 120 + (1 - life) * 700).stroke({ width: 18 * life, color, alpha: life * 0.6 });
             }, true);
             const b = this.battle;
             if (b) brewLift(this.floaters, b.slots.flatMap((h, s) => (h && b.isOpen(s) ? [slotCenter(s)] : [])), Math.round(BALANCE.commander.brew.speed * 100));
@@ -208,7 +211,8 @@ export class BattleView extends Container {
         }
         case 'cellOpen': {
           this.cmd.pulse = 1;
-          this.fx.burst(CMD.x, CMD.feet - CMD.height / 2, 150, COLORS.gold, 0.5);
+          const mid = commanderMid();
+          this.fx.burst(mid.x, mid.y, 150, COLORS.gold, 0.5);
           const c = slotCenter(ev.slot);
           this.fx.burst(c.x, c.y, 120, 0xffffff, 0.5);
           this.floaters.show(tr('cellOpen'), c.x, c.y, COLORS.gold);
@@ -303,7 +307,9 @@ export class BattleView extends Container {
       this.wallShown[1] = max;
       this.wallText.text = `${hp} / ${max}`;
     }
-    this.wallText.position.set(DESIGN_W / 2, barY + BAR_H / 2);
+    // on a turned field the bar stands upright on the screen, too thin for the numbers across it
+    const numbers = isLand() ? landNumbersAt() : { x: DESIGN_W / 2, y: barY + BAR_H / 2 };
+    this.wallText.position.set(numbers.x, numbers.y);
 
     this.fx.update(dt);
     for (const v of b.vortices) vortexSwirl(this.fx.ground, v.x / FP, v.y / FP, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / TICK_RATE / 0.4));
@@ -363,7 +369,8 @@ export class BattleView extends Container {
         pop: t - cell.born,
       });
       const hop = hint?.includes(s) ? Math.abs(Math.sin(t * 7)) * 16 : 0;
-      drawCell(this.time, g, ho, this.heroArt, this.potions, h.kind, h.star, c.x, c.y - 10 - hop, 1, s === from ? 0.35 : 1, s, dim, anim);
+      const mid = aside(c.x, c.y, 0, -10 - hop);
+      drawCell(this.time, g, ho, this.heroArt, this.potions, h.kind, h.star, mid.x, mid.y, 1, s === from ? 0.35 : 1, s, dim, anim);
       if (h.stunTime) stunStars(ho, c.x, c.y - G.cellH / 2 - 6, t);
     }
     this.merges.swirls(g, ho, this.heroArt, this.potions, b, this.time);

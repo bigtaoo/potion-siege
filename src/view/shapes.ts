@@ -44,7 +44,7 @@ export function drawHero(g: Graphics, kind: HeroKind, x: number, y: number, r = 
 }
 
 export function heroShadow(g: Graphics, x: number, y: number, w: number, alpha = 1): void {
-  g.ellipse(x, y, w / 2, w * 0.16).fill({ color: 0x000000, alpha: 0.3 * alpha });
+  drawUpright(g, x, y, (ox, oy) => g.ellipse(ox, oy, w / 2, w * 0.16).fill({ color: 0x000000, alpha: 0.3 * alpha }));
 }
 
 const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e, flyer: 0xc9a24a, winder: 0x3f9a96, clock: 0x7a3b22, tripod: 0x3fa7b5, anvil: 0xd2602a, gear: 0x6a3d9a } as const;
