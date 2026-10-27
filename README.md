@@ -53,7 +53,9 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board on phones, 
   (capped per run) and more the first time you reach each milestone wave.
 - **Between battles**: potion levels and workshop upgrades are bought with crystals. The menus also hold
   the codex, the shop (a free chest and ad rewards), the daily reward, daily tasks, and a daily
-  challenge with modifiers and a streak.
+  challenge with modifiers and a streak. In the welcome gifts and the daily login, a claimed day is a
+  sunk green tile with a big tick and "Claimed" in place of its amount (`claimedTile`/`markClaimed` in
+  `src/view/home/shared.ts`).
 - **Crystals**: a result screen offers an ad to double the crystals, up to 3 times a day. After a loss
   it first offers a revive, once per battle.
 - **First minute**: a new player lands straight in a live first battle, with no title tap. The tutorial
@@ -68,6 +70,10 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board on phones, 
   buttons sit on a walnut shelf under the field. Only the view turns: the sim, seeds and replays are
   the same. `?wide=off` keeps the upright board with side boards (this run's skills with each potion's
   damage share, the next waves with a boss countdown); in land the left board is hidden for now.
+  In land the commander stands mid-strip behind the wall's bar, the wall's numbers over its head (the
+  bar is too thin for them), the cast call across its feet; offsets around a figure go through
+  `aside`, so potions sit centred on their cells. Merge arcs, brew bubbles and stun stars still use
+  upright offsets.
   The battle's small text grows on small embeds (`textBoost` in `src/view/viewport.ts`), so 800x450 stays legible.
 
 ## Commands
