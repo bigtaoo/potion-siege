@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 import type { Game } from '../app';
 import { Battle } from '../sim/battle';
 import { TICK_RATE } from '../sim/math/fixed';
-import { HOLD_AFTER_SECONDS, Tutorial } from '../sim/tutorial';
-import { held, logStep } from './tutorialFlow';
+import { HOLD_AFTER_SECONDS, SLOW_PACE, Tutorial } from '../sim/tutorial';
+import { logStep, pace } from './tutorialFlow';
 
 /** The bits of the Game the tutorial's flow reads. */
 function game(over: Partial<Game> = {}) {
@@ -13,7 +13,7 @@ function game(over: Partial<Game> = {}) {
   return { g, sent, analytics };
 }
 
-/** A first battle past the walk-in, where the summon step holds it. */
+/** A first battle past the walk-in, where the summon step slows it. */
 function waiting(): Battle {
   const b = new Battle(1);
   while (b.time < HOLD_AFTER_SECONDS * TICK_RATE) b.step();
@@ -22,14 +22,14 @@ function waiting(): Battle {
 }
 
 describe('tutorial flow', () => {
-  it('holds the battle while a step waits, never under autoplay or with no tutorial', () => {
+  it('slows the battle while a step waits, never under autoplay or with no tutorial', () => {
     const b = waiting();
-    expect(held(game().g, b)).toBe(true);
-    expect(held(game({ autoplay: true }).g, b)).toBe(false);
-    expect(held(game({ tutorial: null }).g, b)).toBe(false);
+    expect(pace(game().g, b)).toBe(SLOW_PACE);
+    expect(pace(game({ autoplay: true }).g, b)).toBe(1);
+    expect(pace(game({ tutorial: null }).g, b)).toBe(1);
   });
 
-  it('logs a step with the real seconds the held battle waited for it, and no assist', () => {
+  it('logs a step with the real seconds the slowed battle waited for it, and no assist', () => {
     const { g, sent, analytics } = game();
     const b = waiting();
     analytics.sessionSeconds = 4;
