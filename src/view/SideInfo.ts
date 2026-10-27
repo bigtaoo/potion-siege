@@ -20,6 +20,9 @@ const MAX_W = 560;
 /** How often the damage shares are redrawn while they change, in seconds. */
 const REFRESH = 0.25;
 
+/** The left board's look while it has nothing to show yet. */
+const EMPTY_ALPHA = 0.35;
+
 /** The parts of the left board that change without a new layout. */
 interface Live {
   /** Each taken skill's pips (or ×n), redrawn when its level changes. */
@@ -53,8 +56,9 @@ export class SideInfo extends Container {
     this.addChild(this.left, this.right);
   }
 
-  /** `boardX` is where the board starts, in page units; the columns are either side of it. */
-  update(b: Battle | null, boardX: number, m: MenuFit, show: boolean, dt: number): void {
+  /** `boardX` is where the board starts, in page units; the columns are either side of it, ending
+   *  `reserve` above the bottom when the gold and buttons sit under them. */
+  update(b: Battle | null, boardX: number, m: MenuFit, show: boolean, dt: number, reserve = 0): void {
     const pw = Math.min(MAX_W, boardX - 64);
     this.visible = show && !!b && pw >= MIN_COLUMN - 64;
     if (!this.visible || !b) {
@@ -62,21 +66,25 @@ export class SideInfo extends Container {
       return;
     }
     this.scale.set(m.scale);
+    // the left board steps back until it has something to show: a skill taken or any damage done
+    const empty = SKILL_IDS.every((id) => !(b.skills[id] > 0)) && Object.values(b.dealt).every((d) => d === 0);
+    this.left.alpha = empty ? EMPTY_ALPHA : 1;
     this.wait -= dt;
     // a new layout, wave or skill at once; a new level at once, without a rebuild; the damage
     // shares at most every REFRESH
-    const key = this.keyOf(b, boardX, m);
+    const key = `${this.keyOf(b, boardX, m)}:${Math.round(reserve)}`;
     const levels = SKILL_IDS.map((id) => b.skills[id]).join('');
     const shown = `${levels}|${this.shares(b)}`;
     if (key !== this.key || b !== this.battle) {
       this.key = key;
       this.battle = b;
       // room above for the name plate that sits on the top edge
-      const ph = Math.min(m.h - 150, 1500);
+      const room = m.h - reserve;
+      const ph = Math.min(room - 150, 1500);
       const left = skillsBoard(b, pw, ph);
       this.live = left.live;
-      this.rebuild(this.left, left.board, boardX / 2, m.h / 2 + 30);
-      this.rebuild(this.right, wavesBoard(b, pw, ph), m.w - boardX / 2, m.h / 2 + 30);
+      this.rebuild(this.left, left.board, boardX / 2, room / 2 + 30);
+      this.rebuild(this.right, wavesBoard(b, pw, ph), m.w - boardX / 2, room / 2 + 30);
     } else if (shown === this.shown || (levels === this.levels && this.wait > 0)) {
       return;
     }

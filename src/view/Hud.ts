@@ -11,6 +11,7 @@ import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKi
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
+import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { Button, COLORS, label } from './ui';
@@ -23,6 +24,10 @@ const BANNER_Y = 270;
 const BOSS_BANNER_Y = 620;
 const BOSS_CARD_Y = 850;
 const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
+/** The buttons' size out in a side column, where there is room for bigger ones. */
+const OUT_SCALE = 1.25;
+/** The top of the gold and buttons out in a side column, in design y: the boards there stop above it. */
+export const OUT_TOP = BUTTON.y - (BUTTON.h * OUT_SCALE) / 2 - 130;
 /** How long the grid stays full with a pair to fuse and gold for a summon before the board
  *  points at the pair by itself. */
 const NUDGE_AFTER = 2;
@@ -78,6 +83,16 @@ export class Hud extends Container {
   private nudgeTime = 0;
   /** The summon button's shake after a tap on it while grey. */
   private shake = 0;
+  /** The top row, the hint and the challenge chips, moved down to the screen's top edge when the
+   *  field's top is cut off (wideLayout.ts). */
+  private readonly upper = new Container();
+  /** The design y at the screen's top edge, and how far out the buttons sit in the side columns. */
+  private top = 0;
+  private out: number | null = null;
+  /** The design y of the band under a field turned on its side, where the gold and buttons go. */
+  private band: number | null = null;
+  /** The summon button's x before its shake. */
+  private summonX = DESIGN_W - 190;
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
@@ -107,8 +122,47 @@ export class Hud extends Container {
     for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
-    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton);
+    this.upper.addChild(this.waveText, this.stageText, this.hintBox, this.mods, this.pauseButton);
+    this.addChild(this.upper, this.coin, this.goldText, this.banner, this.newcomer, this.bossCard);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton);
+  }
+
+  /** Lays the HUD out for the screen: `top` is the design y at its top edge, `out` how far out
+   *  from the board's edges the side columns' middles are when the buttons and gold go there. */
+  place(top: number, out: number | null, band: number | null = null): void {
+    if (top === this.top && out === this.out && band === this.band) return;
+    this.top = top;
+    this.out = out;
+    this.band = band;
+    this.upper.y = top;
+    const k = out === null ? 1 : OUT_SCALE;
+    this.upgradeButton.scale.set(k);
+    this.summonButton.scale.set(k);
+    const y = band ?? BUTTON.y;
+    this.upgradeButton.position.set(out === null ? 190 : -out, y);
+    this.summonX = out === null ? DESIGN_W - 190 : DESIGN_W + out;
+    this.summonButton.position.set(this.summonX, y);
+    // the banners come down with the field's top, the boss card staying clear of the grid
+    this.newcomer.y = 370 + this.lift();
+    this.bossCard.y = this.bossY() + BOSS_CARD_Y - BOSS_BANNER_Y;
+    this.legible(this.boost, true);
+  }
+
+  /** How far the banners come down the field for its cut top. */
+  private lift(): number {
+    return this.top <= 200 ? this.top : this.top * 0.75;
+  }
+
+  private bossY(): number {
+    return Math.max(BOSS_BANNER_Y, this.top + 150);
+  }
+
+  /** Where the coin's centre is: top left of the board, or over the summon button out in its column. */
+  private coinAt(): { x: number; y: number } {
+    const top = Math.min(this.boost, 1.25);
+    if (this.band !== null) return { x: -150, y: this.band };
+    if (this.out === null) return { x: 90, y: this.top + 60 * top };
+    return { x: DESIGN_W + this.out - 70 * top, y: BUTTON.y - (BUTTON.h * OUT_SCALE) / 2 - 60 * top };
   }
 
   attach(battle: Battle): void {
@@ -126,8 +180,8 @@ export class Hud extends Container {
   }
 
   /** Grows the small words for a small board; the hint wraps narrower to stay on it. */
-  legible(k: number): void {
-    if (k === this.boost) return;
+  legible(k: number, force = false): void {
+    if (k === this.boost && !force) return;
     this.boost = k;
     const top = Math.min(k, 1.25);
     this.waveText.scale.set(top);
@@ -136,7 +190,11 @@ export class Hud extends Container {
     this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
     this.stageText.x = DESIGN_W - 125 * top;
     this.goldText.scale.set(top);
-    this.goldText.x = 130 + (top - 1) * 30;
+    const coin = this.coinAt();
+    this.goldText.position.set(coin.x + 40 + (top - 1) * 30, coin.y);
+    // the coins fly in the view's own units, which a field turned on its side turns with it
+    COIN_TARGET.x = this.band === null ? coin.x : coin.y;
+    COIN_TARGET.y = this.band === null ? coin.y : DESIGN_H - (coin.x + this.x);
     this.sizeCoin();
     this.hintBox.scale.set(Math.min(k, 1.3));
     this.hintBox.y = 118 + (top - 1) * 40;
@@ -177,7 +235,7 @@ export class Hud extends Container {
       // the merge hint has done its job once the player merges
       if (ev.type === 'merge') this.hint = false;
       if (ev.type !== 'wave') continue;
-      this.show(ev.boss ? t('bossWave') : isHordeWave(ev.wave) ? t('hordeWave') : this.waveLabel(ev.wave), ev.boss ? BOSS_BANNER_Y : BANNER_Y);
+      this.show(ev.boss ? t('bossWave') : isHordeWave(ev.wave) ? t('hordeWave') : this.waveLabel(ev.wave), ev.boss ? this.bossY() : undefined);
       const stage = this.battle?.setup.stage;
       // endless mode brings in every other chapter's boss in turn: each gets its card on its first lap
       const visitor = this.battle?.setup.endless && ev.boss ? endlessBoss(ev.wave) : undefined;
@@ -224,7 +282,7 @@ export class Hud extends Container {
       c.addChild(l);
     });
     // under the BOSS WAVE banner
-    c.position.set(DESIGN_W / 2, BOSS_CARD_Y);
+    c.position.set(DESIGN_W / 2, this.bossY() + BOSS_CARD_Y - BOSS_BANNER_Y);
   }
 
   /** A coin flying off a kill (BattleView's kills) reached the counter: the coin bumps. */
@@ -232,11 +290,12 @@ export class Hud extends Container {
     this.coinPop = 1;
   }
 
-  /** The coin at the board's size, bumped by `coinPop`, its centre staying at (90, 60). */
+  /** The coin at the board's size, bumped by `coinPop`, its centre staying at coinAt(). */
   private sizeCoin(): void {
     const k = Math.min(this.boost, 1.25) * (1 + 0.3 * this.coinPop);
+    const at = this.coinAt();
     this.coin.scale.set(k);
-    this.coin.position.set(90 * (1 - k), 60 * (1 - k));
+    this.coin.position.set(at.x - 90 * k, at.y - 60 * k);
   }
 
   update(dt: number): void {
@@ -256,7 +315,7 @@ export class Hud extends Container {
     this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}\n● ${b.summonCost()}`;
     this.summonButton.setEnabled(b.canSummon());
     this.shake = Math.max(0, this.shake - dt);
-    this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
+    this.summonButton.x = this.summonX + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
     this.pointAt(this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null, dt);
@@ -344,7 +403,10 @@ export class Hud extends Container {
   /** Where a button is on the board, for the tutorial to point at. */
   buttonRect(which: 'summon' | 'upgrade'): { x: number; y: number; w: number; h: number } {
     const b = which === 'summon' ? this.summonButton : this.upgradeButton;
-    return { x: b.x - BUTTON.w / 2, y: b.y - BUTTON.h / 2, w: BUTTON.w, h: BUTTON.h };
+    const w = BUTTON.w * b.scale.x;
+    const h = BUTTON.h * b.scale.y;
+    const x = which === 'summon' ? this.summonX : b.x;
+    return { x: this.x + x - w / 2, y: b.y - h / 2, w, h };
   }
 
   /** A line in the wave banner's place, e.g. the tutorial saying it did a step. */
@@ -352,7 +414,7 @@ export class Hud extends Container {
     this.show(text);
   }
 
-  private show(text: string, y = BANNER_Y): void {
+  private show(text: string, y = BANNER_Y + this.lift()): void {
     this.banner.text = text;
     this.banner.y = y;
     this.banner.scale.set(1);

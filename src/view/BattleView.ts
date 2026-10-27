@@ -29,6 +29,7 @@ import { ShotLayer } from './battleView/shots';
 import { starMark } from './battleView/starMark';
 import { BAR_H, BAR_Y, WALL_TOP, drawWallTop } from './battleView/wall';
 import { reducedMotion } from './media';
+import { keepUpright } from './landView';
 
 const F = BALANCE.field;
 const G = BALANCE.grid;
@@ -378,6 +379,7 @@ export class BattleView extends Container {
     this.merges.dives(d, this.dragArt, this.dragPotions, this.time);
     this.dragArt.end();
     this.dragPotions.end();
+    keepUpright(this, this.wall);
   }
 
   /** The wall from above, redrawn only when a cell is built (see drawWallTop). */

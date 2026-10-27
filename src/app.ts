@@ -46,7 +46,10 @@ import { patchGraphicsDestroy } from './view/graphicsDestroy';
 import { topPick } from './view/nudges';
 import { IOS_RESOLUTION, levelRange, MAX_RESOLUTION, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
-import { fitDesign, fitMenu, textBoost, type MenuFit } from './view/viewport';
+import { fitMenu, type MenuFit } from './view/viewport';
+import { wideMode, type WideMode } from './view/wideLayout';
+import { placeBattle } from './game/battleLayout';
+import { tapToSummon } from './game/tutorialTap';
 import { shakeOn } from './view/media';
 import { countDaily } from './game/countDaily';
 import { finish } from './game/ending';
@@ -96,6 +99,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   const privacy = new PrivacyChoice(platform.storage, privacyRegion(platform.country?.() ?? null, deviceTimeZone()));
   const analytics = createAnalytics(platform, params, privacy);
   const game = new Game(app, platform, params, analytics, privacy);
+  tapToSummon(game);
   // our own frame loop from here on: a frame rate and resolution the device keeps up with
   const mode = params.get('quality') as QualityMode;
   const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm(), () => game.place().place !== 'run');
@@ -142,7 +146,7 @@ export class Game {
   // The game's own, open to the flows in src/game/ (and the tests), not to be touched from
   // anywhere else.
   readonly root = new Container();
-  private readonly view = new BattleView();
+  readonly view = new BattleView();
   readonly hud: Hud;
   /** On the whole screen like the menus, over the battle. */
   readonly overlay = new Overlay();
@@ -213,6 +217,8 @@ export class Game {
   hintHand: Container | null = null;
   readonly autoplay: boolean;
   private readonly speed: number;
+  /** How the battle uses a wide screen (?wide=, a prototype; view/wideLayout.ts). */
+  readonly wide: WideMode;
   /** Turns frame time into battle ticks, `speed` times over, and says how far into the next
    *  tick the view is. */
   private loop = new FixedStep();
@@ -233,6 +239,7 @@ export class Game {
   ) {
     this.save = parseMeta(platform.storage.getItem(SAVE_KEY));
     this.autoplay = params.has('autoplay');
+    this.wide = wideMode(params.get('wide'));
     this.speed = Math.max(1, Number(params.get('speed')) || 1);
     this.perf = new PerfReport(analytics, memProbe(app), () => this.place(), this.speed);
     this.fault = faultHandler(this);
@@ -349,18 +356,13 @@ export class Game {
   }
 
   private tick(dt: number): void {
-    const fit = fitDesign(this.app.screen.width, this.app.screen.height);
-    this.root.scale.set(fit.scale);
-    this.root.position.set(fit.x, fit.y);
-    const boost = textBoost(fit.scale);
-    this.hud.legible(boost);
-    this.view.legible(boost);
     const m = fitMenu(this.app.screen.width, this.app.screen.height);
+    const fit = placeBattle(this, m);
     this.overlay.scale.set(m.scale);
     this.overlay.layout(m.w, m.h);
     pauseFrame(this, dt, m);
     this.sideWall(fit.x, m);
-    this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt);
+    this.side.update(this.battle, fit.x / m.scale, m, this.wall.visible && !this.menu.visible, dt, fit.reserve);
     // the workshop tune on the menus and the title, the battle loop while a battle runs
     this.audio.music(this.menu.visible || !this.run ? 'workshop' : this.ended ? null : 'battle');
 
