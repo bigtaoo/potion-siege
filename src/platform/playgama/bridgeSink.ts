@@ -38,33 +38,64 @@ function runResult(p: Props): BridgeData {
   };
 }
 
+/** Whole seconds from `from` to `to` (ms), never below 0. */
+const secsBetween = (from: number, to: number) => Math.max(0, Math.round((to - from) / 1000));
+
 /**
  * Turns the game's own events into Playgama's, remembering the run in progress (its run_end and
- * run_quit name no stage); null for an event Playgama does not get.
+ * run_quit name no stage); null for an event Playgama does not get. `ts` is the event's wall clock
+ * (ms): `wall_sec` counts real seconds from the run's start, which battle seconds do not while the
+ * tutorial holds the battle.
  */
 export class BridgeEvents {
   private step: BridgeData = stepOf({}, 'first');
+  /** When the run in progress started (ms); null when none is open or its leave went out. */
+  private runAt: number | null = null;
+  /** When the last run started (ms), for `first_input`. */
+  private lastRunAt: number | null = null;
 
-  map(name: string, p: Props): [string, BridgeData] | null {
+  map(name: string, p: Props, ts = 0): [string, BridgeData] | null {
+    const wall: BridgeData = this.lastRunAt === null ? {} : { wall_sec: secsBetween(this.lastRunAt, ts) };
     switch (name) {
-      // each tutorial step as it is done, with the battle second
+      // each tutorial step as it is done, with the battle second and the real one
       case 'tutorial_step':
-        return ['tutorial_step', tutorialFields(p.step, p.doneT)];
+        return ['tutorial_step', { ...tutorialFields(p.step, p.doneT), ...wall }];
       case 'tutorial_end': {
         const fields = tutorialFields('done', 0);
         return ['tutorial_completed', { ...fields, skipped: p.skipped === true, at_step: String(p.step ?? 'done') }];
       }
+      // the first tap or key ever: seconds since the page loaded and since the run started
+      case 'first_input':
+        return ['first_input', { load_sec: Number(p.t) || 0, ...wall }];
       case 'run_start':
         this.step = stepOf(p, String(p.cause ?? ''));
+        this.runAt = this.lastRunAt = ts;
         return ['progression_started', { ...this.step, run: Number(p.run) || 0, cause: String(p.cause ?? '') }];
       case 'run_end':
+        this.runAt = null;
         if (p.result === 'won') return ['progression_completed', { ...this.step, ...runResult(p) }];
         return ['progression_failed', { ...this.step, ...runResult(p), reason: 'wall_fell' }];
       case 'run_quit':
-        return ['progression_failed', { ...this.step, ...runResult(p), reason: p.giveUp ? 'gave_up' : 'left' }];
+        if (p.giveUp) {
+          this.runAt = null;
+          return ['progression_failed', { ...this.step, ...runResult(p), reason: 'gave_up' }];
+        }
+        return this.left(p, ts, 'pagehide');
+      case 'run_hidden':
+        return this.left(p, ts, 'hidden');
       default:
         return null;
     }
+  }
+
+  /** The page hid or went away mid-run: one `left` per run, whichever of the two came first (a
+   *  closed tab hides before pagehide; mobile browsers often never send pagehide). A player who
+   *  only switched tabs and came back still ends the run later. */
+  private left(p: Props, ts: number, via: string): [string, BridgeData] | null {
+    if (this.runAt === null) return null;
+    const wall_sec = secsBetween(this.runAt, ts);
+    this.runAt = null;
+    return ['progression_failed', { ...this.step, ...runResult(p), reason: 'left', via, wall_sec, battle_sec: Number(p.secs) || 0 }];
   }
 }
 
@@ -93,7 +124,7 @@ export class BridgeSink implements Sink {
 
   send(events: TrackedEvent[]): void {
     for (const e of events) {
-      const mapped = this.events.map(e.name, e.props);
+      const mapped = this.events.map(e.name, e.props, e.ts);
       if (mapped) this.bridge.track(mapped[0], { ...mapped[1], ...this.device, session: e.session, day: e.day, build_version: this.build });
     }
   }
