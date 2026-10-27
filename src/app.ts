@@ -416,7 +416,8 @@ export class Game {
   /** Fills the bars beside the board with the workshop wall, the board casting a shadow on it. */
   private sideWall(boardX: number, m: MenuFit): void {
     this.wall.visible = this.root.visible && boardX > 1;
-    const size = `${Math.round(m.w)}x${Math.round(m.h)}`;
+    // the scale and the board's edge too: a window resized at the same shape keeps m.w x m.h
+    const size = `${Math.round(m.w)}x${Math.round(m.h)}@${m.scale.toFixed(4)}/${Math.round(boardX)}`;
     if (!this.wall.visible || size === this.wallSize) return;
     this.wallSize = size;
     this.wall.removeChildren().forEach((c) => c.destroy());
