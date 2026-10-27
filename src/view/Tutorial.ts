@@ -30,6 +30,10 @@ export interface Lesson {
 /** The dim, a warm dark brown rather than black, light enough to watch the battle through. */
 const DIM = { color: P.line, alpha: 0.42 };
 const PAD = 14;
+/** Beside the board narrower than this (page units), a wide screen's card goes over the field. */
+const NARROW = 480;
+/** The gap between a card over the field and what it points at, room for its tail. */
+const BESIDE = 90;
 
 export class TutorialLayer extends Container {
   private readonly dim = new Graphics();
@@ -90,9 +94,18 @@ export class TutorialLayer extends Container {
     const button = lesson.step === 'summon' || lesson.step === 'upgrade' || lesson.step === 'more';
     let cw: number;
     let side: 'left' | 'right' | 'above' | 'below';
+    // the field turned on its side leaves too little room beside the board: the card lies wide
+    // over the field instead, beside what it points at (or above the skill cards)
+    const narrow = wide && Math.max(c.x, w - (c.x + c.w)) < NARROW;
     if (button) {
       cw = Math.min(wide ? 640 : 880, w - 80);
       side = 'above';
+    } else if (narrow && lesson.step === 'pick') {
+      cw = Math.min(880, w - 80);
+      side = 'above';
+    } else if (narrow) {
+      side = target.x + target.w / 2 < w / 2 ? 'right' : 'left';
+      cw = Math.min(760, (side === 'right' ? w - (target.x + target.w) : target.x) - BESIDE - 40);
     } else if (wide) {
       const left = c.x;
       const right = w - (c.x + c.w);
@@ -118,6 +131,9 @@ export class TutorialLayer extends Container {
       // room for the hand between the card and what it points at
       y = side === 'above' ? target.y - (lesson.step === 'pick' ? 30 : 190) - ch / 2 : target.y + target.h + 60 + ch / 2;
       if (lesson.step === 'pick') y = Math.max(y, ch / 2 + 20);
+    } else if (narrow) {
+      x = side === 'right' ? target.x + target.w + BESIDE + cw / 2 : target.x - BESIDE - cw / 2;
+      y = target.y + target.h / 2;
     } else {
       x = side === 'left' ? c.x / 2 : (c.x + c.w + w) / 2;
       y = lesson.step === 'pick' ? h / 2 : target.y + target.h / 2 - (lesson.step === 'merge' ? 260 : 220);
