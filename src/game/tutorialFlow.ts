@@ -8,7 +8,9 @@ import { mergeablePair, Tutorial } from '../sim/tutorial';
 import { BALANCE, type BattleEvent } from '../sim/types';
 import { SKILL_BOX } from '../view/Overlay';
 import type { Lesson, Rect } from '../view/Tutorial';
+import { isLand } from '../view/landView';
 import { DESIGN_H, DESIGN_W, type MenuFit } from '../view/viewport';
+import { LAND } from '../view/wideLayout';
 
 /** The tutorial starts with the first battle of stage 1 on a save that has not seen it. */
 export function beginTutorial(g: Game): void {
@@ -75,7 +77,8 @@ export function lessonFor(g: Game, step: NonNullable<ReturnType<Tutorial['showin
   const ox = g.root.x / m.scale;
   const oy = g.root.y / m.scale;
   const page = (r: Rect): Rect => ({ x: ox + r.x * k, y: oy + r.y * k, w: r.w * k, h: r.h * k });
-  const board = page({ x: 0, y: 0, w: DESIGN_W, h: DESIGN_H });
+  const land = isLand();
+  const board = page(land ? { x: 0, y: 0, w: LAND.w, h: LAND.field + LAND.band } : { x: 0, y: 0, w: DESIGN_W, h: DESIGN_H });
   const center = (r: Rect) => ({ x: r.x + r.w / 2, y: r.y + r.h / 2 });
   if (step === 'pick') {
     const s = Math.min(1, (m.w - 40) / SKILL_BOX.w, (m.h - 40) / SKILL_BOX.h);
@@ -85,9 +88,11 @@ export function lessonFor(g: Game, step: NonNullable<ReturnType<Tutorial['showin
   if (step === 'merge') {
     const pair = mergeablePair(b)!;
     const holes = pair.map((slot) => {
-      const c = slotCenter(slot);
-      const g = BALANCE.grid;
-      return page({ x: c.x - g.cellW / 2, y: c.y - g.cellH / 2, w: g.cellW, h: g.cellH });
+      // the cell where it lies on the board: on a field turned on its side, turned with it
+      const c = land ? g.root.toLocal(g.view.toGlobal(slotCenter(slot))) : slotCenter(slot);
+      const w = land ? BALANCE.grid.cellH : BALANCE.grid.cellW;
+      const h = land ? BALANCE.grid.cellW : BALANCE.grid.cellH;
+      return page({ x: c.x - w / 2, y: c.y - h / 2, w, h });
     });
     return { step, holes, from: center(holes[0]), to: center(holes[1]), clear: board };
   }

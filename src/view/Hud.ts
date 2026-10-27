@@ -11,6 +11,7 @@ import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKi
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
+import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { Button, COLORS, label } from './ui';
@@ -78,6 +79,10 @@ export class Hud extends Container {
   private nudgeTime = 0;
   /** The summon button's shake after a tap on it while grey. */
   private shake = 0;
+  /** The design y of the band under a field turned on its side, where the gold and buttons go. */
+  private band: number | null = null;
+  /** The battle view, to find the cells on a field turned on its side. */
+  field: Container | null = null;
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
@@ -114,6 +119,22 @@ export class Hud extends Container {
     this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton);
   }
 
+  /** Lays the HUD out for the screen: `band` is the design y of the band under a field turned on
+   *  its side (wideLayout.ts), where the gold and the buttons go, or null on the upright board. */
+  place(band: number | null): void {
+    if (band === this.band) return;
+    this.band = band;
+    const y = band ?? BUTTON.y;
+    this.upgradeButton.position.set(190, y);
+    this.summonButton.position.set(DESIGN_W - 190, y);
+    this.legible(this.boost, true);
+  }
+
+  /** Where the coin's centre is: top left of the board, or left of the buttons in the band. */
+  private coinAt(): { x: number; y: number } {
+    return this.band === null ? { x: 90, y: 60 * Math.min(this.boost, 1.25) } : { x: -150, y: this.band };
+  }
+
   attach(battle: Battle): void {
     this.battle = battle;
     this.bannerTime = 0;
@@ -129,8 +150,8 @@ export class Hud extends Container {
   }
 
   /** Grows the small words for a small board; the hint wraps narrower to stay on it. */
-  legible(k: number): void {
-    if (k === this.boost) return;
+  legible(k: number, force = false): void {
+    if (k === this.boost && !force) return;
     this.boost = k;
     const top = Math.min(k, 1.25);
     this.waveText.scale.set(top);
@@ -139,7 +160,11 @@ export class Hud extends Container {
     this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
     this.stageText.x = DESIGN_W - 125 * top;
     this.goldText.scale.set(top);
-    this.goldText.x = 130 + (top - 1) * 30;
+    const coin = this.coinAt();
+    this.goldText.position.set(coin.x + 40 + (top - 1) * 30, coin.y);
+    // the coins fly in the view's own units, which a field turned on its side turns with it
+    COIN_TARGET.x = this.band === null ? coin.x : coin.y;
+    COIN_TARGET.y = this.band === null ? coin.y : DESIGN_H - (coin.x + this.x);
     this.sizeCoin();
     this.hintBox.scale.set(Math.min(k, 1.3));
     this.hintBox.y = 118 + (top - 1) * 40;
@@ -235,11 +260,12 @@ export class Hud extends Container {
     this.coinPop = 1;
   }
 
-  /** The coin at the board's size, bumped by `coinPop`, its centre staying at (90, 60). */
+  /** The coin at the board's size, bumped by `coinPop`, its centre staying at coinAt(). */
   private sizeCoin(): void {
     const k = Math.min(this.boost, 1.25) * (1 + 0.3 * this.coinPop);
+    const at = this.coinAt();
     this.coin.scale.set(k);
-    this.coin.position.set(90 * (1 - k), 60 * (1 - k));
+    this.coin.position.set(at.x - 90 * k, at.y - 60 * k);
   }
 
   update(dt: number): void {
@@ -314,15 +340,18 @@ export class Hud extends Container {
       this.nudgeHand.addChild(pointingHand());
     }
     const s = (this.nudgeTime += dt);
-    const g = BALANCE.grid;
-    const [from, to] = pair.map((slot) => slotCenter(slot));
+    // the cells where they lie: on a field turned on its side, turned with it
+    const field = this.band === null ? null : this.field;
+    const cellW = field ? BALANCE.grid.cellH : BALANCE.grid.cellW;
+    const cellH = field ? BALANCE.grid.cellW : BALANCE.grid.cellH;
+    const [from, to] = pair.map((slot) => (field ? this.toLocal(field.toGlobal(slotCenter(slot))) : slotCenter(slot)));
     const pulse = 0.5 + 0.5 * Math.sin(s * 5);
     const r = this.nudgeRings.clear();
     for (const c of [from, to]) {
-      const x = c.x - g.cellW / 2 - 10;
-      const y = c.y - g.cellH / 2 - 10;
-      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 10, color: P.brassLight, alpha: 0.35 + 0.55 * pulse });
-      r.roundRect(x, y, g.cellW + 20, g.cellH + 20, 30).stroke({ width: 3, color: LIGHT.edge, alpha: 0.6 });
+      const x = c.x - cellW / 2 - 10;
+      const y = c.y - cellH / 2 - 10;
+      r.roundRect(x, y, cellW + 20, cellH + 20, 30).stroke({ width: 10, color: P.brassLight, alpha: 0.35 + 0.55 * pulse });
+      r.roundRect(x, y, cellW + 20, cellH + 20, 30).stroke({ width: 3, color: LIGHT.edge, alpha: 0.6 });
     }
     const mid = { x: (from.x + to.x) / 2, y: Math.min(from.y, to.y) - 60 - 0.25 * Math.hypot(to.x - from.x, to.y - from.y) };
     drawArc(this.nudgeArc.clear(), from, mid, to);
@@ -349,7 +378,10 @@ export class Hud extends Container {
   /** Where a button is on the board, for the tutorial to point at. */
   buttonRect(which: 'summon' | 'upgrade'): { x: number; y: number; w: number; h: number } {
     const b = which === 'summon' ? this.summonButton : this.upgradeButton;
-    return { x: b.x - BUTTON.w / 2, y: b.y - BUTTON.h / 2, w: BUTTON.w, h: BUTTON.h };
+    const w = BUTTON.w * b.scale.x;
+    const h = BUTTON.h * b.scale.y;
+    const x = which === 'summon' ? DESIGN_W - 190 : b.x;
+    return { x: this.x + x - w / 2, y: b.y - h / 2, w, h };
   }
 
   /** A line in the wave banner's place, e.g. the tutorial saying it did a step. */

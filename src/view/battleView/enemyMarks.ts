@@ -6,6 +6,7 @@
 
 import { Container, Sprite, Texture } from 'pixi.js';
 import type { Enemy } from '../../sim/types';
+import { aside } from '../landView';
 import { artBarTop, barsShown, enemyBarBox } from '../shapes';
 import { COLORS } from '../ui';
 
@@ -75,7 +76,8 @@ export class EnemyMarks {
   shadow(e: Enemy): void {
     const { x, y, radius: r } = e;
     const fly = e.kind === 'flyer';
-    this.shadows.put(x, y + r * 0.8, r * (fly ? 1.4 : 1.8), r * (fly ? 0.44 : 0.6), 0x000000, fly ? 0.2 : 0.3);
+    const p = aside(x, y, 0, r * 0.8);
+    this.shadows.put(p.x, p.y, r * (fly ? 1.4 : 1.8), r * (fly ? 0.44 : 0.6), 0x000000, fly ? 0.2 : 0.3);
   }
 
   /** The HP bar over an enemy's art (and the tripod's jar bar over that), unless untouched; an
@@ -83,12 +85,15 @@ export class EnemyMarks {
   hp(e: Enemy): void {
     if (!barsShown(e)) return;
     const { x, w, top } = enemyBarBox(e, artBarTop(e));
-    const left = x - w / 2;
-    this.bars.put(left, top, w, 10, COLORS.hpBack);
-    this.bars.put(left, top, (w * Math.max(0, e.hp)) / e.maxHp, 10, COLORS.hp);
+    // the bars' top left, as an offset from the enemy on the screen
+    const dx = x - w / 2 - e.x;
+    let p = aside(e.x, e.y, dx, top - e.y);
+    this.bars.put(p.x, p.y, w, 10, COLORS.hpBack);
+    this.bars.put(p.x, p.y, (w * Math.max(0, e.hp)) / e.maxHp, 10, COLORS.hp);
     if (e.shieldMax) {
-      this.bars.put(left, top - 14, w, 10, COLORS.hpBack);
-      this.bars.put(left, top - 14, (w * Math.max(0, e.shield ?? 0)) / e.shieldMax, 10, 0x8fe6f0);
+      p = aside(e.x, e.y, dx, top - 14 - e.y);
+      this.bars.put(p.x, p.y, w, 10, COLORS.hpBack);
+      this.bars.put(p.x, p.y, (w * Math.max(0, e.shield ?? 0)) / e.shieldMax, 10, 0x8fe6f0);
     }
   }
 

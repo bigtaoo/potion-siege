@@ -85,10 +85,15 @@ export class TutorialLayer extends Container {
     this.card.removeChildren().forEach((c) => c.destroy({ children: true }));
     const target = lesson.step === 'pick' ? lesson.clear : bounds(lesson.holes.map((r) => grow(r, PAD)));
     const c = lesson.clear;
-    // beside the board (or the skill cards) on a wide screen, above or below the target on a tall one
+    // right over a button it points at, where the eye already is; else beside the board (or the
+    // skill cards) on a wide screen, above or below the target on a tall one
+    const button = lesson.step === 'summon' || lesson.step === 'upgrade' || lesson.step === 'more';
     let cw: number;
     let side: 'left' | 'right' | 'above' | 'below';
-    if (wide) {
+    if (button) {
+      cw = Math.min(wide ? 640 : 880, w - 80);
+      side = 'above';
+    } else if (wide) {
       const left = c.x;
       const right = w - (c.x + c.w);
       side = lesson.step === 'pick' || target.x + target.w / 2 < c.x + c.w / 2 ? (left >= right ? 'left' : 'right') : right >= left ? 'right' : 'left';
@@ -109,7 +114,7 @@ export class TutorialLayer extends Container {
     let x: number;
     let y: number;
     if (side === 'above' || side === 'below') {
-      x = w / 2;
+      x = button ? clamp(target.x + target.w / 2, cw / 2 + 20, w - cw / 2 - 20) : w / 2;
       // room for the hand between the card and what it points at
       y = side === 'above' ? target.y - (lesson.step === 'pick' ? 30 : 190) - ch / 2 : target.y + target.h + 60 + ch / 2;
       if (lesson.step === 'pick') y = Math.max(y, ch / 2 + 20);

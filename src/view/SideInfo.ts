@@ -20,6 +20,9 @@ const MAX_W = 560;
 /** How often the damage shares are redrawn while they change, in seconds. */
 const REFRESH = 0.25;
 
+/** The left board's look while it has nothing to show yet. */
+const EMPTY_ALPHA = 0.35;
+
 /** The parts of the left board that change without a new layout. */
 interface Live {
   /** Each taken skill's pips (or ×n), redrawn when its level changes. */
@@ -62,6 +65,9 @@ export class SideInfo extends Container {
       return;
     }
     this.scale.set(m.scale);
+    // the left board steps back until it has something to show: a skill taken or any damage done
+    const empty = SKILL_IDS.every((id) => !(b.skills[id] > 0)) && Object.values(b.dealt).every((d) => d === 0);
+    this.left.alpha = empty ? EMPTY_ALPHA : 1;
     this.wait -= dt;
     // a new layout, wave or skill at once; a new level at once, without a rebuild; the damage
     // shares at most every REFRESH

@@ -4,6 +4,7 @@
 import { Assets, Container, Sprite, type Texture } from 'pixi.js';
 import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
 import type { SkillId } from '../sim/skills';
+import { isLand } from './landView';
 import type { PotionLook } from './potion';
 
 /** What the first battle shows from its first frame: the field, the commander, the tutorial's
@@ -11,7 +12,8 @@ import type { PotionLook } from './potion';
  *  only (about a sixth of the art). */
 const FIRST = ['bg_field', 'commander', 'tutorial_hand', 'enemy_grunt', ...LINEUP.map((k) => `potion_${k}_body`)];
 /** Fetched right after: what the first battle comes to next (the skill cards show the
- *  ultimates and icons, runners and brutes walk in from waves 2 and 4) and the other potions. */
+ *  ultimates and icons, runners and brutes walk in from waves 2 and 4), the grunt walking on a
+ *  field turned on its side with the runners and brutes in profile too, and the other potions. */
 const SOON = [
   ...LINEUP.map((k) => `potion_${k}_ult`),
   'icon_allDamage',
@@ -21,13 +23,19 @@ const SOON = [
   'icon_crit',
   'enemy_runner',
   'enemy_brute',
+  'enemy_grunt_side',
+  'enemy_runner_side',
+  'enemy_brute_side',
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_body`),
 ];
-/** Then the rest: the later stages' enemies, the bosses and the other ultimates. */
+/** Then the rest: the later stages' enemies, the bosses (in profile too, but for the tank, already
+ *  three-quarter facing left, and the gear king, a cog rolling left face-on) and the other ultimates. */
 const LATER = [
   ...HERO_KINDS.filter((k) => !LINEUP.includes(k)).map((k) => `potion_${k}_ult`),
   'enemy_flyer',
   'enemy_winder',
+  'enemy_flyer_side',
+  'enemy_winder_side',
   'enemy_boss',
   'enemy_clock',
   'enemy_tripod',
@@ -35,6 +43,11 @@ const LATER = [
   'enemy_anvil',
   'enemy_gear',
   'enemy_gear_core',
+  'enemy_clock_side',
+  'enemy_tripod_side',
+  'enemy_tripod_bare_side',
+  'enemy_anvil_side',
+  'enemy_gear_core_side',
 ];
 
 /** The three in fetch order, for art.test.ts (every file in public/art once). */
@@ -207,10 +220,11 @@ export function fieldTexture(key = 'bg_field'): Texture | undefined {
 }
 
 /** `e`, when given, picks the look of a boss's second state: the tripod without its jar, the
- *  gear king's bare core. */
+ *  gear king's bare core. On a field turned on its side an enemy walks left in profile, where it
+ *  has that art yet. */
 export function enemyTexture(kind: EnemyKind, e?: { shieldMax?: number; shield?: number; core?: boolean }): Texture | undefined {
   const look = kind === 'tripod' && e?.shieldMax && !e.shield ? 'tripod_bare' : kind === 'gear' && e?.core ? 'gear_core' : kind;
-  return textures.get(`enemy_${look}`) ?? textures.get(`enemy_${kind}`);
+  return (isLand() && textures.get(`enemy_${look}_side`)) || textures.get(`enemy_${look}`) || textures.get(`enemy_${kind}`);
 }
 
 /** The tutorial's pointing glove, back of the hand, fingertip straight up (see Tutorial.ts). */

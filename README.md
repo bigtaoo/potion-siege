@@ -4,7 +4,7 @@ A merge tower-defense game for CrazyGames. A wizard alchemist holds a castle wal
 clockwork army. The heroes are living potion bottles standing in the wall's cells: summon them,
 drag two matching ones together to brew a stronger one, and pick a skill each time you upgrade.
 The alchemist has no attack of his own; kills charge him and you tap him to cast.
-PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side boards on wide screens.
+PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board on phones, the same battle turned on its side on wide screens.
 
 ## The game
 
@@ -62,8 +62,12 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board with side b
   the hand points at it. Until the first win, stage 1 plays on a fixed seed, so every new player sees the same opening.
 - **Sound**: effects and two music loops synthesized in code (`src/audio/`). They stay silent during
   ads and while the tab is hidden, and there is a music/sound toggle on the home screen.
-- **Wide screens**: a landscape embed shows side boards next to the board: this run's skills with
-  each potion's damage share, and the next waves with a boss countdown.
+- **Wide screens**: a landscape embed turns the battlefield on its side ("land", `src/view/landView.ts`):
+  the wall stands on the left, enemies walk in from the right in profile (`enemy_<look>_side` art,
+  picked by `enemyTexture` only in land; the boss tank and the gear king keep their own art), and the
+  buttons sit on a walnut shelf under the field. Only the view turns: the sim, seeds and replays are
+  the same. `?wide=off` keeps the upright board with side boards (this run's skills with each potion's
+  damage share, the next waves with a boss countdown); in land the left board is hidden for now.
   The battle's small text grows on small embeds (`textBoost` in `src/view/viewport.ts`), so 800x450 stays legible.
 
 ## Commands
