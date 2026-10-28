@@ -4,6 +4,7 @@ import '../view/layout/measure';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { dayOf } from '../sim/daily';
+import { challengeAd, playChallenge } from './modes';
 import { home } from './homeScreen';
 import { englishPage, flush, tap, veteran, world } from './testWorld';
 
@@ -39,5 +40,24 @@ describe("the challenge's second go", () => {
     expect(w.game['menu'].visible).toBe(true);
     expect(w.game['menu'].interactiveChildren).toBe(true);
     expect(w.save().challenge.attempts).toBe(1);
+  });
+
+  it('starts no free go once the day has had it, whatever calls it', () => {
+    const w = world(used());
+    home(w.game, 'challenge');
+    playChallenge(w.game, false);
+    expect(w.game['challenge']).toBeNull();
+    expect(w.game['menu'].visible).toBe(true);
+    expect(w.events('challenge_start')).toEqual([]);
+  });
+
+  it('leaves the screen alone for an ad that was closed with the menu already gone', async () => {
+    const w = world(used());
+    w.game['menu'].visible = false;
+    w.host.answers = ['closed'];
+    await challengeAd(w.game);
+    expect(w.game['menu'].visible).toBe(false);
+    expect(w.game['menu'].interactiveChildren).toBe(true);
+    expect(w.events('ad_challenge')).toEqual([{ ok: false }]);
   });
 });
