@@ -137,4 +137,59 @@ describe('AdMob', () => {
     s.push({ status: 'yes', rewarded: 1, privacyOptions: 'true', error: 'x'.repeat(500) });
     expect([ads.rewardedAvailable(), ads.privacyOffered(), ads.error()?.length]).toEqual([false, false, 120]);
   });
+
+  it('reads no state from a shell without adState, and ignores malformed events', async () => {
+    const s = shell(ON);
+    delete s.native.adState;
+    const ads = new AdMob(s.native);
+    expect([ads.rewardedAvailable(), ads.hosted(), ads.error()]).toEqual([false, true, null]);
+    s.push(ON);
+    const paid = ads.rewarded();
+    for (const bad of [null, 'done', 7]) s.event(bad);
+    s.event({ kind: 'rewarded', event: 'loaded' });
+    s.event({ kind: 'rewarded', event: 'done', ok: true });
+    expect(await paid).toBe(true);
+  });
+
+  it('ignores events with no ad playing or given up, and of another kind than the one given up', async () => {
+    const s = shell(ON);
+    const ads = new AdMob(s.native);
+    const late: boolean[] = [];
+    ads.onLate = (on) => late.push(on);
+    s.event({ kind: 'rewarded', event: 'started' });
+    const paid = ads.rewarded();
+    await vi.advanceTimersByTimeAsync(START_WAIT_MS);
+    expect(await paid).toBe(false);
+    s.event({ kind: 'interstitial', event: 'started' });
+    s.event({ kind: 'rewarded', event: 'loaded' });
+    s.event({ kind: 'rewarded', event: 'started' });
+    s.event({ kind: 'rewarded', event: 'started' });
+    s.event({ kind: 'rewarded', event: 'done', ok: true });
+    expect(late).toEqual([true, false]);
+  });
+
+  it('closes a given-up ad that ends without coming on screen, and the game is never muted', async () => {
+    const s = shell(ON);
+    const ads = new AdMob(s.native);
+    const late: boolean[] = [];
+    ads.onLate = (on) => late.push(on);
+    const paid = ads.midgame();
+    await vi.advanceTimersByTimeAsync(START_WAIT_MS);
+    await paid;
+    s.event({ kind: 'interstitial', event: 'done', ok: false });
+    expect(late).toEqual([]);
+    void ads.rewarded();
+    expect(s.shown).toEqual(['interstitial', 'rewarded']);
+  });
+
+  it('settles an ad once when the shell answers and then throws', async () => {
+    const s = shell(ON);
+    const ads = new AdMob(s.native);
+    s.native.showAd = (kind) => {
+      s.event({ kind, event: 'done', ok: true });
+      throw new Error('bridge gone');
+    };
+    expect(await ads.rewarded()).toBe(true);
+    expect(vi.getTimerCount()).toBe(0);
+  });
 });

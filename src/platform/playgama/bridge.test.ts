@@ -1,5 +1,5 @@
-import { describe, expect, it } from 'vitest';
-import { AD_PLAY_MS, AD_START_MS, BRIDGE_WAIT_MS, PlaygamaBridge } from './bridge';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ADBLOCK_WAIT_MS, AD_PLAY_MS, AD_START_MS, BRIDGE_WAIT_MS, PlaygamaBridge } from './bridge';
 import { fakeBridge } from './testBridge';
 
 /** Timers a test runs by hand: `run(ms)` fires the one set for `ms`. */
@@ -133,4 +133,129 @@ describe('PlaygamaBridge', () => {
     for (const s of ['opened', 'rewarded', 'closed']) f.emit('rewarded_state_changed', s);
     expect(await ad).toBe(true);
   });
+
+  it('waits on real timers by default, and boots without a Bridge that never answers', async () => {
+    vi.useFakeTimers();
+    const b = new PlaygamaBridge({ bridge: { initialize: never } });
+    const ready = b.init();
+    await vi.advanceTimersByTimeAsync(BRIDGE_WAIT_MS);
+    expect(await ready).toBe(false);
+    expect(b.isReady()).toBe(false);
+  });
+
+  it('counts an adblock probe that never answers as no adblocker', async () => {
+    const waited: number[] = [];
+    const f = fakeBridge();
+    f.global.bridge!.advertisement!.checkAdBlock = never;
+    const b = new PlaygamaBridge(f.global, async (ms) => {
+      waited.push(ms);
+      if (ms === BRIDGE_WAIT_MS) await never();
+    });
+    expect(await b.init()).toBe(true);
+    expect([b.hasAdblock(), waited]).toEqual([false, [BRIDGE_WAIT_MS, ADBLOCK_WAIT_MS]]);
+  });
+
+  it('reads language and device only when the platform names them', async () => {
+    const f = fakeBridge({ language: 'de' });
+    const b = new PlaygamaBridge(f.global, never);
+    expect([b.language(), b.deviceType()]).toEqual([null, null]);
+    await b.init();
+    expect([b.language(), b.deviceType()]).toEqual(['de', 'desktop']);
+    f.global.bridge!.platform!.language = '';
+    f.global.bridge!.device = { type: '' };
+    expect([b.language(), b.deviceType()]).toEqual([null, null]);
+    delete f.global.bridge!.device;
+    expect(b.deviceType()).toBeNull();
+  });
+
+  it('swallows every SDK call that throws or rejects, and every game callback that throws', async () => {
+    const f = fakeBridge();
+    const sdk = f.global.bridge!;
+    const boom = () => {
+      throw new Error('sdk');
+    };
+    sdk.platform!.sendMessage = boom;
+    sdk.analytics!.send = async () => Promise.reject(new Error('sdk'));
+    sdk.storage!.get = async () => Promise.reject(new Error('quota'));
+    sdk.storage!.set = boom;
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    b.send('game_ready');
+    b.track('x', { a: 1 });
+    b.save(new Map([['k', 'v']]));
+    expect((await b.load(['k'])).size).toBe(0);
+    b.onPause(() => boom());
+    b.onMute(() => boom());
+    expect(() => f.emit('pause_state_changed', true)).not.toThrow();
+    expect(() => f.emit('audio_state_changed', false)).not.toThrow();
+    sdk.platform!.on = boom;
+    expect(() => b.onPause(() => {})).not.toThrow();
+  });
+
+  it('passes the pause on, and reads a storage answer that is not a list as nothing stored', async () => {
+    const f = fakeBridge();
+    f.global.bridge!.storage!.get = async () => ({ k: 'v' });
+    const b = new PlaygamaBridge(f.global, never);
+    const paused: boolean[] = [];
+    b.onMute(() => paused.push(true));
+    expect(paused).toEqual([]);
+    await b.init();
+    b.onPause((p) => paused.push(p));
+    f.emit('pause_state_changed', true);
+    f.emit('pause_state_changed', 'nope');
+    expect(paused).toEqual([true, false]);
+    expect((await b.load(['k'])).size).toBe(0);
+  });
+
+  it('plays no ad where the advertisement module cannot report states', async () => {
+    const f = fakeBridge();
+    delete f.global.bridge!.advertisement!.on;
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    expect(await b.rewarded()).toBe(false);
+    await b.interstitial();
+    expect(f.shown).toEqual([]);
+  });
+
+  it('gives up an earlier ad still waiting when the next one is asked for', async () => {
+    const f = fakeBridge();
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    const first = b.rewarded();
+    f.emit('rewarded_state_changed', 'opened');
+    f.emit('rewarded_state_changed', 'rewarded');
+    const second = b.rewarded();
+    expect(await first).toBe(false);
+    // an interstitial's states never reach a rewarded ad
+    f.emit('interstitial_state_changed', 'closed');
+    for (const s of ['opened', 'rewarded', 'closed']) f.emit('rewarded_state_changed', s);
+    expect(await second).toBe(true);
+  });
+
+  it('ignores the late failure of an ad that already ended', async () => {
+    const f = fakeBridge();
+    f.global.bridge!.advertisement!.showRewarded = () => {
+      // a cooldown reported as a state, then thrown as well
+      f.emit('rewarded_state_changed', 'failed');
+      throw new Error('cooldown');
+    };
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    expect(await b.rewarded()).toBe(false);
+  });
+
+  it('keeps the game going when the ad-started callback throws', async () => {
+    const f = fakeBridge();
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    const ad = b.interstitial(() => {
+      throw new Error('game');
+    });
+    for (const s of ['opened', 'closed']) f.emit('interstitial_state_changed', s);
+    await expect(ad).resolves.toBeUndefined();
+  });
+});
+
+afterEach(() => {
+  vi.useRealTimers();
 });
