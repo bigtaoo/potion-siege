@@ -10,3 +10,5 @@ telemetry/
 *.local
 ref/
 dist-ota/
+.stryker-tmp/
+reports/

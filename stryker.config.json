@@ -1,0 +1,45 @@
+{
+  "$schema": "./node_modules/@stryker-mutator/core/schema/stryker-schema.json",
+  "testRunner": "vitest",
+  "vitest": {
+    "configFile": "scripts/vitest.mutate.config.js"
+  },
+  "coverageAnalysis": "perTest",
+  "mutate": [
+    "src/sim/battle.ts",
+    "src/sim/damage.ts",
+    "src/sim/hits.ts",
+    "src/sim/shots.ts",
+    "src/sim/kills.ts",
+    "src/sim/enemyTick.ts",
+    "src/sim/targets.ts",
+    "src/sim/targetPick.ts",
+    "src/sim/waves.ts",
+    "src/sim/spawn.ts",
+    "src/sim/horde.ts",
+    "src/sim/rng.ts",
+    "src/sim/math/prng.ts",
+    "src/sim/math/pick.ts"
+  ],
+  "ignorePatterns": [
+    "dist*",
+    "ios",
+    "android",
+    "art",
+    "ref",
+    "telemetry",
+    "*.zip"
+  ],
+  "reporters": [
+    "clear-text",
+    "json",
+    "progress"
+  ],
+  "jsonReporter": {
+    "fileName": "reports/mutation/sim.json"
+  },
+  "concurrency": 16,
+  "timeoutMS": 15000,
+  "dryRunTimeoutMinutes": 20,
+  "tempDirName": ".stryker-tmp"
+}
