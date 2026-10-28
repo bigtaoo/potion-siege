@@ -87,6 +87,7 @@ PixiJS 8 + TypeScript + Vite, in English and Chinese, portrait board on phones, 
 | `npm run check` | Typecheck, the file length check, tests, the quick half of the balance guard and the CrazyGames and iOS builds |
 | `npm run check:filelength` | Fails on any file under `src/`, `scripts/` or `server/` over 500 lines, tests included (`scripts/checkFileLength.mjs`) |
 | `npm run check:balance` | The balance guard (`scripts/guard/`): the main curves of the balance tools below on fewer seeds, each pinned to a band; about 30 s. `:quick` (idle wall, endless; in `check`) and `:slow` (early, chapter and boss curves; a CI step of its own) run its halves |
+| `npm run mutate` | Mutation testing (StrykerJS) of the 14 central `src/sim` files against the sim's own tests; about 1.5 h, so not in `check` or CI. One file: `npx stryker run --mutate src/sim/hits.ts` (2-10 min). Scores and what is left: `ref/mutation-sim.md` |
 | `npm run build` | Typecheck, then the web build in `dist/` |
 | `npm run build:crazygames` | Typecheck, then the CrazyGames build in `dist-crazygames/` (relative paths) |
 | `npm run preview:crazygames` | Serves the built `dist-crazygames/` on port 4174 |
@@ -190,6 +191,7 @@ The notes are in Chinese.
 - `ref/design/crystal-economy.md`: the crystal economy: potions to Lv40, the daily ×2 cap and `npm run economy`.
 - `ref/design/live-data-2026-10.md`: the first live data and the late-game balance.
 - `ref/design/crazygames-launch-check.md`: the pre-launch check against the CrazyGames docs.
+- `ref/mutation-sim.md`: the mutation-testing trial of `src/sim`: scores per file, what the `*Edges.test.ts` files pin, what is left (in English).
 - `ref/design/next-content.md`: content proposals from before chapters, bosses and endless mode.
 
 ## Deploying
