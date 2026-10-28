@@ -1,11 +1,11 @@
-// The edges of the bursts the dead set off (kills.ts): what makes one die burnt, rusted, frozen or
-// only chilled, and how far each burst reaches. Pinned by mutation testing (ref/mutation-sim.md).
+// The edges of the dead taken off (kills.ts): the gold and count each one adds, what makes one
+// die burnt, rusted, frozen or only chilled, and how far each burst reaches. Pinned by mutation testing (ref/mutation-sim.md).
 
 import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { Battle } from './battle';
 import { RESIST } from './enemies';
 import { reapDead } from './kills';
-import { battleSetup, newMeta } from './meta';
+import { BASE_SETUP, battleSetup, newMeta } from './meta';
 import { FP, ticks, toFp } from './math/fixed';
 import { type SkillId } from './skills';
 import { BALANCE, type Enemy } from './types';
@@ -53,6 +53,28 @@ function victim(b: Battle): Enemy {
 
 const u = (v: number) => v / FP;
 
+describe('the kill pay', () => {
+  it('pays its kind\'s gold plus the skill\'s, times the challenge\'s rate, and counts each one', () => {
+    const modifiers = { enemySpeed: 1, summonCost: 1, waveGold: 1, killGold: 3, crit: 0, bossWaves: BALANCE.waves.bossWaves, banned: [] };
+    const b = new Battle(1, { ...BASE_SETUP, modifiers });
+    b.enemies = [];
+    (b.mods as { goldPerKill: number }).goldPerKill = 2;
+    const [g, k] = [b.gold, b.kills];
+    victim(b);
+    victim(b);
+    reapDead(b);
+    expect(b.gold - g).toBe(2 * (BALANCE.enemies.grunt.gold + 2) * 3);
+    expect(b.kills - k).toBe(2);
+
+    const plain = new Battle(1, { ...BASE_SETUP, modifiers: undefined });
+    plain.enemies = [];
+    const p = plain.gold;
+    victim(plain);
+    reapDead(plain);
+    expect(plain.gold - p).toBe(BALANCE.enemies.grunt.gold);
+  });
+});
+
 describe('the fire chain', () => {
   it('bursts only from one still burning, and only around it', () => {
     const b = withSkills(['fireChain']);
@@ -75,6 +97,14 @@ describe('the fire chain', () => {
 });
 
 describe('the melt', () => {
+  it('needs the skill', () => {
+    const b = withSkills([]);
+    victim(b).rust = 3;
+    const near = enemy(b, 560, 600, 1e6);
+    reapDead(b);
+    expect(near.rust).toBe(0);
+  });
+
   it('spreads only rust there was, only close by, half of it onto an ornithopter', () => {
     const clean = withSkills(['poisonMelt']);
     victim(clean);
