@@ -111,6 +111,38 @@ describe('cues', () => {
     expect(ids).toEqual(['hitIce', 'kill', 'boss', 'win']);
   });
 
+  it('gives every other event its own sound, and an ultimate offer none', () => {
+    const cues = battleCues([
+      { type: 'hit', kind: 'shadow' as never, x: 540, y: 0, radius: 10 },
+      { type: 'kill', kind: 'clock', x: 540, y: 0, gold: 9, boss: true },
+      { type: 'summon', slot: 0 },
+      { type: 'merge', slot: 0, star: 3, kind: 'fire' },
+      { type: 'offer', reason: 'upgrade' },
+      { type: 'offer', reason: 'ultimate' },
+      { type: 'cast', skill: 'bomb', x: 0, y: 0, flight: 1 },
+      { type: 'cast', skill: 'brew', x: 0, y: 0, flight: 1 },
+      { type: 'flask', x: 1080, y: 0, radius: 50, hits: [] },
+      { type: 'cellOpen', slot: 4, last: false },
+      { type: 'wave', wave: 1, boss: false },
+      { type: 'wave', wave: 2, boss: false },
+      { type: 'wallHit' },
+    ]);
+    expect(cues).toEqual([
+      { id: 'hitArcane', pan: 0 },
+      { id: 'kill', pan: 0, rate: 0.6, gain: 1 },
+      { id: 'summon' },
+      { id: 'merge', rate: 0.94 + 3 * 0.04 },
+      { id: 'tap' },
+      { id: 'merge', rate: 0.75 },
+      { id: 'levelup' },
+      { id: 'blast', pan: 0.6 },
+      { id: 'crystal' },
+      { id: 'horde' },
+      { id: 'wave' },
+      { id: 'wallHit' },
+    ]);
+  });
+
   it('pans hits by where they land', () => {
     const [l, r] = battleCues([
       { type: 'hit', kind: 'fire', x: 0, y: 0, radius: 10 },
