@@ -2,11 +2,12 @@
 // after them: the real game over a stand-in Pixi app and a host whose ads answer as each test
 // scripts them. An ad can be watched, closed early, fail to load, or break.
 import '../view/layout/measure';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { t } from '../i18n';
 import { INTERSTITIAL_MINUTES } from '../platform/adPacing';
 import { dayOf } from '../sim/daily';
 import { doublesLeft } from '../sim/meta';
+import { again } from './resultScreen';
 import { buttons, englishPage, flush, play, playToEnd, tap, texts, veteran, world, type World } from './testWorld';
 
 beforeAll(englishPage);
@@ -186,5 +187,49 @@ describe('the result screen', () => {
     await flush();
     expect(w.host.rewardedCalls).toBe(1);
     expect(w.save().crystals).toBe(crystals);
+  });
+
+  it('goes home to the tab of the tip tapped after a loss', async () => {
+    const w = world();
+    play(w);
+    playToEnd(w);
+    tap(w.stage, t('tip.workshop.name'));
+    await flush();
+    expect(w.game['menu'].visible).toBe(true);
+    expect(w.game.tab).toBe('workshop');
+    expect(w.events('result_action')).toEqual([expect.objectContaining({ action: 'tip', tab: 'workshop' })]);
+  });
+
+  it('asks the playtest question once on the web, a few battles in', async () => {
+    vi.doMock('../view/feedback', async (orig) => ({
+      ...(await orig<typeof import('../view/feedback')>()),
+      FeedbackAsk: class {
+        constructor(readonly send: unknown, readonly run: number) {}
+      },
+    }));
+    vi.resetModules();
+    try {
+      const tw = await import('./testWorld');
+      await tw.englishPage();
+      const w = tw.world();
+      Object.defineProperty(w.host, 'name', { value: 'web' });
+      tw.play(w);
+      tw.playToEnd(w);
+      expect(w.game.ask).toMatchObject({ run: 9 });
+      expect(w.events('feedback_shown')).toEqual([{ run: 9 }]);
+    } finally {
+      vi.doUnmock('../view/feedback');
+      vi.resetModules();
+    }
+  });
+
+  it('starts the next autoplay battle instead of going home', async () => {
+    const w = world(veteran(), () => {}, 'speed=200&autoplay');
+    w.game['battle']!.result = 'lost';
+    const start = vi.spyOn(w.host, 'gameplayStart');
+    await again(w.game);
+    expect(w.game['menu'].visible).toBe(false);
+    expect(w.game['battle']!.result).toBeNull();
+    expect(start).toHaveBeenCalledOnce();
   });
 });
