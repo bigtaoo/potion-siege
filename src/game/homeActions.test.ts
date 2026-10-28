@@ -2,12 +2,14 @@
 // (homeActions.ts): the real game over a stand-in Pixi app and a host whose ads and store
 // answer as each test scripts them. An ad can be watched, closed early, fail to load, or break.
 import '../view/layout/measure';
-import { beforeAll, describe, expect, it } from 'vitest';
-import { t } from '../i18n';
+import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { getLocale, setLocale, t, type Locale } from '../i18n';
 import { dayOf } from '../sim/daily';
-import { AD_CRYSTALS, ADS_PER_DAY, adsLeft } from '../sim/meta';
-import { shopAd } from './homeActions';
+import { AD_CRYSTALS, ADS_PER_DAY, adsLeft, benched } from '../sim/meta';
+import { LINEUP } from '../sim/types';
+import { buy, claimed, hintDone, language, lineup, shopAd } from './homeActions';
 import { home } from './homeScreen';
+import { LANG_KEY } from './keys';
 import { buttons, Card, englishPage, flush, tap, texts, veteran, world, type World } from './testWorld';
 
 beforeAll(englishPage);
@@ -157,5 +159,99 @@ describe('the ad-free card', () => {
     tap(w.stage, t('tabs.battle'));
     tap(w.stage, t('tabs.shop'));
     expect(texts(w.stage)).not.toContain(t('store.adFree.failed'));
+  });
+});
+
+describe('the language switch', () => {
+  afterEach(() => void setLocale('en'));
+  const page = () => Object.assign(document, { documentElement: {}, title: '' }) as unknown as { documentElement: { lang?: string }; title: string };
+
+  it('loads the language, keeps it for next time and draws the settings again in it', async () => {
+    const doc = page();
+    const w = world();
+    home(w.game, 'settings');
+    await language(w.game, 'de');
+    expect(getLocale()).toBe('de');
+    expect([doc.documentElement.lang, doc.title]).toEqual(['de', t('title')]);
+    expect(w.host.storage.getItem(LANG_KEY)).toBe('de');
+    expect(w.events('language')).toEqual([{ lang: 'de', from: 'en' }]);
+    expect(w.game.panel).toBe('settings');
+  });
+
+  it('changes nothing for the language already on, or one that cannot load', async () => {
+    page();
+    const w = world();
+    await language(w.game, 'en');
+    await language(w.game, 'xx' as Locale);
+    expect(getLocale()).toBe('en');
+    expect(w.host.storage.getItem(LANG_KEY)).toBeNull();
+    expect(w.events('language')).toEqual([]);
+  });
+});
+
+describe('the upgrade pointer', () => {
+  it('is over for good once, said with whether the player bought', () => {
+    const m = veteran();
+    m.upgradeHint = false;
+    const w = world(m);
+    w.game.hintOnButton = true;
+    hintDone(w.game, true);
+    hintDone(w.game, false);
+    expect(w.game.hintOnButton).toBe(false);
+    expect(w.save().upgradeHint).toBe(true);
+    expect(w.events('hint_upgrade_done')).toEqual([{ bought: true, run: 8 }]);
+  });
+});
+
+describe('the lineup strip', () => {
+  it('picks a reserve potion, then swaps it in for the lineup potion tapped', () => {
+    const w = world();
+    const g = w.game;
+    const [reserve, other] = benched(g.save);
+    expect(other, 'two in reserve on stage 20').toBeDefined();
+    lineup(g, LINEUP[0]);
+    expect([g.picked, w.save().lineup]).toEqual([null, [...LINEUP]]);
+    lineup(g, reserve);
+    expect(g.picked).toBe(reserve);
+    lineup(g, reserve);
+    expect(g.picked, 'a second tap unpicks it').toBeNull();
+    lineup(g, reserve);
+    lineup(g, LINEUP[0]);
+    expect(g.picked).toBeNull();
+    expect(w.save().lineup).toContain(reserve);
+    expect(w.save().lineup).not.toContain(LINEUP[0]);
+    expect(w.events('lineup')).toEqual([{ out: LINEUP[0], in: reserve }]);
+  });
+});
+
+describe('a purchase', () => {
+  it('is saved and said with its level, and a refused one is not', () => {
+    const w = world();
+    buy(w.game, false, 'wall', 2);
+    expect(w.events('meta_buy')).toEqual([]);
+    w.game.save.crystals = 40;
+    buy(w.game, true, 'wall', 2);
+    buy(w.game, true, 'unlock');
+    expect(w.save().crystals).toBe(40);
+    expect(w.events('meta_buy')).toEqual([
+      { item: 'wall', level: 2, crystals: 40 },
+      { item: 'unlock', level: null, crystals: 40 },
+    ]);
+  });
+});
+
+describe('claimed crystals', () => {
+  it('are saved and said, the page rebuilt on the panel asked for', () => {
+    const w = world();
+    home(w.game);
+    w.game.save.crystals += 30;
+    const at = buttons(w.stage, t('tabs.shop'))[0];
+    claimed(w.game, 'shop_chest', 30, null, at);
+    expect(w.save().crystals).toBe(130);
+    expect(w.events('daily_claim')).toEqual([{ item: 'shop_chest', crystals: 30, total: 130 }]);
+    w.game.save.crystals += 5;
+    claimed(w.game, 'gift', 5, 'settings');
+    expect(w.game.panel).toBe('settings');
+    expect(w.events('daily_claim')[1]).toEqual({ item: 'gift', crystals: 5, total: 135 });
   });
 });
