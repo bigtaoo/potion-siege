@@ -1,6 +1,8 @@
 import { Container, Graphics, Sprite, Text } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
+import type { Enemy } from '../sim/types';
 import { aside, drawUpright, keepUpright, turnView } from './landView';
+import { artBarTop, enemyBarBox } from './shapes';
 
 const QUARTER = Math.PI / 2;
 
@@ -66,6 +68,21 @@ describe('landView', () => {
     expect(to.x - from.x).toBeCloseTo(10);
     expect(to.y - from.y).toBeCloseTo(-40);
     turnView(v, false);
+  });
+
+  it('keeps the bars of a tall boss on the screen on the top lane of a lying field', () => {
+    const { v } = view();
+    const boss = { x: 90, y: 600, radius: 80, hp: 50, maxHp: 100, shieldMax: 40, shield: 40 } as Enemy;
+    turnView(v, true);
+    const box = enemyBarBox(boss, artBarTop(boss));
+    // the jar bar, 14 over the HP bar, starts under the title bar on the screen's top edge
+    // (screen y = view x)
+    expect(aside(boss.x, boss.y, 0, box.top - 14 - boss.y).x).toBeGreaterThanOrEqual(104);
+    // one low on the field keeps its bars where they were
+    const low = { ...boss, x: 900 };
+    expect(enemyBarBox(low, artBarTop(low)).top).toBe(artBarTop(low));
+    turnView(v, false);
+    expect(enemyBarBox(boss, artBarTop(boss)).top).toBe(Math.max(104, artBarTop(boss)));
   });
 
   it('draws upright about a point: in place upright, about the origin turned back on a lying field', () => {

@@ -101,10 +101,17 @@ export function barsShown(e: Enemy): boolean {
   return !!e.elite || e.hp < e.maxHp || (!!e.shieldMax && (e.shield ?? 0) < e.shieldMax);
 }
 
+/** The top bar with the wave title: no HP bar goes over it. */
+const TITLE_BAR = 104;
+
 /** The HP bar's centre, width and top, for an enemy whose bars would start at `top`. */
 export function enemyBarBox(e: Enemy, top: number): { x: number; w: number; top: number } {
-  // never over the wave title in the top bar (upright: on a lying field the top bar is beside it)
-  return { x: e.x, w: Math.max(60, e.radius * 1.6), top: isLand() ? top : Math.max(104, top) };
+  const w = Math.max(60, e.radius * 1.6);
+  if (!isLand()) return { x: e.x, w, top: Math.max(TITLE_BAR, top) };
+  // on a lying field "above" is toward x = 0, the screen's top edge with the title on it: a tall
+  // boss on the top lane would lift its bars (the jar bar 14 over them) under it or off the screen
+  const edge = e.y - e.x + TITLE_BAR + (e.shieldMax ? 14 : 0);
+  return { x: e.x, w, top: Math.max(edge, top) };
 }
 
 function eliteFrame(g: Graphics, { x, w, top }: { x: number; w: number; top: number }): void {
