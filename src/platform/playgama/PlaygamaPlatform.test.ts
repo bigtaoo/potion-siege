@@ -84,6 +84,17 @@ describe('PlaygamaPlatform', () => {
     expect(muted).toEqual([false, true, true, true, false]);
   });
 
+  it("opens the game's pause on each platform pause, not on its end", async () => {
+    const f = fakeBridge();
+    const p = await platform(f);
+    let opened = 0;
+    p.onHostPause(() => opened++);
+    f.emit('pause_state_changed', true);
+    f.emit('pause_state_changed', false);
+    f.emit('pause_state_changed', true);
+    expect(opened).toBe(2);
+  });
+
   it('offers no rewarded ad under an adblocker', async () => {
     const p = await platform(fakeBridge({ adblock: true }));
     expect([p.rewardedAvailable(), p.adBlocked()]).toEqual([false, true]);

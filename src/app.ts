@@ -248,6 +248,7 @@ export class Game {
     this.audio.attach();
     this.audio.prefs(this.save.sound);
     platform.onHostMute((muted) => this.audio.host(muted));
+    platform.onHostPause?.(() => openPause(this));
     uiSound.tap = () => this.audio.play('tap');
     this.hud = new Hud(
       () => this.battle?.summon(),

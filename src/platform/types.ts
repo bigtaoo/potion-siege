@@ -31,6 +31,8 @@ export interface Platform {
   midgame(onStart: () => void): Promise<void>;
   /** Called with the host's mute state now and whenever it changes. */
   onHostMute(listener: (muted: boolean) => void): void;
+  /** Called whenever the host pauses the game (Playgama's pause_state_changed); absent: never. */
+  onHostPause?(listener: () => void): void;
   /** The element the canvas fills (iOS: the screen inside its safe area); the window when absent. */
   readonly mount?: HTMLElement;
   /** The ad-free card for sale in the shop (iOS); absent where nothing is sold. */

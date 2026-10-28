@@ -33,6 +33,7 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
   private paused = false;
   private soundOff = false;
   private muteListener: ((muted: boolean) => void) | null = null;
+  private pauseListener: (() => void) | null = null;
 
   private constructor(
     private readonly bridge: PlaygamaBridge,
@@ -47,12 +48,18 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     if (saves) this.storage = new SafeStore(saves);
     // only from the portal itself: a local preview and the QA tool stay out of its numbers
     if (this.name === 'playgama') this.hostSink = new BridgeSink(bridge, deviceFields(navigator.userAgent, navigator.maxTouchPoints || 0, bridge.deviceType()), BUILD);
-    // the platform's pause (an overlay, the tab hidden) silences the game, and the save goes
-    // to Bridge at once: a page on its way out may get no next tick
+    // the platform's pause (an overlay, the tab hidden) silences the game, stops a battle under
+    // its pause panel, and the save goes to Bridge at once: a page on its way out may get no next tick
     bridge.onPause((paused) => {
       this.paused = paused;
       this.mute();
-      if (paused) saves?.flush();
+      if (!paused) return;
+      saves?.flush();
+      try {
+        this.pauseListener?.();
+      } catch {
+        /* the game's problem, never Bridge's */
+      }
     });
     bridge.onMute((off) => {
       this.soundOff = off;
@@ -133,6 +140,11 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
   override onHostMute(listener: (muted: boolean) => void): void {
     this.muteListener = listener;
     this.mute();
+  }
+
+  /** The platform's pause opens the game's own: the player comes back to it and taps Resume. */
+  onHostPause(listener: () => void): void {
+    this.pauseListener = listener;
   }
 
   private mute(): void {
