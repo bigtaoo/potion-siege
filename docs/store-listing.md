@@ -143,15 +143,17 @@ How to record:
 
 ## Playgama
 
-The form is filled by hand at developer.playgama.com, under app `cmvpgdscx066aqz0hdg590l59`. It has been in the sandbox since 2026-10-26 on build 0.0.1+183a0a1: https://playgama.ai/play/phz4f742hcbir2
+The form is filled by hand at developer.playgama.com, under app `cmvpgdscx066aqz0hdg590l59`. It has been in the sandbox since 2026-10-26; since 2026-10-28 it runs build 0.0.1+c5f65df: https://playgama.ai/play/phz4f742hcbir2
 
-- **Texts**: the description and How to play are in English and say "mouse only, tap on phones". They follow `store/en/crazygames/`.
-- **Settings**: Desktop, iOS and Android; Portrait only, since the desktop side boards are landscape padding around a portrait game; no features; all 15 languages.
+- **Texts**: the description and How to play are in English and say "mouse only, tap on phones". They follow `store/en/crazygames/`. How to play ends with the orientation note: a phone is held upright, and a desktop or wide screen shows the field on its side.
+- **Settings**: Desktop, iOS and Android; Portrait + Landscape, since wide screens turn the field on its side (the setting is one for all devices); no features; all 15 languages.
 - **Covers**: square 800x800, portrait 9:16 1080x1920 and landscape 1920x1080.
 - **Distribution**: the box that lets Playgama put the game on partner platforms was unticked, to keep CrazyGames and other portals for ourselves. Decide this before the catalog review.
 - **Upload steps**:
   1. Run `npm run build:playgama` from a clean tree. Always zip with Python, because a PowerShell zip fails the Bridge check.
-  2. Update Game, drop the zip, Save Changes.
-  3. Continue, pick the build, Publish/Update in Sandbox.
+  2. Upload it through the Playgama MCP (in `~/.claude.json` for `D:/fang`): `start_archive_upload` with the exact zip size and the version in the name, `curl -T` the zip to the signed URL, `confirm_archive_upload`, then wait for `get_archive_status` PASSED.
+  3. `publish_sandbox` with that archive (it needs an English update note when the build changes), and follow `get_publications` until PUBLISHED. `get_sandbox_state` names the archive the sandbox serves.
+  4. By hand instead: Update Game, drop the zip, Save Changes; Continue, pick the build, Publish/Update in Sandbox.
+- **QA and moderation**: submitting to moderation and the QA tool run stay with the owner in the console; the MCP has no tool for them.
 - **Catalog review**: it opens at 100 qualifying plays (each over 30 s) with a 5:00 average.
 - **Data**: our collector is off in the sandbox, so its data is only in Playgama's console and the events bridgeSink sends.
