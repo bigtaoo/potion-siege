@@ -43,6 +43,7 @@ export function pageLink(w: Window & typeof globalThis = window): TabLink | null
       };
     }
     const store = w.localStorage;
+    if (!store) return null;
     return {
       say: (id) => store.setItem(NAME, id),
       hear: (listener) => w.addEventListener('storage', (e) => e.key === NAME && typeof e.newValue === 'string' && listener(e.newValue)),

@@ -1,7 +1,8 @@
 // One tab plays (tabLock.ts): a tab that hears a newer one goes stale and stops writing its save.
 import '../view/layout/measure';
 import { beforeAll, describe, expect, it } from 'vitest';
-import { pageLink, TabLock, type TabLink } from './tabLock';
+import { t } from '../i18n';
+import { pageLink, staleNotice, TabLock, type TabLink } from './tabLock';
 import { englishPage, world } from './testWorld';
 
 beforeAll(englishPage);
@@ -80,6 +81,51 @@ describe('pageLink', () => {
       },
     }) as Window & typeof globalThis;
     expect(pageLink(shut)).toBeNull();
+  });
+
+  it('locks nothing on a page with neither a channel nor storage', () => {
+    const bare = { localStorage: null, addEventListener() {} } as unknown as Window & typeof globalThis;
+    expect(pageLink(bare)).toBeNull();
+    expect(new TabLock(pageLink(bare), () => undefined).stale).toBe(false);
+  });
+});
+
+/** A stand-in page element: its children, text, style and click listeners. */
+class Node {
+  readonly children: Node[] = [];
+  readonly clicks: (() => void)[] = [];
+  readonly style = { cssText: '' };
+  textContent = '';
+  constructor(
+    readonly tag: string,
+    readonly ownerDocument: { createElement(tag: string): Node },
+  ) {}
+  append(...nodes: Node[]) {
+    this.children.push(...nodes);
+  }
+  appendChild(n: Node) {
+    this.children.push(n);
+    return n;
+  }
+  addEventListener(_type: string, l: () => void) {
+    this.clicks.push(l);
+  }
+}
+
+describe('staleNotice', () => {
+  it('says the game is open elsewhere over the page, with a button that takes it back', () => {
+    const doc = { createElement: (tag: string): Node => new Node(tag, doc) };
+    const body = doc.createElement('body');
+    let reloads = 0;
+    const box = staleNotice(body as unknown as HTMLElement, () => reloads++) as unknown as Node;
+    expect(body.children).toEqual([box]);
+    expect(box.style.cssText).toContain('position:fixed');
+    const [text, button] = box.children;
+    expect([text.tag, text.textContent]).toEqual(['p', t('tab.elsewhere')]);
+    expect([button.tag, button.textContent]).toEqual(['button', t('tab.playHere')]);
+    expect(reloads).toBe(0);
+    button.clicks.forEach((l) => l());
+    expect(reloads).toBe(1);
   });
 });
 
