@@ -5,7 +5,7 @@
 import { execSync } from 'node:child_process';
 import { readFileSync } from 'node:fs';
 
-const git = (args) => {
+export const git = (args) => {
   try {
     return execSync(`git ${args}`, { stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
   } catch {
@@ -13,11 +13,13 @@ const git = (args) => {
   }
 };
 
-export function buildId() {
-  const { version } = JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
-  const sha = git('rev-parse --short=7 HEAD');
+const packageVersion = () => JSON.parse(readFileSync(new URL('../package.json', import.meta.url), 'utf8')).version;
+
+/** `run` answers a git command with its trimmed output, '' when git fails; the tests fake both. */
+export function buildId(run = git, version = packageVersion()) {
+  const sha = run('rev-parse --short=7 HEAD');
   if (!sha) return version;
-  return `${version}+${sha}${git('status --porcelain --untracked-files=no') ? '-dirty' : ''}`;
+  return `${version}+${sha}${run('status --porcelain --untracked-files=no') ? '-dirty' : ''}`;
 }
 
 /** The acquisition source a build tags new players with when their link has no `?src=`: set by

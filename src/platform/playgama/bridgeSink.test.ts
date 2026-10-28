@@ -67,6 +67,36 @@ describe('BridgeEvents', () => {
   });
 });
 
+describe('BridgeEvents with missing or odd props', () => {
+  it('counts an unknown tutorial step as done, and fills missing numbers with 0', () => {
+    const m = new BridgeEvents();
+    expect(m.map('tutorial_step', { step: 'dance' })).toEqual(['tutorial_step', { step_id: 'done', step_index: 5, seconds: 0 }]);
+    expect(m.map('tutorial_end', { skipped: true })?.[1]).toMatchObject({ skipped: true, at_step: 'done' });
+    expect(m.map('first_input', {})).toEqual(['first_input', { load_sec: 0 }]);
+  });
+
+  it('reads a run with no cause or numbers as stage 1 of the story', () => {
+    const m = new BridgeEvents();
+    expect(m.map('run_start', {}, 0)).toEqual(['progression_started', { step_id: 'stage_1', step_index: 1, mode: 'story', run: 0, cause: '' }]);
+    expect(m.map('run_hidden', {}, 1_000)?.[1]).toEqual({
+      step_id: 'stage_1',
+      step_index: 1,
+      mode: 'story',
+      run: 0,
+      wave: 0,
+      duration_sec: 0,
+      kills: 0,
+      merges: 0,
+      max_star: 0,
+      wall_pct: 0,
+      reason: 'left',
+      via: 'hidden',
+      wall_sec: 1,
+      battle_sec: 0,
+    });
+  });
+});
+
 describe('deviceFields', () => {
   it('tells phones, an iPad posing as a Mac and desktops apart', () => {
     expect(deviceFields('Mozilla/5.0 (iPhone; CPU iPhone OS 17_0)', 5, 'mobile')).toEqual({ device: 'ios', form: 'mobile', touch: true });

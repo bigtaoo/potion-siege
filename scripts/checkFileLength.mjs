@@ -7,8 +7,8 @@
 import { readdirSync, readFileSync, statSync } from 'node:fs';
 import { join, relative, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { countLines, lengthErrors, MAX_LINES } from './fileLength.mjs';
 
-const MAX_LINES = 500;
 const ROOT = fileURLToPath(new URL('..', import.meta.url));
 const DIRS = ['src', 'scripts', 'server'];
 const EXTS = ['.ts', '.mts', '.mjs', '.js', '.py', '.sh', '.css', '.html'];
@@ -25,30 +25,13 @@ function* walk(dir) {
   }
 }
 
-// as an editor numbers them: a final newline does not start another line
-const countLines = (text) => text.split('\n').length - (text.endsWith('\n') ? 1 : 0);
-
-const errors = [];
-const seen = new Set();
-for (const d of DIRS) {
-  for (const file of walk(join(ROOT, d))) {
-    const path = relative(ROOT, file).split(sep).join('/');
-    const lines = countLines(readFileSync(file, 'utf8'));
-    const cap = BASELINE[path];
-    if (cap === undefined) {
-      if (lines > MAX_LINES) errors.push(`${path}: ${lines} lines, over ${MAX_LINES}`);
-      continue;
-    }
-    seen.add(path);
-    if (lines > cap) errors.push(`${path}: ${lines} lines, grew past its ${cap}; move the new code to its own file`);
-    else if (lines <= MAX_LINES) errors.push(`${path}: down to ${lines} lines; take it out of BASELINE in scripts/checkFileLength.mjs`);
-    else if (lines < cap) errors.push(`${path}: down to ${lines} lines; lower its BASELINE entry in scripts/checkFileLength.mjs from ${cap} to ${lines}`);
+function* counts() {
+  for (const d of DIRS) {
+    for (const file of walk(join(ROOT, d))) yield [relative(ROOT, file).split(sep).join('/'), countLines(readFileSync(file, 'utf8'))];
   }
 }
-for (const path of Object.keys(BASELINE)) {
-  if (!seen.has(path)) errors.push(`${path}: gone; take it out of BASELINE in scripts/checkFileLength.mjs`);
-}
 
+const errors = lengthErrors(counts(), BASELINE);
 if (errors.length) {
   console.error(`File length (max ${MAX_LINES} lines, CLAUDE.md "File size"):\n  ${errors.join('\n  ')}`);
   process.exit(1);

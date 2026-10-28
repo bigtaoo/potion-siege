@@ -47,4 +47,33 @@ describe('native notifier', () => {
     n.cancel('gift');
     expect(s.posted).toEqual([['schedule', 'daily', 1000, 'a', 'b'], ['cancel', 'gift']]);
   });
+
+  it('starts unknown when the shell reports garbage, and ignores a malformed push', () => {
+    for (const bad of [null, 'on', { status: 'maybe' }]) {
+      const s = shell();
+      s.native.notify = () => bad as unknown as NotifyState;
+      const n = nativeNotifier(s.native)!;
+      let changes = 0;
+      n.onChange = () => changes++;
+      expect(n.status()).toBe('unknown');
+      s.push(bad as unknown as NotifyState);
+      expect([n.status(), changes]).toEqual(['unknown', 0]);
+    }
+  });
+
+  it('takes a sheet the system never showed as a no, and a second ask meanwhile as a no', async () => {
+    const s = shell();
+    const n = nativeNotifier(s.native)!;
+    let changes = 0;
+    n.onChange = () => changes++;
+    const answer = n.ask();
+    await expect(n.ask()).resolves.toBe('off');
+    expect(s.posted).toEqual([['ask']]);
+    // the same status again: the ask ends, but nothing changed for the settings
+    s.push({ status: 'unknown' });
+    await expect(answer).resolves.toBe('off');
+    expect([n.status(), changes]).toEqual(['unknown', 0]);
+    s.push({ status: 'off' });
+    expect([n.status(), changes]).toEqual(['off', 1]);
+  });
 });
