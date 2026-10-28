@@ -47,11 +47,22 @@ targets.ts and battle.ts's grid (the wall's front, open and buildable cells). Re
 two files alone (10 min): **battle.ts 90.5%** (38 left), **targets.ts 100%** (0 left). With
 those, the 14 files stand at **87.6%**: 269 left of 428, so **159 mutants killed** in all.
 
+A second pass the same day went after the real gaps left in three files (spawnEdges and
+targetPickEdges tests, kill pay in killsEdges). Re-run on those three alone (2 min 13 s):
+
+| file | after | second pass | survived left |
+|---|---|---|---|
+| kills.ts | 68.0% | 74.8% | 33 → 26 |
+| spawn.ts | 80.5% | 97.7% | 25 → 3 |
+| targetPick.ts | 83.8% | 96.5% | 23 → 5 |
+
+47 more killed: the 14 files now stand at about **89.8%**, 222 left, **206 killed** in all.
+
 ## What the new tests pin
 
-Seven files, `src/sim/*Edges.test.ts`, split by module: hitsEdges, killsEdges, damageEdges,
-battleEdges, enemyTickEdges, targetsEdges and simEdges (the one-liners across waves, shots,
-spawn, targetPick, horde and rng). They found no bug; production code is unchanged. What they
+Nine files, `src/sim/*Edges.test.ts`, split by module: hitsEdges, killsEdges, damageEdges,
+battleEdges, enemyTickEdges, targetsEdges, spawnEdges, targetPickEdges and simEdges (the
+one-liners across waves, shots, horde and rng). They found no bug; production code is unchanged. What they
 cover that nothing did before:
 
 - the lightning chain's length and the lightning skill's extra links, the sky strike's reach;
@@ -66,11 +77,19 @@ cover that nothing did before:
 - reroll/noReroll, a card not on offer, the wall repair, revive only after a loss;
 - the wall's front over a built column, open and buildable cells, the front/nearest edges
   (targets.ts was the one file whose tests lived only in other modules' tests);
-- the forecast's own boss waves and flyers, an endless theme only in endless.
+- the forecast's own boss waves and flyers, an endless theme only in endless;
+- the kill pay (kind's gold + the gold skill, times the challenge's rate), the kill count, the
+  gold between waves and its rate, the melt only with its skill;
+- the thin field's exact count and the due tick, both ends of a lane, the elite flag, the
+  ornithopter's weave clamp and phase, the winder/clock/anvil first timers;
+- the lightning's chain count (each hop to one not hit, the skill's extra links, only the first
+  twelve, only ones on the field), fire's pick apart from lightning's, ice passing over the
+  frozen and the ones an ice shot is already flying at, the exact lines of the wall's reach and
+  the top edge.
 
 ## What is left
 
-269 mutants still survive. Roughly:
+222 mutants still survive. Roughly:
 
 - **~90 view-only:** the payloads of `b.events.push` (event type strings, x/y/radius for the
   effects). The sim never reads them back; the view tests cover them with real battles, not
@@ -80,9 +99,11 @@ cover that nothing did before:
   the stop condition of `endlessBossesMet`'s loop, `heft >= 1000` on a whole enemy's burst,
   `<=` vs `<` on ties no test layout makes, `Math.max(0, …)` clamps on timers that never go
   below 0.
-- **Real but not chased:** clamps in spawn's lane maths, targetPick's tie-breaks between
-  equally dangerous enemies, the arcane multishot's extra arrows, the kills.ts payouts on the
-  horde's fractional heft. Worth a second pass if these files change.
+  In the second pass's three files, besides payloads: the melt's `e.rust > 0` (a rust of 0
+  spreads nothing), the danger cache, `o !== e` in the crowd count, the chain loop's bound and
+  early break — none changes a pick.
+- **Real but not chased:** the arcane multishot's extra arrows, and whatever is left in shots,
+  damage and hits outside the payloads. Worth a pass if these files change.
 
 ## Timeouts
 
@@ -101,6 +122,7 @@ like with like.
 | after | 14 | 16 | 87 min 31 s |
 | one file (hits.ts) | 1 | 16 | ~2 min |
 | battle.ts + targets.ts | 2 | 16 | 10 min 4 s |
+| spawn + kills + targetPick | 3 | 16 | 2 min 13 s |
 | full src/sim | 40 | 20 | projected 3.5 h+ (stopped) |
 
 The dry run (all sim tests, instrumented) takes about 70 s; the rest is the mutants.
@@ -109,7 +131,7 @@ The dry run (all sim tests, instrumented) takes about 70 s; the rest is the muta
 
 Keep Stryker, as an opt-in `npm run mutate`, not part of `npm run check` or CI: 1.5 h for the
 central files is far too long for every change. It earned its place here: 99.75% line coverage
-hid 428 surviving mutants (159 now killed), and the weakest files (kills 49.5%, hits 68.3%) had whole skill
+hid 428 surviving mutants (206 now killed), and the weakest files (kills 49.5%, hits 68.3%) had whole skill
 rules (melt spread, shatter on chill, wind-and-fire credit, split count) that no test checked.
 The useful way to run it is one file at a time while working on it:
 
