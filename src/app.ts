@@ -20,6 +20,7 @@ import { detectLocale, loadLocale, setLocale, t } from './i18n';
 import { AdPacing } from './platform/adPacing';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
+import { canHurry, FAST } from './game/battleSpeed';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
 import { endlessSetup, type EndlessResult } from './sim/endless';
 import { addProgress, gameDay, rollDay } from './sim/daily';
@@ -331,6 +332,7 @@ export class Game {
     this.hud.hint = this.save.achievements.stats.merges === 0;
     this.hud.nudge = true;
     this.hud.veteran = this.save.achievements.stats.merges >= VETERAN_MERGES;
+    this.hud.offerSpeed(!!this.run && !ch && canHurry(this.save, this.battle.setup));
     this.loop = new FixedStep();
     this.view.attach(this.battle);
     this.view.starMark = () => !ch && cause !== 'endless' && !this.revived;
@@ -389,7 +391,7 @@ export class Game {
       // stops it up front: no time added, so the drawn board stands still too
       const p = b.paused ? 0 : pace(this, b);
       if (p > 0) {
-        const steps = this.loop.advance(dt * 1000, this.speed * p);
+        const steps = this.loop.advance(dt * 1000, this.speed * p * (this.hud.fast ? FAST : 1));
         for (let i = 0; i < steps; i++) {
           if (this.autoplay) botAct(b);
           if (b.paused || pace(this, b) < p) break;

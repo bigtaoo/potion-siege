@@ -14,6 +14,7 @@ import { handTexture } from './art';
 import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
+import { SpeedButton } from './speedButton';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -50,6 +51,11 @@ export class Hud extends Container {
   private readonly upgradeButton: Button;
   /** Top right, the stage line to its left: opens the pause panel. */
   private readonly pauseButton: Container;
+  /** Under the pause button, on a stage won before: the battle at 1.5x (game/battleSpeed.ts). */
+  private readonly speedButton: SpeedButton;
+  /** The speed button shows in this battle (offerSpeed); `fast`: the player turned it on. */
+  private hurry = false;
+  fast = false;
   private bannerTime = 0;
   /** The banner's size before its pop: small enough that a long line stays on the board at the pop's peak. */
   private bannerFit = 1;
@@ -89,6 +95,8 @@ export class Hud extends Container {
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
+    this.speedButton = new SpeedButton(() => (this.fast = !this.fast));
+    this.speedButton.position.set(DESIGN_W - 62, 172);
     this.pauseButton = tappable(new Container(), onPause);
     this.pauseButton.label = 'pause';
     this.pauseButton.position.set(DESIGN_W - 62, 62);
@@ -116,7 +124,7 @@ export class Hud extends Container {
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
     this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
-    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton);
   }
 
   /** Lays the HUD out for the screen: `band` is the design y of the band under a field turned on
@@ -133,6 +141,14 @@ export class Hud extends Container {
   /** Where the coin's centre is: top left of the board, or left of the buttons in the band. */
   private coinAt(): { x: number; y: number } {
     return this.band === null ? { x: 90, y: 60 * Math.min(this.boost, 1.25) } : { x: -150, y: this.band };
+  }
+
+  /** A new battle: at 1x, with the speed button if `hurry` (game/battleSpeed.ts canHurry). */
+  offerSpeed(hurry: boolean): void {
+    this.hurry = hurry;
+    this.fast = false;
+    // the merge hint's plate would run under the button; a stage won before has taught merging anyway
+    if (hurry) this.hint = false;
   }
 
   attach(battle: Battle): void {
@@ -158,6 +174,8 @@ export class Hud extends Container {
     this.stageText.scale.set(top);
     this.pauseButton.scale.set(top);
     this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
+    this.speedButton.scale.set(top);
+    this.speedButton.position.set(DESIGN_W - 62 * top, 172 * top);
     this.stageText.x = DESIGN_W - 125 * top;
     this.goldText.scale.set(top);
     const coin = this.coinAt();
@@ -279,6 +297,8 @@ export class Hud extends Container {
     this.goldText.text = `${b.gold}`;
     // nothing to pause once the battle is over
     this.pauseButton.visible = !b.result;
+    this.speedButton.visible = this.hurry && !b.result;
+    this.speedButton.show(this.fast);
     // a full grid says so on the button, and what to do about it, rather than just going grey
     const full = !b.paused && !b.result && b.freeSlots().length === 0;
     const pair = full ? mergeablePair(b) : null;
