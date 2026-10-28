@@ -61,7 +61,12 @@ function unmasked(c: Container, r: Rect): Rect | null {
   let { x, y, width, height } = r;
   for (let n: Container | null = c; n; n = n.parent) {
     if (!(n.mask instanceof Container)) continue;
+    // Pixi takes a mask out of bounds measuring (measurable false): its bounds read empty unless
+    // it is measured for the moment
+    const was = n.mask.measurable;
+    n.mask.measurable = true;
     const m = n.mask.getBounds();
+    n.mask.measurable = was;
     const x2 = Math.min(x + width, m.x + m.width);
     const y2 = Math.min(y + height, m.y + m.height);
     x = Math.max(x, m.x);
