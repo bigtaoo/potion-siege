@@ -105,4 +105,23 @@ describe('PlaygamaPlatform', () => {
   it("puts the platform's language first", async () => {
     expect((await platform(fakeBridge({ language: 'tr' }))).languages()[0]).toBe('tr');
   });
+
+  it('names the platform and the script version for session_start', async () => {
+    expect((await platform(fakeBridge({ id: 'playgama_sandbox' }))).sessionProps()).toEqual({ sdk: 'playgama_sandbox/2.9.0' });
+    expect((await platform(null)).sessionProps()).toEqual({ sdk: 'none/?' });
+  });
+
+  it("plays its ads through Bridge and tells the platform of an achievement", async () => {
+    const f = fakeBridge();
+    const p = await platform(f);
+    let started = 0;
+    const paid = p.rewarded(() => started++);
+    for (const s of ['opened', 'rewarded', 'closed']) f.emit('rewarded_state_changed', s);
+    expect(await paid).toBe(true);
+    const mid = p.midgame(() => started++);
+    for (const s of ['opened', 'closed']) f.emit('interstitial_state_changed', s);
+    await mid;
+    p.celebrate();
+    expect([started, f.shown, f.messages]).toEqual([2, ['rewarded', 'interstitial'], ['player_got_achievement']]);
+  });
 });

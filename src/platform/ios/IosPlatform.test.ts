@@ -1,5 +1,5 @@
-import { beforeAll, describe, expect, it } from 'vitest';
-import type { AdState, PSNative, StoreState } from './bridge';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
+import { psNative, type AdState, type PSNative, type StoreState } from './bridge';
 import { IosPlatform } from './IosPlatform';
 import { AD_FREE_ID } from './storeKit';
 
@@ -96,5 +96,45 @@ describe('IosPlatform', () => {
     expect(s.platform.mount).toBe(s.appended[0]);
     expect(s.appended[0].id).toBe('game');
     for (const side of ['top', 'right', 'bottom', 'left']) expect(s.appended[0].style.cssText).toContain(`${side}:env(safe-area-inset-${side},0px)`);
+  });
+});
+
+describe('IosPlatform ads', () => {
+  it('counts ads as hosted while the shell has not turned them off, or the card is owned', () => {
+    expect(shell({ ...ADS_ON, status: 'pending', rewarded: false }, NOT_OWNED).platform.rewardedHosted()).toBe(true);
+    const off = shell({ ...ADS_ON, status: 'off', rewarded: false }, NOT_OWNED);
+    expect(off.platform.rewardedHosted()).toBe(false);
+    off.pushStore(OWNED);
+    expect(off.platform.rewardedHosted()).toBe(true);
+  });
+
+  it("says why ads last failed to load, and hands a late ad's mute to the game", () => {
+    const s = shell({ ...ADS_ON, error: 'GADErrorDomain 3: no fill' }, null);
+    expect(s.platform.adError()).toBe('GADErrorDomain 3: no fill');
+    expect(shell(ADS_ON, null).platform.adError()).toBeNull();
+    const mute = vi.fn();
+    s.platform.onHostMute(mute);
+    expect(s.platform.admob.onLate).toBe(mute);
+  });
+
+  it('opens a new tab where there is no shell', () => {
+    const open = vi.fn();
+    vi.stubGlobal('window', { open });
+    try {
+      new IosPlatform(null, fakeDoc().doc).openUrl('https://p.gamestao.com/privacy');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(open).toHaveBeenCalledWith('https://p.gamestao.com/privacy', '_blank', 'noopener');
+  });
+});
+
+describe('psNative', () => {
+  it('finds the bridge object on the page, and nothing in a browser', () => {
+    const n = { languages: ['ja'] };
+    expect(psNative({ PSNative: n })).toBe(n);
+    expect(psNative({})).toBeNull();
+    expect(psNative({ PSNative: 'not an object' })).toBeNull();
+    expect(psNative()).toBeNull();
   });
 });

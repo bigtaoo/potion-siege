@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { trackProgress } from './achievements';
 import { battleSetup, newMeta, parseMeta, Purse, runReward, stageHp, type MetaSave } from './meta';
 import {
-  bookStars, chapterStars, hardOpen, hardPlayable, hardReward, hardSetup, playingHard, runStars, setHardMode, stageOpen, stageSetup, STARS, stepStage, totalStars,
+  bookStars, chapterStars, furthestHard, hardCleared, hardOpen, hardPlayable, hardReward, hardSetup, playingHard, runStars, setHardMode, stageOpen, stageSetup, STARS, stepStage, totalStars,
 } from './stars';
 import { BALANCE } from './types';
 
@@ -151,5 +151,16 @@ describe('hard mode', () => {
     m.stars.hard[1] = 1;
     expect(trackProgress(m, 'stars', 0)).toBe(33);
     expect(trackProgress(m, 'hard', 0)).toBe(2);
+  });
+
+  it('names the furthest hard stage open, none before a chapter opens, and counts hard wins', () => {
+    expect(furthestHard(save(10, 1))).toBeNull();
+    expect(hardCleared(save(10, 1))).toBe(0);
+    const m = save(20, 3);
+    expect(furthestHard(m)).toBe(11);
+    m.stars.hard[10] = 2;
+    m.stars.hard[11] = 1;
+    expect(furthestHard(m)).toBe(13);
+    expect(hardCleared(m)).toBe(2);
   });
 });

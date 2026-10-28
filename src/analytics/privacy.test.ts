@@ -1,7 +1,7 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import { SafeStore } from '../platform/types';
 import { Analytics } from './analytics';
-import { PRIVACY_KEY, PrivacyChoice, privacyRegion, sharingOf } from './privacy';
+import { deviceTimeZone, PRIVACY_KEY, PrivacyChoice, privacyRegion, sharingOf } from './privacy';
 import { MemorySink } from './sinks';
 
 describe('privacyRegion', () => {
@@ -80,5 +80,25 @@ describe('Analytics consent gate', () => {
     sent.track('x');
     expect(sink.events).toHaveLength(0);
     expect(new Analytics(store, [sink], '1', 'web', undefined, undefined, 'off').playerId).toBe(id);
+  });
+});
+
+describe('deviceTimeZone', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it("reads the runtime's zone", () => {
+    expect(deviceTimeZone()).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  });
+
+  it('is null where the runtime names none or Intl throws', () => {
+    vi.stubGlobal('Intl', { ...Intl, DateTimeFormat: () => ({ resolvedOptions: () => ({ timeZone: '' }) }) });
+    expect(deviceTimeZone()).toBeNull();
+    vi.stubGlobal('Intl', {
+      ...Intl,
+      DateTimeFormat: () => {
+        throw new Error('no Intl data');
+      },
+    });
+    expect(deviceTimeZone()).toBeNull();
   });
 });

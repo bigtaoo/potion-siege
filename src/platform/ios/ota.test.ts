@@ -5,7 +5,7 @@ import wrangler from '../../../wrangler/ota.jsonc?raw';
 import capConfig from '../../../capacitor.config.ts?raw';
 import podfile from '../../../ios/App/Podfile?raw';
 import privacy from '../../../ios/App/App/PrivacyInfo.xcprivacy?raw';
-import { applyDownloaded, BUNDLE_ORIGIN, FAILED_KEY, failedOta, findOta, installOta, isNewer, MANIFEST_URL, pickDownloaded, readyOta, wantsDownload, type Bundle, type Updater } from './ota';
+import { applyDownloaded, BUNDLE_ORIGIN, FAILED_KEY, failedOta, findOta, installOta, isNewer, MANIFEST_URL, otaUpdates, pickDownloaded, readyOta, wantsDownload, type Bundle, type Updater } from './ota';
 
 const manifest = { version: '1.0.18.2', url: 'https://ps-ota.gamestao.com/1.0.18.2.zip', checksum: 'ab12', minNativeVersion: '1.0' };
 
@@ -128,6 +128,44 @@ describe('the updater calls', () => {
     expect(await failedOta('1.0.18', true, u, kv)).toEqual([]);
     expect(store.get(FAILED_KEY)).toBe('["1.0.18.1"]');
     expect(await failedOta('0.0.0', true, u, kv)).toEqual([]);
+  });
+});
+
+describe('when the plugin or the network fails', () => {
+  const broken = (): Updater => {
+    const no = async (): Promise<never> => {
+      throw new Error('plugin gone');
+    };
+    return { notifyAppReady: no, current: no, list: no, download: no, set: no, addListener: no };
+  };
+
+  it('keeps the running bundle, leaves it unconfirmed and reports nothing, without throwing', async () => {
+    const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});
+    try {
+      expect(await applyDownloaded('1.0.18', true, broken())).toBe(false);
+      await expect(readyOta('1.0.18', true, broken())).resolves.toBeUndefined();
+      expect(await failedOta('1.0.18', true, broken(), { getItem: () => null, setItem: () => {} })).toEqual([]);
+      expect(warn.mock.calls.map((c) => c[0])).toEqual(['[ota] kept the running bundle:', '[ota] not confirmed:', '[ota] no rollback list:']);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it('fetches the manifest fresh for the running bundle, and finds nothing when the host says no', async () => {
+    const fetch = vi.fn(async () => ({ ok: true, json: async () => manifest }));
+    vi.stubGlobal('fetch', fetch);
+    try {
+      expect(await findOta('1.0.18', true, fakeUpdater())).toEqual(manifest);
+      expect(fetch).toHaveBeenCalledWith(`${MANIFEST_URL}?v=1.0.18`, expect.objectContaining({ cache: 'no-store' }));
+      fetch.mockImplementation(async () => ({ ok: false, json: async () => manifest }));
+      expect(await findOta('1.0.18', true, fakeUpdater())).toBeNull();
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it('offers nothing outside the shell', async () => {
+    expect(await otaUpdates().check()).toBeNull();
   });
 });
 
