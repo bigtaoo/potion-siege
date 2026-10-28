@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { trackProgress } from './achievements';
 import { battleSetup, newMeta, parseMeta, Purse, runReward, stageHp, type MetaSave } from './meta';
 import {
-  bookStars, chapterStars, furthestHard, hardCleared, hardOpen, hardPlayable, hardReward, hardSetup, playingHard, runStars, setHardMode, stageOpen, stageSetup, STARS, stepStage, totalStars,
+  bookStars, chapterStars, furthestHard, hardCleared, hardOpen, hardPlayable, hardReward, hardSetup, playingHard, runStars, setHardMode, stageOpen, stageSetup, stageStars, STARS, stepStage, totalStars,
 } from './stars';
 import { BALANCE } from './types';
 
@@ -162,5 +162,51 @@ describe('hard mode', () => {
     m.stars.hard[11] = 1;
     expect(furthestHard(m)).toBe(13);
     expect(hardCleared(m)).toBe(2);
+  });
+});
+
+describe('stars at the edges', () => {
+  const STAGES = BALANCE.meta.stageCount;
+
+  it('reads no stars and plays no hard stage off the stage range', () => {
+    const m = save(STAGES, 3);
+    m.stars.hard.fill(3);
+    expect(stageStars(m, 0)).toBe(0);
+    expect(stageStars(m, STAGES + 1, true)).toBe(0);
+    expect(stageStars(m, STAGES, true)).toBe(3);
+    expect(hardPlayable(m, 1)).toBe(true);
+    expect(hardPlayable(m, STAGES)).toBe(true);
+    expect(hardPlayable(m, 0)).toBe(false);
+    expect(hardPlayable(m, STAGES + 1)).toBe(false);
+  });
+
+  it('pays a hard loss as a loss six stages on, with no win bonus and no first win sum', () => {
+    const m = save(20, 3);
+    m.workshop.crystals = 0;
+    const r = { stage: 5, won: false, wave: 4, kills: 30 };
+    const later = runReward(save(11, 3), { ...r, stage: 11 });
+    // the hard stage was never won, yet a loss is no first win
+    expect(m.stars.hard[4]).toBe(0);
+    expect(hardReward(m, r).crystals).toBe(later.crystals);
+    expect(hardReward(m, r).crystals).toBeLessThan(hardReward(m, { ...r, won: true }).crystals);
+  });
+
+  it('books hard stars on the hard list and never says they opened a chapter', () => {
+    const m = save(10, 3);
+    m.stars.hard[2] = 1;
+    expect(bookStars(m, 3, true, 2)).toEqual({ stars: 2, before: 1, hard: true, opened: 0 });
+    expect(m.stars.hard[2]).toBe(2);
+    expect(m.stars.normal[2]).toBe(3);
+    expect(bookStars(m, 4, true, 3)).toEqual({ stars: 3, before: 0, hard: true, opened: 0 });
+  });
+
+  it('books nothing for a stage off the range', () => {
+    const m = save(STAGES, 2);
+    expect(bookStars(m, STAGES + 1, false, 3)).toMatchObject({ stars: 3, before: 0 });
+    expect(bookStars(m, 0, true, 3)).toMatchObject({ stars: 3, before: 0 });
+    expect(m.stars.normal).toHaveLength(STAGES);
+    expect(Object.keys(m.stars.hard)).toHaveLength(STAGES);
+    expect(m.stars.normal.every((s) => s === 2)).toBe(true);
+    expect(m.stars.hard.every((s) => s === 0)).toBe(true);
   });
 });
