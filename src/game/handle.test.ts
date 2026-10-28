@@ -98,6 +98,31 @@ describe('the update prompt', () => {
     }
   });
 
+  it('checks again once the game comes back from the background', async () => {
+    let checks = 0;
+    const on = vi.spyOn(document, 'addEventListener');
+    const { tick } = homeWith({ check: async () => (checks++, null) });
+    const seen = on.mock.calls.filter(([type]) => type === 'visibilitychange').pop()![1] as () => void;
+    on.mockRestore();
+    tick();
+    await settle();
+    tick();
+    expect(checks).toBe(1);
+    seen(); // still visible: nothing changes
+    tick();
+    await settle();
+    expect(checks).toBe(1);
+    (document as { visibilityState: string }).visibilityState = 'hidden';
+    try {
+      seen();
+    } finally {
+      (document as { visibilityState: string }).visibilityState = 'visible';
+    }
+    tick();
+    await settle();
+    expect(checks).toBe(2);
+  });
+
   it('is only there on ?ota=fake or fail', () => {
     expect(updatesSwitch(new URLSearchParams('ota=fake'))).toBeDefined();
     expect(updatesSwitch(new URLSearchParams('ota=fail'))).toBeDefined();
@@ -109,6 +134,13 @@ describe('the update prompt', () => {
 });
 
 describe('the handle', () => {
+  it('draws home again on refresh', () => {
+    const { g, handle } = homeWith();
+    const refresh = vi.spyOn(g, 'refresh');
+    handle.refresh();
+    expect(refresh).toHaveBeenCalledOnce();
+  });
+
   it('sends a launch report as an anomaly where it happened', () => {
     const { w, handle } = homeWith();
     handle.report('boot_fail', { place: 'boot', stage: 'boot', bundle: '1.0.18.2' });

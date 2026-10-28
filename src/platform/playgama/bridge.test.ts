@@ -103,4 +103,34 @@ describe('PlaygamaBridge', () => {
     await b.init();
     expect(b.hasAdblock()).toBe(true);
   });
+
+  it('counts an initialize that rejects as no Bridge', async () => {
+    const b = new PlaygamaBridge({ bridge: { initialize: async () => Promise.reject(new Error('blocked')) } }, never);
+    expect(await b.init()).toBe(false);
+    expect(b.isReady()).toBe(false);
+  });
+
+  it("reads the script's version, null when it gives none", async () => {
+    const f = fakeBridge();
+    const b = new PlaygamaBridge(f.global, never);
+    expect(b.version()).toBeNull();
+    await b.init();
+    expect(b.version()).toBe('2.9.0');
+    (f.global.bridge as { version?: unknown }).version = 3;
+    expect(b.version()).toBeNull();
+  });
+
+  it('fails an ad whose show call throws, and the next one still plays', async () => {
+    const f = fakeBridge();
+    f.global.bridge!.advertisement!.showRewarded = () => {
+      throw new Error('cooldown');
+    };
+    const b = new PlaygamaBridge(f.global, never);
+    await b.init();
+    expect(await b.rewarded()).toBe(false);
+    f.global.bridge!.advertisement!.showRewarded = () => void f.shown.push('rewarded');
+    const ad = b.rewarded();
+    for (const s of ['opened', 'rewarded', 'closed']) f.emit('rewarded_state_changed', s);
+    expect(await ad).toBe(true);
+  });
 });

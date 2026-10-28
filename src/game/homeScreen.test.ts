@@ -6,7 +6,11 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { PrivacyChoice } from '../analytics/privacy';
 import { t } from '../i18n';
 import { gameDay, loginReward } from '../sim/daily';
-import { heroCost, workshopCost } from '../sim/meta';
+import { TRACKS } from '../sim/achievements';
+import { heroCost, unlockPrice, workshopCost } from '../sim/meta';
+import { BALANCE } from '../sim/types';
+import { WELCOME_GIFTS } from '../sim/welcome';
+import { setCodexPage } from '../view/codex';
 import type { HomePanel } from '../view/Home';
 import { PillButton } from '../view/kit';
 import { extras, home } from './homeScreen';
@@ -151,5 +155,109 @@ describe('the home buttons', () => {
     expect(start).toHaveBeenCalledOnce();
     expect(w.events('battle_start_tap')).toEqual([{ stage: 20, from: 'home', run: 9 }]);
     expect(texts(w.game['menu'])).toEqual([]);
+  });
+});
+
+describe('the claims and switches on the home screen', () => {
+  const at = (tab: 'battle' | 'potions' | 'codex' | 'shop', edit: (m: ReturnType<typeof veteran>) => void = () => {}) => {
+    const m = veteran();
+    m.daily.lastClaim = gameDay(m, new Date());
+    edit(m);
+    const w = world(m);
+    w.game['tab'] = tab;
+    home(w.game);
+    return w;
+  };
+
+  it("claims the welcome week's gift of the day", () => {
+    const w = at('battle', (m) => {
+      m.welcome.gifts = 0;
+      m.welcome.day = '';
+    });
+    home(w.game, 'welcome');
+    tap(w.stage, t('claim'));
+    expect(w.save().welcome.gifts).toBe(1);
+    expect(w.save().crystals).toBe(100 + WELCOME_GIFTS[0]);
+    expect(w.events('daily_claim')).toEqual([expect.objectContaining({ item: 'welcome', crystals: WELCOME_GIFTS[0] })]);
+  });
+
+  it('claims a feat tier from the codex', () => {
+    setCodexPage('feats');
+    try {
+      const w = at('codex', (m) => (m.achievements.stats.merges = 100));
+      const reward = TRACKS.merges[0].reward;
+      const found = buttons(w.stage, String(reward)).filter((b) => b instanceof PillButton);
+      found[0].emit('pointertap', { stopPropagation() {} } as never);
+      expect(w.save().achievements.claimed.merges).toBe(1);
+      expect(w.events('daily_claim')).toEqual([expect.objectContaining({ item: 'ach_merges', crystals: reward })]);
+    } finally {
+      setCodexPage('potions');
+    }
+  });
+
+  it('turns hard mode on only once a chapter has the stars, and back off', () => {
+    const w = at('battle');
+    tap(w.stage, t('stars.hard'));
+    expect(w.save().stars.hardMode).toBe(false);
+    w.game.save.stars.normal.fill(3, 0, 10);
+    home(w.game);
+    tap(w.stage, t('stars.hard'));
+    expect(w.save().stars.hardMode).toBe(true);
+    expect(w.save().stage).toBe(1);
+    tap(w.stage, t('stars.normal'));
+    expect(w.save().stars.hardMode).toBe(false);
+  });
+
+  it("opens a finished chapter's chest once", () => {
+    const w = at('battle');
+    home(w.game, 'chapters');
+    tap(w.stage, t('chapter.chestOpen'));
+    expect(w.save().chapterChests).toEqual([1]);
+    expect(w.events('daily_claim')).toEqual([expect.objectContaining({ item: 'chapter_1' })]);
+    expect(buttons(w.stage, t('chapter.chestOpen'))).toHaveLength(0);
+  });
+
+  it('picks a benched potion for the lineup, and says when a potion is maxed', () => {
+    const w = at('potions', (m) => (m.heroes.fire = BALANCE.meta.heroMax));
+    expect(texts(w.stage)).toContain(t('maxed'));
+    const bench = buttons(w.stage, t('bench'));
+    expect(bench).toHaveLength(2); // poison and wind, earned by stage 19
+    bench[0].emit('pointertap', { stopPropagation() {} } as never);
+    expect(w.game.picked).toBe('poison');
+  });
+
+  it("buys a level from a potion's panel and keeps it open, and says maxed once there is none", () => {
+    const w = at('battle', (m) => (m.crystals = 1000));
+    home(w.game, 'fire');
+    const lv = w.game.save.heroes.fire;
+    const [buy] = buttons(w.stage, String(heroCost(lv))).filter((b) => b instanceof PillButton);
+    buy.emit('pointertap', { stopPropagation() {} } as never);
+    expect(w.save().heroes.fire).toBe(lv + 1);
+    expect(w.game['panel']).toBe('fire');
+    w.game.save.heroes.fire = BALANCE.meta.heroMax;
+    home(w.game, 'fire');
+    expect(texts(w.stage)).toContain(t('maxed'));
+  });
+
+  it('says maxed for a workshop item with no level left', () => {
+    let top = 0;
+    while (workshopCost('wall', top) !== null) top++;
+    const w = at('battle', (m) => (m.workshop.wall = top));
+    w.game['tab'] = 'workshop';
+    home(w.game);
+    expect(texts(w.stage)).toContain(t('maxed'));
+  });
+
+  it('buys a locked potion in the shop', () => {
+    const w = at('shop', (m) => {
+      m.crystals = 2000;
+      m.cleared = 3;
+      m.stage = 4;
+    });
+    const price = unlockPrice('poison')!;
+    tap(w.stage, String(price));
+    expect(w.save().unlocked).toContain('poison');
+    expect(w.save().crystals).toBe(2000 - price);
+    expect(w.events('meta_buy')).toEqual([{ item: 'unlock_poison', level: null, crystals: 2000 - price }]);
   });
 });

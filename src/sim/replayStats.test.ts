@@ -1,12 +1,12 @@
 // The players' replays played again into stats (replayStats.ts, `npm run replays`).
 
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
 import { Battle } from './battle';
 import { botAct } from './bot';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { REPLAY_VERSION, takeReplay, type Replay } from './replay';
 import { formatReport } from './replayReport';
-import { addReplay, newStats, stageKey } from './replayStats';
+import { addReplay, newStats, stageKey, type ReplayStats } from './replayStats';
 import { ENEMY_KINDS } from './types';
 
 function record(seed: number, setup: BattleSetup, ticks: number): { b: Battle; r: Replay } {
@@ -74,5 +74,55 @@ describe('replay stats', () => {
     const text = formatReport(s);
     for (const part of ['replays played 2', '  stage  runs', 'wall damage by source', 'merges (', 'skill offers:', 'commander casts']) expect(text).toContain(part);
     expect(text).toMatch(/^\s+1\s+2\s+0%\s+1\s+1 .*lost w\d+×1/m);
+  });
+
+  it('puts a wall drop with no one at the wall down to other, and counts a win, its revives and rerolls', async () => {
+    vi.doMock('./replay', async (orig) => ({
+      ...(await orig<typeof import('./replay')>()),
+      playReplay: (_r: Replay, onTick: (b: unknown, ev: unknown[]) => void, hooks: { beforeStep: (b: unknown) => void }) => {
+        const b = { wall: 100, enemies: [] as unknown[], result: 'won', wave: 9 };
+        hooks.beforeStep(b);
+        b.wall = 70;
+        onTick(b, [{ type: 'cast', skill: 'bomb' }]);
+        return b;
+      },
+    }));
+    vi.doMock('./hash', () => ({ hashBattle: () => 7 }));
+    vi.resetModules();
+    try {
+      const fresh = await import('./replayStats');
+      const s = fresh.newStats();
+      const commands = [{ type: 'reroll', tick: 1 }, { type: 'revive', tick: 2 }, { type: 'revive', tick: 3 }];
+      expect(fresh.addReplay(s, { version: REPLAY_VERSION, seed: 1, setup: { ...BASE_SETUP, stage: 2 }, commands, ticks: 5, hash: 7 } as Replay)).toBe(true);
+      expect(s.stages.get('2')).toMatchObject({ battles: 1, won: 1, lost: 0, left: 0 });
+      expect([...s.wall.keys()]).toEqual(['other']);
+      expect([...s.casts]).toEqual([['bomb', 1]]);
+      expect([s.rerolls, s.revives]).toEqual([1, 2]);
+    } finally {
+      vi.doUnmock('./replay');
+      vi.doUnmock('./hash');
+      vi.resetModules();
+    }
+  });
+});
+
+describe('replay report', () => {
+  it('orders stages as played, waves upward and offers by count, and says none for an empty table', () => {
+    const s: ReplayStats = newStats();
+    const stage = (falls: [number, number][]) => ({ battles: 2, won: 1, lost: 1, left: 0, falls: new Map(falls), losses: new Map(falls) });
+    s.stages.set('endless', stage([]));
+    s.stages.set('2', stage([[7, 1], [3, 2]]));
+    s.stages.set('1h', stage([]));
+    s.stages.set('1', stage([]));
+    s.offered.set('crit', 2).set('frost', 5);
+    s.picked.set('frost', 1);
+    const text = formatReport(s);
+    const rows = text.split('\n').filter((l) => /^\s*(1|1h|2|endless) /.test(l)).map((l) => l.trim().split(/\s+/)[0]);
+    expect(rows).toEqual(['1', '1h', '2', 'endless']);
+    expect(text).toContain('falls w3×2 w7×1');
+    expect(text).toContain('falls -');
+    expect(text).toMatch(/commander casts \(0\)\n {2}\(none\)/);
+    expect(text.indexOf('frost')).toBeLessThan(text.indexOf('crit'));
+    expect(text).toMatch(/frost\s+5\s+1\s+20%/);
   });
 });

@@ -65,4 +65,14 @@ describe('Prng', () => {
     }
     expect(seen.size).toBe(7);
   });
+
+  it('resumes a stream from its peeked state', () => {
+    const a = new Prng(99);
+    a.int(10);
+    const raw = a.peek();
+    const b = Prng.resume(raw);
+    expect(b.peek()).toBe(raw);
+    expect(Array.from({ length: 10 }, () => b.int(1000))).toEqual(Array.from({ length: 10 }, () => a.int(1000)));
+    expect(Prng.resume(-1).peek()).toBe(0xffffffff);
+  });
 });

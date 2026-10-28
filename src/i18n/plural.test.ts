@@ -52,6 +52,19 @@ describe('plural category', () => {
     expect(fresh.pluralCategory(1, 'ru')).toBe('one');
     expect(fresh.pluralCategory(5, 'ru')).toBe('other');
   });
+
+  it("falls back on English's rule where Intl.PluralRules throws for the language", async () => {
+    vi.stubGlobal('Intl', {
+      ...Intl,
+      PluralRules: function () {
+        throw new RangeError('Incorrect locale information provided');
+      },
+    });
+    vi.resetModules();
+    const fresh = await import('./index');
+    expect(fresh.pluralCategory(1, 'pl')).toBe('one');
+    expect(fresh.pluralCategory(3, 'pl')).toBe('other');
+  });
 });
 
 describe('t with plurals', () => {
@@ -147,5 +160,34 @@ describe('formatAmount', () => {
     expect(fresh.formatAmount(9999, 'zh')).toBe('9999');
     expect(fresh.formatAmount(12345, 'zh')).toBe('1.2万');
     expect(fresh.formatAmount(340_000_000, 'ja')).toBe('3.4億');
+  });
+
+  it('falls back the same way where Intl.NumberFormat throws on the compact options', async () => {
+    const Real = Intl.NumberFormat;
+    const Picky = function (locale?: string, opts?: Intl.NumberFormatOptions) {
+      if (opts?.notation) throw new RangeError('Invalid notation');
+      return new Real(locale);
+    } as unknown as typeof Intl.NumberFormat;
+    vi.stubGlobal('Intl', { ...Intl, NumberFormat: Picky });
+    vi.resetModules();
+    const fresh = await import('./index');
+    expect(fresh.formatAmount(4_560_000, 'en')).toBe('4.5M');
+    expect(fresh.formatAmount(12345, 'ko')).toBe('1.2만');
+  });
+});
+
+describe('loadLocale', () => {
+  it('has English in hand and no loader for a language it does not know', async () => {
+    expect(await loadLocale('en')).toBe(true);
+    expect(await loadLocale('xx' as never)).toBe(false);
+  });
+
+  it('says false when the fetch fails, and the language stays English', async () => {
+    vi.doMock('./more', () => ({ MORE: { de: () => Promise.reject(new Error('offline')) }, MORE_NAMES: {} }));
+    vi.resetModules();
+    const fresh = await import('./index');
+    expect(await fresh.loadLocale('de')).toBe(false);
+    expect(fresh.setLocale('de')).toBe('en');
+    vi.doUnmock('./more');
   });
 });

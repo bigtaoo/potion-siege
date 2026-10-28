@@ -1,5 +1,5 @@
-import { Container, type Sprite } from 'pixi.js';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { Container, Texture, type Sprite } from 'pixi.js';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Enemy } from '../../sim/types';
 import { noCanvas } from '../fakeArt';
 import { turnView } from '../landView';
@@ -81,5 +81,32 @@ describe('the marks under and over each enemy', () => {
     expect([shadow.x, shadow.y]).toEqual([e.x + 32, e.y]);
     expect(bar.x).toBeLessThan(e.x);
     expect(bar.y).toBeGreaterThan(e.y);
+  });
+});
+
+describe('the shadow disc', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    vi.restoreAllMocks();
+    vi.resetModules();
+  });
+
+  it('is baked once on a canvas where there is one', async () => {
+    const calls: string[] = [];
+    const ctx = { beginPath: () => calls.push('path'), arc: (...a: number[]) => calls.push(`arc ${a.slice(0, 3)}`), fill: () => calls.push('fill'), fillStyle: '' };
+    const canvas = { width: 0, height: 0, getContext: () => ctx };
+    const make = vi.fn(() => canvas);
+    vi.stubGlobal('document', { createElement: make });
+    const baked = new Texture({ source: Texture.WHITE.source });
+    const from = vi.spyOn(Texture, 'from').mockReturnValue(baked);
+    vi.resetModules();
+    const { EnemyMarks: Fresh } = await import('./enemyMarks');
+    const marks = new Fresh();
+    frame(marks as EnemyMarks, [foe(), foe({ id: 2 })]);
+    expect(shown(marks.shadows).map((s) => s.texture)).toEqual([baked, baked]);
+    expect(make).toHaveBeenCalledOnce();
+    expect(from).toHaveBeenCalledWith(canvas);
+    expect([canvas.width, canvas.height, ctx.fillStyle]).toEqual([64, 64, '#fff']);
+    expect(calls).toEqual(['path', 'arc 32,32,31', 'fill']);
   });
 });
