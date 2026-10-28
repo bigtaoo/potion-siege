@@ -152,3 +152,37 @@ describe('boot', () => {
     expect(p.appended).toHaveLength(2);
   });
 });
+
+describe('boot on rarer pages', () => {
+  afterEach(() => vi.unstubAllEnvs());
+
+  it('reads a page with no pixel ratio as 1x, takes a quality mode it knows, and goes without a country', async () => {
+    page({ dpr: 0 });
+    vi.stubGlobal('location', { search: '?quality=saver', hostname: 'localhost', protocol: 'http:', reload() {} });
+    const { h } = host(veteran(), { country: undefined } as never);
+    await boot(h);
+    const app = await pixiApp();
+    expect(app.options.resolution).toBe(1);
+    expect(app.options.antialias).toBe(true);
+  });
+
+  it('keeps the game off the window in a release build', async () => {
+    page();
+    vi.stubEnv('DEV', false);
+    const { h } = host(veteran());
+    await boot(h);
+    expect((window as unknown as { __game?: unknown }).__game).toBeUndefined();
+  });
+
+  it('leaves on pagehide and goes on when the page comes back from the back/forward cache', async () => {
+    const p = page();
+    const { h, names } = host(newMeta());
+    await boot(h);
+    const game = (window as unknown as { __game: { run: { closed: boolean } | null } }).__game;
+    p.fire('win:pagehide');
+    expect(names()).toContain('session_end');
+    p.fire('win:pageshow', { persisted: true });
+    expect(names().filter((n) => n === 'session_end')).toHaveLength(1);
+    expect(game.run).not.toBeNull();
+  });
+});

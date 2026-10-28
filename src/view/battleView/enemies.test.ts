@@ -94,6 +94,19 @@ describe('the enemies as drawn', () => {
       expect(w.bounds.width).toBeGreaterThan(0);
     });
 
+    it('tints an enemy by its strongest status, ice first', () => {
+      const { draw } = layer();
+      const tint = (o: Partial<Enemy>) => draw([foe(1, 400, 600, o)]).art[0].tint;
+      expect(tint({ freezeTime: 1, slowTime: 1 })).toBe(0x9fe8ff);
+      expect(tint({ slowTime: 1, burnTime: 1 })).toBe(0xc4dcff);
+      expect(tint({ burnTime: 1, chargeTime: 1 })).toBe(0xffb27a);
+      expect(tint({ chargeTime: 1, markTime: 1 })).toBe(0xfff2a0);
+      expect(tint({ markTime: 1, rust: 1 })).toBe(0xdcb8ff);
+      expect(tint({ rust: 1, poisonTime: 1 })).toBe(0xe0a878);
+      expect(tint({ poisonTime: 1 })).toBe(0xc8f0a0);
+      expect(tint({})).toBe(0xffffff);
+    });
+
     it('does not carry a boss\'s jar bar over to a new enemy in its place', () => {
       const { draw } = layer();
       expect(draw([foe(1, 400, 600, { kind: 'tripod', hp: 50, shieldMax: 40, shield: 20 })]).bars.length).toBe(4);
