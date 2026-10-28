@@ -2,12 +2,12 @@
 // (homeActions.ts): the real game over a stand-in Pixi app and a host whose ads and store
 // answer as each test scripts them. An ad can be watched, closed early, fail to load, or break.
 import '../view/layout/measure';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { getLocale, setLocale, t, type Locale } from '../i18n';
 import { dayOf } from '../sim/daily';
 import { AD_CRYSTALS, ADS_PER_DAY, adsLeft, benched } from '../sim/meta';
 import { LINEUP } from '../sim/types';
-import { buy, claimed, hintDone, language, lineup, shopAd } from './homeActions';
+import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
 import { home } from './homeScreen';
 import { LANG_KEY } from './keys';
 import { buttons, Card, englishPage, flush, tap, texts, veteran, world, type World } from './testWorld';
@@ -62,6 +62,37 @@ describe('the shop ad', () => {
     await shopAd(w.game);
     expect(w.host.rewardedCalls).toBe(ADS_PER_DAY);
     expect(w.save().crystals).toBe(100 + ADS_PER_DAY * AD_CRYSTALS);
+  });
+
+  it('pays only once for two ads watched at once on the last one of the day', async () => {
+    const w = world();
+    open(w);
+    w.game.save.shop.adDay = today;
+    w.game.save.shop.ads = ADS_PER_DAY - 1;
+    w.host.answers = ['watched', 'watched'];
+    // both pass the cap before either has paid
+    const both = Promise.all([shopAd(w.game), shopAd(w.game)]);
+    await both;
+    expect(w.host.rewardedCalls).toBe(2);
+    expect(w.save().crystals).toBe(100 + AD_CRYSTALS);
+    expect(adsLeft(w.save(), today)).toBe(0);
+    expect(w.events('ad_shop')).toEqual([{ ok: true }, { ok: true }]);
+    expect(w.events('daily_claim')).toHaveLength(1);
+    // the second one still draws the shop again, its button now off
+    expect(w.game['menu'].visible).toBe(true);
+    expect(buttons(w.stage, t('store.watch'))).toHaveLength(0);
+  });
+
+  it('draws no home screen over a battle that began while an unpaid ad played', async () => {
+    const w = world();
+    open(w);
+    w.host.answers = ['closed'];
+    const ad = shopAd(w.game);
+    w.game['menu'].visible = false;
+    await ad;
+    expect(w.save().crystals).toBe(100);
+    expect(w.game['menu'].visible).toBe(false);
+    expect(w.events('home_view')).toHaveLength(1);
   });
 
   it('drops the ad card where the host has none, the free chest left on its own', () => {
@@ -150,6 +181,25 @@ describe('the ad-free card', () => {
     expect(texts(w.stage)).toContain(t(note));
   });
 
+  it('says nothing for a restore the player cancelled', async () => {
+    const { w } = shop((c) => (c.restores = ['cancelled']));
+    tap(w.stage, t('store.adFree.restore'));
+    await flush();
+    expect(w.game.storeNote).toBeNull();
+    expect(texts(w.stage)).toContain(t('store.adFree.desc'));
+    expect(w.events('iap')).toEqual([{ op: 'restore', outcome: 'cancelled', run: 8 }]);
+  });
+
+  it('buys and restores nothing on a host with no store', async () => {
+    const w = world();
+    w.game.storeNote = 'kept';
+    await buyAdFree(w.game);
+    await restoreAdFree(w.game);
+    expect(w.game['menu'].interactiveChildren, 'the menu never locked').not.toBe(false);
+    expect(w.game.storeNote).toBe('kept');
+    expect(w.events('iap')).toEqual([]);
+  });
+
   it("the strip's note goes when the tab changes", async () => {
     const { w } = shop((c) => (c.buys = ['failed']));
     tap(w.stage, '$4.99');
@@ -186,6 +236,17 @@ describe('the language switch', () => {
     expect(getLocale()).toBe('en');
     expect(w.host.storage.getItem(LANG_KEY)).toBeNull();
     expect(w.events('language')).toEqual([]);
+  });
+
+  it('switches during a battle without drawing the home screen over it', async () => {
+    page();
+    const w = world();
+    w.game['menu'].visible = false;
+    await language(w.game, 'fr');
+    expect(getLocale()).toBe('fr');
+    expect(w.host.storage.getItem(LANG_KEY)).toBe('fr');
+    expect(w.game['menu'].visible).toBe(false);
+    expect(w.game.panel).not.toBe('settings');
   });
 });
 
@@ -253,5 +314,38 @@ describe('claimed crystals', () => {
     claimed(w.game, 'gift', 5, 'settings');
     expect(w.game.panel).toBe('settings');
     expect(w.events('daily_claim')[1]).toEqual({ item: 'gift', crystals: 5, total: 135 });
+  });
+});
+
+describe('claimed crystals in flight', () => {
+  /** The flight layer `claimed` adds over the page, and where its first crystal starts. */
+  const flight = (w: World) => {
+    const layers = w.game['menu'].children;
+    const fx = layers[layers.length - 1];
+    expect(fx.eventMode).toBe('none');
+    fx.onRender!(undefined as never);
+    const first = fx.children[0];
+    return { x: first.x, y: first.y };
+  };
+
+  it('fly from the button tapped, else the middle of the page, else its corner before any page', () => {
+    vi.spyOn(performance, 'now').mockReturnValue(1000);
+    try {
+      const w = world();
+      home(w.game);
+      const fit = w.game.menuFit!;
+      w.game.save.crystals += 30;
+      claimed(w.game, 'gift', 30, null);
+      expect(flight(w)).toEqual({ x: fit.w / 2, y: fit.h / 2 });
+      // the purse counts up from what it held before
+      expect(texts(w.stage)).toContain('100');
+      w.game.menuFit = null;
+      w.game.save.crystals += 30;
+      claimed(w.game, 'gift', 30, null);
+      expect(flight(w)).toEqual({ x: 0, y: 0 });
+      expect(texts(w.stage)).toContain('130');
+    } finally {
+      vi.restoreAllMocks();
+    }
   });
 });
