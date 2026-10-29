@@ -30,6 +30,16 @@ export function rateOf(method, url) {
 
 export const addressOf = (req) => String(req.headers['cf-connecting-ip'] ?? req.socket?.remoteAddress ?? '');
 
+/**
+ * The country Cloudflare places the request in (its `CF-IPCountry` header, ISO 3166 two letters,
+ * T1 for Tor), or undefined when it gives none or XX (unknown). Only the country is kept, never the
+ * address (public/privacy.html §2).
+ */
+export function countryOf(req) {
+  const c = req.headers['cf-ipcountry'];
+  return typeof c === 'string' && /^(?:[A-Z]{2}|T1)$/.test(c) && c !== 'XX' ? c : undefined;
+}
+
 /** The body length the request declares, or 0 when it declares none (chunked: charged as read). */
 export function declared(req) {
   const n = Number(req.headers['content-length']);

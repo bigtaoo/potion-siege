@@ -16,12 +16,14 @@
 // checkpoint, no id: `open_*` from the page's inline script before anything else downloads
 // (scripts/openBeacon.mjs), `loaded_*` once the first battle frame is up (app.ts). `n` says
 // whether it is a new player's launch, `r` is the acquisition source tag or referrer host. It
-// lands in the same file as {name: 'beacon', step, host, build, ms, new, src}.
+// lands in the same file as {name: 'beacon', step, host, build, ms, new, src, country}.
 //
 // POST /e keeps only what the privacy policy (§2) lists: events with a name the game sends
 // (EVENTS) and TrackedEvent's fields (src/analytics/analytics.ts), each of its type, with props
 // of the shapes Props allows. Unknown keys are dropped, strings lose their control characters and
 // stop at 200 characters (the feedback line's own limit), and an event still over 4 KB is dropped.
+// Each line, events and checkpoints alike, gets the `country` Cloudflare puts the request in
+// (collectorLimits.mjs countryOf), never the address.
 //
 // POST /r keeps one battle's replay, sent by the game only while the player shares statistics
 // (src/analytics/replayUpload.ts), in <dir>/replays for 15 days (scripts/replayShelf.mjs);
@@ -31,7 +33,7 @@
 import { accessSync, appendFileSync, constants, mkdirSync, readdirSync, statfsSync, statSync, unlinkSync } from 'node:fs';
 import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
-import { addressOf, BodyGate, declared, Limits, MAX_BODY, MAX_REPLAY, rateOf, readBody, STATUS } from './collectorLimits.mjs';
+import { addressOf, BodyGate, countryOf, declared, Limits, MAX_BODY, MAX_REPLAY, rateOf, readBody, STATUS } from './collectorLimits.mjs';
 import { cleanReplay, MAX_BYTES, ReplayShelf } from './replayShelf.mjs';
 
 const port = Number(process.env.PORT) || Number(process.argv[2]) || 8787;
@@ -94,7 +96,7 @@ const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch']
 const HOSTS = ['crazygames', 'web', 'ios'];
 
 /** The line a checkpoint request writes, or null when it is not one. */
-function beaconLine(url, received) {
+function beaconLine(url, received, country) {
   const q = new URL(url, 'http://x').searchParams;
   const step = q.get('s');
   const host = q.get('h');
@@ -107,6 +109,7 @@ function beaconLine(url, received) {
   if (n === '0' || n === '1') line.new = n === '1';
   const src = q.get('r');
   if (src && /^[a-z0-9._-]{1,40}$/.test(src)) line.src = src;
+  if (country) line.country = country;
   return line;
 }
 
@@ -157,7 +160,7 @@ function propValue(v) {
 }
 
 /** The line to store for one posted event, or null to drop it. */
-export function cleanEvent(e, received) {
+export function cleanEvent(e, received, country) {
   if (!e || typeof e !== 'object' || Array.isArray(e) || !knownName(e.name) || !id(e.uid)) return null;
   const out = { name: e.name };
   for (const [k, ok] of Object.entries(FIELDS)) {
@@ -179,6 +182,7 @@ export function cleanEvent(e, received) {
     out.props = props;
   }
   out.received = received;
+  if (country) out.country = country;
   const line = JSON.stringify(out);
   return line.length <= MAX_EVENT ? line : null;
 }
@@ -216,12 +220,12 @@ function healthy() {
 }
 
 /** POST /e: an array of events, each kept as one line of the day's file. */
-function events(text, res) {
+function events(text, res, country) {
   try {
     const list = JSON.parse(text);
     if (!Array.isArray(list)) throw new Error('not an array');
     const received = Date.now();
-    const lines = list.map((e) => cleanEvent(e, received)).filter(Boolean);
+    const lines = list.map((e) => cleanEvent(e, received, country)).filter(Boolean);
     if (lines.length) append(fileFor(received), lines.join('\n') + '\n');
     res.writeHead(204, cors).end();
   } catch {
@@ -262,7 +266,7 @@ createServer((req, res) => {
   const length = declared(req);
   if (!limits.allow(rate, ip, length)) return refuse(res, 429);
   if (req.method === 'GET') {
-    const line = beaconLine(req.url, now);
+    const line = beaconLine(req.url, now, countryOf(req));
     if (!line) return res.writeHead(400, cors).end();
     append(fileFor(now), JSON.stringify(line) + '\n');
     return res.writeHead(204, cors).end();
@@ -274,6 +278,7 @@ createServer((req, res) => {
   readBody(req, { limit, over: (n) => limits.spend(rate, ip, n) }, (err, text) => {
     if (big) bigReads.give();
     if (err) return err in STATUS ? refuse(res, STATUS[err]) : undefined;
-    (big ? replay : events)(text, res);
+    if (big) replay(text, res);
+    else events(text, res, countryOf(req));
   });
 }).listen(port, () => console.log(`collector on :${port}/e -> ${dir ? join(dir, 'events-<day>.ndjson') : single}`));

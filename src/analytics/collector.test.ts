@@ -238,3 +238,26 @@ describe('collector rate limit', () => {
     expect(String(log.mock.calls)).not.toContain('1.2.3.4');
   });
 });
+
+describe('collector country', () => {
+  it("stamps events and checkpoints with Cloudflare's country, never the address", async () => {
+    const handler = await load();
+    const headers = { 'cf-ipcountry': 'DE', 'cf-connecting-ip': '203.0.113.9' };
+    request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]), headers);
+    request(handler, 'GET', '/b?h=web&s=open_desktop&b=1', undefined, { 'cf-ipcountry': 'T1' });
+    expect(lines(TODAY)).toEqual([
+      { name: 'run_start', uid: 'u', received: NOON, country: 'DE' },
+      { name: 'beacon', step: 'open_desktop', host: 'web', build: '1', ts: NOON, received: NOON, country: 'T1' },
+    ]);
+    expect(state.files.get(TODAY)).not.toContain('203.0.113.9');
+  });
+
+  it('leaves the country out when Cloudflare gives none, XX or anything not two letters', async () => {
+    const handler = await load();
+    for (const c of [undefined, 'XX', 'de', 'DEU', 'D1', '']) {
+      const headers: Record<string, string> = c === undefined ? {} : { 'cf-ipcountry': c };
+      request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]), headers);
+    }
+    expect(lines(TODAY).map((e) => e.country)).toEqual(Array(6).fill(undefined));
+  });
+});

@@ -2,4 +2,4 @@
 // mocked (src/analytics/collector.test.ts, collectorSchema.test.ts).
 
 /** The line POST /e stores for one posted event, or null when it is dropped. */
-export function cleanEvent(e: unknown, received: number): string | null;
+export function cleanEvent(e: unknown, received: number, country?: string): string | null;

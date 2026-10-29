@@ -15,6 +15,7 @@ import { dailyRows, printDaily } from './dailyScorecard.mjs';
 import { feedbackLines, playtestRows, printPlaytest } from './playtestMetrics.mjs';
 import { printSessions, sessionStats } from './sessionReport.mjs';
 import { compareBuilds, printCompare } from './buildCompare.mjs';
+import { countryRows, printCountries } from './countryReport.mjs';
 
 const args = process.argv.slice(2);
 const sources = [];
@@ -211,6 +212,7 @@ const adOk = events.filter((e) => e.name === 'ad_result' && e.props.ok).length;
 console.log(`\n== Ads ==\nrevive offered ${adOffers}, watched ${adOk} (${pct(adOk, adOffers)}), midgame ${events.filter((e) => e.name === 'ad_midgame').length}, paced away ${events.filter((e) => e.name === 'ad_paced').length}`);
 
 printPerf(perfSummary(events));
+printCountries(countryRows(events));
 
 // --- the playtest: new players by build, source and device, as CrazyGames scores them ---
 printPlaytest(playtestRows(events));
