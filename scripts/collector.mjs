@@ -93,7 +93,8 @@ function pruneReplays(now) {
 }
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
-const HOSTS = ['crazygames', 'web', 'ios'];
+// playgama sends only `loaded_*` (its build has no inline `open_*`, vite.playgama.config.js)
+const HOSTS = ['crazygames', 'web', 'ios', 'playgama'];
 
 /** The line a checkpoint request writes, or null when it is not one. */
 function beaconLine(url, received, country) {

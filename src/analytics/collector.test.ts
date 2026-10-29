@@ -183,6 +183,14 @@ describe('collector GET /b load checkpoints', () => {
     ]);
   });
 
+  it('takes a loaded checkpoint from the Playgama build', async () => {
+    const handler = await load();
+    expect(request(handler, 'GET', '/b?h=playgama&s=loaded_touch&b=0.0.1%2Bc5f65df&ms=4321&n=1&r=playgama').res.status).toBe(204);
+    expect(lines(TODAY)).toEqual([
+      { name: 'beacon', step: 'loaded_touch', host: 'playgama', build: '0.0.1+c5f65df', ts: NOON, received: NOON, ms: 4321, new: true, src: 'playgama' },
+    ]);
+  });
+
   it('rejects an unknown step, host or a missing or malformed build', async () => {
     const handler = await load();
     for (const q of ['h=web&s=closed_desktop&b=1', 'h=itch&s=open_desktop&b=1', 'h=web&s=open_desktop', 'h=web&s=open_desktop&b=a%20b', `h=web&s=open_desktop&b=${'1'.repeat(41)}`]) {
