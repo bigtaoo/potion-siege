@@ -307,6 +307,24 @@ describe('the layout', () => {
     expect(h.buttonRect('upgrade').x).toBe(190 - 160);
   });
 
+  it('narrows a long gold sum in the band so it stops short of the upgrade button, never upright', () => {
+    const { h, b, upgrade } = hud();
+    const gold = h['goldText'] as Text;
+    h.place(700);
+    h.legible(1, true);
+    b.gold = 99999;
+    h.update(0);
+    expect(gold.scale.x).toBeLessThan(1);
+    expect(gold.x + gold.width).toBeLessThanOrEqual(upgrade.x - 160 - 12 + 0.01);
+    b.gold = 40;
+    h.update(0);
+    expect(gold.scale.x).toBe(1);
+    b.gold = 99999;
+    h.place(null);
+    h.update(0);
+    expect(gold.scale.x).toBe(1);
+  });
+
   it('sends the kills\' coins to the counter, wherever it sits', () => {
     const { h } = hud();
     h.place(null);

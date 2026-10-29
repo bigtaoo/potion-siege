@@ -143,6 +143,15 @@ export class Hud extends Container {
     return this.band === null ? { x: 90, y: 60 * Math.min(this.boost, 1.25) } : { x: -150, y: this.band };
   }
 
+  /** The gold at the top line's size; in the band a long sum narrows to stop short of the upgrade button. */
+  private fitGold(): void {
+    const top = Math.min(this.boost, 1.25);
+    this.goldText.scale.set(top);
+    if (this.band === null) return;
+    const room = this.upgradeButton.x - BUTTON.w / 2 - 12 - this.goldText.x;
+    if (this.goldText.width > room) this.goldText.scale.set((top * room) / this.goldText.width);
+  }
+
   /** A new battle: at 1x, with the speed button if `hurry` (game/battleSpeed.ts canHurry). */
   offerSpeed(hurry: boolean): void {
     this.hurry = hurry;
@@ -177,9 +186,9 @@ export class Hud extends Container {
     this.speedButton.scale.set(top);
     this.speedButton.position.set(DESIGN_W - 62 * top, 172 * top);
     this.stageText.x = DESIGN_W - 125 * top;
-    this.goldText.scale.set(top);
     const coin = this.coinAt();
     this.goldText.position.set(coin.x + 40 + (top - 1) * 30, coin.y);
+    this.fitGold();
     // the coins fly in the view's own units, which a field turned on its side turns with it
     COIN_TARGET.x = this.band === null ? coin.x : coin.y;
     COIN_TARGET.y = this.band === null ? coin.y : DESIGN_H - (coin.x + this.x);
@@ -294,7 +303,11 @@ export class Hud extends Container {
       this.sizeCoin();
     }
     this.waveText.text = this.waveLabel(b.wave);
-    this.goldText.text = `${b.gold}`;
+    const gold = `${b.gold}`;
+    if (gold !== this.goldText.text) {
+      this.goldText.text = gold;
+      this.fitGold();
+    }
     // nothing to pause once the battle is over
     this.pauseButton.visible = !b.result;
     this.speedButton.visible = this.hurry && !b.result;

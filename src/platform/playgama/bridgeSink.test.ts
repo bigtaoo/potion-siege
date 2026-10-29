@@ -41,11 +41,23 @@ describe('BridgeEvents', () => {
     expect(m.map('run_hidden', { run: 3 }, 95_000)).toBeNull();
   });
 
-  it('still ends a run the player came back to after a tab switch', () => {
+  it('still ends a run the player came back to after a tab switch, saying they came back', () => {
     const m = new BridgeEvents();
     m.map('run_start', { run: 1, cause: 'first', stage: 1 }, 0);
     m.map('run_hidden', { run: 1, secs: 20 }, 20_000);
-    expect(m.map('run_end', { run: 1, result: 'won' }, 200_000)?.[0]).toBe('progression_completed');
+    expect(m.map('run_end', { run: 1, result: 'won' }, 200_000)).toMatchObject(['progression_completed', { returned: true }]);
+    m.map('run_start', { run: 2, cause: 'again', stage: 1 }, 210_000);
+    expect(m.map('run_end', { run: 2, result: 'lost' }, 300_000)?.[1]).not.toHaveProperty('returned');
+  });
+
+  it('on a desktop counts only pagehide as left, so a tab switch is nothing', () => {
+    const m = new BridgeEvents(false);
+    m.map('run_start', { run: 4, cause: 'again', stage: 4 }, 0);
+    expect(m.map('run_hidden', { run: 4, secs: 13 }, 15_000)).toBeNull();
+    expect(m.map('run_end', { run: 4, result: 'won' }, 208_000)?.[1]).not.toHaveProperty('returned');
+    m.map('run_start', { run: 5, cause: 'next', stage: 5 }, 220_000);
+    m.map('run_hidden', { run: 5, secs: 5 }, 226_000);
+    expect(m.map('run_quit', { run: 5, secs: 5 }, 227_000)?.[1]).toMatchObject({ reason: 'left', via: 'pagehide', wall_sec: 7 });
   });
 
   it('gives the first input and tutorial steps real seconds since the run started', () => {
@@ -114,5 +126,16 @@ describe('BridgeSink', () => {
     sink.send([ev('session_start', {}), ev('run_start', { run: 1, cause: 'first', stage: 1 })]);
     expect(tracked).toEqual([['progression_started', { step_id: 'stage_1', step_index: 1, mode: 'story', run: 1, cause: 'first', device: 'desktop', form: 'desktop', touch: false, session: 1, day: 0, build_version: '0.1+abc' }]]);
     expect(sink.beforeConsent).toBe(true);
+  });
+
+  it('counts a hidden page as left on a phone, not on a desktop', () => {
+    const ev = (name: string, props: TrackedEvent['props']): TrackedEvent => ({ name, props, uid: '', sid: 's', ts: 0, day: 0, session: 1, build: 'b', platform: 'playgama', src: 'playgama' });
+    const sent = (device: string) => {
+      const tracked: string[] = [];
+      new BridgeSink({ track: (e) => void tracked.push(e) }, { device, form: 'mobile', touch: true }, 'b').send([ev('run_start', { stage: 1 }), ev('run_hidden', {})]);
+      return tracked;
+    };
+    expect(sent('android')).toEqual(['progression_started', 'progression_failed']);
+    expect(sent('desktop')).toEqual(['progression_started']);
   });
 });

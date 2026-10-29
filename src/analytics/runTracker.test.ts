@@ -189,7 +189,7 @@ describe('RunTracker close', () => {
     b.wave = 2;
     tracker.hidden();
     tracker.hidden();
-    expect(named(sink, 'run_hidden')).toEqual([expect.objectContaining({ run: 1, wave: 2 })]);
+    expect(named(sink, 'run_hidden')).toEqual([expect.objectContaining({ run: 1, wave: 2, result: 'hidden' })]);
     tracker.close('pagehide');
     expect(named(sink, 'run_quit')).toHaveLength(1);
 

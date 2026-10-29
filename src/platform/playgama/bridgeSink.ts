@@ -45,7 +45,9 @@ const secsBetween = (from: number, to: number) => Math.max(0, Math.round((to - f
  * Turns the game's own events into Playgama's, remembering the run in progress (its run_end and
  * run_quit name no stage); null for an event Playgama does not get. `ts` is the event's wall clock
  * (ms): `wall_sec` counts real seconds from the run's start, which battle seconds do not while the
- * tutorial holds the battle.
+ * tutorial holds the battle. `hiddenLeaves` is for phones and tablets, whose browsers often never
+ * send pagehide: there a hidden page already counts as left. A desktop browser sends pagehide on a
+ * closed tab, so there a tab switch counts for nothing.
  */
 export class BridgeEvents {
   private step: BridgeData = stepOf({}, 'first');
@@ -53,6 +55,10 @@ export class BridgeEvents {
   private runAt: number | null = null;
   /** When the last run started (ms), for `first_input`. */
   private lastRunAt: number | null = null;
+  /** The run in progress already went out as left on a hidden page: its end says the player came back. */
+  private wentLeft = false;
+
+  constructor(private readonly hiddenLeaves = true) {}
 
   map(name: string, p: Props, ts = 0): [string, BridgeData] | null {
     const wall: BridgeData = this.lastRunAt === null ? {} : { wall_sec: secsBetween(this.lastRunAt, ts) };
@@ -70,22 +76,30 @@ export class BridgeEvents {
       case 'run_start':
         this.step = stepOf(p, String(p.cause ?? ''));
         this.runAt = this.lastRunAt = ts;
+        this.wentLeft = false;
         return ['progression_started', { ...this.step, run: Number(p.run) || 0, cause: String(p.cause ?? '') }];
       case 'run_end':
         this.runAt = null;
-        if (p.result === 'won') return ['progression_completed', { ...this.step, ...runResult(p) }];
-        return ['progression_failed', { ...this.step, ...runResult(p), reason: 'wall_fell' }];
+        if (p.result === 'won') return ['progression_completed', { ...this.step, ...runResult(p), ...this.back() }];
+        return ['progression_failed', { ...this.step, ...runResult(p), reason: 'wall_fell', ...this.back() }];
       case 'run_quit':
         if (p.giveUp) {
           this.runAt = null;
-          return ['progression_failed', { ...this.step, ...runResult(p), reason: 'gave_up' }];
+          return ['progression_failed', { ...this.step, ...runResult(p), reason: 'gave_up', ...this.back() }];
         }
         return this.left(p, ts, 'pagehide');
       case 'run_hidden':
-        return this.left(p, ts, 'hidden');
+        return this.hiddenLeaves ? this.left(p, ts, 'hidden') : null;
       default:
         return null;
     }
+  }
+
+  /** `returned` on the end of a run that already went out as left: the player only looked away. */
+  private back(): BridgeData {
+    const was = this.wentLeft;
+    this.wentLeft = false;
+    return was ? { returned: true } : {};
   }
 
   /** The page hid or went away mid-run: one `left` per run, whichever of the two came first (a
@@ -95,6 +109,7 @@ export class BridgeEvents {
     if (this.runAt === null) return null;
     const wall_sec = secsBetween(this.runAt, ts);
     this.runAt = null;
+    this.wentLeft = via === 'hidden';
     return ['progression_failed', { ...this.step, ...runResult(p), reason: 'left', via, wall_sec, battle_sec: Number(p.secs) || 0 }];
   }
 }
@@ -114,13 +129,15 @@ export function deviceFields(ua: string, touchPoints: number, bridgeType: string
 
 export class BridgeSink implements Sink {
   readonly beforeConsent = true;
-  private readonly events = new BridgeEvents();
+  private readonly events: BridgeEvents;
 
   constructor(
     private readonly bridge: Pick<PlaygamaBridge, 'track'>,
     private readonly device: BridgeData,
     private readonly build: string,
-  ) {}
+  ) {
+    this.events = new BridgeEvents(device.device !== 'desktop');
+  }
 
   send(events: TrackedEvent[]): void {
     for (const e of events) {

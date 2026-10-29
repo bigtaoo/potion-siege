@@ -97,11 +97,12 @@ export class RunTracker {
   }
 
   /** The page was hidden with the battle still on: a tab switch, or the first sign of a close
-   *  (mobile browsers often skip pagehide). `run_hidden` once per run; the player may come back. */
+   *  (mobile browsers often skip pagehide). `run_hidden` once per run, its result `hidden` rather
+   *  than `quit`: the player may come back. */
   hidden(): void {
     if (this.hiddenSent || this.ended || this.battle.result) return;
     this.hiddenSent = true;
-    this.a.track('run_hidden', this.summary());
+    this.a.track('run_hidden', { ...this.summary(), result: 'hidden' });
   }
 
   /** The page came back from the back/forward cache with the battle still on: it can quit again. */
