@@ -130,7 +130,7 @@ export class Hud extends Container {
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
     this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
-    this.addChild(this.nudgeRings, this.nudgeArc, this.nudgeHand, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton);
+    this.addChild(this.nudgeRings, this.nudgeArc, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton, this.nudgeHand);
   }
 
   /** Lays the HUD out for the screen: `band` is the design y of the band under a field turned on
@@ -332,7 +332,8 @@ export class Hud extends Container {
     this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
-    this.pointAt(this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null, dt);
+    const nudgePair = this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null;
+    this.pointAt(nudgePair ?? (this.idleSummon >= IDLE_SUMMON_AFTER ? 'summon' : null), dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
     for (const btn of [this.summonButton, this.upgradeButton]) {
@@ -343,7 +344,7 @@ export class Hud extends Container {
       btn.text.scale.set(Math.min(this.boost, (BUTTON.w - 36) / w, (BUTTON.h - 12) / h));
     }
     // the opening hint, or a word on what to do while the board points at a pair
-    const pointing = this.nudgeHand.visible;
+    const pointing = this.nudgeArc.visible;
     const opening = this.hint && b.seconds < HINT_SECONDS;
     this.hintBox.visible = ((pointing && !this.veteran) || opening) && this.mods.children.length === 0;
     const words = pointing ? t('full.hint') : t('hint');
@@ -369,9 +370,11 @@ export class Hud extends Container {
   }
 
   /** The pointer over the two cells of `pair` (design units), or hidden when it is null: the
-   *  tutorial's merge look, its hand dragging along an arc from one to the other. */
-  private pointAt(pair: [number, number] | null, dt: number): void {
-    this.nudgeRings.visible = this.nudgeArc.visible = this.nudgeHand.visible = pair !== null;
+   *  tutorial's merge look, its hand dragging along an arc from one to the other. 'summon' has
+   *  the hand alone tapping 召唤, as the tutorial does. */
+  private pointAt(pair: [number, number] | 'summon' | null, dt: number): void {
+    this.nudgeRings.visible = this.nudgeArc.visible = Array.isArray(pair);
+    this.nudgeHand.visible = pair !== null;
     if (!pair) {
       this.nudgeTime = 0;
       return;
@@ -382,6 +385,14 @@ export class Hud extends Container {
       this.nudgeHand.addChild(pointingHand());
     }
     const s = (this.nudgeTime += dt);
+    if (pair === 'summon') {
+      // taps along the finger: back up toward the wrist, then down onto the button
+      const bob = Math.abs(Math.sin(s * 4)) * 26;
+      this.nudgeHand.position.set(this.summonButton.x - Math.sin(0.35) * bob, this.summonButton.y - Math.cos(0.35) * bob);
+      this.nudgeHand.alpha = 1;
+      this.nudgeHand.scale.set(1);
+      return;
+    }
     // the cells where they lie: on a field turned on its side, turned with it
     const field = this.band === null ? null : this.field;
     const cellW = field ? BALANCE.grid.cellH : BALANCE.grid.cellW;

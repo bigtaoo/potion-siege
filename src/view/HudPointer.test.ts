@@ -8,6 +8,7 @@ import { endlessSetup } from '../sim/endless';
 import { battleSetup, newMeta } from '../sim/meta';
 import { BALANCE, HERO_KINDS, type BattleEvent } from '../sim/types';
 import { endlessBoss } from '../sim/waves';
+import { t } from '../i18n';
 import { fakeArt } from './fakeArt';
 import { Hud } from './Hud';
 
@@ -114,5 +115,38 @@ describe('召唤 pulsing again after the tutorial', () => {
     h.update(5);
     h.update(0.3);
     expect(scale(h)).toBe(1);
+  });
+});
+
+describe('the hand on 召唤 after the tutorial', () => {
+  const hand = (h: Hud) => h['nudgeHand'] as Container;
+  function idle(secs: number, over: Partial<Hud> = {}) {
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    Object.assign(h, over);
+    h['battle']!.gold = h['battle']!.summonCost() * 3;
+    h.update(secs);
+    h.update(0.3);
+    return h;
+  }
+
+  it('taps the button alone, with no rings, arc or merge hint, once a new player idles 4 s', () => {
+    expect(hand(idle(3.5)).visible).toBe(false);
+    const h = idle(4);
+    const button = h['summonButton'] as Container;
+    expect(hand(h).visible).toBe(true);
+    expect((h['nudgeRings'] as Container).visible).toBe(false);
+    expect((h['nudgeArc'] as Container).visible).toBe(false);
+    expect((h['hintText'] as { text: string }).text).not.toBe(t('full.hint'));
+    expect(Math.hypot(hand(h).x - button.x, hand(h).y - button.y)).toBeLessThanOrEqual(26);
+    expect(h.children.indexOf(hand(h))).toBeGreaterThan(h.children.indexOf(button));
+  });
+
+  it('goes at a summon and stays away for a veteran or during the tutorial', () => {
+    const h = idle(4);
+    h['battle']!.summon();
+    h.update(0.3);
+    expect(hand(h).visible).toBe(false);
+    expect(hand(idle(5, { veteran: true })).visible).toBe(false);
+    expect(hand(idle(5, { nudge: false })).visible).toBe(false);
   });
 });
