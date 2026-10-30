@@ -20,10 +20,10 @@ export type TutorialStep = (typeof TUTORIAL_STEPS)[number];
 export type TutorialCue = TutorialStep | 'more' | 'again';
 
 /** Summons the 强化 step asks for while its gold comes in, spread over it: the ~20 s from the
- *  merge to 100 gold were an empty wait. The first battle gives them free (giftSummons). */
+ *  merge to 100 gold were an empty wait. The first battle gives them free (giftSummons), each
+ *  GIFT_EVERY after the last (the battle keeps 召唤 shut until then; kill gold comes in too
+ *  unevenly to go by). */
 export const EXTRA_SUMMONS = 2;
-/** Battle seconds between the merge and each of them; kill gold comes in too unevenly to go by. */
-export const AGAIN_EVERY = 7;
 
 /** Battle seconds before the first slow motion: the opening crowd walks a fifth of the way down
  *  (the wall is about 15 s off) at full speed, so the player sees at once what is coming. */
@@ -47,9 +47,6 @@ export function mergeablePair(b: Battle): [number, number] | null {
 export class Tutorial {
   /** The step waiting to be done; null when all are done or skipped. */
   step: TutorialStep | null = 'summon';
-  /** Summons done during the 强化 step, up to EXTRA_SUMMONS. */
-  private extra = 0;
-  private mergedAt = 0;
 
   get done(): boolean {
     return this.step === null;
@@ -65,9 +62,7 @@ export class Tutorial {
         return mergeablePair(b) ? 'merge' : b.canSummon() ? 'more' : null;
       case 'upgrade':
         if (b.canUpgrade()) return 'upgrade';
-        // spread over the wait, AGAIN_EVERY apart from the merge on
-        const due = b.seconds - this.mergedAt >= AGAIN_EVERY * (this.extra + 1);
-        return this.extra < EXTRA_SUMMONS && due && b.canSummon() ? 'again' : null;
+        return b.giftReady() && b.canSummon() ? 'again' : null;
       case 'pick':
         return b.choices ? 'pick' : null;
       default:
@@ -79,11 +74,7 @@ export class Tutorial {
   update(b: Battle, events: readonly BattleEvent[]): void {
     for (const ev of events) {
       if (this.step === 'summon' && ev.type === 'summon') this.step = 'merge';
-      else if (this.step === 'merge' && ev.type === 'merge') {
-        this.step = 'upgrade';
-        this.mergedAt = b.seconds;
-      }
-      else if (this.step === 'upgrade' && ev.type === 'summon') this.extra++;
+      else if (this.step === 'merge' && ev.type === 'merge') this.step = 'upgrade';
     }
     if (this.step === 'upgrade' && b.choices && b.choiceReason === 'upgrade') this.step = 'pick';
     else if (this.step === 'pick' && !b.choices) this.step = null;

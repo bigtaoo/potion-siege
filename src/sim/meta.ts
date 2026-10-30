@@ -259,17 +259,18 @@ export function buyWorkshop(m: MetaSave, id: WorkshopId): boolean {
 /** The seed of a new player's battles: the first one, and stage 1 again until it is won, so
  *  their telemetry compares run for run (the waves are the same whatever the player does).
  *  Picked by scripts/first-seed.test.ts over seeds 1-2000 on the stage 1 base setup: the first
- *  two summons are a fire pair side by side on the wall (cells 18 and 19, just right of the
- *  middle), so the tutorial's merge is one short drag on the first potions the art shows off; the
- *  third is a lightning one in the middle cell, so there is one pair to point at; wave 1 comes
- *  down both halves of the field evenly (12 / 13 of 25; as the horde, 27 / 29 of 56, rescored
- *  and kept, as none of the seeds that split it 28 / 28 lays out the potions this way); and the
+ *  two summons are a fire pair side by side on the wall (cells 18 and 17, at and just right of
+ *  the middle), so the tutorial's merge is one short drag on the first potions the art shows off,
+ *  clear of the hands on 召唤 and 强化 that sit over the outer two columns on each side on a tall
+ *  screen; the third is an arcane one in cell 16, so there is one pair to point at and it too stays
+ *  in sight; wave 1 comes down both halves of the field evenly (18 / 20 of the first 38); and the
  *  bot wins with the wall untouched whether it acts every tick or only every 0.5, 1 or 2 s.
+ *  It took over from 609, whose pair stood under the hand on 召唤.
  *  Summons roll on their own stream, so this opening holds however long the player waits between
  *  taps. A change to what the battle rolls its dice for, or in what order, changes what this
  *  seed plays: run the script again
  *  (SEEDS=2000 npx vitest run --config scripts/vitest.seed.config.js) and repick. */
-export const FIRST_SEED = 609;
+export const FIRST_SEED = 1764;
 
 /** FIRST_SEED for a save that has not won a battle yet on stage 1, else null (a random one). */
 export function firstSeed(m: MetaSave): number | null {

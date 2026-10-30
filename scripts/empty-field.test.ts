@@ -72,7 +72,7 @@ it('empty field', () => {
   if (env.BAL) merge(BALANCE as unknown as Record<string, unknown>, JSON.parse(env.BAL));
   const seeds = Number(env.SEEDS ?? 40);
   const stages = (env.STAGES ?? '1,2,3,4,5,6,7,8,9,10').split(',').map(Number);
-  report('first 609', [run(FIRST_SEED, battleSetup(newMeta(), 1))]);
+  report('first 1764', [run(FIRST_SEED, battleSetup(newMeta(), 1))]);
   for (const stage of stages) {
     const setup = battleSetup(saveFor(ARRIVE[stage - 1]), stage);
     report(`stage ${stage}`, Array.from({ length: seeds }, (_, i) => run(1000 + i, setup)));

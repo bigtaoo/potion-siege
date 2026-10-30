@@ -1,6 +1,6 @@
 // `npx vitest run --config scripts/vitest.seed.config.js`: scores seeds for the new player's first
 // battle (FIRST_SEED in src/sim/meta.ts) on the stage 1 base setup. SEEDS=2000 sets how many,
-// ONLY=609 scores that one seed alone.
+// ONLY=1764 scores that one seed alone.
 // The opening is what every new player sees the same: the first three summons (taken one at a
 // time as gold allows, before any shot rolls a crit) and wave 1's spawn places. The rest of the
 // battle depends on the player, so it is judged by the bot at four paces.
@@ -9,6 +9,7 @@ import { Battle } from '../src/sim/battle';
 import { botAct } from '../src/sim/bot';
 import { TICK_RATE } from '../src/sim/math/fixed';
 import { BASE_SETUP } from '../src/sim/meta';
+import { BALANCE } from '../src/sim/types';
 import { mergeablePair } from '../src/sim/tutorial';
 
 const env = (globalThis as unknown as { process: { env: Record<string, string | undefined> } }).process.env;
@@ -26,6 +27,12 @@ function play(seed: number, every: number): Battle {
   }
   return b;
 }
+
+/** Columns no button's hand covers on a tall screen: 强化 sits over 0-1, 召唤 over 5-6. */
+const clear = (slot: number) => {
+  const col = slot % BALANCE.grid.cols;
+  return col >= 2 && col <= 4;
+};
 
 const wallPct = (b: Battle) => Math.round((100 * Math.max(0, b.wall)) / b.wallMax);
 
@@ -60,6 +67,9 @@ it('scores first-battle seeds', () => {
     const gap = pairAt === 2 ? Math.abs(slots[0] - slots[1]) : 9;
     // a pair from the first two summons, side by side, so the merge step is one short drag
     let score = pairAt === 2 ? 3 + (gap === 1 ? 1 : 0) : pairAt === 3 ? 1 : 0;
+    // ...and clear of the hands on 召唤 and 强化, which the tutorial points at while they stand there
+    if (pairAt === 2 && clear(slots[0]) && clear(slots[1])) score += 2;
+    if (slots.length === 3 && clear(slots[2])) score += 0.5;
     score += balance * 4; // up to 2
     score += wins * 1.5 + walls.reduce((a, w) => a + w, 0) / 100 / PACES.length;
     const line = `${seed}\tpair@${pairAt} gap ${gap}\t${kinds.join(',')}\tslots ${slots.join(',')}\tw1 n=${xs.length} bal=${balance.toFixed(2)}\twins ${wins}/${PACES.length} walls ${walls.join(',')}\tscore ${score.toFixed(2)}`;

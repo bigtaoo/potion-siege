@@ -34,6 +34,10 @@ import { startWave, stepWaves } from './spawn';
 import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
 import type { Spawn } from './waves';
 
+/** Battle seconds from the first merge to the first of the setup's free summons, and between
+ *  them (giftSummons): about one per third of the wait for 强化's gold. */
+export const GIFT_EVERY = 7;
+
 export { SLOT_COUNT, slotCenter, WALL_ROW } from './field';
 
 const B = BALANCE;
@@ -78,6 +82,8 @@ export class Battle {
   /** Of them the free ones the setup gives (giftSummons), which leave the price where it was. */
   gifted = 0;
   merges = 0;
+  /** The tick of the first merge, then of each free summon: the next one comes GIFT_EVERY on. */
+  private giftFrom = 0;
   /** Skill offers bought so far; each one costs more. */
   upgrades = 0;
   /** Cells the commander has built onto the wall, one every `summonsPerCell` summons. */
@@ -213,15 +219,21 @@ export class Battle {
 
   /** Rises a little faster with every summon, rounded to 5. */
   summonCost(): number {
-    if (this.gift()) return 0;
+    if (this.giftOwed()) return 0;
     const n = this.summons - this.gifted;
     const cost = (B.summonCostBase + B.summonCostStep * n + B.summonCostSquare * n * n) * (this.setup.modifiers?.summonCost ?? 1);
     return Math.round(cost / 5) * 5;
   }
 
-  /** The next summon is one of the setup's free ones. */
-  private gift(): boolean {
+  /** The next summon is one of the setup's free ones: owed from the first merge to the first 强化. */
+  private giftOwed(): boolean {
     return this.gifted < (this.setup.giftSummons ?? 0) && this.merges > 0 && this.upgrades === 0;
+  }
+
+  /** A free summon is owed and its time has come. Until then 召唤 stays shut, so the free ones
+   *  spread over the wait for 强化's gold instead of going at once and leaving it empty. */
+  giftReady(): boolean {
+    return this.giftOwed() && this.time - this.giftFrom >= GIFT_EVERY * TICK_RATE;
   }
 
   upgradeCost(): number {
@@ -231,6 +243,7 @@ export class Battle {
   }
 
   canSummon(): boolean {
+    if (this.giftOwed() && !this.giftReady()) return false;
     return !this.paused && this.gold >= this.summonCost() && this.freeSlots().length > 0;
   }
 
@@ -327,7 +340,7 @@ export class Battle {
 
   private doSummon(): boolean {
     if (!this.canSummon()) return false;
-    if (this.gift()) this.gifted++;
+    if (this.giftOwed()) (this.gifted++, (this.giftFrom = this.time));
     else this.gold -= this.summonCost();
     const slot = pick(this.summonRng, this.freeSlots());
     this.summons++;
@@ -367,7 +380,7 @@ export class Battle {
     this.slots[from] = null;
     const kind = pick(this.summonRng, this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: K.summonCooldown };
-    this.merges++;
+    if (this.merges++ === 0) this.giftFrom = this.time;
     this.events.push({ type: 'merge', slot: to, star, kind });
     if (star === B.maxStar) this.offer('ultimate', kind);
     return true;

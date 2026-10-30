@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { FixedStep } from '../view/fixedStep';
-import { Battle, WALL_ROW } from './battle';
+import { Battle, GIFT_EVERY, WALL_ROW } from './battle';
 import { FP, TICK_RATE } from './math/fixed';
 import { BASE_SETUP, FIRST_SEED, newMeta } from './meta';
 import { stageSetup } from './stars';
 import { checkReplay, takeReplay } from './replay';
-import { AGAIN_EVERY, EXTRA_SUMMONS, HOLD_AFTER_SECONDS, mergeablePair, SLOW_PACE, STOP_GAP, Tutorial } from './tutorial';
+import { EXTRA_SUMMONS, HOLD_AFTER_SECONDS, mergeablePair, SLOW_PACE, STOP_GAP, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -92,18 +92,18 @@ describe('tutorial', () => {
     tut.update(b, b.drain());
     mergeFirst(b, tut);
     expect(tut.step).toBe('upgrade');
-    // each one AGAIN_EVERY battle seconds after the last
+    // each one GIFT_EVERY battle seconds after the last
     const merged = b.seconds;
     b.gold = b.upgradeCost() - 1;
     for (let i = 0; i < EXTRA_SUMMONS; i++) {
-      at(b, merged + AGAIN_EVERY * (i + 1) - 0.1);
+      at(b, merged + GIFT_EVERY * (i + 1) - 0.1);
       expect(tut.showing(b)).toBeNull();
       at(b, b.seconds + 0.1);
       expect(tut.showing(b)).toBe('again');
       b.summon();
       tut.update(b, b.drain());
     }
-    at(b, b.seconds + AGAIN_EVERY);
+    at(b, b.seconds + GIFT_EVERY);
     expect(tut.showing(b)).toBeNull();
     b.gold = b.upgradeCost();
     expect(tut.showing(b)).toBe('upgrade');
@@ -119,8 +119,11 @@ describe('tutorial', () => {
     mergeFirst(b, tut);
     const paid = b.summons;
     b.gold = b.upgradeCost() - 1;
-    at(b, b.seconds + AGAIN_EVERY * EXTRA_SUMMONS);
     for (let i = 0; i < EXTRA_SUMMONS; i++) {
+      // 召唤 stays shut, at no price, until the free one's time
+      at(b, b.seconds + GIFT_EVERY - 0.1);
+      expect([b.canSummon(), b.summonCost(), b.summon()]).toEqual([false, 0, false]);
+      at(b, b.seconds + 0.1);
       expect(tut.showing(b)).toBe('again');
       expect(b.summon()).toBe(true);
       tut.update(b, b.drain());
@@ -180,7 +183,7 @@ describe('tutorial', () => {
   });
 
   it('goes on the moment the player does the step, and slows again at the next one', () => {
-    const b = new Battle(FIRST_SEED, BASE_SETUP);
+    const b = new Battle(FIRST_SEED, stageSetup(newMeta()));
     const tut = new Tutorial();
     run(b, tut, 10);
     b.summon();
@@ -191,7 +194,7 @@ describe('tutorial', () => {
     expect(tut.step).toBe('upgrade');
     // 强化 is not affordable yet: 召唤 again while its gold comes in, then 强化, slowed at each
     for (let i = 0; i < EXTRA_SUMMONS; i++) {
-      run(b, tut, 60);
+      run(b, tut, GIFT_EVERY + 1);
       expect(tut.showing(b)).toBe('again');
       expect(tut.pace(b)).toBeLessThan(1);
       b.summon();
