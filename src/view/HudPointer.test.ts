@@ -150,3 +150,41 @@ describe('the hand on 召唤 after the tutorial', () => {
     expect(hand(idle(5, { nudge: false })).visible).toBe(false);
   });
 });
+
+describe('the idle hand picks the next move', () => {
+  const hand = (h: Hud) => h['nudgeHand'] as Container;
+  const scale = (h: Hud) => (h['summonButton'] as Container).scale.x;
+  /** A pair of the first hero kind in the first two open cells, the rest of the grid free. */
+  function pairOnly(b: Battle): void {
+    const [a, c] = b.slots.map((_, i) => i).filter((i) => b.isOpen(i));
+    for (const [n, slot] of [a, c].entries())
+      b.slots[slot] = { id: 100 + n, kind: HERO_KINDS[0], star: 1, slot, cooldown: 0 } as Battle['slots'][number];
+  }
+
+  it('drags between a pair on a grid with room, with the opening words rather than "no room left"', () => {
+    const b = new Battle(1, battleSetup(newMeta(), 1));
+    pairOnly(b);
+    b.gold = b.summonCost() * 3;
+    const h = hud(b);
+    h.update(4);
+    h.update(0.3);
+    expect((h['nudgeArc'] as Container).visible).toBe(true);
+    expect((h['hintText'] as { text: string }).text).toBe(t('hint'));
+    expect(scale(h)).toBe(1);
+  });
+
+  it('taps 强化 once there is gold for it and no pair, and starts over when the player acts', () => {
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    const b = h['battle']!;
+    b.gold = b.upgradeCost();
+    h.update(4);
+    h.update(0.3);
+    const button = h['upgradeButton'] as Container;
+    expect(hand(h).visible).toBe(true);
+    expect((h['nudgeArc'] as Container).visible).toBe(false);
+    expect(Math.hypot(hand(h).x - button.x, hand(h).y - button.y)).toBeLessThanOrEqual(26);
+    b.summon();
+    h.update(0.3);
+    expect(hand(h).visible).toBe(false);
+  });
+});

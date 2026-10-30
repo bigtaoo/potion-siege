@@ -31,8 +31,9 @@ const NUDGE_AFTER = 2;
 /** Merges after which a player knows how: the board no longer points by itself or explains on
  *  a plate, only when a summon is tapped on a full grid. */
 export const VETERAN_MERGES = 20;
-/** Seconds a player short of VETERAN_MERGES could summon and has not before 召唤 pulses again,
- *  as in the tutorial: players who stopped after its guided summons lost stage 1 with 1–2. */
+/** Seconds a player short of VETERAN_MERGES could act and has not before the hand shows the next
+ *  move, as the tutorial does: a pair to fuse, else 强化, else 召唤 (pulsing too). Players who
+ *  stopped after the tutorial's guided summons lost stage 1 with 1–2. */
 const IDLE_SUMMON_AFTER = 4;
 
 export class Hud extends Container {
@@ -95,9 +96,10 @@ export class Hud extends Container {
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
-  /** Seconds the player could have summoned and has not (IDLE_SUMMON_AFTER); a new summon resets it. */
+  /** Seconds the player could have acted and has not (IDLE_SUMMON_AFTER); a summon, merge or
+   *  强化 resets it, seen as a change in `acted`. */
   private idleSummon = 0;
-  private seenSummons = 0;
+  private acted = '';
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
@@ -168,6 +170,8 @@ export class Hud extends Container {
 
   attach(battle: Battle): void {
     this.battle = battle;
+    this.idleSummon = 0;
+    this.acted = actedOn(battle);
     this.bannerTime = 0;
     this.banner.alpha = 0;
     this.newcomerTime = 0;
@@ -325,15 +329,20 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
-    const idle = this.nudge && !this.veteran && !b.result && b.canSummon() && b.summons === this.seenSummons;
+    // the next move for a player who has stopped: a pair to fuse, else 强化, else 召唤
+    const anyPair = b.paused || b.result ? null : (pair ?? mergeablePair(b));
+    const next = anyPair ?? (b.canUpgrade() ? 'upgrade' : b.canSummon() ? 'summon' : null);
+    const acted = actedOn(b);
+    const idle = this.nudge && !this.veteran && !b.result && next !== null && acted === this.acted;
     this.idleSummon = idle ? this.idleSummon + dt : 0;
-    this.seenSummons = b.summons;
-    this.pulseTime = this.pulse || this.idleSummon >= IDLE_SUMMON_AFTER ? this.pulseTime + dt : 0;
+    this.acted = acted;
+    const shown = this.idleSummon >= IDLE_SUMMON_AFTER ? next : null;
+    this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
     this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
     const nudgePair = this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null;
-    this.pointAt(nudgePair ?? (this.idleSummon >= IDLE_SUMMON_AFTER ? 'summon' : null), dt);
+    this.pointAt(nudgePair ?? shown, dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
     for (const btn of [this.summonButton, this.upgradeButton]) {
@@ -347,7 +356,7 @@ export class Hud extends Container {
     const pointing = this.nudgeArc.visible;
     const opening = this.hint && b.seconds < HINT_SECONDS;
     this.hintBox.visible = ((pointing && !this.veteran) || opening) && this.mods.children.length === 0;
-    const words = pointing ? t('full.hint') : t('hint');
+    const words = pointing && full ? t('full.hint') : t('hint');
     if (this.hintText.text !== words) this.hintText.text = words;
     if (this.hintBox.visible) this.fitHint();
     // the opening one fades out over its last second
@@ -370,9 +379,9 @@ export class Hud extends Container {
   }
 
   /** The pointer over the two cells of `pair` (design units), or hidden when it is null: the
-   *  tutorial's merge look, its hand dragging along an arc from one to the other. 'summon' has
-   *  the hand alone tapping 召唤, as the tutorial does. */
-  private pointAt(pair: [number, number] | 'summon' | null, dt: number): void {
+   *  tutorial's merge look, its hand dragging along an arc from one to the other. A button has
+   *  the hand alone tapping it, as the tutorial does. */
+  private pointAt(pair: [number, number] | 'summon' | 'upgrade' | null, dt: number): void {
     this.nudgeRings.visible = this.nudgeArc.visible = Array.isArray(pair);
     this.nudgeHand.visible = pair !== null;
     if (!pair) {
@@ -385,10 +394,11 @@ export class Hud extends Container {
       this.nudgeHand.addChild(pointingHand());
     }
     const s = (this.nudgeTime += dt);
-    if (pair === 'summon') {
+    if (!Array.isArray(pair)) {
       // taps along the finger: back up toward the wrist, then down onto the button
       const bob = Math.abs(Math.sin(s * 4)) * 26;
-      this.nudgeHand.position.set(this.summonButton.x - Math.sin(0.35) * bob, this.summonButton.y - Math.cos(0.35) * bob);
+      const button = pair === 'summon' ? this.summonButton : this.upgradeButton;
+      this.nudgeHand.position.set(button.x - Math.sin(0.35) * bob, button.y - Math.cos(0.35) * bob);
       this.nudgeHand.alpha = 1;
       this.nudgeHand.scale.set(1);
       return;
@@ -449,4 +459,9 @@ export class Hud extends Container {
     this.bannerFit = Math.min(1, (DESIGN_W - 40) / (this.banner.width * 1.18));
     this.bannerTime = 2;
   }
+}
+
+/** Changes with each summon, merge and 强化 (and an opened cell): the idle hand's clock starts over. */
+function actedOn(b: Battle): string {
+  return `${b.summons} ${b.freeSlots().length} ${b.upgradeCost()}`;
 }
