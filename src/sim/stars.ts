@@ -7,6 +7,7 @@
 
 import { CHAPTER_COUNT, CHAPTER_SIZE, chapterOf, chapterProgress, chapterStages } from './chapters';
 import { battleSetup, stageHp, workshopValue, type BattleSetup, type MetaSave, type Reward, type RunResult } from './meta';
+import { EXTRA_SUMMONS } from './tutorial';
 import { BALANCE } from './types';
 
 /** The stars rule and hard mode, picked with the bot (scripts/stars-probe.test.ts). */
@@ -145,7 +146,9 @@ export function setHardMode(m: MetaSave, on: boolean): boolean {
  *  tough as `hard.shift` stages on and `hard.speed` as fast. */
 export function stageSetup(m: MetaSave): BattleSetup {
   const setup = battleSetup(m);
-  return playingHard(m) ? hardSetup(setup) : setup;
+  if (playingHard(m)) return hardSetup(setup);
+  // the tutorial's 召唤 twice more while 强化's gold comes in, free so 强化 comes no later
+  return m.tutorial || setup.stage !== 1 ? setup : { ...setup, giftSummons: EXTRA_SUMMONS };
 }
 
 export function hardSetup(setup: BattleSetup): BattleSetup {

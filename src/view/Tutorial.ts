@@ -25,6 +25,8 @@ export interface Lesson {
   from: { x: number; y: number };
   to?: { x: number; y: number };
   clear: Rect;
+  /** The heroes on the board: on a tall screen the card over a button stays above them. */
+  keep?: Rect[];
 }
 
 /** The dim, a warm dark brown rather than black, light enough to watch the battle through. */
@@ -71,7 +73,7 @@ export class TutorialLayer extends Container {
     this.hand.visible = !pick;
     this.useHandArt();
 
-    const key = `${lesson.step}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}`;
+    const key = `${lesson.step}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${lesson.keep?.length ?? 0}`;
     if (key !== this.key) {
       this.key = key;
       this.drawDim(w, h);
@@ -91,7 +93,7 @@ export class TutorialLayer extends Container {
     const c = lesson.clear;
     // right over a button it points at, where the eye already is; else beside the board (or the
     // skill cards) on a wide screen, above or below the target on a tall one
-    const button = lesson.step === 'summon' || lesson.step === 'upgrade' || lesson.step === 'more';
+    const button = lesson.step === 'summon' || lesson.step === 'upgrade' || lesson.step === 'more' || lesson.step === 'again';
     let cw: number;
     let side: 'left' | 'right' | 'above' | 'below';
     // the field turned on its side leaves too little room beside the board: the card lies wide
@@ -116,9 +118,9 @@ export class TutorialLayer extends Container {
       side = target.y + target.h / 2 > h * 0.45 ? 'above' : 'below';
     }
 
-    const n = TUTORIAL_STEPS.indexOf(lesson.step === 'more' ? 'merge' : lesson.step) + 1;
+    const n = TUTORIAL_STEPS.indexOf(lesson.step === 'more' ? 'merge' : lesson.step === 'again' ? 'upgrade' : lesson.step) + 1;
     const head = ink(t('tutorial.step', { n, total: TUTORIAL_STEPS.length }), 32, { fill: P.inkSoft });
-    const body = balanced(t(`tutorial.${lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
+    const body = balanced(t(`tutorial.${lesson.step === 'again' ? 'summon' : lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
     const skip = skipButton(() => this.onSkip());
     // the step and the skip button share the top row on a roomy card; a narrow one has skip below
     const roomy = cw >= 600;
@@ -131,6 +133,8 @@ export class TutorialLayer extends Container {
       // room for the hand between the card and what it points at
       y = side === 'above' ? target.y - (lesson.step === 'pick' ? 30 : 190) - ch / 2 : target.y + target.h + 60 + ch / 2;
       if (lesson.step === 'pick') y = Math.max(y, ch / 2 + 20);
+      // a tall screen's card over a button would hide the potions just summoned: it and its tail (48) stay above them
+      if (button && !wide && lesson.keep?.length) y = Math.min(y, bounds(lesson.keep).y - 60 - ch / 2);
     } else if (narrow) {
       x = side === 'right' ? target.x + target.w + BESIDE + cw / 2 : target.x - BESIDE - cw / 2;
       y = target.y + target.h / 2;

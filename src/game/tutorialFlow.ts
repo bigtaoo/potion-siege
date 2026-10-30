@@ -50,7 +50,7 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
   const step = g.tutorial && b && g.root.visible ? g.tutorial.showing(b) : null;
   // the pick shows over the skill cards, every other step over the battle itself
   const up = step === 'pick' ? g.overlay.visible : !g.overlay.visible;
-  g.hud.pulse = up && (step === 'summon' || step === 'more');
+  g.hud.pulse = up && (step === 'summon' || step === 'more' || step === 'again');
   g.lessons.scale.set(m.scale);
   g.lessons.show(step && up && b ? lessonFor(g, step, b, m) : null, m.w, m.h, m.wide, dt);
 }
@@ -85,17 +85,18 @@ export function lessonFor(g: Game, step: NonNullable<ReturnType<Tutorial['showin
     const box = { x: m.w / 2 - (SKILL_BOX.w * s) / 2, y: m.h / 2 - (SKILL_BOX.h * s) / 2, w: SKILL_BOX.w * s, h: SKILL_BOX.h * s };
     return { step, holes: [], from: center(box), clear: box };
   }
+  const cell = (slot: number): Rect => {
+    // the cell where it lies on the board: on a field turned on its side, turned with it
+    const c = land ? g.root.toLocal(g.view.toGlobal(slotCenter(slot))) : slotCenter(slot);
+    const w = land ? BALANCE.grid.cellH : BALANCE.grid.cellW;
+    const h = land ? BALANCE.grid.cellW : BALANCE.grid.cellH;
+    return page({ x: c.x - w / 2, y: c.y - h / 2, w, h });
+  };
   if (step === 'merge') {
-    const pair = mergeablePair(b)!;
-    const holes = pair.map((slot) => {
-      // the cell where it lies on the board: on a field turned on its side, turned with it
-      const c = land ? g.root.toLocal(g.view.toGlobal(slotCenter(slot))) : slotCenter(slot);
-      const w = land ? BALANCE.grid.cellH : BALANCE.grid.cellW;
-      const h = land ? BALANCE.grid.cellW : BALANCE.grid.cellH;
-      return page({ x: c.x - w / 2, y: c.y - h / 2, w, h });
-    });
+    const holes = mergeablePair(b)!.map(cell);
     return { step, holes, from: center(holes[0]), to: center(holes[1]), clear: board };
   }
-  const r = page(g.hud.buttonRect(step === 'more' ? 'summon' : step));
-  return { step, holes: [r], from: { x: r.x + r.w / 2, y: r.y + 8 }, clear: board };
+  const r = page(g.hud.buttonRect(step === 'more' || step === 'again' ? 'summon' : step));
+  const keep = b.slots.flatMap((hero, slot) => (hero ? [cell(slot)] : []));
+  return { step, holes: [r], from: { x: r.x + r.w / 2, y: r.y + 8 }, clear: board, keep };
 }

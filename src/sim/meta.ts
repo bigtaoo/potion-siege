@@ -97,6 +97,8 @@ export interface BattleSetup {
   endless?: boolean;
   /** A stage on hard mode (stars.ts). */
   hard?: boolean;
+  /** The first battle's tutorial: summons free from the first merge to the first upgrade. */
+  giftSummons?: number;
 }
 
 /** What a daily challenge or a stage's chapter changes inside the battle (the wall, enemy hit

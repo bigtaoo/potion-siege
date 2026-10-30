@@ -75,6 +75,9 @@ export class Battle {
   wave = 0;
   waveTime = 0;
   summons = 0;
+  /** Of them the free ones the setup gives (giftSummons), which leave the price where it was. */
+  gifted = 0;
+  merges = 0;
   /** Skill offers bought so far; each one costs more. */
   upgrades = 0;
   /** Cells the commander has built onto the wall, one every `summonsPerCell` summons. */
@@ -210,9 +213,15 @@ export class Battle {
 
   /** Rises a little faster with every summon, rounded to 5. */
   summonCost(): number {
-    const n = this.summons;
+    if (this.gift()) return 0;
+    const n = this.summons - this.gifted;
     const cost = (B.summonCostBase + B.summonCostStep * n + B.summonCostSquare * n * n) * (this.setup.modifiers?.summonCost ?? 1);
     return Math.round(cost / 5) * 5;
+  }
+
+  /** The next summon is one of the setup's free ones. */
+  private gift(): boolean {
+    return this.gifted < (this.setup.giftSummons ?? 0) && this.merges > 0 && this.upgrades === 0;
   }
 
   upgradeCost(): number {
@@ -318,7 +327,8 @@ export class Battle {
 
   private doSummon(): boolean {
     if (!this.canSummon()) return false;
-    this.gold -= this.summonCost();
+    if (this.gift()) this.gifted++;
+    else this.gold -= this.summonCost();
     const slot = pick(this.summonRng, this.freeSlots());
     this.summons++;
     this.slots[slot] = { id: this.nextId++, kind: pick(this.summonRng, this.setup.lineup), star: 1, slot, cooldown: K.summonCooldown };
@@ -357,6 +367,7 @@ export class Battle {
     this.slots[from] = null;
     const kind = pick(this.summonRng, this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: K.summonCooldown };
+    this.merges++;
     this.events.push({ type: 'merge', slot: to, star, kind });
     if (star === B.maxStar) this.offer('ultimate', kind);
     return true;

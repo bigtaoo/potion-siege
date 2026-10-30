@@ -46,6 +46,36 @@ describe('the tutorial card in rarer layouts', () => {
   });
 });
 
+describe('the card over 召唤 on a tall screen', () => {
+  const summon = (keep?: Rect[]): Lesson => ({
+    step: 'more',
+    holes: [{ x: 400, y: 1700, w: 280, h: 120 }],
+    from: { x: 540, y: 1708 },
+    clear: { x: 0, y: 0, w: 1080, h: 1920 },
+    keep,
+  });
+  const bottom = (l: TutorialLayer) => card(l).y + card(l).children[1].height / 2;
+
+  it('stands clear of the potions already summoned', () => {
+    const l = new TutorialLayer(() => {});
+    l.show(summon(), 1080, 1920, false, 0.1);
+    const near = bottom(l);
+    expect(near).toBeGreaterThan(1300);
+    l.show(summon([{ x: 300, y: 1300, w: 150, h: 150 }]), 1080, 1920, false, 0.1);
+    // the panel's drawn height takes in its shadow
+    expect(bottom(l)).toBeLessThan(1300 - 45);
+  });
+
+  it('keeps its place beside the board on a wide screen', () => {
+    const l = new TutorialLayer(() => {});
+    const wide = { ...summon([{ x: 300, y: 1300, w: 150, h: 150 }]), holes: [{ x: 400, y: 900, w: 280, h: 120 }] };
+    l.show({ ...wide, keep: undefined }, 1920, 1080, true, 0.1);
+    const y = card(l).y;
+    l.show(wide, 1920, 1080, true, 0.1);
+    expect(card(l).y).toBe(y);
+  });
+});
+
 describe('the merge hand', () => {
   it('drags at full size mid-cycle and fades out at the end of it', () => {
     const l = new TutorialLayer(() => {});
