@@ -31,6 +31,9 @@ const NUDGE_AFTER = 2;
 /** Merges after which a player knows how: the board no longer points by itself or explains on
  *  a plate, only when a summon is tapped on a full grid. */
 export const VETERAN_MERGES = 20;
+/** Seconds a player short of VETERAN_MERGES could summon and has not before 召唤 pulses again,
+ *  as in the tutorial: players who stopped after its guided summons lost stage 1 with 1–2. */
+const IDLE_SUMMON_AFTER = 4;
 
 export class Hud extends Container {
   private readonly coin = new Graphics();
@@ -92,6 +95,9 @@ export class Hud extends Container {
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
+  /** Seconds the player could have summoned and has not (IDLE_SUMMON_AFTER); a new summon resets it. */
+  private idleSummon = 0;
+  private seenSummons = 0;
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
@@ -319,7 +325,10 @@ export class Hud extends Container {
     this.summonButton.setEnabled(b.canSummon());
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
-    this.pulseTime = this.pulse ? this.pulseTime + dt : 0;
+    const idle = this.nudge && !this.veteran && !b.result && b.canSummon() && b.summons === this.seenSummons;
+    this.idleSummon = idle ? this.idleSummon + dt : 0;
+    this.seenSummons = b.summons;
+    this.pulseTime = this.pulse || this.idleSummon >= IDLE_SUMMON_AFTER ? this.pulseTime + dt : 0;
     this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;

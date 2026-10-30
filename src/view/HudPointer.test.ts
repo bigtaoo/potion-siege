@@ -78,3 +78,41 @@ describe('the pointer at a pair', () => {
     expect(hand.children[0]).toBe(glove);
   });
 });
+
+describe('召唤 pulsing again after the tutorial', () => {
+  const scale = (h: Hud) => (h['summonButton'] as Container).scale.x;
+  /** A battle with gold for a summon and cells free, its clock at `secs` idle. */
+  function idle(secs: number, over: Partial<Hud> = {}) {
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    Object.assign(h, over);
+    h['battle']!.gold = h['battle']!.summonCost() * 3;
+    h.update(secs);
+    h.update(0.3);
+    return h;
+  }
+
+  it('swells once a new player could summon for 4 s and has not', () => {
+    expect(scale(idle(3.5))).toBe(1);
+    expect(scale(idle(4))).toBeGreaterThan(1);
+  });
+
+  it('starts the wait over at each summon', () => {
+    const h = idle(4);
+    const b = h['battle']!;
+    b.summon();
+    h.update(0.3);
+    expect(scale(h)).toBe(1);
+    h.update(3.5);
+    expect(scale(h)).toBe(1);
+  });
+
+  it('stays still for a veteran, during the tutorial and with no gold for a summon', () => {
+    expect(scale(idle(5, { veteran: true }))).toBe(1);
+    expect(scale(idle(5, { nudge: false }))).toBe(1);
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    h['battle']!.gold = 0;
+    h.update(5);
+    h.update(0.3);
+    expect(scale(h)).toBe(1);
+  });
+});
