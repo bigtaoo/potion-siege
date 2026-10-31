@@ -18,8 +18,8 @@ function pose(over: Partial<PotionPose> = {}): PotionPose {
 }
 
 function parts(c: { children: unknown[] }) {
-  const [back, body, front] = c.children as [Graphics, Sprite, Graphics];
-  return { back, body, front };
+  const [back, body, mark, front] = c.children as [Graphics, Sprite, Graphics, Graphics];
+  return { back, body, mark, front };
 }
 
 describe('popScale', () => {
@@ -146,12 +146,21 @@ describe('a still potion', () => {
 });
 
 describe('the mark out of its neck', () => {
-  const front = (mark: PotionLook['mark'], over: Partial<PotionPose> = {}) => parts(stillPotion(look(mark), pose(over))).front;
+  const front = (mark: PotionLook['mark'], over: Partial<PotionPose> = {}) => parts(stillPotion(look(mark), pose(over))).mark;
 
   it('goes out while pouring', () => {
     for (const mark of ['flame', 'frost', 'spark', 'star', 'acid', 'wind'] as const) {
-      expect(drawnColors(front(mark, { tilt: 0.3 }), 'fill')).toEqual([LIMB, LIMB]);
+      expect(front(mark, { tilt: 0.3 }).visible).toBe(false);
+      expect(front(mark).visible).toBe(true);
     }
+  });
+
+  it('stands on the neck, upright as a flame or a wind, turning with the bottle otherwise', () => {
+    const p = stillPotion(look('flame'), pose({ wind: 1 }));
+    expect([parts(p).mark.x, parts(p).mark.y]).toEqual([0, -100 * 0.1 - 0.9 * 100]);
+    expect(parts(p).mark.rotation).toBeCloseTo(-p.rotation);
+    expect(parts(stillPotion(look('wind'), pose({ time: 0, wind: 1 }))).mark.rotation).toBeCloseTo(0.22);
+    expect(parts(stillPotion(look('star'), pose({ time: 0, wind: 1 }))).mark.rotation).toBe(0);
   });
 
   it('flame: three nested flames, the outer one outlined, and three embers', () => {
@@ -208,14 +217,13 @@ describe('the mark out of its neck', () => {
   });
 
   it('flares up higher on a throw', () => {
-    for (const mark of ['frost', 'spark', 'star', 'wind'] as const) {
-      const calm = front(mark).context.bounds;
-      const hot = front(mark, { since: 0 }).context.bounds;
-      expect(hot.minY, mark).toBeLessThan(calm.minY);
+    // how high its top is over the bottle's feet
+    const top = (m: Graphics) => m.y + m.scale.y * m.context.bounds.minY;
+    for (const mark of ['frost', 'spark', 'star', 'wind', 'acid'] as const) {
+      expect(top(front(mark, { since: 0 })), mark).toBeLessThan(top(front(mark)) - 5);
     }
-    // the embers drift above the flame itself: measure the outer flame alone
-    const outer = (over: Partial<PotionPose>) => (front('flame', over).context.instructions[0].data as { path: { bounds: { minY: number } } }).path.bounds.minY;
-    expect(outer({ since: 0 })).toBeLessThan(outer({}) - 10);
+    expect(front('flame', { since: 0 }).scale.x).toBeCloseTo(1.45);
+    expect(front('flame', { wind: 1 }).scale.x).toBeCloseTo(1.2);
   });
 });
 
@@ -271,40 +279,61 @@ describe('PotionLayer', () => {
     return spies.map((s) => s.mock.calls.length);
   }
 
-  it('redraws an idle figure every other frame, half of them on each', () => {
-    const l = look('flame');
-    expect(redraws(4, () => [[l, pose()], [l, pose()]])).toEqual([2, 2]);
-    expect(redraws(1, () => [[l, pose()], [l, pose()]])).toEqual([1, 0]);
-    expect(redraws(2, () => [[l, pose()], [l, pose()]])).toEqual([1, 1]);
-  });
-
-  it('redraws every idle figure every frame when it may not skip (a low frame rate)', () => {
+  it("shows an idle figure's kept frame, shared with every figure of that look at that time, scaled to its size", () => {
     const l = look('flame');
     const layer = new PotionLayer();
-    layer.skip = false;
     layer.begin();
     layer.put(l, pose());
-    const spy = vi.spyOn(parts(layer.children[0]).front, 'clear');
-    for (let f = 0; f < 4; f++) {
-      layer.begin();
-      layer.put(l, pose());
-    }
-    expect(spy.mock.calls.length).toBe(4);
+    layer.put(l, pose({ height: 50 }));
+    layer.put(look('flame'), pose());
+    const [a, b, c] = layer.children.map(parts);
+    expect(a.front.context).toBe(b.front.context);
+    expect(a.back.context).toBe(b.back.context);
+    expect(c.front.context).not.toBe(a.front.context);
+    expect(a.front.scale.x).toBe(1);
+    expect(b.front.scale.x).toBe(0.5);
+    expect(b.back.scale.y).toBe(0.5);
   });
 
-  it('redraws at once while winding up, recoiling or pouring', () => {
+  it("never redraws an idle figure's strokes", () => {
+    const l = look('flame');
+    expect(redraws(4, (f) => [[l, pose({ time: 1 + f / 30 })], [l, pose({ phase: 2, time: 1 + f / 30 })]])).toEqual([0, 0]);
+  });
+
+  it('draws its own strokes again once it stops idling, and goes back to the kept frame after', () => {
+    const l = look('flame');
+    const layer = new PotionLayer();
+    layer.begin();
+    layer.put(l, pose());
+    const p = parts(layer.children[0]);
+    const kept = p.front.context;
+    const mark = p.mark.context;
+    layer.begin();
+    layer.put(l, pose({ wind: 0.5 }));
+    expect(p.front.context).not.toBe(kept);
+    expect(p.front.scale.x).toBe(1);
+    expect(drawnColors(p.front, 'fill')).toContain(GLOW[1]);
+    // the mark stays the kept one, only scaled up
+    expect(p.mark.context).toBe(mark);
+    expect(p.mark.scale.x).toBeCloseTo(1.1);
+    layer.begin();
+    layer.put(l, pose());
+    expect(p.front.context).toBe(kept);
+  });
+
+  it('draws its strokes afresh every frame while blinking, and in a still picture', () => {
+    const l = look('flame');
+    // blinks while (t * 0.31) % 1 < 0.035
+    expect(redraws(4, () => [[l, pose({ time: 0.05 })]])).toEqual([4]);
+    const still = parts(stillPotion(l, pose()));
+    expect(drawnColors(still.mark, 'fill')).toContain(GLOW[0]);
+    expect(drawnColors(still.front, 'fill')).toEqual([LIMB, LIMB]);
+  });
+
+  it('redraws its arms at once while winding up or recoiling, but not while pouring', () => {
     const l = look('flame');
     expect(redraws(4, () => [[l, pose({ wind: 0.1 })]])).toEqual([4]);
     expect(redraws(4, () => [[l, pose({ since: 0.1 })]])).toEqual([4]);
-    expect(redraws(4, () => [[l, pose({ tilt: 0.2 })]])).toEqual([4]);
-  });
-
-  it('redraws at once with a new look, size, dimming or blink', () => {
-    const a = look('flame');
-    const b = look('frost');
-    expect(redraws(4, (f) => [[f % 2 ? a : b, pose()]])).toEqual([4]);
-    expect(redraws(4, (f) => [[a, pose({ height: 100 + f })]])).toEqual([4]);
-    expect(redraws(4, (f) => [[a, pose({ dim: f % 2 === 0 })]])).toEqual([4]);
-    expect(redraws(4, (f) => [[a, pose({ time: f % 2 ? 0 : 1 })]])).toEqual([4]);
+    expect(redraws(4, () => [[l, pose({ tilt: 0.2 })]])).toEqual([0]);
   });
 });

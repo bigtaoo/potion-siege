@@ -297,8 +297,6 @@ export class BattleView extends Container {
     const t = this.time;
     // the battle's own clock, between its ticks: it stops with the battle and keeps its pace
     const bt = Math.max(0, (b.time - 1 + alpha) / TICK_RATE);
-    // idle figures redraw every other frame only while the frames come fast enough
-    this.potions.skip = this.dragPotions.skip = dt < 1 / 45;
     this.blows = 0;
     const w = this.world.clear();
     const u = this.under.clear();
