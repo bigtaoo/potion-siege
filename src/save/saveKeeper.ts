@@ -50,9 +50,15 @@ export class SaveKeeper implements KeyValueStore {
     if (key === SAVE_KEY && !isFresh(value)) this.keep(value);
   }
 
-  /** Sends the copy that waits for the server (the page is being hidden). */
+  /** Sends the copy that waits for the server (the page is being hidden, a leaderboard post). */
   flush(): void {
     this.parts.upload?.flush();
+  }
+
+  /** This device's copy on our server, which names the player on its leaderboards (board/serverBoard.ts). */
+  copyKey(): { id: string; token: string } | null {
+    const copy = this.parts.mirror.of(this.parts.owner);
+    return copy ? { id: copy.id, token: copy.token } : null;
   }
 
   private keep(save: string, from?: Owner): void {
@@ -61,13 +67,16 @@ export class SaveKeeper implements KeyValueStore {
   }
 }
 
+const isLocal = (h: string) => h === 'localhost' || h === '[::1]' || h.startsWith('127.');
+
 /** The collector's save route, or null where nothing goes to it: no collector in this build, a
- *  host that blocks it, or a local preview (the iOS app's capacitor://localhost does send). */
+ *  host that blocks it, or a local preview of a real collector's build (the iOS app's
+ *  capacitor://localhost does send, and so does a preview with a collector on this machine). */
 export function vaultFor(blocked: boolean, loc: Pick<Location, 'hostname' | 'protocol'> = location): string | null {
   const url = import.meta.env.VITE_ANALYTICS_URL as string | undefined;
   if (!url || blocked) return null;
   const h = loc.hostname;
-  if (loc.protocol !== 'capacitor:' && (h === 'localhost' || h === '[::1]' || h.startsWith('127.'))) return null;
+  if (loc.protocol !== 'capacitor:' && isLocal(h) && !isLocal(new URL(url, 'http://x').hostname)) return null;
   return vaultUrl(url);
 }
 

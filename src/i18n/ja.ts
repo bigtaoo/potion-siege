@@ -381,4 +381,16 @@ export const ja: Table = {
     windVortex: { name: 'つむじ風', desc: '疾風で倒した場所につむじ風、2秒間敵を引き寄せる' },
     windFire: { name: '火に油', desc: '燃えている敵に疾風が当たると、周りの敵に火が燃え移る' },
   },
+  board: {
+    button: 'ランキング',
+    title: 'ランキング',
+    endless: 'エンドレス',
+    stars: 'スター',
+    loading: '読み込み中…',
+    offline: 'ランキングに接続できません',
+    empty: 'まだ誰もいません。一番乗りしよう！',
+    wave: 'ウェーブ {n}',
+    starCount: 'スター {n}',
+    note: 'スコアはバトルごとに送られます。',
+  },
 };

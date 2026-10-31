@@ -381,4 +381,16 @@ export const vi: Table = {
     windVortex: { name: 'Lốc Xoáy', desc: 'Hạ địch bằng gió để lại lốc xoáy hút địch vào trong 2s' },
     windFire: { name: 'Quạt Lửa', desc: 'Đòn gió trúng địch đang cháy thổi lửa sang địch xung quanh' },
   },
+  board: {
+    button: 'Xếp hạng',
+    title: 'Bảng xếp hạng',
+    endless: 'Vô tận',
+    stars: 'Sao',
+    loading: 'Đang tải…',
+    offline: 'Không kết nối được bảng xếp hạng',
+    empty: 'Chưa có ai. Hãy là người đầu tiên!',
+    wave: 'Đợt {n}',
+    starCount: '{n} sao',
+    note: 'Điểm được gửi sau mỗi trận.',
+  },
 };

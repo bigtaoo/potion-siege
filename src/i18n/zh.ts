@@ -381,4 +381,16 @@ export const zh: Table = {
     windVortex: { name: '旋风', desc: '疾风击杀处留下旋风，2 秒内把周围敌人吸过去' },
     windFire: { name: '煽风点火', desc: '疾风命中燃烧的敌人，把火吹到周围敌人身上' },
   },
+  board: {
+    button: '排行榜',
+    title: '排行榜',
+    endless: '无尽',
+    stars: '星星',
+    loading: '加载中…',
+    offline: '连不上排行榜',
+    empty: '还没有人上榜，来当第一个！',
+    wave: '第 {n} 波',
+    starCount: '{n} 星',
+    note: '每场战斗结束后成绩自动上传。',
+  },
 };

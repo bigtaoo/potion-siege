@@ -1,5 +1,6 @@
 import { urlSwitches } from '../../game/switches';
 import { accountOwner, GUEST } from '../../save/saveCopies';
+import { serverBoard } from '../../board/serverBoard';
 import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { devNotifier } from '../fakeNotifier';
 import { updatesSwitch } from '../fakeUpdates';
@@ -65,8 +66,10 @@ export class IosPlatform extends WebPlatform implements Platform {
   async keepCopies(doc: Document = document, win: Window = window): Promise<void> {
     const player = await this.gameCenter.player();
     this.signedIn = player !== null;
-    const keeper = await keepSaves(this.storage, player ? accountOwner(player, 'gc') : GUEST, { url: vaultFor(false), doc, win });
+    const url = vaultFor(false);
+    const keeper = await keepSaves(this.storage, player ? accountOwner(player, 'gc') : GUEST, { url, doc, win });
     this.storage = new SafeStore(keeper);
+    this.leaderboard = serverBoard(url, keeper);
     if (keeper.restored) this.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
   }
 

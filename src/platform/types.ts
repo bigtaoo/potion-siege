@@ -1,4 +1,5 @@
 import type { Sink } from '../analytics/analytics';
+import type { Leaderboard } from '../board/types';
 
 /** A key/value store that behaves like localStorage. */
 export interface KeyValueStore {
@@ -62,6 +63,8 @@ export interface Platform {
   readonly collectorBlocked?: boolean;
   /** The host's own telemetry, one more analytics sink (Playgama's Bridge events). */
   readonly hostSink?: Sink;
+  /** The leaderboards the home screen shows (board/types.ts); absent or null: no board button. */
+  leaderboard?: Leaderboard | null;
 }
 
 /** Hot updates of the game itself (docs/ios.md "Hot updates"), offered on the home screen (view/updatePrompt.ts). */

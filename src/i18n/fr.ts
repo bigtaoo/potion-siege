@@ -381,4 +381,16 @@ export const fr: Table = {
     windVortex: { name: 'Tourbillon', desc: 'Une élimination au vent laisse un tourbillon qui aspire les ennemis 2s' },
     windFire: { name: 'Attiser les flammes', desc: 'Le vent qui frappe un ennemi en feu propage les flammes à ses voisins' },
   },
+  board: {
+    button: 'Classement',
+    title: 'Classement',
+    endless: 'Infini',
+    stars: 'Étoiles',
+    loading: 'Chargement…',
+    offline: 'Classement injoignable',
+    empty: "Personne pour l'instant. Sois le premier !",
+    wave: 'Vague {n}',
+    starCount: '{n} étoiles',
+    note: 'Tes scores sont envoyés après chaque combat.',
+  },
 };

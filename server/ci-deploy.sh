@@ -1,6 +1,6 @@
 #!/bin/sh
 # The only command CI's deploy key may run on blightbloom: it reads a tar.gz from stdin, takes
-# the collector's three files (FILES) out of it (nothing else, whatever else the archive holds),
+# the collector's files (FILES) out of it (nothing else, whatever else the archive holds),
 # puts them in /home/deploy/potion-siege and restarts the containers. `.github/workflows/ci.yml`'s
 # deploy-server job sends it; server/README.md says how it is installed.
 #
@@ -18,10 +18,10 @@
 set -eu
 
 TARGET="$HOME/potion-siege"
-DOCKERFILE_SHA256=559455a27d37d72d17168c1c5b6c336a0396ee58c2ced94871a516dae32326db
+DOCKERFILE_SHA256=be2951ef4875db87e9becb010824b3912518fb33a88656b70666f0babb165ccc
 COMPOSE_SHA256=8822f604a44e35b948f6fea22a0e886dc2697634a519b2d69b042d007c1567db
 # the collector's own files, in the order CI packs them (the Dockerfile copies the same)
-FILES="collector.mjs collectorLimits.mjs replayShelf.mjs saveVault.mjs"
+FILES="collector.mjs collectorLimits.mjs replayShelf.mjs saveVault.mjs leaderboard.mjs"
 # the collector is ~20 KB; anything near this is not it
 MAX_PAYLOAD=1048576
 STAGE="$(mktemp -d)"

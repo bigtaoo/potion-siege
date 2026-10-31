@@ -381,4 +381,16 @@ export const id: Table = {
     windVortex: { name: 'Puting Beliung', desc: 'Musuh yang tumbang oleh angin meninggalkan puting beliung yang menarik musuh selama 2d' },
     windFire: { name: 'Kipasi Bara', desc: 'Serangan angin ke musuh terbakar meniup apinya ke sekitar' },
   },
+  board: {
+    button: 'Peringkat',
+    title: 'Papan Peringkat',
+    endless: 'Tanpa Akhir',
+    stars: 'Bintang',
+    loading: 'Memuat…',
+    offline: 'Papan peringkat tak terjangkau',
+    empty: 'Belum ada siapa pun. Jadilah yang pertama!',
+    wave: 'Gelombang {n}',
+    starCount: '{n} bintang',
+    note: 'Skormu dikirim setelah tiap pertempuran.',
+  },
 };

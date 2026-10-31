@@ -381,4 +381,16 @@ export const tr: Table = {
     windVortex: { name: 'Hortum', desc: 'Rüzgârla ölen düşmanlar, 2 sn boyunca düşmanları içine çeken bir hortum bırakır' },
     windFire: { name: 'Yangına Körük', desc: 'Yanan düşmanlara rüzgâr vuruşu ateşi çevredekilere taşır' },
   },
+  board: {
+    button: 'Sıralama',
+    title: 'Sıralama',
+    endless: 'Sonsuz',
+    stars: 'Yıldızlar',
+    loading: 'Yükleniyor…',
+    offline: 'Sıralamaya ulaşılamıyor',
+    empty: 'Henüz kimse yok. İlk sen ol!',
+    wave: '{n}. dalga',
+    starCount: '{n} yıldız',
+    note: 'Skorların her savaştan sonra gönderilir.',
+  },
 };

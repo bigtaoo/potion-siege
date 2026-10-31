@@ -80,6 +80,13 @@ export class SaveVault {
     return doc ? { at: doc.at, save: doc.save } : null;
   }
 
+  /** The save of the copy `id` when `token` is its secret, else null (none, or another device's). */
+  saveOf(id, token) {
+    if (!ID.test(id)) return null;
+    const doc = this.read(join(this.dir, `${id}.json`));
+    return doc && doc.tokenHash === hash(token) && typeof doc.save === 'string' ? doc.save : null;
+  }
+
   /** Drops the copies and account names not written for KEEP_MONTHS; how many went. */
   prune(now) {
     const cutoff = new Date(now);

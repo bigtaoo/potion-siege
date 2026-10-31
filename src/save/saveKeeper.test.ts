@@ -104,6 +104,18 @@ describe('SaveKeeper', () => {
   });
 });
 
+describe('SaveKeeper.copyKey', () => {
+  it("names this owner's copy on our server once it has one", () => {
+    const d = device();
+    const k = new SaveKeeper(memory(), { owner: GUEST, mirror: d.mirror(), upload: null });
+    expect(k.copyKey()).toBeNull();
+    k.setItem(SAVE_KEY, saveWith(1));
+    const copy = d.mirror().of(GUEST)!;
+    expect(k.copyKey()).toEqual({ id: copy.id, token: copy.token });
+    expect(copy.id).toMatch(/^[0-9a-f]{24}$/);
+  });
+});
+
 describe('vaultFor', () => {
   it('is off without a collector, on a host that blocks it and on a local preview', () => {
     const web = { hostname: 'ps.example.com', protocol: 'https:' };
@@ -114,6 +126,12 @@ describe('vaultFor', () => {
     expect(vaultFor(true, web)).toBeNull();
     for (const hostname of ['localhost', '127.0.0.1', '[::1]']) expect(vaultFor(false, { hostname, protocol: 'http:' })).toBeNull();
     expect(vaultFor(false, { hostname: 'localhost', protocol: 'capacitor:' })).toBe('https://c.example.com/s');
+  });
+
+  it('sends from a local preview to a collector on this machine', () => {
+    vi.stubEnv('VITE_ANALYTICS_URL', 'http://localhost:8787/e');
+    expect(vaultFor(false, { hostname: 'localhost', protocol: 'http:' })).toBe('http://localhost:8787/s');
+    expect(vaultFor(false, { hostname: '127.0.0.1', protocol: 'http:' })).toBe('http://localhost:8787/s');
   });
 });
 

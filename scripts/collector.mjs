@@ -27,7 +27,8 @@
 //
 // POST /r keeps one battle's replay, sent by the game only while the player shares statistics
 // (src/analytics/replayUpload.ts), in <dir>/replays for 15 days (scripts/replayShelf.mjs);
-// `npm run replays` plays them again. Every route but /health is charged to a per-address budget
+// `npm run replays` plays them again. POST /l puts a save copy's scores on the leaderboards and
+// GET /l?board=<endless|stars> reads one (scripts/leaderboard.mjs). Every route but /health is charged to a per-address budget
 // before its body is read (scripts/collectorLimits.mjs).
 
 import { accessSync, appendFileSync, constants, mkdirSync, readdirSync, statfsSync, statSync, unlinkSync } from 'node:fs';
@@ -36,6 +37,7 @@ import { dirname, join } from 'node:path';
 import { addressOf, BodyGate, countryOf, declared, Limits, MAX_BODY, MAX_REPLAY, rateOf, readBody, STATUS } from './collectorLimits.mjs';
 import { cleanReplay, MAX_BYTES, ReplayShelf } from './replayShelf.mjs';
 import { acctOfQuery, cleanSave, SaveVault } from './saveVault.mjs';
+import { boardQuery, cleanPost, Leaderboards, MAX_POST } from './leaderboard.mjs';
 
 const port = Number(process.env.PORT) || Number(process.argv[2]) || 8787;
 const dir = process.env.COLLECTOR_DIR;
@@ -85,14 +87,16 @@ prune(Date.now());
 
 const shelf = new ReplayShelf(join(dir ?? dirname(single), 'replays'), Number(process.env.COLLECTOR_REPLAY_BYTES) || MAX_BYTES);
 const vault = new SaveVault(join(dir ?? dirname(single), 'saves'));
+const boards = new Leaderboards(join(dir ?? dirname(single), 'boards'));
 let replaysPrunedAt = -1;
-/** Drops the replays past their days and the save copies past their months, once an hour. */
+/** Drops the replays past their days and the save copies and board entries past their months, once an hour. */
 function pruneReplays(now) {
   const hour = Math.floor(now / 3600_000);
   if (hour === replaysPrunedAt) return;
   replaysPrunedAt = hour;
   shelf.prune(now);
   vault.prune(now);
+  boards.prune(now);
 }
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
@@ -281,6 +285,33 @@ function savedCopy(url, res) {
   res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(doc));
 }
 
+/** POST /l: the scores of the copy whose secret came, read from the copy itself. */
+function boardPost(text, res) {
+  let post = null;
+  try {
+    post = cleanPost(JSON.parse(text));
+  } catch {
+    // not JSON
+  }
+  if (!post) return res.writeHead(400, cors).end();
+  const save = vault.saveOf(post.id, post.token);
+  // no copy yet (it goes up a little after a change), or not this device's
+  if (!save) return res.writeHead(404, cors).end();
+  try {
+    return res.writeHead(boards.post(post.id, save, Date.now()) === 'posted' ? 204 : 422, cors).end();
+  } catch (err) {
+    console.log(`collector: could not post scores: ${err}`);
+    return res.writeHead(503, cors).end();
+  }
+}
+
+/** GET /l?board=<board>[&n=<rows>][&me=<id>]: the board's top rows and the asker's own. */
+function boardRows(url, res) {
+  const q = boardQuery(url);
+  if (!q) return res.writeHead(400, cors).end();
+  res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(boards.top(q.board, q.n, q.me)));
+}
+
 createServer((req, res) => {
   const now = Date.now();
   prune(now);
@@ -296,6 +327,7 @@ createServer((req, res) => {
   const length = declared(req);
   if (!limits.allow(rate, ip, length)) return refuse(res, 429);
   if (rate === 'saves' && req.method === 'GET') return savedCopy(req.url, res);
+  if (rate === 'boards' && req.method === 'GET') return boardRows(req.url, res);
   if (req.method === 'GET') {
     const line = beaconLine(req.url, now, countryOf(req));
     if (!line) return res.writeHead(400, cors).end();
@@ -303,7 +335,7 @@ createServer((req, res) => {
     return res.writeHead(204, cors).end();
   }
   const big = rate === 'replays';
-  const limit = big ? MAX_REPLAY : MAX_BODY;
+  const limit = big ? MAX_REPLAY : rate === 'boards' ? MAX_POST : MAX_BODY;
   if (length > limit) return refuse(res, 413);
   if (big && !bigReads.take()) return refuse(res, 503, { 'Retry-After': '5' });
   readBody(req, { limit, over: (n) => limits.spend(rate, ip, n) }, (err, text) => {
@@ -311,6 +343,7 @@ createServer((req, res) => {
     if (err) return err in STATUS ? refuse(res, STATUS[err]) : undefined;
     if (big) replay(text, res);
     else if (rate === 'saves') saveCopy(text, res);
+    else if (rate === 'boards') boardPost(text, res);
     else events(text, res, countryOf(req));
   });
 }).listen(port, () => console.log(`collector on :${port}/e -> ${dir ? join(dir, 'events-<day>.ndjson') : single}`));
