@@ -1,13 +1,14 @@
 // The ground under a battle: the chapter's field art (fading into the next one as endless mode
-// moves on a chapter), the wall's inner face with the health bar's tube and the workshop floor,
-// or plain shapes while there is no art.
+// moves on a chapter; while it is still on its way, nothing, then after a while the chapter's
+// main colour, never another chapter's field), the wall's inner face with the health bar's tube
+// and the workshop floor, or plain shapes while there is no art.
 
-import { Graphics, Sprite, type Container, type Texture } from 'pixi.js';
+import { Graphics, Sprite, Texture, type Container } from 'pixi.js';
 import type { Battle } from '../../sim/battle';
 import { stageField } from '../../sim/chapters';
 import { BALANCE } from '../../sim/types';
 import { endlessChapter } from '../../sim/waves';
-import { fieldTexture, loadField } from '../art';
+import { fieldTexture, loadField, loadedField } from '../art';
 import { innerFace, workshopFloor } from '../stone';
 import { COLORS } from '../ui';
 import { DESIGN_H, DESIGN_W } from '../viewport';
@@ -21,6 +22,26 @@ const FIELD_H = WALL_BOTTOM;
 const FIELD_FADE = 1.6;
 /** Design y where the wall's inner face ends and the workshop floor starts. */
 const FLOOR_Y = 1672;
+/** Seconds a battle waits for its field to come in before it shows the chapter's colour. */
+export const FIELD_WAIT = 1.5;
+/** Seconds the chapter's colour takes to fade in. */
+const COLOR_FADE = 0.4;
+/** Each field's main colour (its average), what stands in for it while it is still on its way. */
+export const FIELD_COLORS: Record<string, number> = {
+  bg_field: 0x838e5f,
+  bg_snow: 0xafb2b3,
+  bg_rail: 0x7b7873,
+  bg_foundry: 0x75706b,
+  bg_clock: 0x848c8a,
+};
+
+/** Lays `t` on `s` across the field: the art, or with `color` a plain fill of that colour. */
+function paint(s: Sprite, t: Texture, color = 0xffffff): void {
+  s.texture = t;
+  s.tint = color;
+  s.width = DESIGN_W;
+  s.height = FIELD_H;
+}
 
 /** The field `b` is on in `wave` (its current one by default): its stage's chapter, or in endless
  *  mode the chapter of the wave's band. */
@@ -75,41 +96,70 @@ export class FieldArt {
   /** A new battle: no fade running. */
   reset(): void {
     this.fade = 0;
+    this.wait = null;
+    this.asked++;
     this.next.visible = false;
   }
 
-  /** Lays the chapter's field under the battle, once it has come in if it is still on its way;
-   *  `fade`: over the one there, in FIELD_FADE seconds. */
+  /** Lays the chapter's field under the battle; `fade`: over the one there, in FIELD_FADE
+   *  seconds. One still on its way is waited for: a fade keeps the old field till it comes, a swap
+   *  shows nothing, then after FIELD_WAIT seconds fades in the chapter's colour, and fades from
+   *  that into the art when it comes. */
   show(key: string, fade = false): void {
     this.key = key;
-    const set = (t: Texture | undefined) => {
-      if (!this.field || !t || this.key !== key) return;
-      if (fade && this.field.texture !== t) {
-        if (this.fade > 0) this.field.texture = this.next.texture;
-        const n = this.next;
-        n.texture = t;
-        n.width = DESIGN_W;
-        n.height = FIELD_H;
-        n.alpha = 0;
-        n.visible = true;
-        this.fade = FIELD_FADE;
-        return;
-      }
-      this.field.texture = t;
-      this.field.width = DESIGN_W;
-      this.field.height = FIELD_H;
-    };
-    set(fieldTexture(key));
-    void loadField(key).then(set);
+    this.wait = null;
+    const ask = ++this.asked;
+    const have = loadedField(key) ?? (key === 'bg_field' ? fieldTexture() : undefined);
+    if (have) return this.set(have, fade);
+    if (!fade && this.field) {
+      paint(this.field, Texture.WHITE, FIELD_COLORS[key] ?? COLORS.field);
+      this.field.alpha = 0;
+      this.fade = 0;
+      this.next.visible = false;
+      this.wait = 0;
+    }
+    void loadField(key).then((t) => {
+      if (this.asked !== ask || !t) return;
+      // the colour is up (or fading in): fade from it into the art
+      const late = this.wait !== null && this.wait > FIELD_WAIT;
+      this.wait = null;
+      this.set(t, fade || late);
+    });
+  }
+
+  /** Seconds the field has waited for its art (past FIELD_WAIT its colour shows); null when it
+   *  is not waiting. */
+  private wait: number | null = null;
+  /** Counts the fields asked for, so one that comes in after another was asked for is dropped. */
+  private asked = 0;
+
+  private set(t: Texture, fade: boolean): void {
+    if (!this.field) return;
+    if (fade && this.field.texture !== t) {
+      if (this.fade > 0) paint(this.field, this.next.texture);
+      this.field.alpha = 1;
+      const n = this.next;
+      paint(n, t);
+      n.alpha = 0;
+      n.visible = true;
+      this.fade = FIELD_FADE;
+      return;
+    }
+    paint(this.field, t);
+    this.field.alpha = 1;
   }
 
   /** Runs the fade into the next field `dt` seconds on. */
   update(dt: number): void {
+    if (this.wait !== null && this.field) {
+      this.wait += dt;
+      this.field.alpha = Math.max(0, Math.min(1, (this.wait - FIELD_WAIT) / COLOR_FADE));
+    }
     if (this.fade > 0) {
       this.fade = Math.max(0, this.fade - dt);
       this.next.alpha = 1 - this.fade / FIELD_FADE;
       if (this.fade === 0 && this.field) {
-        this.field.texture = this.next.texture;
+        paint(this.field, this.next.texture);
         this.next.visible = false;
       }
     }

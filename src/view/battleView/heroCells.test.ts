@@ -9,7 +9,8 @@ import { fakeArt } from '../fakeArt';
 import { turnView } from '../landView';
 import { PotionLayer } from '../potion';
 import { FxLayer } from './fxLayer';
-import { FLIGHT, HeroCells, LANDING, aimAt, arc, landing } from './heroCells';
+import { BALANCE } from '../../sim/types';
+import { FLIGHT, HeroCells, LANDING, UPRIGHT_SCALE, aimAt, arc, cellScale, landing, starBadge } from './heroCells';
 import { MergeAnims } from './merges';
 
 function cells() {
@@ -142,5 +143,45 @@ describe('HeroCells', () => {
     expect(heroes.held({ x: 0, y: 0 }, 1 / 60)).toMatchObject({ spin: 0, squash: -0 });
     turnView(new Container(), true);
     expect(heroes.held({ x: 0, y: -100 }, 1 / 60).spin).toBeGreaterThan(0);
+  });
+});
+
+describe('the cell size and badge', () => {
+  it('stands the potions bigger on an upright field only, the top level as it is', () => {
+    expect(cellScale(1)).toBe(UPRIGHT_SCALE);
+    expect(cellScale(BALANCE.maxStar)).toBe(1);
+    turnView(new Container(), true);
+    expect(cellScale(1)).toBe(1);
+  });
+
+  it('draws the potions of a portrait cell bigger than on a field on its side', () => {
+    fakeArt();
+    const { put, draw } = cells();
+    put({ star: 2 });
+    const upright = draw(5)[0].sx;
+    turnView(new Container(), true);
+    expect(draw(5)[0].sx).toBeCloseTo(upright / UPRIGHT_SCALE);
+  });
+
+  it('puts the badge in the top left corner, wider with each star', () => {
+    const one = new Graphics();
+    starBadge(one, 500, 500, 1);
+    const three = new Graphics();
+    starBadge(three, 500, 500, 3);
+    const a = one.getLocalBounds();
+    const b = three.getLocalBounds();
+    expect(a.x).toBeLessThan(500 - BALANCE.grid.cellW / 2 + 12);
+    expect(a.y).toBeLessThan(500 - BALANCE.grid.cellH / 2 + 12);
+    expect(b.width).toBeGreaterThan(a.width + 30);
+  });
+
+  it('badges a cell with a hero in it', () => {
+    fakeArt();
+    const { put, draw, layers } = cells();
+    draw(5);
+    const empty = layers.ho.getLocalBounds().width;
+    put({ star: 3 });
+    draw(5);
+    expect(layers.ho.getLocalBounds().width).toBeGreaterThan(empty);
   });
 });

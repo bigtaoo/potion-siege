@@ -215,6 +215,11 @@ export function loadField(key: string): Promise<Texture | undefined> {
 }
 
 /** The playfield above the wall: the chapter's own once it is in, else the first chapter's. */
+/** Chapter field `key` itself, once it has come in (no stand-in for it). */
+export function loadedField(key: string): Texture | undefined {
+  return textures.get(key);
+}
+
 export function fieldTexture(key = 'bg_field'): Texture | undefined {
   return textures.get(key) ?? textures.get('bg_field');
 }

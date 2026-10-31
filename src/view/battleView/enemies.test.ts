@@ -7,7 +7,8 @@ import { BALANCE, type Enemy } from '../../sim/types';
 import { BASH_EVERY } from '../enemyGait';
 import { fakeArt } from '../fakeArt';
 import { turnView } from '../landView';
-import { EnemyLayer } from './enemies';
+import { endlessSetup } from '../../sim/endless';
+import { EnemyLayer, battleChapter } from './enemies';
 
 /** An enemy at (x, y) in world units, stored in the sim's fixed point. */
 function foe(id: number, x: number, y: number, o: Partial<Enemy> = {}): Enemy {
@@ -32,6 +33,13 @@ function layer() {
 }
 
 describe('the enemies as drawn', () => {
+  it('wear the metal of the chapter of the stage, or in endless mode of the band of the wave', () => {
+    expect([1, 15, 25, 35, 45].map((s) => battleChapter(new Battle(1, battleSetup(newMeta(), s))))).toEqual([1, 2, 3, 4, 5]);
+    const endless = new Battle(1, endlessSetup(newMeta()));
+    endless.wave = BALANCE.endless.chapterEvery + 1;
+    expect(battleChapter(endless)).toBe(2);
+  });
+
   it('stands in as shapes, with no shadows or bars, while there is no art', () => {
     const { w, draw } = layer();
     const drawn = draw([foe(1, 400, 600, { hp: 10 })]);
@@ -82,6 +90,16 @@ describe('the enemies as drawn', () => {
       expect(u.bounds.width).toBe(0);
       draw([foe(1, 400, 600, { elite: true })]);
       expect(u.bounds.width).toBeGreaterThan(0);
+    });
+
+    it('lights a glowing core on an elite, but not on a boss', () => {
+      const { w, draw } = layer();
+      draw([foe(1, 400, 600, { elite: true })]);
+      expect(w.bounds.width).toBeGreaterThan(0);
+      draw([foe(1, 400, 600, { kind: 'clock' })]);
+      const boss = w.bounds.width;
+      draw([foe(1, 400, 600, { elite: true, kind: 'clock' })]);
+      expect(w.bounds.width).toBe(boss);
     });
 
     it('draws a frozen one in its shell of ice', () => {
