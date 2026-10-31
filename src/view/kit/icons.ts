@@ -4,6 +4,7 @@
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { enemyTexture, ultimateTexture } from '../art';
 import { COLORS, HERO_COLORS, label } from '../ui';
+import { shrunk } from '../shrink';
 import { slab } from '../stone';
 import type { EnemyKind, HeroKind } from '../../sim/types';
 import { t } from '../../i18n';
@@ -12,8 +13,9 @@ import { P } from './palette';
 /** A hero's ultimate bottle, `h` tall. */
 export function bottle(kind: HeroKind, h: number): Container {
   const c = new Container();
-  const tex = ultimateTexture(kind);
-  if (tex) {
+  const full = ultimateTexture(kind);
+  if (full) {
+    const tex = shrunk(full, h);
     const s = new Sprite(tex);
     s.anchor.set(0.5);
     s.scale.set(h / Math.max(tex.width, tex.height));
@@ -47,8 +49,9 @@ export function flask(g: Graphics, x: number, feet: number, h: number, color: nu
 /** An enemy's art fitted into `w` by `h`, centred; empty until the art has loaded. */
 export function enemySprite(kind: EnemyKind, w: number, h: number = w): Container {
   const c = new Container();
-  const tex = enemyTexture(kind);
-  if (tex) {
+  const full = enemyTexture(kind);
+  if (full) {
+    const tex = shrunk(full, Math.max(w, h));
     const s = new Sprite(tex);
     s.anchor.set(0.5);
     s.scale.set(Math.min(w / tex.width, h / tex.height));
