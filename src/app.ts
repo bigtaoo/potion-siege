@@ -45,7 +45,7 @@ import { sideBackdrop } from './view/sideLook';
 import { FixedStep } from './view/fixedStep';
 import { patchGraphicsDestroy } from './view/graphicsDestroy';
 import { topPick } from './view/nudges';
-import { IOS_RESOLUTION, levelRange, MAX_RESOLUTION, QUALITY_MODES, type QualityMode } from './view/quality';
+import { densityCap, levelRange, QUALITY_MODES, type QualityMode } from './view/quality';
 import { QualityRuntime } from './view/qualityRuntime';
 import { fitMenu, type MenuFit } from './view/viewport';
 import { wideMode, type WideMode } from './view/wideLayout';
@@ -79,7 +79,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   const app = new Application();
   // a 3x phone's own pixels for the screens around a battle, which draws at its level's (view/quality.ts);
   // the iOS app stays at 2, as standing's after its 3x build never booted on an iPhone 15
-  const resolution = Math.min(window.devicePixelRatio || 1, platform.name === 'ios' ? IOS_RESOLUTION : MAX_RESOLUTION);
+  const resolution = Math.min(window.devicePixelRatio || 1, densityCap(platform.name));
   await app.init({
     background: COLORS.bg,
     resizeTo: platform.mount ?? window,
@@ -103,7 +103,7 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   tapToSummon(game);
   // our own frame loop from here on: a frame rate and resolution the device keeps up with
   const mode = params.get('quality') as QualityMode;
-  const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm(), () => game.place().place !== 'run');
+  const quality = new QualityRuntime(app, levelRange(QUALITY_MODES.includes(mode) ? mode : 'auto', device(app)), () => game.calm(), () => game.place().place !== 'run', densityCap(platform.name));
   quality.onFault = game.fault;
   if (import.meta.env.DEV) Object.assign(window, { __game: game });
   platform.loaded();

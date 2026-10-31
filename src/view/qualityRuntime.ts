@@ -11,7 +11,9 @@ import { FrameGate, FrameGovernor, frameResolution, LEVELS, refreshCap, targetFp
 // FrameClock (as standing's), so the battle and the view step whole refreshes however late the
 // frame's callback ran. Screens with no battle draw at the canvas's full density and battles at
 // their level's resolution: the canvas is resized as the player goes in or out of a battle, never
-// mid-battle (frameResolution). A frame that throws goes to onFault (game/faultRecover.ts).
+// mid-battle (frameResolution). The full density follows the screen's: a window dragged to another
+// monitor, a page zoom, or a page first laid out hidden at 1x (watchDensity). A frame that throws
+// goes to onFault (game/faultRecover.ts).
 
 /** The WebGL renderer string, '' when the browser hides it. */
 export function gpuName(renderer: Renderer): string {
@@ -25,11 +27,30 @@ export function gpuName(renderer: Renderer): string {
   }
 }
 
+/** Calls `onChange` with the new device pixel ratio each time it changes; returns a stop. */
+export function watchDensity(onChange: (dpr: number) => void, win: Pick<Window, 'devicePixelRatio' | 'matchMedia'> | undefined = globalThis.window): () => void {
+  let off = () => {};
+  const arm = () => {
+    off();
+    if (typeof win?.matchMedia !== 'function') return;
+    // a query on the ratio as it is now: it changes once, then a new one is armed on the new ratio
+    const query = win.matchMedia(`(resolution: ${win.devicePixelRatio || 1}dppx)`);
+    const changed = () => {
+      onChange(win.devicePixelRatio || 1);
+      arm();
+    };
+    query.addEventListener('change', changed);
+    off = () => query.removeEventListener('change', changed);
+  };
+  arm();
+  return () => off();
+}
+
 export class QualityRuntime {
   governor: FrameGovernor;
   private readonly gate: FrameGate;
   private readonly clock = new FrameClock();
-  private readonly maxResolution: number;
+  private maxResolution: number;
   private last = 0;
   private wasCalm = true;
   /** A frame threw; must not throw itself. */
@@ -44,9 +65,12 @@ export class QualityRuntime {
     private readonly calm: () => boolean = () => false,
     /** True while no battle is on screen (home, title, results): drawn at full density. */
     private readonly sharp: () => boolean = () => false,
+    /** The most the canvas's density may follow the screen's up to (quality.densityCap). */
+    cap = app.renderer.resolution,
   ) {
     this.governor = new FrameGovernor(range);
     this.maxResolution = app.renderer.resolution;
+    watchDensity((dpr) => (this.maxResolution = Math.min(dpr, cap)));
     this.gate = new FrameGate(LEVELS[range.start].fps);
     // a later ticker.add() would otherwise start the ticker's own loop again
     app.ticker.autoStart = false;

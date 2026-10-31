@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CALM_FPS, FrameGate, FrameGovernor, frameResolution, LEVELS, levelRange, refreshCap, startLevel, targetFps, type DeviceInfo } from './quality';
+import { CALM_FPS, densityCap, FrameGate, FrameGovernor, frameResolution, LEVELS, levelRange, refreshCap, startLevel, targetFps, type DeviceInfo } from './quality';
 
 const PC: DeviceInfo = { mobile: false, cores: 8, memoryGB: 8, gpu: 'ANGLE (Intel, Intel(R) Arc(TM) Graphics)' };
 const PHONE: DeviceInfo = { mobile: true, cores: 8, memoryGB: 8, gpu: 'Adreno (TM) 740' };
@@ -44,6 +44,14 @@ describe('levelRange', () => {
     expect(levelRange('high', { ...IPHONE, memoryGB: 2 })).toEqual({ start: TOP, min: TOP, max: TOP });
     expect(levelRange('auto', IPHONE)).toEqual({ start: TOP, min: 0, max: TOP });
     expect(levelRange('auto', PHONE)).toEqual({ start: startLevel(PHONE), min: 0, max: startLevel(PHONE) });
+  });
+});
+
+describe('densityCap', () => {
+  it('lets the web reach a 3x phone and holds the iOS app at 2', () => {
+    expect(densityCap('web')).toBe(3);
+    expect(densityCap('playgama')).toBe(3);
+    expect(densityCap('ios')).toBe(2);
   });
 });
 

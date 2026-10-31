@@ -1,7 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { Application, Renderer } from 'pixi.js';
 import { LEVELS } from './quality';
-import { gpuName, QualityRuntime } from './qualityRuntime';
+import { gpuName, QualityRuntime, watchDensity } from './qualityRuntime';
 
 const TOP = LEVELS.length - 1;
 const RANGE = { start: TOP, min: 0, max: TOP };
@@ -38,6 +38,43 @@ beforeEach(() => {
   vi.stubGlobal('requestAnimationFrame', (cb: FrameRequestCallback) => waiting.push(cb));
 });
 afterEach(() => vi.unstubAllGlobals());
+
+/** A window whose pixel ratio `to` moves, telling the query armed on the old ratio. */
+function fakeScreen(dpr: number) {
+  const armed: { media: string; on: () => void }[] = [];
+  const win = {
+    devicePixelRatio: dpr,
+    matchMedia: (media: string) => ({
+      addEventListener: (_: string, on: () => void) => armed.push({ media, on }),
+      removeEventListener: (_: string, on: () => void) => armed.splice(armed.findIndex((a) => a.on === on), 1),
+    }),
+  };
+  const to = (next: number) => {
+    const old = armed.filter((a) => a.media === `(resolution: ${win.devicePixelRatio}dppx)`);
+    win.devicePixelRatio = next;
+    for (const a of old) a.on();
+  };
+  return { win, armed, to };
+}
+
+describe('watchDensity', () => {
+  it('tells each change of the pixel ratio, one query armed at a time', () => {
+    const { win, armed, to } = fakeScreen(1);
+    const seen: number[] = [];
+    const stop = watchDensity((d) => seen.push(d), win as unknown as Window);
+    to(1.5);
+    to(2);
+    expect(seen).toEqual([1.5, 2]);
+    expect(armed.map((a) => a.media)).toEqual(['(resolution: 2dppx)']);
+    stop();
+    expect(armed).toEqual([]);
+  });
+
+  it('does nothing without matchMedia', () => {
+    expect(() => watchDensity(() => {}, undefined)()).not.toThrow();
+    expect(() => watchDensity(() => {}, {} as Window)()).not.toThrow();
+  });
+});
 
 describe('gpuName', () => {
   const gl = (ext: object | null, params: Record<number, unknown>) => ({
@@ -99,6 +136,22 @@ describe('QualityRuntime', () => {
     const resizes = renderer.resize.mock.calls.length;
     frames(1017, 1000 / 60, 200);
     expect(renderer.resize.mock.calls.length).toBe(resizes);
+  });
+
+  it("follows the screen's density on a screen with no battle, up to the cap", () => {
+    const screen = fakeScreen(1);
+    vi.stubGlobal('window', screen.win);
+    const { asApp, renderer } = fakeApp(1);
+    new QualityRuntime(asApp, RANGE, () => true, () => true, 2);
+    frame(0);
+    expect(renderer.resolution).toBe(1);
+    screen.to(1.5);
+    frame(100);
+    expect(renderer.resolution).toBe(1.5);
+    expect(renderer.resize).toHaveBeenLastCalledWith(1080, 1920, 1.5);
+    screen.to(3);
+    frame(200);
+    expect(renderer.resolution).toBe(2);
   });
 
   it('steps down a level when battle frames come too slow, and draws at the lower resolution', () => {

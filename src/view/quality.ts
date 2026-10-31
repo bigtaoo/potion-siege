@@ -35,6 +35,11 @@ export const MAX_RESOLUTION = 3;
 /** The iOS app's canvas cap: 2x, as standing's after its 3x bundle never booted on an iPhone 15. */
 export const IOS_RESOLUTION = 2;
 
+/** The most pixels per logical pixel the canvas gets on host `host`. */
+export function densityCap(host: string): number {
+  return host === 'ios' ? IOS_RESOLUTION : MAX_RESOLUTION;
+}
+
 /** The render resolution for a frame. Calm screens with no battle (home, results) barely move,
  *  so they get the canvas's full density (`device`, the most the host allows); a battle, its
  *  skill picks and its tutorial draw at the level's resolution. */
