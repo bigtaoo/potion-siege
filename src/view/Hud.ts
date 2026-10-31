@@ -15,7 +15,9 @@ import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { BossPreview } from './bossPreview';
+import { HudPlates } from './hudPlates';
 import { SpeedButton } from './speedButton';
+import { summonPrice } from './summonPrice';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 
@@ -38,6 +40,7 @@ export const VETERAN_MERGES = 20;
 const IDLE_SUMMON_AFTER = 4;
 
 export class Hud extends Container {
+  private readonly plates = new HudPlates();
   private readonly coin = new Graphics();
   private readonly waveText = label('', 56);
   private readonly stageText = label('', 44, { fill: COLORS.gold });
@@ -133,7 +136,7 @@ export class Hud extends Container {
     for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.preview, this.mods);
+    this.addChild(this.plates, this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.preview, this.mods);
     this.addChild(this.nudgeRings, this.nudgeArc, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton, this.nudgeHand);
   }
 
@@ -329,8 +332,9 @@ export class Hud extends Container {
     // a full grid says so on the button, and what to do about it, rather than just going grey
     const full = !b.paused && !b.result && b.freeSlots().length === 0;
     const pair = full ? mergeablePair(b) : null;
-    this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}\n● ${b.summonCost()}`;
+    this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}${summonPrice(b)}`;
     this.summonButton.setEnabled(b.canSummon());
+    this.plates.fit([{ text: this.waveText }, { text: this.stageText }, { text: this.goldText, coin: { ...this.coinAt(), r: 26 * Math.min(this.boost, 1.25) } }]);
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     // the next move for a player who has stopped: a pair to fuse, else 强化, else 召唤
