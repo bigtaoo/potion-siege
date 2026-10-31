@@ -315,7 +315,7 @@ describe('the layout', () => {
     b.gold = 99999;
     h.update(0);
     expect(gold.scale.x).toBeLessThan(1);
-    expect(gold.x + gold.width).toBeLessThanOrEqual(upgrade.x - 160 - 12 + 0.01);
+    expect(gold.x + gold.width).toBeLessThanOrEqual(upgrade.x - 160 * 0.76 - 12 + 0.01);
     b.gold = 40;
     h.update(0);
     expect(gold.scale.x).toBe(1);

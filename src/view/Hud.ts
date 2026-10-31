@@ -20,6 +20,7 @@ import { SpeedButton } from './speedButton';
 import { summonPrice } from './summonPrice';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
+import { BAND_BUTTON } from './wideLayout';
 
 const HINT_SECONDS = 25;
 /** The wave banner's height; a boss wave's goes down the field, out of the way of the boss
@@ -148,6 +149,7 @@ export class Hud extends Container {
     const y = band ?? BUTTON.y;
     this.upgradeButton.position.set(190, y);
     this.summonButton.position.set(DESIGN_W - 190, y);
+    this.upgradeButton.scale.set(band === null ? 1 : BAND_BUTTON);
     this.legible(this.boost, true);
   }
 
@@ -161,7 +163,7 @@ export class Hud extends Container {
     const top = Math.min(this.boost, 1.25);
     this.goldText.scale.set(top);
     if (this.band === null) return;
-    const room = this.upgradeButton.x - BUTTON.w / 2 - 12 - this.goldText.x;
+    const room = this.upgradeButton.x - (BUTTON.w * BAND_BUTTON) / 2 - 12 - this.goldText.x;
     if (this.goldText.width > room) this.goldText.scale.set((top * room) / this.goldText.width);
   }
 
@@ -346,7 +348,7 @@ export class Hud extends Container {
     this.acted = acted;
     const shown = this.idleSummon >= IDLE_SUMMON_AFTER ? next : null;
     this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
-    this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
+    this.summonButton.scale.set(this.upgradeButton.scale.x * (1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2));
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
     const nudgePair = this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null;

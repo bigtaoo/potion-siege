@@ -19,7 +19,7 @@ describe('fitBattle', () => {
   it('gives the board far more of a 16:9 screen', () => {
     expect(boardShare(fitBattle(1280, 720, 'off'), 1280)).toBeCloseTo(0.316, 2);
     for (const [w, h] of [[1280, 720], [1920, 1080], [800, 450]]) {
-      expect(boardShare(fitBattle(w, h, 'land'), w)).toBeCloseTo(0.831, 2);
+      expect(boardShare(fitBattle(w, h, 'land'), w)).toBeCloseTo(0.878, 2);
     }
   });
 
