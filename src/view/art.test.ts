@@ -19,7 +19,25 @@ describe('art tiers', () => {
 });
 
 describe('loaded art', () => {
+  it("fetches only the first battle's art until the rest is asked for, then the rest once", async () => {
+    vi.resetModules();
+    const { Assets } = await import('pixi.js');
+    const { loadArt, restOfArt } = await import('./art');
+    const urls: string[] = [];
+    const spy = vi.spyOn(Assets, 'load').mockImplementation(async (url) => {
+      urls.push(String(url));
+      return { source: { autoGarbageCollect: true }, height: 1 } as never;
+    });
+    await loadArt();
+    await loadArt();
+    expect(urls).toHaveLength(ART_TIERS.FIRST.length);
+    await Promise.all([restOfArt(), restOfArt()]);
+    expect(urls).toHaveLength(ART_TIERS.FIRST.length + ART_TIERS.SOON.length + ART_TIERS.LATER.length);
+    spy.mockRestore();
+  });
+
   it('opts out of Pixi\'s texture GC, first battle, rest and chapter fields alike', async () => {
+    vi.resetModules();
     const { Assets } = await import('pixi.js');
     const { loadArt, loadField, restOfArt } = await import('./art');
     const made: { source: { autoGarbageCollect: boolean } }[] = [];

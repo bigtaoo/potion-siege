@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
+import { CHUNK_WARN_KB, preloadPixi } from './scripts/pixiPreload.mjs';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
 import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
@@ -43,8 +44,8 @@ const iosHtml = () => {
 export default defineConfig({
   base: './',
   define: buildDefine(),
-  plugins: [iosHtml()],
+  plugins: [iosHtml(), preloadPixi()],
   server: { port: 5182, host: true, watch: { ignored: WATCH_IGNORED } },
   // Safari 15 is the oldest web view the shell runs in (iOS 15)
-  build: { target: ['es2020', 'safari15'], outDir: 'dist-ios', emptyOutDir: true },
+  build: { target: ['es2020', 'safari15'], outDir: 'dist-ios', emptyOutDir: true, chunkSizeWarningLimit: CHUNK_WARN_KB },
 });

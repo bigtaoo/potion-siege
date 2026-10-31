@@ -142,6 +142,10 @@ describe('boot', () => {
     await boot(h);
     const game = (window as unknown as { __game: { menu: Container; tabs: { stale: boolean } } }).__game;
     const first = game.menu.children[0];
+    // asked for only once the first frame is on screen
+    expect(art.rest).toBeNull();
+    p.frames.splice(0).forEach((f) => f(0));
+    p.frames.splice(0).forEach((f) => f(16));
     art.rest!();
     await Promise.resolve();
     await Promise.resolve();

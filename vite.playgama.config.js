@@ -3,6 +3,7 @@ import { join } from 'node:path';
 import { defineConfig } from 'vite';
 import { buildDefine } from './scripts/buildId.mjs';
 import { WATCH_IGNORED } from './scripts/devWatch.mjs';
+import { CHUNK_WARN_KB, preloadPixi } from './scripts/pixiPreload.mjs';
 
 // The Playgama build: `npm run build:playgama` writes dist-playgama/ and zips it into
 // potion-siege-playgama.zip (scripts/pack_playgama.py), index.html at the archive's root. Like the
@@ -77,7 +78,7 @@ process.env.PS_DEFAULT_SRC ??= 'playgama';
 export default defineConfig({
   base: './',
   define: buildDefine(),
-  plugins: [playgama()],
+  plugins: [playgama(), preloadPixi()],
   server: { port: 5183, host: true, watch: { ignored: WATCH_IGNORED } },
-  build: { target: 'es2020', outDir: 'dist-playgama', emptyOutDir: true },
+  build: { target: 'es2020', outDir: 'dist-playgama', emptyOutDir: true, chunkSizeWarningLimit: CHUNK_WARN_KB },
 });

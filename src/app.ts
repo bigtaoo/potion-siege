@@ -129,14 +129,14 @@ export async function boot(platform: Platform): Promise<GameHandle> {
   game.start();
   // one tab plays: an older one stops, keeps its save off the newer one's, and says why
   game.tabs = new TabLock(pageLink(), () => ((quality.stopped = true), game.audio.host(true), staleNotice(document.body)));
-  // the art the first frame did not wait for: screens built without it are built again
-  void restOfArt().then(() => game.artIn());
   // the first battle frame is on screen two animation frames later: the `loaded` checkpoint, and
-  // the mark scripts/firstFrame.mjs times
+  // the mark scripts/firstFrame.mjs times. Only then the art the first frame did not wait for,
+  // so it does not share the line with the boot: screens built without it are built again.
   requestAnimationFrame(() =>
     requestAnimationFrame(() => {
       performance.mark('first_frame');
       loadedBeacon(platform, analytics);
+      void restOfArt().then(() => game.artIn());
     }),
   );
   return gameHandle(game, platform.updates);

@@ -1,4 +1,5 @@
 import { defineConfig, loadEnv } from 'vite';
+import { CHUNK_WARN_KB, preloadPixi } from './scripts/pixiPreload.mjs';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
 import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
@@ -20,9 +21,9 @@ const webBeacon = () => {
 
 export default defineConfig({
   define: buildDefine(),
-  plugins: [webBeacon()],
+  plugins: [webBeacon(), preloadPixi()],
   server: { port: 5180, host: true, watch: { ignored: WATCH_IGNORED } },
-  build: { target: 'es2020', outDir: 'dist' },
+  build: { target: 'es2020', outDir: 'dist', chunkSizeWarningLimit: CHUNK_WARN_KB },
   // 5 s is vitest's default; the sim-heavy tests pass it under the full suite's load on CI
   test: { include: ['src/**/*.test.ts'], testTimeout: 30_000 },
 });

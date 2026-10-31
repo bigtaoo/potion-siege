@@ -64,8 +64,8 @@ function keep(t: Texture): Texture {
   t.source.autoGarbageCollect = false;
   return t;
 }
-let rest: Promise<void> = Promise.resolve();
 let first: Promise<void> | undefined;
+let rest: Promise<void> | undefined;
 
 function load(files: readonly string[]): Promise<void> {
   const base = import.meta.env.BASE_URL;
@@ -80,19 +80,20 @@ function load(files: readonly string[]): Promise<void> {
   ).then(() => {});
 }
 
-/** Fetches the first battle's art and resolves once it is in; the rest follows on its own (see
- *  restOfArt). Anything that fails keeps its placeholder. A second call gets the first one's
- *  promise: a host's entry can start it before boot() does. */
+/** Fetches the first battle's art and resolves once it is in; anything that fails keeps its
+ *  placeholder. A second call gets the first one's promise: a host's entry can start it before
+ *  boot() does. Nothing else is fetched meanwhile: on a slow line the rest would share the
+ *  bandwidth with this and with Pixi's renderer chunks, and hold the first frame back. */
 export function loadArt(): Promise<void> {
-  first ??= load(FIRST).then(() => {
-    rest = load(SOON).then(() => load(LATER));
-  });
+  first ??= load(FIRST);
   return first;
 }
 
-/** Resolves once the art loadArt did not wait for is in too (or failed). Until then a texture
- *  getter can come back empty, as for art that never loaded. */
+/** Fetches the art loadArt did not (SOON, then LATER) once the first battle's is in, and
+ *  resolves when it is in too (or failed). boot() asks for it once the first frame is on screen;
+ *  until then a texture getter can come back empty, as for art that never loaded. */
 export function restOfArt(): Promise<void> {
+  rest ??= loadArt().then(() => load(SOON).then(() => load(LATER)));
   return rest;
 }
 

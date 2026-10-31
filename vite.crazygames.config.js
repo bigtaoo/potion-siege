@@ -1,6 +1,7 @@
 import { rmSync } from 'node:fs';
 import { join } from 'node:path';
 import { defineConfig, loadEnv } from 'vite';
+import { CHUNK_WARN_KB, preloadPixi } from './scripts/pixiPreload.mjs';
 import { buildDefine, buildId, defaultSource } from './scripts/buildId.mjs';
 import { WATCH_IGNORED } from './scripts/devWatch.mjs';
 import { openBeacon } from './scripts/openBeacon.mjs';
@@ -55,7 +56,7 @@ const portalHtml = () => {
 export default defineConfig({
   base: './',
   define: buildDefine(),
-  plugins: [portalHtml()],
+  plugins: [portalHtml(), preloadPixi()],
   server: { port: 5181, host: true, watch: { ignored: WATCH_IGNORED } },
-  build: { target: 'es2020', outDir: 'dist-crazygames', emptyOutDir: true },
+  build: { target: 'es2020', outDir: 'dist-crazygames', emptyOutDir: true, chunkSizeWarningLimit: CHUNK_WARN_KB },
 });
