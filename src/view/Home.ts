@@ -9,7 +9,7 @@
 import { Container } from 'pixi.js';
 import type { MetaSave } from '../sim/meta';
 import type { HeroKind } from '../sim/types';
-import { buildCodex, enemyPanel, isEnemy } from './codex';
+import { buildCodex, enemyPanel, isEnemy, scrollFeats } from './codex';
 import { workshopWall } from './kit';
 import { homeDots } from './homeDots';
 import type { MenuFit } from './viewport';
@@ -64,6 +64,8 @@ export function buildHome(
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier, act.panel));
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
+  // the achievements are sorted afresh, from the top, when the codex is opened again
+  if (tab !== 'codex') scrollFeats();
   topBar(root, m, act, left, w, wide, dots);
   nav(root, act, tab, fit, { ...dots, [tab]: false }, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));

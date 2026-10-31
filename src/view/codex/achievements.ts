@@ -1,7 +1,8 @@
 // The achievements page: every track a row on one board, big enough to read on a phone, so the
 // list scrolls. The tracks with a tier to claim come first, then the ones under way (the closest
 // to their next tier first), then the finished ones, dimmed. A claim keeps the list where it was
-// scrolled to and slides the rows to their new places.
+// scrolled to and every row in its place: the order is sorted afresh only when the page is opened
+// again.
 
 import { Container, Graphics } from 'pixi.js';
 import { formatAmount, t } from '../../i18n';
@@ -15,24 +16,20 @@ import { scrollList } from '../scroll';
 import { COLORS, HERO_COLORS, label } from '../ui';
 import { board, FOOT, GAP, HEAD, type CodexArea } from './common';
 
-/** A row's height on a portrait page and on a landscape one; how long the rows take to slide to
- *  their new places after a claim, and how soon after the tap the rebuild must come to slide. */
+/** A row's height on a portrait page and on a landscape one. */
 const ROW = 200;
 const ROW_WIDE = 180;
-const SLIDE = 320;
-const FRESH = 1500;
 
-/** Kept over the rebuild a claim brings: how far down the list is scrolled, where each row sat
- *  (in the list's units) and in which row size, and when the last claim was tapped. */
+/** Kept over the rebuilds while the page stays open (a claim brings one): how far down the list
+ *  is scrolled, and the order its rows were first drawn in. */
 let scrolled = 0;
-let placed = new Map<TrackId, { x: number; y: number }>();
-let placedIn = '';
-let claimedAt = -Infinity;
+let held: TrackId[] | null = null;
 
-/** Scrolls the list `y` px down for its next build: back to the top when the page is turned to
- *  (the layout test also tries the far end). */
+/** Scrolls the list `y` px down for its next build and sorts it afresh: back to the top when the
+ *  page is turned to or the codex left (the layout test also tries the far end). */
 export function scrollFeats(y = 0): void {
   scrolled = y;
+  held = null;
 }
 
 /** The tracks in the list's order: a tier to claim, then under way by how close the next tier is,
@@ -73,38 +70,14 @@ export function featsBoard(root: Container, m: MetaSave, a: CodexArea, top: numb
   const vw = w - 40;
   const list = scrollList(vw, h - HEAD - FOOT + 12, scrolled, (y) => (scrolled = y));
   list.view.position.set(-w / 2 + 20, -h / 2 + HEAD + 2);
-  const now = performance.now();
-  // a resize in between moves every row anyway: no slide then
-  const shape = `${rw}x${rh}`;
-  const slide = now - claimedAt < FRESH && shape === placedIn;
-  claimedAt = -Infinity;
-  placedIn = shape;
-  const was = placed;
-  placed = new Map();
-  const moving: { r: Container; from: { x: number; y: number }; to: { x: number; y: number } }[] = [];
-  const order = featOrder(m);
+  const order = (held ??= featOrder(m));
   order.forEach((id, i) => {
-    const r = featRow(m, id, rw, rh, (b) => {
-      claimedAt = performance.now();
-      claim(id, b);
-    });
-    const to = { x: 10 + rw / 2 + (i % cols) * (rw + 30), y: 8 + rh / 2 + Math.floor(i / cols) * (rh + GAP) };
-    const from = slide ? was.get(id) : undefined;
-    r.position.set(from?.x ?? to.x, from?.y ?? to.y);
-    if (from && (from.x !== to.x || from.y !== to.y)) moving.push({ r, from, to });
-    placed.set(id, to);
+    const r = featRow(m, id, rw, rh, (b) => claim(id, b));
+    r.position.set(10 + rw / 2 + (i % cols) * (rw + 30), 8 + rh / 2 + Math.floor(i / cols) * (rh + GAP));
     list.content.addChild(r);
   });
   const lines = Math.ceil(order.length / cols);
   list.fill(16 + lines * rh + (lines - 1) * GAP);
-  if (moving.length) {
-    list.content.onRender = () => {
-      const k = Math.min(1, (performance.now() - now) / SLIDE);
-      const e = 1 - (1 - k) ** 3;
-      for (const { r, from, to } of moving) r.position.set(from.x + (to.x - from.x) * e, from.y + (to.y - from.y) * e);
-      if (k >= 1) list.content.onRender = null;
-    };
-  }
   c.addChild(list.view);
   root.addChild(c);
 }

@@ -1,5 +1,5 @@
 // The achievements list: its order, a drag that scrolls it (and keeps the tap off the rows), the
-// scroll kept over the rebuild a claim brings, and the rows sliding to their new places.
+// scroll and the rows' places kept over the rebuild a claim brings, sorted afresh on the next visit.
 import '../layout/measure';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { Container, Text, type Rectangle } from 'pixi.js';
@@ -119,11 +119,9 @@ describe('achievements list', () => {
     expect(content.y).toBe(end);
   });
 
-  it('slides the rows from where they were to their new places after a claim, from the tapped button', () => {
+  it('keeps every row in its place after a claim, from the tapped button, and sorts afresh on the next visit', () => {
     setCodexPage('feats');
     const m = meta();
-    let now = 1000;
-    vi.spyOn(performance, 'now').mockImplementation(() => now);
     let tapped: Container | null = null;
     let rebuilt: Container | null = null;
     const claim = (id: TrackId, b: Container) => {
@@ -132,21 +130,18 @@ describe('achievements list', () => {
       rebuilt = build(m, claim);
     };
     const before = list(build(m, claim));
-    const stagesY = before.rows.get('stages')!.y;
+    const ys = new Map([...before.rows].map(([id, r]) => [id, r.y]));
     const button = find(before.rows.get('stages')!, (n): n is PillButton => n instanceof PillButton)[0];
-    now += 100;
     button.emit('pointertap', at(0));
     expect(tapped).toBe(button);
+    // stages has its next tier far off now, but stays on top, its button greyed
     const after = list(rebuilt!);
-    // stages has its next tier far off now: it starts where it was and slides down below kills
-    const row = after.rows.get('stages')!;
-    expect(row.y).toBe(stagesY);
-    now += 1000;
-    after.content.onRender!(null as never);
-    expect(row.y).toBeGreaterThan(after.rows.get('kills')!.y);
-    expect(after.content.onRender).toBeFalsy();
-    // a rebuild that no claim brought draws the rows in place at once
-    const still = list(build(m));
-    expect(still.content.onRender).toBeFalsy();
+    for (const [id, r] of after.rows) expect(r.y).toBe(ys.get(id));
+    expect((find(after.rows.get('stages')!, (n): n is PillButton => n instanceof PillButton)[0] as unknown as { enabled: boolean }).enabled).toBe(false);
+    expect(featOrder(m)[0]).toBe('kills');
+    // the page opened again: sorted afresh
+    scrollFeats();
+    const again = list(build(m));
+    expect([...again.rows.entries()].sort((a, b) => a[1].y - b[1].y).map(([id]) => id)).toEqual(featOrder(m));
   });
 });
