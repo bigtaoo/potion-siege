@@ -21,13 +21,13 @@ const SDK_TAG = '<script src="https://bridge.playgama.com/v2/stable/playgama-bri
 const DEFAULT_ENTRY = '/src/main.ts';
 const PORTAL_ENTRY = '/src/main.playgama.ts';
 
-/** Interstitials no closer than a minute apart (Bridge's own default, made explicit). The two
- *  leaderboards (src/platform/leaderboard.ts) run on Playgama's SaaS backend, which the portal
+/** Interstitials no closer than a minute apart (Bridge's own default, made explicit). The three
+ *  leaderboards (src/board/bridgeBoard.ts) run on Playgama's SaaS backend, which the portal
  *  itself has no native board for. */
 export const BRIDGE_CONFIG = {
   advertisement: { minimumDelayBetweenInterstitial: 60 },
   saas: { publicToken: 'cmvpgdscx066aqz0hdg590l59', leaderboards: { platforms: ['playgama', 'qa_tool'] } },
-  leaderboards: [{ id: 'daily_challenge' }, { id: 'endless', isMain: true }],
+  leaderboards: [{ id: 'daily_challenge' }, { id: 'endless', isMain: true }, { id: 'stars' }],
 };
 
 export function rewritePlaygamaHtml(html) {

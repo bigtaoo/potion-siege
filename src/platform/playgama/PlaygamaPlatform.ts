@@ -7,6 +7,7 @@ import { PLAYER_KEY, type Sink } from '../../analytics/analytics';
 import { PRIVACY_KEY } from '../../analytics/privacy';
 import { BUILD, LANG_KEY, REMINDERS_KEY, SAVE_KEY } from '../../game/keys';
 import { accountOwner, GUEST } from '../../save/saveCopies';
+import { bridgeBoard } from '../../board/bridgeBoard';
 import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { MIRROR_KEY, SaveMirror } from '../../save/saveMirror';
 import { SafeStore, type Platform } from '../types';
@@ -88,6 +89,8 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     const mirror = saves ? new SaveMirror(platform.storage) : undefined;
     const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url: vaultFor(platform.collectorBlocked), mirror, doc, win });
     platform.storage = new SafeStore(keeper);
+    // Bridge's own boards (its SaaS leaderboards); the sandbox's CSP keeps ours out
+    platform.leaderboard = ok ? bridgeBoard(bridge) : null;
     if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;
   }
@@ -131,10 +134,6 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
 
   override celebrate(): void {
     this.bridge.send('player_got_achievement');
-  }
-
-  setScore(board: string, score: number): void {
-    this.bridge.setScore(board, score);
   }
 
   /** Hidden under an adblocker and where the platform has no rewarded ads. */

@@ -388,4 +388,16 @@ export const it: Table = {
     windVortex: { name: 'Mulinello', desc: 'Le uccisioni del vento lasciano un mulinello che risucchia i nemici per 2s' },
     windFire: { name: 'Soffia sul Fuoco', desc: 'I colpi di vento sui nemici in fiamme spingono il fuoco su quelli vicini' },
   },
+  board: {
+    button: 'Classifica',
+    title: 'Classifica',
+    endless: 'Infinita',
+    stars: 'Stelle',
+    loading: 'Caricamento…',
+    offline: 'Classifica non raggiungibile',
+    empty: 'Ancora nessuno. Sii il primo!',
+    wave: 'Ondata {n}',
+    starCount: '{n} stelle',
+    note: 'I tuoi punteggi salgono dopo ogni battaglia.',
+  },
 };

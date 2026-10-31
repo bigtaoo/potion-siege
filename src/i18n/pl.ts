@@ -388,4 +388,16 @@ export const pl: Table = {
     windVortex: { name: 'Wir', desc: 'Zabójstwa wichrem zostawiają wir, który przez 2 s wciąga wrogów' },
     windFire: { name: 'Rozdmuchaj Ogień', desc: 'Trafienia wichrem w płonących wrogów przenoszą ogień na sąsiadów' },
   },
+  board: {
+    button: 'Ranking',
+    title: 'Ranking',
+    endless: 'Bez końca',
+    stars: 'Gwiazdki',
+    loading: 'Wczytywanie…',
+    offline: 'Brak połączenia z rankingiem',
+    empty: 'Jeszcze nikogo. Bądź pierwszy!',
+    wave: 'Fala {n}',
+    starCount: 'Gwiazdki: {n}',
+    note: 'Wyniki trafiają tu po każdej bitwie.',
+  },
 };

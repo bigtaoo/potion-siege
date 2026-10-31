@@ -1,5 +1,6 @@
-// The home screen's top bar: the daily login, the daily tasks, the settings and (in the first
-// week) the welcome gifts as medals, and the crystals top right.
+// The home screen's top bar: the daily login, the daily tasks, the settings, (in the first week)
+// the welcome gifts and (where the host has them) the leaderboards as medals, and the crystals
+// top right.
 
 import { Container, Graphics } from 'pixi.js';
 import { formatAmount, t } from '../../i18n';
@@ -7,10 +8,12 @@ import type { MetaSave } from '../../sim/meta';
 import { welcomeOn } from '../../sim/welcome';
 import { calendarIcon, chestIcon, fit as fitText, gearIcon, ink, LIGHT, medal, redDot, scrollIcon, tappable } from '../kit';
 import { gem } from '../ui';
+import { trophyIcon } from './boardPanel';
 import type { HomeActions } from './types';
 
-/** `dots`: the welcome gifts', the login's and the tasks' red dots (view/homeDots.ts). */
-export function topBar(root: Container, m: MetaSave, act: HomeActions, left: number, w: number, wide: boolean, dots: { welcome: boolean; login: boolean; tasks: boolean }): void {
+/** `dots`: the welcome gifts', the login's and the tasks' red dots (view/homeDots.ts); `board`:
+ *  the leaderboards' medal. */
+export function topBar(root: Container, m: MetaSave, act: HomeActions, left: number, w: number, wide: boolean, dots: { welcome: boolean; login: boolean; tasks: boolean }, board = false): void {
   const y = wide ? 70 : 80;
   const button = (x: number, icon: Container, text: string, dot: boolean, onTap: () => void) => {
     const c = tappable(new Container(), onTap);
@@ -31,7 +34,9 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, left: num
   button(left + 240, scrollIcon(), t('tasks'), dots.tasks, () => act.panel('tasks'));
   button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
   // the welcome week's gifts, while there are any left
-  if (welcomeOn(m)) button(left + 540, chestIcon(), t('welcome.button'), dots.welcome, () => act.panel('welcome'));
+  const welcome = welcomeOn(m);
+  if (welcome) button(left + 540, chestIcon(), t('welcome.button'), dots.welcome, () => act.panel('welcome'));
+  if (board) button(left + (welcome ? 690 : 540), trophyIcon(), t('board.button'), false, () => act.panel('board'));
 
   // the crystals in a dark inset, top right
   const count = ink(formatAmount(m.crystals), 50, { fill: LIGHT.crystal });

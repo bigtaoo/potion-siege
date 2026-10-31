@@ -49,7 +49,8 @@ ssh blightbloom 'rm -f /home/deploy/potion-siege/data/replays/<id>-*.json.gz'
 the body is read: 240 event requests and 1 MB a minute, 20 replays and 4 MB a minute; bytes past
 the declared `Content-Length` are charged as they come. Bodies over 64 KB (events) or 256 KB (a
 replay) get 413, at most 32 replay bodies are read at once (503 with `Retry-After` past that), and
-a body not done in 20 s gets 408. Once a minute the log says how many addresses went over a byte
+a body not done in 20 s gets 408. The leaderboards (`/l`) have their own budget of 30 requests
+and 32 KB a minute, with bodies of 1 KB at most. Once a minute the log says how many addresses went over a byte
 budget.
 
 `GET /health` answers 200 `ok` while the data folder takes writes and the disk has 256 MB free,
@@ -78,6 +79,16 @@ copy with the most battles back to a device whose portal save came up empty
 (`scripts/saveVault.mjs`). One `<id>.json` per device and owner and one `acct-<hash>.json` per
 account in `data/saves`, each deleted 14 months after its last change (`KEEP_MONTHS`). The
 nightly backup does not copy them.
+
+## Leaderboards
+
+The web, CrazyGames and iOS builds rank players here (`scripts/leaderboard.mjs`, `src/board/`;
+Playgama ranks through Bridge when its SaaS leaderboards are set up): `POST /l` with a save copy's
+id and secret puts the scores of the copy the server already holds on the `endless` (best wave)
+and `stars` (total stars) boards, never a number from the request, and refuses (422) a save no one
+could have played. `GET /l?board=endless&n=10&me=<id>` hands back the top rows, each a short tag
+hashed from the id and the score, and the asking player's own row. One `<board>.json` per board in
+`data/boards`; an entry not posted for 14 months goes. The nightly backup does not copy them.
 
 ## Deploy from CI
 

@@ -14,6 +14,7 @@ import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
 import { loginPops, markSeen, upgradeHintKind } from '../view/nudges';
 import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu } from '../view/viewport';
+import { boardView, fetchBoard, submitScores } from './boardFlow';
 import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
 import { challengeAd, playChallenge, playEndless } from './modes';
 import { reminderBook } from './reminderBook';
@@ -30,6 +31,7 @@ export function home(g: Game, panel: HomePanel = null): void {
     g.consentVisit = false;
     enterHome(g);
     reminderBook(g)?.sync();
+    submitScores(g);
   }
   // the play statistics question, from the first home screen on (never in the first battle,
   // which starts live), ahead of the login reward
@@ -79,7 +81,12 @@ export function home(g: Game, panel: HomePanel = null): void {
       const old = panel;
       if ((old === 'login' || old === 'tasks') && p !== old) g.analytics.track('dialog', { id: old, action: 'close', run: g.save.runs });
       if ((p === 'login' || p === 'tasks') && p !== old) g.analytics.track('dialog', { id: p, action: 'open', auto: false, run: g.save.runs });
+      if (p === 'board' && old !== 'board') fetchBoard(g, boardView(g)?.tab ?? 'endless', () => home(g, 'board'));
       home(g, p);
+    },
+    boardTab: (b) => {
+      fetchBoard(g, b, () => home(g, 'board'));
+      home(g, 'board');
     },
     claimLogin: (at) => {
       const n = claimLogin(g.save, today);
@@ -204,5 +211,6 @@ export function extras(g: Game): HomeExtras {
     vibrate: !!g.platform.vibrate,
     data: { sending: g.analytics.sending, id: g.analytics.playerId, copy: !!g.platform.copyText, note: g.idNote },
     remind: reminderBook(g)?.state(),
+    board: boardView(g),
   };
 }

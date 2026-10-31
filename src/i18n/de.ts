@@ -388,4 +388,16 @@ export const de: Table = {
     windVortex: { name: 'Wirbelwind', desc: 'Wind-Abschüsse hinterlassen einen Wirbel, der Feinde 2 s lang anzieht' },
     windFire: { name: 'Feuer schüren', desc: 'Windtreffer auf brennende Feinde wehen das Feuer auf Feinde ringsum' },
   },
+  board: {
+    button: 'Rangliste',
+    title: 'Rangliste',
+    endless: 'Endlos',
+    stars: 'Sterne',
+    loading: 'Lädt…',
+    offline: 'Rangliste nicht erreichbar',
+    empty: 'Noch niemand hier. Sei der Erste!',
+    wave: 'Welle {n}',
+    starCount: '{n} Sterne',
+    note: 'Deine Werte zählen nach jedem Kampf.',
+  },
 };

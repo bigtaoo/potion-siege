@@ -14,6 +14,7 @@ import { workshopWall } from './kit';
 import { homeDots } from './homeDots';
 import type { MenuFit } from './viewport';
 import { battleTab } from './home/battleTab';
+import { boardPanel } from './home/boardPanel';
 import { challengePanel } from './home/challengePanel';
 import { chaptersPanel } from './home/chaptersPanel';
 import { consentPanel } from './home/consentPanel';
@@ -66,7 +67,7 @@ export function buildHome(
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
   // the achievements are sorted afresh, from the top, when the codex is opened again
   if (tab !== 'codex') scrollFeats();
-  topBar(root, m, act, left, w, wide, dots);
+  topBar(root, m, act, left, w, wide, dots, !!extras.board);
   nav(root, act, tab, fit, { ...dots, [tab]: false }, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));
   else if (panel === 'welcome') root.addChild(welcomePanel(m, act, today, fit));
@@ -77,6 +78,7 @@ export function buildHome(
   else if (panel === 'language') root.addChild(languagePanel(act, fit));
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
+  else if (panel === 'board') root.addChild(boardPanel(act, fit, extras.board ?? { tab: 'endless', page: 'offline' }));
   else if (panel) root.addChild(isEnemy(panel) ? enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)) : heroPanel(m, act, panel, fit));
   return root;
 }

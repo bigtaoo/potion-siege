@@ -388,4 +388,16 @@ export const es: Table = {
     windVortex: { name: 'Torbellino', desc: 'Las bajas eólicas dejan un torbellino que atrae enemigos durante 2s' },
     windFire: { name: 'Avivar las llamas', desc: 'Los golpes eólicos a enemigos en llamas propagan el fuego a los de alrededor' },
   },
+  board: {
+    button: 'Ranking',
+    title: 'Clasificación',
+    endless: 'Infinito',
+    stars: 'Estrellas',
+    loading: 'Cargando…',
+    offline: 'No se puede abrir la clasificación',
+    empty: 'Aún no hay nadie. ¡Sé el primero!',
+    wave: 'Oleada {n}',
+    starCount: '{n} estrellas',
+    note: 'Tus puntuaciones se envían tras cada batalla.',
+  },
 };

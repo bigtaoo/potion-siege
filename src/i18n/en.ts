@@ -390,6 +390,18 @@ export const en = {
     windVortex: { name: 'Whirlwind', desc: 'Gale kills leave a whirlwind that pulls enemies in for 2s' },
     windFire: { name: 'Fan the Flames', desc: 'Gale hits on burning enemies blow the fire onto those around' },
   },
+  board: {
+    button: 'Ranks',
+    title: 'Leaderboard',
+    endless: 'Endless',
+    stars: 'Stars',
+    loading: 'Loading…',
+    offline: "Can't reach the leaderboard",
+    empty: 'No one here yet. Be the first!',
+    wave: 'Wave {n}',
+    starCount: '{n} stars',
+    note: 'Your scores go up after each battle.',
+  },
 };
 
 type Widen<T> = { [K in keyof T]: T[K] extends string ? string : Widen<T[K]> };

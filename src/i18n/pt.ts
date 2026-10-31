@@ -388,4 +388,16 @@ export const pt: Table = {
     windVortex: { name: 'Redemoinho', desc: 'Abates de vento deixam um redemoinho que puxa inimigos por 2s' },
     windFire: { name: 'Atiçar as Chamas', desc: 'Golpes de vento em inimigos em chamas espalham o fogo ao redor' },
   },
+  board: {
+    button: 'Ranking',
+    title: 'Classificação',
+    endless: 'Infinito',
+    stars: 'Estrelas',
+    loading: 'Carregando…',
+    offline: 'Não foi possível abrir a classificação',
+    empty: 'Ninguém ainda. Seja o primeiro!',
+    wave: 'Onda {n}',
+    starCount: '{n} estrelas',
+    note: 'Suas pontuações sobem após cada batalha.',
+  },
 };

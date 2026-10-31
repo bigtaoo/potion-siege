@@ -2,6 +2,7 @@
 // asks the game to do, and what only some hosts have.
 
 import type { Container } from 'pixi.js';
+import type { BoardId, BoardPage } from '../../board/types';
 import type { Locale } from '../../i18n';
 import type { TrackId } from '../../sim/achievements';
 import type { WorkshopId } from '../../sim/meta';
@@ -10,7 +11,7 @@ import type { SoundSwitch } from '../soundSwitches';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'welcome' | 'remind' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | HeroKind | EnemyKind | null;
+export type HomePanel = 'login' | 'welcome' | 'remind' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | 'board' | HeroKind | EnemyKind | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -65,6 +66,8 @@ export interface HomeActions {
   copyId(): void;
   /** The reminders: the card's answer, or the settings switch. */
   remind(on: boolean): void;
+  /** The leaderboard panel's endless / stars switch. */
+  boardTab(board: BoardId): void;
 }
 
 /** The iOS app's reminders: 'blocked' when refused in the phone's settings. */
@@ -85,6 +88,14 @@ export interface HomeExtras {
   data?: PlayData;
   /** The reminders' switch, where the host has notifications. */
   remind?: RemindState;
+  /** The leaderboards, where the host has them (board/types.ts). */
+  board?: BoardView;
+}
+
+/** What the leaderboard panel shows: the board picked, and its page, or where it is at. */
+export interface BoardView {
+  tab: BoardId;
+  page: BoardPage | 'loading' | 'offline';
 }
 
 /** What the settings show of the play statistics (analytics/privacy.ts). */

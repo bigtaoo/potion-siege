@@ -2,6 +2,7 @@
 // loading and gameplay hooks, and its ads. Adapted from D:\standing's CrazyGamesPlatform.
 
 import { accountOwner, GUEST } from '../../save/saveCopies';
+import { serverBoard } from '../../board/serverBoard';
 import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { WebPlatform } from '../web';
 import { SafeStore, type KeyValueStore, type Platform } from '../types';
@@ -49,8 +50,10 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     const [adblock, account] = await Promise.all([sdk.hasAdblock(), sdk.userId()]);
     platform.adblock = adblock;
     platform.signedIn = account !== null;
-    const keeper = await keepSaves(platform.storage, account ? accountOwner(account, 'cg') : GUEST, { url: vaultFor(false), doc, win });
+    const url = vaultFor(false);
+    const keeper = await keepSaves(platform.storage, account ? accountOwner(account, 'cg') : GUEST, { url, doc, win });
     platform.storage = new SafeStore(keeper);
+    platform.leaderboard = serverBoard(url, keeper);
     if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;
   }

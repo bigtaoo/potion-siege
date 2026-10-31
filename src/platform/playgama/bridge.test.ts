@@ -43,7 +43,7 @@ describe('PlaygamaBridge', () => {
     expect([...(await b.load(['a', 'b', 'c']))]).toEqual([['a', 'x'], ['b', '{"n":1}']]);
   });
 
-  it('sends a score only where the platform has leaderboards', async () => {
+  it('sends a score once the script is in, and draws the boards only where they are in game', async () => {
     const f = fakeBridge();
     const b = new PlaygamaBridge(f.global, never);
     b.setScore('endless', 9);
@@ -52,8 +52,7 @@ describe('PlaygamaBridge', () => {
     const off = fakeBridge({ boards: 'not_available' });
     const c = new PlaygamaBridge(off.global, never);
     await c.init();
-    c.setScore('endless', 12);
-    expect([f.scores, off.scores]).toEqual([[['endless', 12]], []]);
+    expect([f.scores, b.boardsInGame(), c.boardsInGame()]).toEqual([[['endless', 12]], true, false]);
   });
 
   it('reports the sound switch now and on every change', async () => {

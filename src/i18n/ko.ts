@@ -388,4 +388,16 @@ export const ko: Table = {
     windVortex: { name: '회오리', desc: '질풍으로 처치한 자리에 회오리가 남아 2초간 적을 빨아들임' },
     windFire: { name: '부채질', desc: '불타는 적을 질풍이 맞히면 불길이 주변으로 번짐' },
   },
+  board: {
+    button: '순위',
+    title: '순위표',
+    endless: '무한',
+    stars: '별',
+    loading: '불러오는 중…',
+    offline: '순위표에 연결할 수 없어요',
+    empty: '아직 아무도 없어요. 첫 번째가 되어 보세요!',
+    wave: '{n} 웨이브',
+    starCount: '별 {n}개',
+    note: '전투가 끝날 때마다 점수가 올라가요.',
+  },
 };

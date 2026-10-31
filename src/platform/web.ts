@@ -1,3 +1,4 @@
+import type { Leaderboard } from '../board/types';
 import { urlSwitches } from '../game/switches';
 import { shareSpeaker } from './audioSession';
 import { devNotifier } from './fakeNotifier';
@@ -18,6 +19,7 @@ export function browserStorage(): KeyValueStore | null {
 export class WebPlatform implements Platform {
   readonly name: string = 'web';
   storage = new SafeStore(browserStorage());
+  leaderboard: Leaderboard | null = null;
   private readonly fakeAds = urlSwitches(location.search).get('ads') === 'fake';
   readonly updates?: AppUpdates = updatesSwitch(urlSwitches(location.search));
   readonly notify: Notifier | null = devNotifier();

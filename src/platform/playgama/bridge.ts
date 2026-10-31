@@ -37,7 +37,19 @@ export interface BridgeShape {
   device?: { type?: string };
   player?: { id?: string | null; isAuthorized?: boolean };
   analytics?: { send?: (event: string, data?: BridgeData) => unknown };
-  leaderboards?: { type?: string; setScore?: (id: string, score: number) => unknown };
+  leaderboards?: {
+    type?: string;
+    setScore?: (id: string, score: number) => unknown;
+    getEntries?: (id: string) => unknown;
+  };
+}
+
+/** One row of a Bridge leaderboard. */
+export interface BridgeEntry {
+  id: string;
+  name: string;
+  score: number;
+  rank: number;
 }
 
 export interface BridgeGlobal {
@@ -139,6 +151,25 @@ export class PlaygamaBridge {
     return p?.isAuthorized === true && typeof p.id === 'string' && p.id !== '' ? p.id : null;
   }
 
+  /** Whether the game draws Bridge's leaderboards itself (`in_game`: Bridge SaaS on Playgama). */
+  boardsInGame(): boolean {
+    return this.sdk?.leaderboards?.type === 'in_game';
+  }
+
+  setScore(board: string, score: number): void {
+    void settle(() => this.sdk?.leaderboards?.setScore?.(board, score));
+  }
+
+  /** The rows of `board`, or null when Bridge gave none it could read. */
+  async entries(board: string): Promise<BridgeEntry[] | null> {
+    const got = await settle(() => this.sdk?.leaderboards?.getEntries?.(board));
+    if (!Array.isArray(got)) return null;
+    return got
+      .map((e: unknown) => e as { id?: unknown; name?: unknown; score?: unknown; rank?: unknown } | null)
+      .filter((e) => e && typeof e.score === 'number' && typeof e.rank === 'number')
+      .map((e) => ({ id: String(e!.id ?? ''), name: typeof e!.name === 'string' ? e!.name : '', score: e!.score as number, rank: e!.rank as number }));
+  }
+
   /** game_ready, gameplay_started, gameplay_stopped, player_got_achievement. */
   send(message: string): void {
     void settle(() => this.sdk?.platform?.sendMessage?.(message));
@@ -176,14 +207,6 @@ export class PlaygamaBridge {
 
   save(entries: Map<string, string>): void {
     void settle(() => this.sdk?.storage?.set?.([...entries.keys()], [...entries.values()]));
-  }
-
-  /** A score for one of the boards in the Bridge config; a no-op where the platform has none
-   *  ('not_available') and without the script. */
-  setScore(id: string, score: number): void {
-    const boards = this.sdk?.leaderboards;
-    if (!boards || boards.type === undefined || boards.type === 'not_available') return;
-    void settle(() => boards.setScore?.(id, score));
   }
 
   hasAdblock(): boolean {

@@ -18,5 +18,6 @@ export class SaveVault {
   constructor(dir: string, log?: (line: string) => void);
   put(copy: VaultCopy, now: number): 'kept' | 'refused';
   get(acct: string): { at: number; save: string } | null;
+  saveOf(id: string, token: string): string | null;
   prune(now: number): number;
 }
