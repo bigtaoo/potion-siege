@@ -6,6 +6,8 @@
 import { PLAYER_KEY, type Sink } from '../../analytics/analytics';
 import { PRIVACY_KEY } from '../../analytics/privacy';
 import { BUILD, LANG_KEY, REMINDERS_KEY, SAVE_KEY } from '../../game/keys';
+import { accountOwner, GUEST } from '../../save/saveCopies';
+import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { SafeStore, type Platform } from '../types';
 import { WebPlatform } from '../web';
 import { PlaygamaBridge } from './bridge';
@@ -34,6 +36,8 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
   private soundOff = false;
   private muteListener: ((muted: boolean) => void) | null = null;
   private pauseListener: (() => void) | null = null;
+  /** Where the save was restored from at boot ('none': the host's own was the best). */
+  private restored = 'none';
 
   private constructor(
     private readonly bridge: PlaygamaBridge,
@@ -73,9 +77,15 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
   static async create(bridge = new PlaygamaBridge(), doc: Document = document, win: Window = window): Promise<PlaygamaPlatform> {
     const ok = await bridge.init();
     const saves = ok ? await BridgeStore.create(bridge, KEYS) : null;
-    console.info(`[potion-siege] Playgama Bridge: ${ok ? bridge.platformId() : 'unavailable'}, save: ${saves ? 'bridge' : 'localStorage'}`);
+    const account = bridge.accountId();
+    console.info(`[potion-siege] Playgama Bridge: ${ok ? bridge.platformId() : 'unavailable'}, save: ${saves ? 'bridge' : 'localStorage'}, ${account ? 'signed in' : 'guest'}`);
     // without Bridge the save stays where the browser keeps it (WebPlatform's storage)
-    return new PlaygamaPlatform(bridge, saves, doc, win);
+    const platform = new PlaygamaPlatform(bridge, saves, doc, win);
+    // our own copies beside the host's store, per owner: a portal account or this browser's guest
+    const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url: vaultFor(platform.collectorBlocked), doc, win });
+    platform.storage = new SafeStore(keeper);
+    if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
+    return platform;
   }
 
   /** The platform's language first, then the browser's. */
@@ -84,9 +94,10 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     return lang ? [lang, ...super.languages()] : super.languages();
   }
 
-  /** Which platform Bridge found and its version, for `session_start`. */
+  /** Which platform Bridge found and its version, whether the player is signed in to the portal
+   *  and where the save came from (saveCopies.ts), for `session_start`. */
   sessionProps(): Record<string, string | boolean> {
-    return { sdk: `${this.bridge.platformId() ?? 'none'}/${this.bridge.version() ?? '?'}` };
+    return { sdk: `${this.bridge.platformId() ?? 'none'}/${this.bridge.version() ?? '?'}`, signedIn: this.bridge.accountId() !== null, restored: this.restored };
   }
 
   override loaded(): void {

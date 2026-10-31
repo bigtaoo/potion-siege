@@ -13,7 +13,7 @@ export interface FakeBridge {
   shown: string[];
 }
 
-export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>; adblock?: boolean; audio?: boolean; rewarded?: boolean; interstitial?: boolean; language?: string } = {}): FakeBridge {
+export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>; adblock?: boolean; audio?: boolean; rewarded?: boolean; interstitial?: boolean; language?: string; player?: { id?: string | null; isAuthorized?: boolean } } = {}): FakeBridge {
   const listeners = new Map<string, ((v: unknown) => void)[]>();
   const on = (event: string, cb: (v: unknown) => void) => void listeners.set(event, [...(listeners.get(event) ?? []), cb]);
   const fake: FakeBridge = {
@@ -41,6 +41,7 @@ export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>
       on,
     },
     device: { type: 'desktop' },
+    player: opts.player ?? { id: null, isAuthorized: false },
     analytics: { send: (e, d) => void fake.tracked.push([e, d]) },
   };
   fake.global.bridge = bridge;

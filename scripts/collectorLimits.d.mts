@@ -1,7 +1,7 @@
 // The collector's budgets and body reads (collectorLimits.mjs), as its tests use them
 // (src/analytics/collectorLimits.test.ts).
 
-export type Rate = 'events' | 'replays';
+export type Rate = 'events' | 'replays' | 'saves';
 export const MAX_BODY: number;
 export const MAX_REPLAY: number;
 export const RATES: Record<Rate, { requests: number; bytes: number }>;

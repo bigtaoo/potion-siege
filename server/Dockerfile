@@ -3,7 +3,7 @@
 # unasked (bump it here, and the backup service's in docker-compose.yml).
 FROM node:22.23.4-alpine
 WORKDIR /app
-COPY collector.mjs collectorLimits.mjs replayShelf.mjs ./
+COPY collector.mjs collectorLimits.mjs replayShelf.mjs saveVault.mjs ./
 # compose bind-mounts ./data here; without it, node could not create the directory itself
 RUN mkdir /data && chown node:node /data
 USER node

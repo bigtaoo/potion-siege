@@ -168,6 +168,20 @@ describe('PlaygamaBridge', () => {
     expect(b.deviceType()).toBeNull();
   });
 
+  it("names the player's account only while they are signed in", async () => {
+    const f = fakeBridge({ player: { id: 'u1', isAuthorized: true } });
+    const b = new PlaygamaBridge(f.global, never);
+    expect(b.accountId()).toBeNull();
+    await b.init();
+    expect(b.accountId()).toBe('u1');
+    f.global.bridge!.player = { id: 'u1', isAuthorized: false };
+    expect(b.accountId()).toBeNull();
+    f.global.bridge!.player = { id: '', isAuthorized: true };
+    expect(b.accountId()).toBeNull();
+    delete f.global.bridge!.player;
+    expect(b.accountId()).toBeNull();
+  });
+
   it('swallows every SDK call that throws or rejects, and every game callback that throws', async () => {
     const f = fakeBridge();
     const sdk = f.global.bridge!;

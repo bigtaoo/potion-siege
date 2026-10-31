@@ -35,6 +35,7 @@ import { createServer } from 'node:http';
 import { dirname, join } from 'node:path';
 import { addressOf, BodyGate, countryOf, declared, Limits, MAX_BODY, MAX_REPLAY, rateOf, readBody, STATUS } from './collectorLimits.mjs';
 import { cleanReplay, MAX_BYTES, ReplayShelf } from './replayShelf.mjs';
+import { acctOfQuery, cleanSave, SaveVault } from './saveVault.mjs';
 
 const port = Number(process.env.PORT) || Number(process.argv[2]) || 8787;
 const dir = process.env.COLLECTOR_DIR;
@@ -83,13 +84,15 @@ function prune(now) {
 prune(Date.now());
 
 const shelf = new ReplayShelf(join(dir ?? dirname(single), 'replays'), Number(process.env.COLLECTOR_REPLAY_BYTES) || MAX_BYTES);
+const vault = new SaveVault(join(dir ?? dirname(single), 'saves'));
 let replaysPrunedAt = -1;
-/** Drops the replays past their days, once an hour. */
+/** Drops the replays past their days and the save copies past their months, once an hour. */
 function pruneReplays(now) {
   const hour = Math.floor(now / 3600_000);
   if (hour === replaysPrunedAt) return;
   replaysPrunedAt = hour;
   shelf.prune(now);
+  vault.prune(now);
 }
 
 const BEACONS = ['open_desktop', 'open_touch', 'loaded_desktop', 'loaded_touch'];
@@ -252,6 +255,32 @@ function replay(text, res) {
   res.writeHead(204, cors).end();
 }
 
+/** POST /s: one save copy, kept unless its id belongs to another device. */
+function saveCopy(text, res) {
+  let copy = null;
+  try {
+    copy = cleanSave(JSON.parse(text));
+  } catch {
+    // not JSON
+  }
+  if (!copy) return res.writeHead(400, cors).end();
+  try {
+    return res.writeHead(vault.put(copy, Date.now()) === 'kept' ? 204 : 403, cors).end();
+  } catch (err) {
+    console.log(`collector: could not keep a save: ${err}`);
+    return res.writeHead(503, cors).end();
+  }
+}
+
+/** GET /s?acct=<hash>: the account's save copy. */
+function savedCopy(url, res) {
+  const acct = acctOfQuery(url);
+  if (!acct) return res.writeHead(400, cors).end();
+  const doc = vault.get(acct);
+  if (!doc) return res.writeHead(404, cors).end();
+  res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(doc));
+}
+
 createServer((req, res) => {
   const now = Date.now();
   prune(now);
@@ -266,6 +295,7 @@ createServer((req, res) => {
   const ip = addressOf(req);
   const length = declared(req);
   if (!limits.allow(rate, ip, length)) return refuse(res, 429);
+  if (rate === 'saves' && req.method === 'GET') return savedCopy(req.url, res);
   if (req.method === 'GET') {
     const line = beaconLine(req.url, now, countryOf(req));
     if (!line) return res.writeHead(400, cors).end();
@@ -280,6 +310,7 @@ createServer((req, res) => {
     if (big) bigReads.give();
     if (err) return err in STATUS ? refuse(res, STATUS[err]) : undefined;
     if (big) replay(text, res);
+    else if (rate === 'saves') saveCopy(text, res);
     else events(text, res, countryOf(req));
   });
 }).listen(port, () => console.log(`collector on :${port}/e -> ${dir ? join(dir, 'events-<day>.ndjson') : single}`));

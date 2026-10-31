@@ -18,10 +18,10 @@
 set -eu
 
 TARGET="$HOME/potion-siege"
-DOCKERFILE_SHA256=b43e177d9ec8aedb31befb1cbc35e933a612de7086b7ba43dae582661d0dfdb1
+DOCKERFILE_SHA256=559455a27d37d72d17168c1c5b6c336a0396ee58c2ced94871a516dae32326db
 COMPOSE_SHA256=8822f604a44e35b948f6fea22a0e886dc2697634a519b2d69b042d007c1567db
 # the collector's own files, in the order CI packs them (the Dockerfile copies the same)
-FILES="collector.mjs collectorLimits.mjs replayShelf.mjs"
+FILES="collector.mjs collectorLimits.mjs replayShelf.mjs saveVault.mjs"
 # the collector is ~20 KB; anything near this is not it
 MAX_PAYLOAD=1048576
 STAGE="$(mktemp -d)"

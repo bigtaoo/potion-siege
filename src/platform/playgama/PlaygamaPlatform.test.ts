@@ -106,9 +106,13 @@ describe('PlaygamaPlatform', () => {
     expect((await platform(fakeBridge({ language: 'tr' }))).languages()[0]).toBe('tr');
   });
 
-  it('names the platform and the script version for session_start', async () => {
-    expect((await platform(fakeBridge({ id: 'playgama_sandbox' }))).sessionProps()).toEqual({ sdk: 'playgama_sandbox/2.9.0' });
-    expect((await platform(null)).sessionProps()).toEqual({ sdk: 'none/?' });
+  it('names the platform, the script version and the sign-in for session_start', async () => {
+    expect((await platform(fakeBridge({ id: 'playgama_sandbox' }))).sessionProps()).toEqual({ sdk: 'playgama_sandbox/2.9.0', signedIn: false, restored: 'none' });
+    expect((await platform(null)).sessionProps()).toEqual({ sdk: 'none/?', signedIn: false, restored: 'none' });
+    const signedIn = fakeBridge({ player: { id: 'u1', isAuthorized: true } });
+    expect((await platform(signedIn)).sessionProps()).toMatchObject({ signedIn: true });
+    // a guest's id is no account
+    expect((await platform(fakeBridge({ player: { id: 'g1', isAuthorized: false } }))).sessionProps()).toMatchObject({ signedIn: false });
   });
 
   it("plays its ads through Bridge and tells the platform of an achievement", async () => {

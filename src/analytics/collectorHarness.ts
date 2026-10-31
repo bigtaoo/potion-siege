@@ -22,7 +22,7 @@ interface State {
   /** Size statSync reports instead of the real one, e.g. to stand for a full file. */
   sizeOverride: number | null;
   dirs: string[];
-  /** Bytes statfsSync reports free, and whether accessSync refuses to write. */
+  /** Bytes statfsSync reports free, and whether accessSync and writeFileSync refuse to write. */
   free: number;
   readOnly: boolean;
 }
@@ -74,6 +74,7 @@ export const fakeFs = {
     state.files.set(key(file), String(was) + text);
   },
   writeFileSync: (file: string, data: Uint8Array) => {
+    if (state.readOnly) throw Object.assign(new Error('EROFS'), { code: 'EROFS' });
     state.files.set(key(file), data);
     state.mtimes.set(key(file), Date.now());
   },

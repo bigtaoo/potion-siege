@@ -20,8 +20,8 @@ describe('collector deploy', () => {
     expect(deployScript).toContain(`COMPOSE_SHA256=${await sha256(compose)}`);
   });
 
-  it("takes the collector's three files alone from CI, which sends nothing else", () => {
-    const files = 'collector.mjs collectorLimits.mjs replayShelf.mjs';
+  it("takes the collector's four files alone from CI, which sends nothing else", () => {
+    const files = 'collector.mjs collectorLimits.mjs replayShelf.mjs saveVault.mjs';
     expect(deployScript).toContain(`FILES="${files}"`);
     expect(deployScript).toMatch(/tar xzf - -C "\$STAGE" [^\n]*\$FILES \|\|/);
     expect(deployScript).not.toMatch(/cp "\$STAGE\/(Dockerfile|docker-compose)/);

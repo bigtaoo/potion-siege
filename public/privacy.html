@@ -64,6 +64,12 @@
       <td data-h="Legal basis">The same as play statistics: your consent in the EEA, the UK and Switzerland, our legitimate interest elsewhere; the <em>Share stats</em> switch turns it off</td>
     </tr>
     <tr>
+      <td>Save backup</td>
+      <td data-h="Exactly">A copy of your progress and settings (<code>mb.save</code>, §4), once you have played a battle, sent a few seconds after it changes: under a random ID and secret made for it on your device, not the install ID, and on Playgama while you are signed in, with a short code worked out from your Playgama account (not the account itself). When your device or Playgama's save comes up empty, the game asks for the copy with that code. Sent whatever your answer about play statistics, as it is part of keeping your game.</td>
+      <td data-h="Why">Giving back progress the site, the browser or a change of account on the device has lost</td>
+      <td data-h="Legal basis">Providing the game you play (Art. 6(1)(b) GDPR), and our legitimate interest in not losing it (Art. 6(1)(f))</td>
+    </tr>
+    <tr>
       <td>Load counts</td>
       <td data-h="Exactly">Two requests with no ID at all: one when the page starts loading and one when the first battle is on screen, each with whether the device is touch or desktop, the game version, the load time, whether this is a new player and the same short source tag as above.</td>
       <td data-h="Why">Counting how many launches give up while the game is still loading</td>
@@ -99,6 +105,7 @@
     <li><code>mb.save</code>: your progress and settings. On CrazyGames and Playgama it lives in the portal's save, which follows a signed-in player to other devices.</li>
     <li><code>mb.player</code>: the random install ID (created only once play statistics may be sent), the day you first played, how many times you have played, which first steps you have reached, and where you first came from.</li>
     <li><code>mb.privacy</code>: your answer about play statistics.</li>
+    <li><code>ps.copies</code>: the game's own copy of your progress, one for each of the last few players on the device (a guest and the Playgama accounts signed in there, each by the short code of §2), with the random ID and secret of its save backup. It brings progress back when the site's save is lost, and keeps one account's progress from going to another.</li>
     <li><code>ps.adFree</code> (iPhone app only): whether you own the Ad-free card, as the App Store last told the app.</li>
   </ul>
   <p>In the iPhone app these items are also copied into the app's own storage, so iOS clearing the web storage loses nothing, and the app downloads game updates from our server at <code>ps-ota.gamestao.com</code>. Clearing the site's data in your browser, or deleting the app, removes all of it; the game then starts over with a new install ID.</p>
@@ -119,16 +126,17 @@
     <li><strong>Apple</strong>, in the iPhone app: the App Store and the purchase of the Ad-free card: <a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Apple privacy policy</a>.</li>
     <li><strong>Google</strong>, in the iPhone app: the ads and the consent form (§5): <a href="https://policies.google.com/privacy" target="_blank" rel="noopener">Google privacy policy</a>.</li>
     <li><strong>Cloudflare</strong>: delivers the game and its updates and carries the traffic to our server.</li>
-    <li><strong>Hetzner Online</strong> (Germany): runs our server, where the statistics are stored.</li>
+    <li><strong>Hetzner Online</strong> (Germany): runs our server, where the statistics and save backups are stored.</li>
   </ul>
   <p>Cloudflare and Hetzner process the data for us under data processing agreements. Where data is processed outside the EEA, this happens under the European Commission's standard contractual clauses.</p>
 
   <h2>8. How long we keep it</h2>
   <!-- The 14 months are KEEP_MONTHS in scripts/collector.mjs, which deletes the older day files
-       itself; the 15 days are KEEP_DAYS in scripts/replayShelf.mjs; the 30 days of backups are
+       itself; the 15 days are KEEP_DAYS in scripts/replayShelf.mjs; the save backups' 14 months are
+       KEEP_MONTHS in scripts/saveVault.mjs; the 30 days of backups are
        PS_BACKUP_DAYS in server/docker-compose.yml. Change each with its text. TODO(owner): check what Cloudflare logs for ps.gamestao.com
        on this plan. -->
-  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>Each day's file is deleted automatically after 14 months</strong>, sooner if you ask us to delete yours (§9). A daily backup copy of each day's file is kept on the same server for 30 days. <strong>Battle replays are deleted automatically after 15 days</strong>, or sooner when the space set aside for them is full (the oldest first), and are not backed up. The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
+  <p>Play statistics, load counts and feedback are stored as one file per day on our server in Germany. They contain no name, address or other detail that says who you are. <strong>Each day's file is deleted automatically after 14 months</strong>, sooner if you ask us to delete yours (§9). A daily backup copy of each day's file is kept on the same server for 30 days. <strong>Battle replays are deleted automatically after 15 days</strong>, or sooner when the space set aside for them is full (the oldest first), and are not backed up. <strong>Save backups are deleted automatically 14 months after they last changed</strong>, and are not backed up either. The server's own logs record no IP addresses and are overwritten once they reach about 30 MB. Connection data is not stored (§2).</p>
 
   <h2>9. Your rights</h2>
   <p>You can ask for access to your data, correction, deletion, restriction and a portable copy, and you can object to processing based on our legitimate interest at any time. Consent you gave by allowing play statistics or by sending feedback can be withdrawn at any time, without affecting what was sent before.</p>
@@ -175,6 +183,12 @@
       <td data-h="法律依据">与游戏统计相同：在欧洲经济区、英国和瑞士是你的同意，其他地区是我们的正当利益；“设置”里的“分享统计”开关可以关闭</td>
     </tr>
     <tr>
+      <td>存档备份</td>
+      <td data-h="具体内容">你的进度和设置（<code>mb.save</code>，见第 4 节）的一份副本，打过一场战斗后，在它变化几秒后发送：放在你设备上为它生成的随机 ID 和密钥下，不是安装 ID；在 Playgama 上登录时，还附带一个由你的 Playgama 账号算出的短代码（不是账号本身）。当你的设备或 Playgama 的存档变空时，游戏用这个代码取回副本。无论你对游戏统计怎么选择都会发送，因为它是保住你游戏进度的一部分。</td>
+      <td data-h="用途">在游戏网站、浏览器或同一设备上换账号丢失进度时把它还给你</td>
+      <td data-h="法律依据">提供你所玩的游戏（GDPR 第 6 条第 1 款 b 项），以及我们不让进度丢失的正当利益（第 6 条第 1 款 f 项）</td>
+    </tr>
+    <tr>
       <td>加载计数</td>
       <td data-h="具体内容">两次不带任何 ID 的请求：页面开始加载时一次，第一场战斗出现在屏幕上时一次，各自附带设备是触屏还是电脑、游戏版本、加载用时、是否新玩家，以及与上面相同的简短来源标记。</td>
       <td data-h="用途">统计有多少次启动在游戏还没加载完时就放弃了</td>
@@ -210,6 +224,7 @@
     <li><code>mb.save</code>：你的进度和设置。在 CrazyGames 和 Playgama 上它保存在平台的存档里，已登录的玩家换设备也能继续。</li>
     <li><code>mb.player</code>：随机安装 ID（只有在允许发送游戏统计后才会生成）、你第一次游玩的日期、游玩次数、已经完成的新手步骤，以及你最初从哪里来。</li>
     <li><code>mb.privacy</code>：你对游戏统计的选择。</li>
+    <li><code>ps.copies</code>：游戏自己保存的进度副本，设备上最近几位玩家各一份（游客，以及在这里登录过的 Playgama 账号，各以第 2 节所说的短代码区分），附带其存档备份的随机 ID 和密钥。网站的存档丢失时用它找回进度，并保证一个账号的进度不会给到另一个账号。</li>
     <li><code>ps.adFree</code>（仅 iPhone 应用）：你是否拥有“免广告”卡，以 App Store 最近一次告诉应用的为准。</li>
   </ul>
   <p>在 iPhone 应用里，这些内容还会复制一份到应用自己的存储中，即使 iOS 清掉网页存储也不会丢失；应用还会从我们的服务器 <code>ps-ota.gamestao.com</code> 下载游戏更新。在浏览器里清除本站数据，或删除应用，就会把这些全部删掉；之后游戏会以新的安装 ID 重新开始。</p>
@@ -230,12 +245,12 @@
     <li><strong>Apple</strong>（iPhone 应用）：App Store 以及“免广告”卡的购买：<a href="https://www.apple.com/legal/privacy/" target="_blank" rel="noopener">Apple 隐私政策</a>。</li>
     <li><strong>Google</strong>（iPhone 应用）：广告和同意表单（见第 5 节）：<a href="https://policies.google.com/privacy?hl=zh-CN" target="_blank" rel="noopener">Google 隐私政策</a>。</li>
     <li><strong>Cloudflare</strong>：分发游戏及其更新，并把流量转到我们的服务器。</li>
-    <li><strong>Hetzner Online</strong>（德国）：运行我们的服务器，统计数据就存放在这里。</li>
+    <li><strong>Hetzner Online</strong>（德国）：运行我们的服务器，统计数据和存档备份就存放在这里。</li>
   </ul>
   <p>Cloudflare 和 Hetzner 依据数据处理协议代我们处理数据。若在欧洲经济区以外处理数据，则依据欧盟委员会的标准合同条款进行。</p>
 
   <h2>8. 保存多久</h2>
-  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>每天的文件保存 14 个月后自动删除</strong>；你要求删除你的数据时会更早删除（见第 9 节）。每天的文件在同一台服务器上另有一份备份，保留 30 天。<strong>战斗回放 15 天后自动删除</strong>，为它们预留的空间满了时会更早删除（最旧的先删），且不做备份。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
+  <p>游戏统计、加载计数和反馈按天存成文件，放在我们位于德国的服务器上，其中没有姓名、地址或其他能说明你是谁的信息。<strong>每天的文件保存 14 个月后自动删除</strong>；你要求删除你的数据时会更早删除（见第 9 节）。每天的文件在同一台服务器上另有一份备份，保留 30 天。<strong>战斗回放 15 天后自动删除</strong>，为它们预留的空间满了时会更早删除（最旧的先删），且不做备份。<strong>存档备份在最后一次变化 14 个月后自动删除</strong>，同样不做备份。服务器自己的日志不记录 IP 地址，累计约 30 MB 后就会被覆盖。连接数据不保存（见第 2 节）。</p>
 
   <h2>9. 你的权利</h2>
   <p>你可以要求查阅、更正、删除、限制处理你的数据，或获取一份可携带的副本，也可以随时反对基于我们正当利益的处理。你通过允许游戏统计或发送反馈给出的同意可以随时撤回，撤回不影响之前已发送的数据。</p>

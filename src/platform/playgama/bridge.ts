@@ -35,6 +35,7 @@ export interface BridgeShape {
     checkAdBlock?: () => unknown;
   };
   device?: { type?: string };
+  player?: { id?: string | null; isAuthorized?: boolean };
   analytics?: { send?: (event: string, data?: BridgeData) => unknown };
 }
 
@@ -128,6 +129,13 @@ export class PlaygamaBridge {
   deviceType(): string | null {
     const v = this.sdk?.device?.type;
     return typeof v === 'string' && v !== '' ? v : null;
+  }
+
+  /** The portal's account id while the player is signed in; null for a guest (whose id, where the
+   *  portal gives one, is no account and does not follow them). */
+  accountId(): string | null {
+    const p = this.sdk?.player;
+    return p?.isAuthorized === true && typeof p.id === 'string' && p.id !== '' ? p.id : null;
   }
 
   /** game_ready, gameplay_started, gameplay_stopped, player_got_achievement. */

@@ -25,7 +25,7 @@ describe('collector setup', () => {
   it('writes one file per UTC day under COLLECTOR_DIR, on PORT', async () => {
     const handler = await load({ COLLECTOR_DIR: DIR, PORT: '9001' });
     expect(state.port).toBe(9001);
-    expect(state.dirs).toEqual([DIR, `${DIR}/replays`]);
+    expect(state.dirs).toEqual([DIR, `${DIR}/replays`, `${DIR}/saves`]);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     vi.setSystemTime(NOON + 86_400_000);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_end', uid: 'u' }]));
@@ -36,14 +36,14 @@ describe('collector setup', () => {
   it('defaults to port 8787 and a single file, or takes both from the command line', async () => {
     const handler = await load({});
     expect(state.port).toBe(8787);
-    expect(state.dirs).toEqual(['telemetry', 'telemetry/replays']);
+    expect(state.dirs).toEqual(['telemetry', 'telemetry/replays', 'telemetry/saves']);
     request(handler, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('telemetry/events.ndjson')).toHaveLength(1);
 
     state.dirs.length = 0;
     const custom = await load({}, ['9100', 'out/x.ndjson']);
     expect(state.port).toBe(9100);
-    expect(state.dirs).toEqual(['out', 'out/replays']);
+    expect(state.dirs).toEqual(['out', 'out/replays', 'out/saves']);
     request(custom, 'POST', '/e', JSON.stringify([{ name: 'run_start', uid: 'u' }]));
     expect(lines('out/x.ndjson')).toHaveLength(1);
   });

@@ -13,11 +13,13 @@ export const MAX_REPLAY = 256 * 1024;
  * Per client address and minute, per route: requests and body bytes. Behind the tunnel the
  * address is CF-Connecting-IP. Events and load checkpoints share one budget: a client sends a
  * batch every 15 s, and players can share an address. A replay goes once per battle and once
- * more when the page is hidden mid-battle.
+ * more when the page is hidden mid-battle. A save copy goes at most every 10 s and once when the
+ * page is hidden, and is read once per launch of a signed-in player.
  */
 export const RATES = {
   events: { requests: 240, bytes: 1024 * 1024 },
   replays: { requests: 20, bytes: 4 * 1024 * 1024 },
+  saves: { requests: 60, bytes: 1024 * 1024 },
 };
 
 /** The budget a request is charged to, from its method and path alone, or null for none. */
@@ -25,6 +27,7 @@ export function rateOf(method, url) {
   if (method === 'POST' && url === '/e') return 'events';
   if (method === 'GET' && url?.startsWith('/b?')) return 'events';
   if (method === 'POST' && url === '/r') return 'replays';
+  if ((method === 'POST' && url === '/s') || (method === 'GET' && url?.startsWith('/s?'))) return 'saves';
   return null;
 }
 

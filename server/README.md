@@ -69,11 +69,22 @@ the 30 days (privacy policy §8):
 ssh blightbloom 'cd /home/deploy/potion-siege/backups && for f in events-*.ndjson.gz; do gzip -dc "$f" | grep -v "\"<id>\"" | gzip > "$f.new" && mv "$f.new" "$f"; done'
 ```
 
+## Save copies
+
+The game also keeps a copy of each player's save here, whatever their statistics choice
+(`src/save/`, privacy policy §2): `POST /s` replaces the copy a device made under its random id
+when it brings the same secret, and `GET /s?acct=<hash>` hands a signed-in Playgama account's
+copy with the most battles back to a device whose portal save came up empty
+(`scripts/saveVault.mjs`). One `<id>.json` per device and owner and one `acct-<hash>.json` per
+account in `data/saves`, each deleted 14 months after its last change (`KEEP_MONTHS`). The
+nightly backup does not copy them.
+
 ## Deploy from CI
 
 Every green push to `main` deploys it (`.github/workflows/ci.yml`, job `deploy-server`, before
 the web build goes out); a push that leaves the collector unchanged restarts nothing. CI sends
-the collector's three files (`collector.mjs`, `collectorLimits.mjs`, `replayShelf.mjs`) and
+the collector's four files (`collector.mjs`, `collectorLimits.mjs`, `replayShelf.mjs`,
+`saveVault.mjs`) and
 nothing else: the `Dockerfile` and `docker-compose.yml` say what runs and
 what is mounted, so a leaked key that could send them could take the box. They are installed by
 hand, and `ci-deploy.sh` refuses to build unless both hash to the values written in it
@@ -100,7 +111,7 @@ tr -d '\r' < server/ci-deploy.sh | ssh blightbloom 't=$(mktemp) && cat > $t && s
 After editing the `Dockerfile` or `docker-compose.yml` (and so the hashes in `ci-deploy.sh`),
 install all three by hand before the push reaches `main`; root owns the two, so nothing running
 as `deploy` can change them. The order matters when CI starts sending a new file (as when
-`collectorLimits.mjs` and `replayShelf.mjs` came): an old script would copy `collector.mjs`
+`collectorLimits.mjs` and `replayShelf.mjs` came, and `saveVault.mjs`): an old script would copy `collector.mjs`
 alone and build an image without the others, which then fails at start, while the new script on
 an old push only refuses to deploy. Then create the backup folder once:
 `ssh blightbloom 'sudo install -d -o deploy -g deploy /home/deploy/potion-siege/backups'`
