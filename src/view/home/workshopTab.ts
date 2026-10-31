@@ -9,16 +9,17 @@ import { gem } from '../ui';
 import { priced, type Area } from './shared';
 import type { HomeActions } from './types';
 
-/** A row per upgrade: its level as pips, what it gives now and what the next level adds, and
- *  the button that buys it. The rows share the page's height. */
+/** A card per upgrade: its level as pips, what it gives now and what the next level adds, and
+ *  the button that buys it. The cards share the page's height, centred in it. */
 export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
   const head = plate(t('workshop'), 52);
   head.position.set(a.x + a.w / 2, a.y + 60);
   root.addChild(head);
-  const rw = Math.min(a.wide ? 1100 : 960, a.w - 80);
-  const gap = 30;
-  const rh = Math.max(230, Math.min(a.wide ? 260 : 330, (a.h - 170 - gap * 2) / 3));
-  const y0 = a.y + 140 + rh / 2 + Math.max(0, (a.h - 170 - 3 * rh - 2 * gap) / 4);
+  // big cards, the three together centred in the room under the heading
+  const rw = Math.min(a.wide ? 1200 : 1000, a.w - 60);
+  const gap = 36;
+  const rh = Math.max(230, Math.min(a.wide ? 280 : 360, (a.h - 170 - gap * 2) / 3));
+  const y0 = a.y + 140 + rh / 2 + Math.max(0, (a.h - 170 - 3 * rh - 2 * gap) / 2);
   WORKSHOP_IDS.forEach((id, i) => {
     const lv = m.workshop[id];
     const max = BALANCE.meta.workshop[id].max;
@@ -33,7 +34,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
     const icon = new Container();
     icon.addChild(medal(62, P.paperDark), shopIcon(id));
     icon.x = -rw / 2 + 90;
-    icon.scale.set(rh >= 280 ? 1.15 : 1);
+    icon.scale.set(rh >= 320 ? 1.3 : rh >= 280 ? 1.15 : 1);
     const x0 = -rw / 2 + 190;
     const bx = rw / 2 - 150;
     const room = bx - 125 - 24 - x0;

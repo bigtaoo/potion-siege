@@ -4,18 +4,22 @@
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { heroCost, heroDamage, heroUnlocked, type MetaSave } from '../../sim/meta';
+import { lateStepOf } from '../../sim/latePerks';
 import { baseSkills, MILESTONES, skillHeroes } from '../../sim/skills';
 import { BALANCE, type HeroKind } from '../../sim/types';
 import { bottle, fit as fitText, ink, inkWrapped, lightTile, lock, P, PillButton } from '../kit';
 import { HERO_COLORS, label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
+import { lateTiles } from './lateTiles';
+import { perkText } from './perkText';
 import { priced } from './shared';
 import type { HomeActions } from './types';
 
-/** One hero: its level, the skill cards it starts with and what each milestone unlocks. */
+/** One hero: its level, the skill cards it starts with and what each milestone unlocks, the
+ *  four past Lv 20 as small tiles two by two under the rest. */
 export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: MenuFit): Container {
-  const h = 1440;
+  const h = 1700;
   const { panel, box } = frame(act, t(`hero.${kind}`), h, fit);
   const lv = m.heroes[kind];
   const top = -h / 2;
@@ -41,7 +45,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
   box.addChild(head, cards);
 
   let y = top + 554;
-  MILESTONES[kind].forEach((ms) => {
+  MILESTONES[kind].filter((ms) => !('perk' in ms && lateStepOf(ms.perk))).forEach((ms) => {
     const on = lv >= ms.level;
     const r = new Container();
     const lvTag = ink(t('level', { n: ms.level }), 38, { fill: on ? P.brassDark : P.inkSoft });
@@ -50,7 +54,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
     let needs = '';
     let detail = '';
     if ('perk' in ms) {
-      what = t(`perk.${ms.perk}`);
+      what = perkText(ms.perk);
     } else {
       const other = skillHeroes(ms.skill).with;
       const name = t(`skill.${ms.skill}.name`);
@@ -98,6 +102,7 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
     }
     box.addChild(r);
   });
+  box.addChild(lateTiles(kind, lv, y));
 
   // the next level and the button that buys it along the bottom; the panel stays open after
   const foot = h / 2 - 100;

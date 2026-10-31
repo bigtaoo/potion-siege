@@ -4,6 +4,7 @@
 import { nextTier, TRACK_IDS, trackReady } from '../sim/achievements';
 import { CHAPTER_COUNT, chestWaiting } from '../sim/chapters';
 import { chestReady, heroCost, heroUnlocked, maxStage, unlockPrice, WORKSHOP_IDS, workshopCost, type MetaSave, type SeenTab } from '../sim/meta';
+import { anyStarChestWaiting } from '../sim/starChest';
 import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
 
@@ -60,10 +61,10 @@ export function markSeen(m: MetaSave, tab: SeenTab, today: string): boolean {
   return true;
 }
 
-/** A chapter's one-time chest waits to be opened. */
+/** A chapter's one-time chest, or a star chest, waits to be opened. */
 export function anyChestWaiting(m: MetaSave): boolean {
   for (let ch = 1; ch <= CHAPTER_COUNT; ch++) if (chestWaiting(m, ch)) return true;
-  return false;
+  return anyStarChestWaiting(m);
 }
 
 /** The nav bar's dots, tab by tab (the tab already open gets none); `pointing` while the

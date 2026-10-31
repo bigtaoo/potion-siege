@@ -7,6 +7,8 @@ import { newChallenge, parseChallenge, type ChallengeSave } from './challenge';
 import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import { newStars, parseStars, type StarSave } from './stars';
+import { newStarChests, parseStarChests } from './starChest';
+import { liftUnlocked } from './heroUnlock';
 import { newWelcome, parseWelcome, type WelcomeSave } from './welcome';
 import { carry, int } from './parse';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
@@ -58,6 +60,8 @@ export interface MetaSave {
   achievements: AchievementSave;
   /** The chapters whose one-time crystal chest has been opened. */
   chapterChests: number[];
+  /** Star chest tiers opened per chapter (starChest.ts). */
+  starChests: number[];
   /** What a home tab's red dot was about when the tab was last open, by tab: keys of the
    *  things it offered (view/nudges.ts), so the same thing does not light the dot again. */
   seen: Partial<Record<SeenTab, string[]>>;
@@ -140,6 +144,7 @@ export function newMeta(): MetaSave {
     sound: { music: true, sfx: true, shake: null, haptics: true },
     achievements: newAchievements(),
     chapterChests: [],
+    starChests: newStarChests(),
     seen: {},
     stars: newStars(),
   };
@@ -193,6 +198,7 @@ export function parseMeta(raw: string | null): MetaSave {
   // screen to open
   const chests = Array.isArray(data.chapterChests) ? data.chapterChests : [];
   out.chapterChests = [...new Set(chests.map(Number))].filter((c) => Number.isInteger(c) && c >= 1 && c <= chapterOf(M.stageCount)).sort((a, b) => a - b);
+  out.starChests = parseStarChests(data.starChests);
   const seen = (data.seen ?? {}) as Record<string, unknown>;
   for (const tab of SEEN_TABS) {
     const keys = seen[tab];
@@ -424,6 +430,7 @@ export function heroUnlocked(m: MetaSave, kind: HeroKind): boolean {
 export function unlockHero(m: MetaSave, kind: HeroKind): boolean {
   if (heroUnlocked(m, kind)) return false;
   m.unlocked.push(kind);
+  liftUnlocked(m, kind);
   return true;
 }
 

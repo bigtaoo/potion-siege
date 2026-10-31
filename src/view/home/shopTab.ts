@@ -29,7 +29,7 @@ export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area,
   const locked = HERO_KINDS.filter((k) => !heroUnlocked(m, k));
   if (locked.length === 0) {
     // only the freebies: one calm panel a little above the middle
-    const w = Math.min(a.wide ? 1100 : 960, a.w - 80);
+    const w = Math.min(a.wide ? 1200 : 1000, a.w - 60);
     const h = Math.min(room, showAd ? (a.wide ? 760 : 900) : CHEST_ALONE_H);
     dailyPanel(root, m, act, today, ads, showAd, cx, top + (room - h) * 0.4 + h / 2, w, h);
     return;
@@ -44,14 +44,14 @@ export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area,
     unlockPanel(root, m, act, locked, cols, a.x + 2 * gap + dw + uw / 2, top + room / 2, uw, room, room);
     return;
   }
-  const pw = Math.min(960, a.w - 80);
+  const pw = Math.min(1000, a.w - 60);
   const gap = 60;
   // the cards take what the freebies need at least, and the freebies the rest up to a cap
   const least = showAd ? 600 : CHEST_ALONE_H;
   const ch = Math.min(cardH(cols), (room - gap - least - PANEL_PAD - (rows - 1) * CARD_GAP) / rows);
   const uh = PANEL_PAD + rows * ch + (rows - 1) * CARD_GAP;
   const dh = showAd ? Math.min(860, room - gap - uh) : CHEST_ALONE_H;
-  const y0 = top + Math.max(0, (room - dh - gap - uh) * 0.4);
+  const y0 = top + Math.max(0, (room - dh - gap - uh) * 0.5);
   dailyPanel(root, m, act, today, ads, showAd, cx, y0 + dh / 2, pw, dh);
   unlockPanel(root, m, act, locked, cols, cx, y0 + dh + gap + uh / 2, pw, uh, cardH(cols));
 }
@@ -234,7 +234,7 @@ function unlockPanel(root: Container, m: MetaSave, act: HomeActions, locked: Her
   c.addChild(sub);
   const rows = Math.ceil(locked.length / cols);
   const big = cols === 2;
-  const cw = big ? Math.min(420, (w - 60 - CARD_GAP) / 2) : (w - 60 - 2 * CARD_GAP) / 3;
+  const cw = big ? Math.min(460, (w - 60 - CARD_GAP) / 2) : (w - 60 - 2 * CARD_GAP) / 3;
   const body = h - PANEL_PAD;
   const ch = Math.min(most, (body - (rows - 1) * CARD_GAP) / rows);
   const y0 = -h / 2 + PANEL_HEAD + (body - rows * ch - (rows - 1) * CARD_GAP) / 2 + ch / 2;

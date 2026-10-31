@@ -2,7 +2,7 @@
 
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../../i18n';
-import { skillHeroes, skillMax, type SkillId } from '../../sim/skills';
+import { skillHeroes, skillMax, skillRarity, type Rarity, type SkillId } from '../../sim/skills';
 import type { HeroKind } from '../../sim/types';
 import { balanced, coinsIcon, LIGHT, medal, P, paperCard, stopwatchIcon, swordIcon, wallIcon } from '../kit';
 import { iconTexture, ultimateTexture } from '../art';
@@ -11,9 +11,12 @@ import { HERO_COLORS, label } from '../ui';
 const CARD_W = 320;
 const CARD_H = 640;
 
-/** A tall parchment card: the name on a band in its hero's colour (both colours for a recipe,
- *  brass for the skills every hero shares), the picture, what it does, and pips for how far
- *  it has been taken. */
+/** The frame round a card, by how strong it is: white, blue, purple, gold. */
+export const RARITY_COLORS: Record<Rarity, number> = { common: 0xf4efe2, rare: 0x3f8fe6, epic: 0x9a5ce0, legend: 0xf2b632 };
+
+/** A tall parchment card in a frame of its rarity's colour: the name on a band in its hero's
+ *  colour (both colours for a recipe, brass for the skills every hero shares), the picture, what
+ *  it does, and pips for how far it has been taken. */
 export function skillCard(id: SkillId, level: number): Container {
   const card = new Container();
   const { hero, with: other } = skillHeroes(id);
@@ -21,6 +24,12 @@ export function skillCard(id: SkillId, level: number): Container {
   const band = 130;
   const color = hero ? HERO_COLORS[hero] : P.brass;
   card.addChild(paperCard(CARD_W, CARD_H, 30));
+  const rarity = skillRarity(id);
+  const rim = new Graphics()
+    .roundRect(-CARD_W / 2 - 4, top - 4, CARD_W + 8, CARD_H + 8, 34).stroke({ width: 10, color: RARITY_COLORS[rarity] })
+    .roundRect(-CARD_W / 2 - 9, top - 9, CARD_W + 18, CARD_H + 18, 39).stroke({ width: 3, color: P.line });
+  rim.label = `rarity_${rarity}`;
+  card.addChild(rim);
   const g = new Graphics();
   const x = -CARD_W / 2 + 10;
   const w = CARD_W - 20;

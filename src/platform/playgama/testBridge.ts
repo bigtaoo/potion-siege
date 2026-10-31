@@ -11,9 +11,10 @@ export interface FakeBridge {
   emit(event: string, value: unknown): void;
   /** The ad calls made: 'rewarded' or 'interstitial'. */
   shown: string[];
+  scores: [string, number][];
 }
 
-export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>; adblock?: boolean; audio?: boolean; rewarded?: boolean; interstitial?: boolean; language?: string; player?: { id?: string | null; isAuthorized?: boolean } } = {}): FakeBridge {
+export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>; adblock?: boolean; audio?: boolean; rewarded?: boolean; interstitial?: boolean; language?: string; boards?: string; player?: { id?: string | null; isAuthorized?: boolean } } = {}): FakeBridge {
   const listeners = new Map<string, ((v: unknown) => void)[]>();
   const on = (event: string, cb: (v: unknown) => void) => void listeners.set(event, [...(listeners.get(event) ?? []), cb]);
   const fake: FakeBridge = {
@@ -22,6 +23,7 @@ export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>
     tracked: [],
     saved: [],
     shown: [],
+    scores: [],
     emit: (event, value) => listeners.get(event)?.forEach((cb) => cb(value)),
   };
   const bridge: BridgeShape = {
@@ -43,6 +45,7 @@ export function fakeBridge(opts: { id?: string; stored?: Record<string, unknown>
     device: { type: 'desktop' },
     player: opts.player ?? { id: null, isAuthorized: false },
     analytics: { send: (e, d) => void fake.tracked.push([e, d]) },
+    leaderboards: { type: opts.boards ?? 'in_game', setScore: async (id, score) => void fake.scores.push([id, score]) },
   };
   fake.global.bridge = bridge;
   return fake;

@@ -37,6 +37,7 @@ export interface BridgeShape {
   device?: { type?: string };
   player?: { id?: string | null; isAuthorized?: boolean };
   analytics?: { send?: (event: string, data?: BridgeData) => unknown };
+  leaderboards?: { type?: string; setScore?: (id: string, score: number) => unknown };
 }
 
 export interface BridgeGlobal {
@@ -175,6 +176,14 @@ export class PlaygamaBridge {
 
   save(entries: Map<string, string>): void {
     void settle(() => this.sdk?.storage?.set?.([...entries.keys()], [...entries.values()]));
+  }
+
+  /** A score for one of the boards in the Bridge config; a no-op where the platform has none
+   *  ('not_available') and without the script. */
+  setScore(id: string, score: number): void {
+    const boards = this.sdk?.leaderboards;
+    if (!boards || boards.type === undefined || boards.type === 'not_available') return;
+    void settle(() => boards.setScore?.(id, score));
   }
 
   hasAdblock(): boolean {

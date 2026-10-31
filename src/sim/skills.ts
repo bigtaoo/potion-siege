@@ -2,6 +2,7 @@
 // Most skills belong to a hero and are only offered with it on the board; some are unlocked by
 // levelling that hero between battles, and the recipe cards also need a second hero fielded.
 
+import { LATE_STEPS, lateDamage, latePerk, perkWeight, type LatePerkId } from './latePerks';
 import type { Prng } from './math/prng';
 import { sample } from './math/pick';
 import { BALANCE, HERO_KINDS, type HeroKind } from './types';
@@ -53,45 +54,51 @@ interface SkillDef {
   hero?: HeroKind;
   /** A recipe: also needs this hero on the board. */
   with?: HeroKind;
+  /** How strong the card is, for its frame: the plain boosts common, the Lv 5 cards and the
+   *  stronger base ones rare, the Lv 15 cards epic, the recipes legend. */
+  rarity: Rarity;
 }
 
+export const RARITIES = ['common', 'rare', 'epic', 'legend'] as const;
+export type Rarity = (typeof RARITIES)[number];
+
 const DEFS: Record<SkillId, SkillDef> = {
-  allDamage: { max: 5 },
-  allSpeed: { max: 5 },
-  crit: { max: 4 },
-  gold: { max: 3 },
-  wallRepair: { max: 99 },
-  arcanePower: { max: 3, hero: 'arcane' },
-  arcaneMulti: { max: 2, hero: 'arcane' },
-  arcaneMark: { max: 2, hero: 'arcane' },
-  arcaneSplit: { max: 1, hero: 'arcane' },
-  arcaneIce: { max: 1, hero: 'arcane', with: 'ice' },
-  fireRadius: { max: 3, hero: 'fire' },
-  fireDamage: { max: 3, hero: 'fire' },
-  fireBurn: { max: 2, hero: 'fire' },
-  fireChain: { max: 1, hero: 'fire' },
-  fireArcane: { max: 1, hero: 'fire', with: 'arcane' },
-  iceFreeze: { max: 3, hero: 'ice' },
-  iceDamage: { max: 3, hero: 'ice' },
-  iceFrostbite: { max: 1, hero: 'ice' },
-  iceShatter: { max: 1, hero: 'ice' },
-  iceLightning: { max: 1, hero: 'ice', with: 'lightning' },
-  lightningChain: { max: 3, hero: 'lightning' },
-  lightningDamage: { max: 3, hero: 'lightning' },
-  lightningStatic: { max: 2, hero: 'lightning' },
-  lightningStrike: { max: 1, hero: 'lightning' },
-  lightningFire: { max: 1, hero: 'lightning', with: 'fire' },
-  poisonDamage: { max: 3, hero: 'poison' },
-  poisonRust: { max: 2, hero: 'poison' },
-  poisonSplash: { max: 1, hero: 'poison' },
-  poisonMelt: { max: 1, hero: 'poison' },
-  poisonLightning: { max: 1, hero: 'poison', with: 'lightning' },
-  windDamage: { max: 3, hero: 'wind' },
-  windPush: { max: 3, hero: 'wind' },
-  windHaste: { max: 2, hero: 'wind' },
-  windGust: { max: 1, hero: 'wind' },
-  windVortex: { max: 1, hero: 'wind' },
-  windFire: { max: 1, hero: 'wind', with: 'fire' },
+  allDamage: { max: 5, rarity: 'common' },
+  allSpeed: { max: 5, rarity: 'common' },
+  crit: { max: 4, rarity: 'rare' },
+  gold: { max: 3, rarity: 'common' },
+  wallRepair: { max: 99, rarity: 'common' },
+  arcanePower: { max: 3, hero: 'arcane', rarity: 'common' },
+  arcaneMulti: { max: 2, hero: 'arcane', rarity: 'rare' },
+  arcaneMark: { max: 2, hero: 'arcane', rarity: 'rare' },
+  arcaneSplit: { max: 1, hero: 'arcane', rarity: 'epic' },
+  arcaneIce: { max: 1, hero: 'arcane', with: 'ice', rarity: 'legend' },
+  fireRadius: { max: 3, hero: 'fire', rarity: 'common' },
+  fireDamage: { max: 3, hero: 'fire', rarity: 'common' },
+  fireBurn: { max: 2, hero: 'fire', rarity: 'rare' },
+  fireChain: { max: 1, hero: 'fire', rarity: 'epic' },
+  fireArcane: { max: 1, hero: 'fire', with: 'arcane', rarity: 'legend' },
+  iceFreeze: { max: 3, hero: 'ice', rarity: 'common' },
+  iceDamage: { max: 3, hero: 'ice', rarity: 'common' },
+  iceFrostbite: { max: 1, hero: 'ice', rarity: 'rare' },
+  iceShatter: { max: 1, hero: 'ice', rarity: 'epic' },
+  iceLightning: { max: 1, hero: 'ice', with: 'lightning', rarity: 'legend' },
+  lightningChain: { max: 3, hero: 'lightning', rarity: 'common' },
+  lightningDamage: { max: 3, hero: 'lightning', rarity: 'common' },
+  lightningStatic: { max: 2, hero: 'lightning', rarity: 'rare' },
+  lightningStrike: { max: 1, hero: 'lightning', rarity: 'epic' },
+  lightningFire: { max: 1, hero: 'lightning', with: 'fire', rarity: 'legend' },
+  poisonDamage: { max: 3, hero: 'poison', rarity: 'common' },
+  poisonRust: { max: 2, hero: 'poison', rarity: 'rare' },
+  poisonSplash: { max: 1, hero: 'poison', rarity: 'rare' },
+  poisonMelt: { max: 1, hero: 'poison', rarity: 'epic' },
+  poisonLightning: { max: 1, hero: 'poison', with: 'lightning', rarity: 'legend' },
+  windDamage: { max: 3, hero: 'wind', rarity: 'common' },
+  windPush: { max: 3, hero: 'wind', rarity: 'common' },
+  windHaste: { max: 2, hero: 'wind', rarity: 'rare' },
+  windGust: { max: 1, hero: 'wind', rarity: 'rare' },
+  windVortex: { max: 1, hero: 'wind', rarity: 'epic' },
+  windFire: { max: 1, hero: 'wind', with: 'fire', rarity: 'legend' },
 };
 
 /** The hero a skill belongs to and, for a recipe, the second one it needs. */
@@ -99,17 +106,25 @@ export function skillHeroes(id: SkillId): { hero?: HeroKind; with?: HeroKind } {
   return { hero: DEFS[id].hero, with: DEFS[id].with };
 }
 
+/** How strong a skill's card is. */
+export function skillRarity(id: SkillId): Rarity {
+  return DEFS[id].rarity;
+}
+
 /** How many times a skill can be taken. */
 export function skillMax(id: SkillId): number {
   return DEFS[id].max;
 }
 
-/** Passive boosts a milestone gives to a skill the hero already has. */
+/** Passive boosts a milestone gives to a skill the hero already has, and past Lv 20 the late
+ *  perks (latePerks.ts). */
 export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus', 'windPushPlus'] as const;
-export type PerkId = (typeof PERK_IDS)[number];
+export type PerkId = (typeof PERK_IDS)[number] | LatePerkId;
 
 /** What levelling a hero opens up: a new card in the pool, or a perk. */
 export type Milestone = { level: number } & ({ skill: SkillId } | { perk: PerkId });
+
+const late = (kind: HeroKind): Milestone[] => LATE_STEPS.map(({ level, step }) => ({ level, perk: latePerk(kind, step) }));
 
 export const MILESTONES: Record<HeroKind, Milestone[]> = {
   arcane: [
@@ -117,36 +132,42 @@ export const MILESTONES: Record<HeroKind, Milestone[]> = {
     { level: 10, perk: 'arcaneMarkPlus' },
     { level: 15, skill: 'arcaneSplit' },
     { level: 20, skill: 'arcaneIce' },
+    ...late('arcane'),
   ],
   fire: [
     { level: 5, skill: 'fireBurn' },
     { level: 10, perk: 'fireBurnPlus' },
     { level: 15, skill: 'fireChain' },
     { level: 20, skill: 'fireArcane' },
+    ...late('fire'),
   ],
   ice: [
     { level: 5, skill: 'iceFrostbite' },
     { level: 10, perk: 'iceFreezePlus' },
     { level: 15, skill: 'iceShatter' },
     { level: 20, skill: 'iceLightning' },
+    ...late('ice'),
   ],
   lightning: [
     { level: 5, skill: 'lightningStatic' },
     { level: 10, perk: 'lightningStaticPlus' },
     { level: 15, skill: 'lightningStrike' },
     { level: 20, skill: 'lightningFire' },
+    ...late('lightning'),
   ],
   poison: [
     { level: 5, skill: 'poisonSplash' },
     { level: 10, perk: 'poisonRustPlus' },
     { level: 15, skill: 'poisonMelt' },
     { level: 20, skill: 'poisonLightning' },
+    ...late('poison'),
   ],
   wind: [
     { level: 5, skill: 'windGust' },
     { level: 10, perk: 'windPushPlus' },
     { level: 15, skill: 'windVortex' },
     { level: 20, skill: 'windFire' },
+    ...late('wind'),
   ],
 };
 
@@ -272,34 +293,35 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     wind: 1 + s.classDamage * levels.windDamage,
   };
   const p = BALANCE.heroes.poison;
+  const w = (base: PerkId, kind: HeroKind) => perkWeight(perks, base, kind);
   return {
-    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (own[kind] ?? 1),
+    damage: (kind) => (1 + s.allDamage * levels.allDamage) * (own[kind] ?? 1) * lateDamage(perks, kind),
     speed: 1 + s.allSpeed * levels.allSpeed,
     crit: s.crit * levels.crit,
     goldPerKill: s.gold * levels.gold,
     extraArrows: levels.arcaneMulti,
     fireRadius: 1 + s.fireRadius * levels.fireRadius,
-    burn: s.fireBurn * levels.fireBurn * (perks.has('fireBurnPlus') ? 1 + s.fireBurnPlus : 1),
+    burn: s.fireBurn * levels.fireBurn * (1 + s.fireBurnPlus * w('fireBurnPlus', 'fire')),
     fireChain: levels.fireChain > 0,
     burstBolts: levels.fireArcane > 0,
-    mark: s.arcaneMark * levels.arcaneMark * (perks.has('arcaneMarkPlus') ? 1 + s.arcaneMarkPlus : 1),
+    mark: s.arcaneMark * levels.arcaneMark * (1 + s.arcaneMarkPlus * w('arcaneMarkPlus', 'arcane')),
     splitBolts: levels.arcaneSplit > 0,
     frostBolts: levels.arcaneIce > 0,
     freezeChance: s.iceFreezeChance * levels.iceFreeze,
-    freezeTime: perks.has('iceFreezePlus') ? 1 + s.iceFreezePlus : 1,
+    freezeTime: 1 + s.iceFreezePlus * w('iceFreezePlus', 'ice'),
     frostbite: levels.iceFrostbite > 0,
     shatter: levels.iceShatter > 0,
     superconduct: levels.iceLightning > 0,
     extraChains: s.lightningChains * levels.lightningChain,
-    static: s.lightningStatic * levels.lightningStatic * (perks.has('lightningStaticPlus') ? 1 + s.lightningStaticPlus : 1),
+    static: s.lightningStatic * levels.lightningStatic * (1 + s.lightningStaticPlus * w('lightningStaticPlus', 'lightning')),
     thunder: levels.lightningStrike > 0,
     plasma: levels.lightningFire > 0,
     rustMax: p.rustMax + s.rustExtra * levels.poisonRust,
-    rustStep: p.rustStep * (perks.has('poisonRustPlus') ? 1 + s.rustPlus : 1),
+    rustStep: p.rustStep * (1 + s.rustPlus * w('poisonRustPlus', 'poison')),
     acidSplash: levels.poisonSplash > 0,
     melt: levels.poisonMelt > 0,
     electrolysis: levels.poisonLightning > 0,
-    push: (1 + s.windPush * levels.windPush) * (perks.has('windPushPlus') ? 1 + s.windPushPlus : 1),
+    push: (1 + s.windPush * levels.windPush) * (1 + s.windPushPlus * w('windPushPlus', 'wind')),
     pushHeavy: perks.has('windPushPlus'),
     windSpeed: 1 + s.windHaste * levels.windHaste,
     gust: levels.windGust > 0,

@@ -137,17 +137,38 @@ describe('daily challenge', () => {
     expect(canPlayAd(m, d)).toBe(false);
     expect(beginAttempt(m, d, true)).toBeNull();
     expect(beginAttempt(m, d, false)).toBe(0);
+    bookAttempt(m, 3);
     expect(attemptsUsed(m, d)).toBe(1);
     expect(challengeFresh(m, d)).toBe(false);
     expect(canPlayFree(m, d)).toBe(false);
     expect(canPlayAd(m, d)).toBe(true);
     expect(beginAttempt(m, d, false)).toBeNull();
     expect(beginAttempt(m, d, true)).toBe(0);
+    bookAttempt(m, 3);
     expect(canPlayAd(m, d)).toBe(false);
     expect(beginAttempt(m, d, true)).toBeNull();
     // a new day, a new free attempt
     expect(canPlayFree(m, '2026-10-17')).toBe(true);
     expect(attemptsUsed(m, '2026-10-17')).toBe(0);
+  });
+
+  it('charges an attempt when it is booked, so one left midway can be played again', () => {
+    const m = newMeta();
+    const d = '2026-10-16';
+    expect(beginAttempt(m, d, false)).toBe(0);
+    // left from the pause menu: nothing booked
+    expect(attemptsUsed(m, d)).toBe(0);
+    expect(canPlayFree(m, d)).toBe(true);
+    expect(beginAttempt(m, d, false)).toBe(0);
+    expect(m.challenge.streak).toBe(1);
+    bookAttempt(m, 5);
+    expect(canPlayFree(m, d)).toBe(false);
+    // the ad attempt the same way, and never more booked than the day has
+    expect(beginAttempt(m, d, true)).toBe(0);
+    expect(canPlayAd(m, d)).toBe(true);
+    bookAttempt(m, 5);
+    bookAttempt(m, 5);
+    expect(m.challenge.attempts).toBe(C.attempts + C.adAttempts);
   });
 
   it('pays the best tier once a day: only what a better attempt adds', () => {

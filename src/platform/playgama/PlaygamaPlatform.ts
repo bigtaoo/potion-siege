@@ -133,6 +133,10 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     this.bridge.send('player_got_achievement');
   }
 
+  setScore(board: string, score: number): void {
+    this.bridge.setScore(board, score);
+  }
+
   /** Hidden under an adblocker and where the platform has no rewarded ads. */
   override rewardedAvailable(): boolean {
     return this.bridge.rewardedSupported() && !this.bridge.hasAdblock();
