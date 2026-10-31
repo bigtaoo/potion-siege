@@ -16,6 +16,7 @@ import { COLORS, label } from '../ui';
 import { LIGHT, P } from '../kit/palette';
 import { DESIGN_H } from '../viewport';
 import { BAR_H, BAR_Y } from './wall';
+import { CommanderHints, drawCellIcon, drawFullGlow } from './cmdHints';
 
 const C = BALANCE.commander;
 /** Where the commander stands: feet on this point, below the wall between the two buttons. On a
@@ -66,6 +67,8 @@ export class CommanderArt {
   readonly count = label('', 34, { stroke: { color: P.umber, width: 5 } });
   /** The call to tap once it is charged, at its feet. */
   readonly castTap = label('', 40, { stroke: { color: P.umber, width: 6 } });
+  /** The first-time line over the count and the hand at a full badge. */
+  readonly hints = new CommanderHints();
   /** The pop as a cell is built, running down. */
   pulse = 0;
   /** The commander's last cast, for the raise-and-throw; a summon gets a smaller nod. */
@@ -133,6 +136,7 @@ export class CommanderArt {
     // over its head
     const tap = full && !b.paused;
     this.castTap.visible = tap;
+    this.hints.pointAt(tap ? badgeAt() : null, BADGE.r * k, t);
     if (tap) {
       const words = tr('castTap');
       if (this.castTap.text !== words) this.castTap.text = words;
@@ -148,9 +152,12 @@ export class CommanderArt {
     }
     const next = b.summonsToNextCell();
     this.count.visible = next !== null;
+    this.hints.showTip(next, head, k, b.paused ? 0 : dt);
     if (next === null) return;
     const per = C.summonsPerCell;
     drawUpright(over, head.x, head.y, (ox, oy) => over.roundRect(ox - 56 * k, oy - 22 * k, 112 * k, 44 * k, 22 * k).fill({ color: LIGHT.edge, alpha: 0.85 }));
+    const icon = aside(head.x, head.y, -80 * k, 0);
+    drawCellIcon(over, icon.x, icon.y, k);
     this.count.text = tr('commanderNext', { n: per - next, total: per });
   }
 
@@ -161,6 +168,7 @@ export class CommanderArt {
     const bomb = b.nextCast === 'bomb';
     const color = bomb ? BOMB_COLOR : BREW_COLOR;
     const r = BADGE.r * this.boost * (full ? 1 + Math.abs(Math.sin(t * 6)) * 0.12 : 1);
+    if (full) drawFullGlow(g, x, y, r, t);
     g.circle(x, y, r + 9).fill({ color: P.umber, alpha: 0.9 });
     g.circle(x, y, r).fill(full ? color : LIGHT.edge);
     const frac = full ? 1 - b.chargedFor / ticks(C.autoCast) : b.charge / C.charge;
