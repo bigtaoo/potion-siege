@@ -24,8 +24,34 @@ on its own:
 
 The parallel boot has a cost. While the SDK is still starting, the first battle's art finishes and
 the later art starts loading, so it takes bandwidth from the boot. Some runs had 20–33 requests
-and up to 659 kB in flight before the first frame; one cold run took 8.91 s. Holding back the
-SOON/LATER art until boot() has started would take that away.
+and up to 659 kB in flight before the first frame; one cold run took 8.91 s.
+
+## Rest of the art after the first frame (84aaaf8)
+
+Measured 2026-10-31 with `npm run firstframe -- dist 5` on a web build
+(`VITE_ANALYTICS_URL= npx vite build`), with Fast 3G, 4x CPU and the median of 5 runs. Two changes
+went in together:
+
+- `loadArt()` waits for the FIRST tier only. `restOfArt()` loads SOON, then LATER, from the
+  first frame on, and `game.artIn()` rebuilds the screens once they are in.
+- scripts/pixiPreload.mjs adds modulepreload links for the renderer chunks that Pixi otherwise
+  imports only during `Application.init`, which costs one more round trip. Every build gets
+  these links.
+
+| | first frame |
+|---|---|
+| before (7f19edb) | 5.09 s |
+| after | 4.83 s |
+
+About 420 kB still crosses the wire before the first frame, so what is left is bandwidth. Two
+other approaches were tried and dropped:
+
+- **Splitting the main chunk.** It is all code the first frame runs: about 357 kB of game and
+  290 kB of Pixi, before gzip. A Pixi vendor chunk fails because the app imports Pixi through
+  `pixi.js` barrels: the chunk either pulls in every renderer or comes out empty. The build's
+  size warning is raised to `CHUNK_WARN_KB` instead.
+- **Preload links for images.** Pixi fetches textures in a worker, so it cannot reuse the
+  page's preloaded images.
 
 ## Battle frame cost
 
