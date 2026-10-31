@@ -50,6 +50,8 @@ describe('the first-time line', () => {
     // beside the count, not over it on the wall's numbers
     expect(h.tip.y).toBe(1700);
     expect(h.tip.x).toBeLessThan(500 - 80);
+    // wrapped to the room left of it, so a phone's edge cuts no word
+    expect([h.tip.style.wordWrap, h.tip.style.wordWrapWidth]).toEqual([true, h.tip.x - 12]);
     h.showTip(3, { x: 500, y: 1700 }, 1, TIP_SECONDS);
     h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
     expect(h.tip.visible).toBe(false);

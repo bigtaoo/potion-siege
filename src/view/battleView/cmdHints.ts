@@ -16,6 +16,8 @@ const TIP_LEFT = 104;
 /** On a turned field the board beside the wall is narrow: the tip goes under the commander, wrapped. */
 const LAND_BELOW = 250;
 const LAND_WRAP = 230;
+/** On an upright field the tip wraps to the room left of it, this far in from the screen edge. */
+const EDGE = 12;
 
 /** Lets the tip show again, as on a fresh page load. */
 export function resetCellTip(): void {
@@ -62,11 +64,13 @@ export class CommanderHints extends Container {
     const words = t('cellTip', { n: left });
     if (this.tip.text !== words) this.tip.text = words;
     const land = isLand();
-    if (this.tip.style.wordWrap !== land) {
-      this.tip.anchor.set(land ? 0.5 : 1, 0.5);
-      Object.assign(this.tip.style, { wordWrap: land, wordWrapWidth: LAND_WRAP, breakWords: land });
-    }
     const p = land ? aside(at.x, at.y, 0, LAND_BELOW * k) : aside(at.x, at.y, -TIP_LEFT * k, 0);
+    // a phone's narrow screen: the words on one line would run off its left edge
+    const wrap = land ? LAND_WRAP : Math.max(LAND_WRAP / 2, (p.x - EDGE) / k);
+    if (this.tip.style.wordWrapWidth !== wrap || this.tip.anchor.x !== (land ? 0.5 : 1)) {
+      this.tip.anchor.set(land ? 0.5 : 1, 0.5);
+      Object.assign(this.tip.style, { wordWrap: true, wordWrapWidth: wrap, breakWords: land, align: land ? 'center' : 'right' });
+    }
     this.tip.position.set(p.x, p.y);
     this.tip.scale.set(k);
     this.tip.alpha = Math.min(1, tipLeft / 0.4);
