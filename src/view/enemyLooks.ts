@@ -5,11 +5,14 @@
 
 import { CanvasSource, Rectangle, Texture } from 'pixi.js';
 import type { Enemy } from '../sim/types';
-import { METALS, metalled, rimmed, type Pixels } from './enemyBake';
+import { METALS, RIM, SOFT_RIM, metalled, rimmed, type Pixels } from './enemyBake';
 import { ENEMY_ART } from './shapes';
 
-/** How wide the rim is, in design units, on an enemy of its kind's size. */
+/** How wide the rim is, in design units, on an enemy of its kind's size: an elite's, the rest's. */
 export const RIM_WIDTH = 2.5;
+export const SOFT_RIM_WIDTH = 1.5;
+/** Added to the chapter in a look's key for an elite's. */
+const ELITE = 10;
 
 /** The tint of what is on `e`, the strongest first; white when nothing is. */
 export function statusTint(e: Enemy): number {
@@ -28,8 +31,9 @@ export function chapterMetal(chapter: number): (typeof METALS)[number] {
   return METALS[Math.max(0, Math.min(METALS.length - 1, chapter - 1))];
 }
 
-/** Each base texture's baked looks: 0 the grey one, 1-5 the chapters'. Only the grey ones and
- *  the last chapter asked for are kept: endless mode walks through all five. */
+/** Each base texture's baked looks: 0 the grey one, 1-5 the chapters', each plus ELITE for an
+ *  elite's. Only the grey ones and the last chapter asked for are kept: endless mode walks
+ *  through all five. */
 const baked = new Map<Texture, Map<number, Texture>>();
 let kept = 0;
 
@@ -37,7 +41,7 @@ let kept = 0;
 function keepOnly(chapter: number): void {
   if (chapter === kept) return;
   kept = chapter;
-  for (const looks of baked.values()) for (const k of looks.keys()) if (k > 0 && k !== chapter) looks.delete(k);
+  for (const looks of baked.values()) for (const k of looks.keys()) if (k % ELITE > 0 && k % ELITE !== chapter) looks.delete(k);
 }
 
 /** Reads `base`'s pixels off a canvas; undefined without a 2D context. */
@@ -68,25 +72,27 @@ function textureOf(base: Texture, px: Pixels, pad: number): Texture | undefined 
   });
 }
 
-/** `base` (art of an enemy kind `radius` across its hit circle) rimmed, in the metal of `chapter`
- *  or with 0 in its own grey. `base` itself when it cannot be baked. */
-export function enemyLook(base: Texture, radius: number, chapter: number): Texture {
+/** `base` (art of an enemy kind `radius` across its hit circle) rimmed, brightly for an `elite`,
+ *  in the metal of `chapter` or with 0 in its own grey. `base` itself when it cannot be baked. */
+export function enemyLook(base: Texture, radius: number, chapter: number, elite = false): Texture {
   if (chapter > 0) keepOnly(chapter);
   let looks = baked.get(base);
   if (!looks) baked.set(base, (looks = new Map()));
-  const have = looks.get(chapter);
+  const key = chapter + (elite ? ELITE : 0);
+  const have = looks.get(key);
   if (have) return have;
   let made = base;
   try {
     const px = pixelsOf(base);
     if (px) {
-      const pad = Math.max(1, Math.round((RIM_WIDTH * base.height) / (radius * ENEMY_ART.height)));
+      const width = elite ? RIM_WIDTH : SOFT_RIM_WIDTH;
+      const pad = Math.max(1, Math.round((width * base.height) / (radius * ENEMY_ART.height)));
       if (chapter > 0) metalled(px, chapterMetal(chapter));
-      made = textureOf(base, rimmed(px, pad), pad) ?? base;
+      made = textureOf(base, rimmed(px, pad, elite ? RIM : SOFT_RIM), pad) ?? base;
     }
   } catch (err) {
     console.warn('enemy art: could not bake, drawing it as it comes', err);
   }
-  looks.set(chapter, made);
+  looks.set(key, made);
   return made;
 }

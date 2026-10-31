@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { METALS, RIM, metalAt, metalled, rimmed, type Pixels } from './enemyBake';
+import { METALS, RIM, SOFT_RIM, metalAt, metalled, rimmed, type Pixels } from './enemyBake';
 
 /** A w x h picture, each pixel [r, g, b, a] from `at`. */
 function pic(w: number, h: number, at: (x: number, y: number) => number[]): Pixels {
@@ -20,12 +20,20 @@ describe('the rim', () => {
 
   it('rings the solid pixels in the rim colour out to the pad, nothing past it', () => {
     const r = rimmed(dot, 3);
-    const rim = [(RIM >> 16) & 255, (RIM >> 8) & 255, RIM & 255];
+    const rim = [(RIM.color >> 16) & 255, (RIM.color >> 8) & 255, RIM.color & 255];
     expect(px(r, 7, 5).slice(0, 3)).toEqual(rim);
     expect(px(r, 7, 5)[3]).toBeGreaterThan(200);
     expect(px(r, 5, 2)[3]).toBeGreaterThan(0);
     expect(px(r, 9, 5)[3]).toBe(0);
     expect(px(r, 0, 0)[3]).toBe(0);
+  });
+
+  it('rings it fainter and dimmer with the soft rim', () => {
+    const [hard, soft] = [rimmed(dot, 3), rimmed(dot, 3, SOFT_RIM)];
+    expect(px(soft, 7, 5)[3]).toBeLessThan(px(hard, 7, 5)[3] * 0.6);
+    const lum = (p: number[]) => p[0] + p[1] + p[2];
+    expect(lum(px(soft, 7, 5))).toBeLessThan(lum(px(hard, 7, 5)));
+    expect(px(soft, 5, 5)).toEqual([10, 20, 30, 255]);
   });
 
   it('counts a faint pixel as empty, but keeps it over the rim', () => {

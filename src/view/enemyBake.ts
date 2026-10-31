@@ -1,5 +1,5 @@
 // What an enemy's art is baked into before the battle draws it, pixel by pixel on its RGBA data:
-// a light rim round its ink line, so a grey clockwork soldier stands off the grey stone of the
+// a rim round its ink line (light on an elite, dim on the rest), so a grey clockwork soldier stands off the grey stone of the
 // later chapters, and its metal turned to the chapter's own (copper, steel blue, rust, black iron,
 // gilt). Its coloured parts (the red eyes, the brass keys) keep their colours.
 
@@ -15,10 +15,17 @@ export const METALS: readonly Metal[] = [
   [0x5a3a08, 0xd2a028, 0xfff0a0], // gilt
 ];
 
-/** The rim round every enemy: warm cream, like the white edge of a sticker. */
-export const RIM = 0xffe6bc;
-/** How opaque the rim is at its full width. */
-const RIM_ALPHA = 0.9;
+/** A rim's colour and how opaque it is at its full width. */
+export interface Rim {
+  color: number;
+  alpha: number;
+}
+
+/** The rim round an elite: warm cream, like the white edge of a sticker. */
+export const RIM: Rim = { color: 0xffe6bc, alpha: 0.9 };
+/** The rim round the rest: a dim tan, enough to part them from the ground without a crowd of
+ *  them glaring. */
+export const SOFT_RIM: Rim = { color: 0xd2bc94, alpha: 0.45 };
 
 /** An RGBA picture: what a canvas's getImageData hands back, and what goes back into it. */
 export interface Pixels {
@@ -29,7 +36,7 @@ export interface Pixels {
 
 /** `px`'s picture `pad` pixels bigger on every side, with a rim `pad` wide round whatever is
  *  more than half opaque, its outer edge soft. */
-export function rimmed(px: Pixels, pad: number, color = RIM): Pixels {
+export function rimmed(px: Pixels, pad: number, { color, alpha } = RIM): Pixels {
   const w = px.width + pad * 2;
   const h = px.height + pad * 2;
   const n = w * h;
@@ -72,7 +79,7 @@ export function rimmed(px: Pixels, pad: number, color = RIM): Pixels {
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
-      const rim = Math.max(0, Math.min(1, pad + 0.5 - d[i])) * RIM_ALPHA;
+      const rim = Math.max(0, Math.min(1, pad + 0.5 - d[i])) * alpha;
       const sx = x - pad;
       const sy = y - pad;
       const inside = sx >= 0 && sy >= 0 && sx < px.width && sy < px.height;

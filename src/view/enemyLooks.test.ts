@@ -85,6 +85,21 @@ describe('the enemy looks', () => {
     expect(enemyLook(t, 36, 1)).not.toBe(one);
   });
 
+  it("bakes an elite's look apart, rimmed wider and brighter, and keeps it with its chapter", () => {
+    const put = fakeCanvas();
+    const t = base();
+    // a kind so small that a 1 px art is a few rims across
+    const plain = enemyLook(t, 0.1, 2);
+    const elite = enemyLook(t, 0.1, 2, true);
+    expect(elite).not.toBe(plain);
+    expect(elite.trim.x).toBeLessThan(plain.trim.x);
+    const edge = (p: (typeof put)[number]) => Math.max(...p.data.filter((_, i) => i % 4 === 3 && i < p.width * 4));
+    expect(edge(put[1])).toBeGreaterThan(edge(put[0]));
+    enemyLook(t, 0.1, 3);
+    expect(enemyLook(t, 0.1, 2, true)).not.toBe(elite);
+    expect(enemyLook(t, 0.1, 3, true)).toBe(enemyLook(t, 0.1, 3, true));
+  });
+
   it('falls back to the art when baking throws', () => {
     vi.stubGlobal('document', { createElement: () => { throw new Error('no'); } });
     const warn = vi.spyOn(console, 'warn').mockImplementation(() => {});

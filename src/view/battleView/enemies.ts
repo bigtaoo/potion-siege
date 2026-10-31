@@ -111,7 +111,7 @@ export class EnemyLayer {
       // something is on them, so the tint of that reads on every chapter
       const boss = isBoss(e.kind);
       const tint = statusTint(e);
-      const tex = boss ? art : enemyLook(art, BALANCE.enemies[e.kind].radius, tint === 0xffffff ? chapter : 0);
+      const tex = boss ? art : enemyLook(art, BALANCE.enemies[e.kind].radius, tint === 0xffffff ? chapter : 0, e.elite);
       const s = poseEnemy(this.art, tex, e, bt, react);
       if (e.freezeTime > 0) {
         drawUpright(w, e.x, e.y, (ox, oy) => iceShell(w, ox, oy + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92));
