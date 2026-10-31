@@ -26,9 +26,9 @@ describe('chapter 1', () => {
       for (const stage of stages) won[`b${budget} s${stage}`] = 100 * winRate(Array.from({ length: 30 }, (_, i) => playOut(1000 + i, 1200, battleSetup(m, stage))));
     }
     expectNear('bot win % (30 seeds)', won, {
-      'b0 s1': 80, 'b0 s2': 76.7, 'b0 s3': 60, 'b0 s4': 33.3, 'b0 s5': 13.3,
+      'b0 s1': 96.7, 'b0 s2': 76.7, 'b0 s3': 60, 'b0 s4': 33.3, 'b0 s5': 13.3,
       'b500 s3': 80, 'b500 s4': 70, 'b500 s5': 60, 'b500 s6': 30,
-      'b1000 s5': 76.7, 'b1000 s6': 40, 'b1000 s7': 26.7, 'b1000 s8': 10,
+      'b1000 s5': 76.7, 'b1000 s6': 60, 'b1000 s7': 46.7, 'b1000 s8': 10,
     }, 15);
   }, 300_000);
 });

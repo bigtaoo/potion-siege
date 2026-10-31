@@ -6,7 +6,7 @@ import type { HeroKind } from './types';
 const LINEUP: HeroKind[] = ['fire', 'ice', 'poison', 'lightning'];
 
 describe('mergedKind', () => {
-  it('keeps the kind about half the time and draws from the lineup otherwise', () => {
+  it('keeps the kind about three times in ten and draws from the lineup otherwise', () => {
     const rng = new Prng(3);
     let kept = 0;
     const N = 4000;

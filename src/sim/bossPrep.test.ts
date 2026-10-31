@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
-import { BOSS_CHARGE, PREP_FROM, weakFielded } from './bossPrep';
+import { PREP_FROM, weakFielded } from './bossPrep';
 import { resist } from './enemies';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { BALANCE, isBoss } from './types';
@@ -19,12 +19,12 @@ function lastWave(setup: BattleSetup = { ...BASE_SETUP, stage: 4 }): Battle {
 }
 
 describe('bossPrep', () => {
-  it('offers a free skill and half a charge as the last boss wave sets out', () => {
+  it('offers a free skill, and no extra charge, as the last boss wave sets out', () => {
     const b = lastWave();
     expect(b.wave).toBe(BALANCE.waves.count);
     expect(b.choices).toHaveLength(3);
     expect(b.choiceReason).toBe('boss');
-    expect(b.charge).toBe(Math.round(BALANCE.commander.charge * BOSS_CHARGE));
+    expect(b.charge).toBe(0);
     expect(b.drain()).toContainEqual({ type: 'offer', reason: 'boss' });
     expect(b.pending.some((s) => isBoss(s.kind))).toBe(true);
   });
@@ -39,16 +39,6 @@ describe('bossPrep', () => {
     for (let i = 0; i < 300; i++) b.step();
     expect(b.choices).toBeNull();
     expect(b.enemies.length).toBeGreaterThan(0);
-  });
-
-  it('caps the charge at full', () => {
-    const b = new Battle(5, { ...BASE_SETUP, stage: 4 });
-    b.charge = BALANCE.commander.charge - 1;
-    b.wave = BALANCE.waves.count - 1;
-    b.pending = [];
-    b.enemies = [];
-    b.step();
-    expect(b.charge).toBe(BALANCE.commander.charge);
   });
 
   it('leaves endless mode, stages 1-3 and the earlier waves alone', () => {

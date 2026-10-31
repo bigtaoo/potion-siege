@@ -37,7 +37,7 @@ describe('chapter bosses', () => {
     }
     expectNear('boss win % and its edge over the tank (20 seeds, 3 stages)', delta, {
       'clock win %': 48.3, 'clock - tank': -5,
-      'tripod win %': 53.3, 'tripod - tank': -11.7,
+      'tripod win %': 71.7, 'tripod - tank': 13.3,
       'anvil win %': 48.3, 'anvil - tank': -11.7,
       'gear win %': 41.7, 'gear - tank': -10,
     }, 15);
