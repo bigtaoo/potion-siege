@@ -1,5 +1,6 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { CrazyGamesPlatform } from './CrazyGamesPlatform';
+import { saveWith } from '../../save/testSaves';
 import { CrazyGamesSdk, type CgGlobal } from './sdk';
 
 beforeAll(() => {
@@ -191,10 +192,10 @@ describe('CrazyGamesPlatform ads', () => {
 
   it('tells the session where the portal runs the game and whether it is in Basic Launch', async () => {
     const global: CgGlobal = { CrazyGames: { SDK: { environment: 'crazygames', user: { systemInfo: { applicationType: 'google_play_store' } }, ad: ads('error', { basicLaunch: true }).ad } } };
-    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(global))).sessionProps()).toEqual({ app: 'google_play_store', basic: true });
+    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(global))).sessionProps()).toEqual({ app: 'google_play_store', basic: true, signedIn: false, restored: 'none' });
     const odd: CgGlobal = { CrazyGames: { SDK: { environment: 'crazygames', user: { systemInfo: { applicationType: 'Web App!' } } } } };
-    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(odd))).sessionProps()).toEqual({ basic: false });
-    expect((await platform('disabled')).p.sessionProps()).toEqual({});
+    expect((await CrazyGamesPlatform.create(new CrazyGamesSdk(odd))).sessionProps()).toEqual({ basic: false, signedIn: false, restored: 'none' });
+    expect((await platform('disabled')).p.sessionProps()).toEqual({ restored: 'none' });
   });
 
   it('keeps the rewards under an adblocker in Basic Launch, where they come without an ad', async () => {
@@ -217,6 +218,35 @@ describe('CrazyGamesPlatform ads', () => {
     try {
       await platform('crazygames');
       expect(session.type).toBe('ambient');
+    } finally {
+      vi.unstubAllGlobals();
+    }
+  });
+
+  it("keeps the save beside the portal's per account, and brings it back when the portal lost it", async () => {
+    const data = new Map<string, string>();
+    const local = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => local.get(k) ?? null, setItem: (k: string, v: string) => void local.set(k, v) } });
+    try {
+      const token = `h.${btoa(JSON.stringify({ userId: 'cg-u1' }))}.s`;
+      const boot = (store: Map<string, string>) =>
+        CrazyGamesPlatform.create(
+          new CrazyGamesSdk({
+            CrazyGames: {
+              SDK: {
+                environment: 'crazygames',
+                user: { getUserToken: async () => token },
+                data: { getItem: (k) => store.get(k) ?? null, setItem: (k, v) => void store.set(k, v) },
+              },
+            },
+          }),
+        );
+      const first = await boot(data);
+      first.storage.setItem('mb.save', saveWith(3));
+      expect(first.sessionProps()).toMatchObject({ signedIn: true, restored: 'none' });
+      // the portal's cloud comes back empty on the next visit
+      const again = await boot(new Map());
+      expect([again.storage.getItem('mb.save'), again.sessionProps().restored]).toEqual([saveWith(3), 'mirror']);
     } finally {
       vi.unstubAllGlobals();
     }

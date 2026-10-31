@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { AD_PLAY_MS, AD_START_MS, ADBLOCK_WAIT_MS, CrazyGamesSdk, SDK_WAIT_MS, type CgAdCallbacks, type CgGlobal } from './sdk';
+import { AD_PLAY_MS, AD_START_MS, ADBLOCK_WAIT_MS, CrazyGamesSdk, SDK_WAIT_MS, USER_WAIT_MS, type CgAdCallbacks, type CgGlobal } from './sdk';
 
 // The SDK's calls that can hang: an ad that never calls back, and an adblock probe that never
 // answers. Neither may hold the game.
@@ -245,6 +245,20 @@ describe('CrazyGamesSdk on the portal', () => {
       throw new Error('no user module');
     };
     expect(await named(broken)).toBeNull();
+  });
+
+  it("reads the signed-in account's id from its token, and none for a guest, a bad token or no answer", async () => {
+    const token = (payload: unknown) => `h.${btoa(JSON.stringify(payload)).replace(/=+$/, '').replace(/\+/g, '-').replace(/\//g, '_')}.sig`;
+    const idOf = async (getUserToken: () => unknown) => (await ready({ user: { getUserToken } })).userId();
+    expect(await idOf(async () => token({ userId: 'u-1?>', username: 'brewer' }))).toBe('u-1?>');
+    expect(await idOf(async () => Promise.reject(new Error('userNotAuthenticated')))).toBeNull();
+    for (const bad of ['nodots', 'a.%%%.b', token({ userId: 7 }), token(null), 5]) expect(await idOf(async () => bad), String(bad)).toBeNull();
+    expect(await (await ready({ user: { getUserToken: async () => token({ userId: 'u1' }) } }, 'disabled')).userId()).toBeNull();
+    let t = 0;
+    const slow = new CrazyGamesSdk({ CrazyGames: { SDK: { environment: 'crazygames', user: { getUserToken: () => new Promise(() => {}) } } } }, () => t, async (ms) => void (t += ms));
+    await slow.init();
+    expect(await slow.userId()).toBeNull();
+    expect(t).toBeGreaterThanOrEqual(USER_WAIT_MS);
   });
 
   it('offers accounts only where the portal says it has them', async () => {

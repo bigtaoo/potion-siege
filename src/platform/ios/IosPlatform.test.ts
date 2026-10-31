@@ -1,6 +1,7 @@
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { psNative, type AdState, type PSNative, type StoreState } from './bridge';
 import { IosPlatform } from './IosPlatform';
+import { saveWith } from '../../save/testSaves';
 import { AD_FREE_ID } from './storeKit';
 
 // The iOS host over a stub shell: the ad-free card's perk over AdMob, the key store the shell
@@ -126,6 +127,40 @@ describe('IosPlatform ads', () => {
       vi.unstubAllGlobals();
     }
     expect(open).toHaveBeenCalledWith('https://p.gamestao.com/privacy', '_blank', 'noopener');
+  });
+});
+
+describe('IosPlatform save copies', () => {
+  it("keeps the save per Game Center player and brings it back after a reinstall", async () => {
+    const local = new Map<string, string>();
+    vi.stubGlobal('window', { localStorage: { getItem: (k: string) => local.get(k) ?? null, setItem: (k: string, v: string) => void local.set(k, v) } });
+    try {
+      const phone = (player: string | null, saved: Record<string, string> = {}) => {
+        const native: Partial<PSNative> = {
+          v: 3,
+          saved,
+          save: () => {},
+          gameCenter: () => ({ alias: player && 'brewer', player, canSignIn: false }),
+          onGameCenter: () => {},
+        };
+        return new IosPlatform(native, fakeDoc().doc);
+      };
+      const first = phone('T:_abc');
+      await first.keepCopies(fakeDoc().doc, {} as Window);
+      first.storage.setItem('mb.save', saveWith(4));
+      expect(first.sessionProps()).toEqual({ signedIn: true, restored: 'none' });
+      // the shell's store came back empty: the copy beside it is the same player's
+      local.delete('mb.save');
+      const again = phone('T:_abc');
+      await again.keepCopies(fakeDoc().doc, {} as Window);
+      expect([again.storage.getItem('mb.save'), again.sessionProps()]).toEqual([saveWith(4), { signedIn: true, restored: 'mirror' }]);
+      // signed out of Game Center: the device's guest
+      const guest = phone(null, { 'mb.save': saveWith(2) });
+      await guest.keepCopies(fakeDoc().doc, {} as Window);
+      expect(guest.sessionProps()).toEqual({ signedIn: false, restored: 'none' });
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 });
 

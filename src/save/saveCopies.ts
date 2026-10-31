@@ -14,12 +14,16 @@
 
 import { parseMeta } from '../sim/meta';
 
-/** Who a save belongs to: 'guest', or a portal account ('pg:<hash>'). */
+/** Who a save belongs to: 'guest', or an account: Playgama's ('pg:<hash>'), CrazyGames' ('cg:')
+ *  or Game Center's ('gc:'). */
 export type Owner = string;
 export const GUEST: Owner = 'guest';
 
-/** A portal account's owner: a hash of its id, so our server never holds the portal's own id. */
-export function accountOwner(accountId: string): Owner {
+/** Where an account comes from: Playgama, CrazyGames or Game Center. */
+export type AccountHost = 'pg' | 'cg' | 'gc';
+
+/** An account's owner: a hash of its id, so our server never holds the host's own id. */
+export function accountOwner(accountId: string, host: AccountHost = 'pg'): Owner {
   // cyrb53's mixing (public domain), both 32-bit lanes kept
   let h1 = 0xdeadbeef;
   let h2 = 0x41c6ce57;
@@ -30,7 +34,7 @@ export function accountOwner(accountId: string): Owner {
   }
   h1 = Math.imul(h1 ^ (h1 >>> 16), 2246822507) ^ Math.imul(h2 ^ (h2 >>> 13), 3266489909);
   h2 = Math.imul(h2 ^ (h2 >>> 16), 2246822507) ^ Math.imul(h1 ^ (h1 >>> 13), 3266489909);
-  return `pg:${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}`;
+  return `${host}:${(h2 >>> 0).toString(16).padStart(8, '0')}${(h1 >>> 0).toString(16).padStart(8, '0')}`;
 }
 
 export interface SaveCopy {

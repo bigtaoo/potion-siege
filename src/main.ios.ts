@@ -27,6 +27,8 @@ async function start(): Promise<void> {
   if (import.meta.env.DEV && fake) (await import('./platform/ios/fakeNative')).installFakeNative(fake);
   trail.step('platform');
   const platform = new IosPlatform();
+  trail.step('saves');
+  await platform.keepCopies();
   trail.step('boot');
   const game = await boot(platform);
   trail.step('up');

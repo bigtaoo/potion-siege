@@ -4,25 +4,27 @@ import WebKit
 
 // The root view controller: Capacitor's web view plus `window.PSNative`, the bridge the game reads
 // through src/platform/ios/bridge.ts (contract in docs/ios.md). Ported from D:\standing's
-// HKBridgeViewController, without Game Center. It is no Capacitor plugin (the only ones are
-// SystemBars and the hot-update plugin, capacitor.config.ts): one WKScriptMessageHandler named
+// HKBridgeViewController, with Game Center's player but not its signed identity. It is no
+// Capacitor plugin (the only ones are SystemBars and the hot-update plugin, capacitor.config.ts):
+// one WKScriptMessageHandler named
 // "ps" and one script injected at document start. SceneDelegate makes this the window's root.
 //
 // Calls from JS are messages `{ op, ... }`. Answers are pushed back into the page rather than
 // settled by id: AdMob's, the store's and the notification permission's states go to
-// `PSNative._adState`, `_store` and `_notify` whenever they change and when the page asks (a reloaded page asks again); an ad's progress goes to `_adEvent`, how a buy or a restore went to `_storeResult`. Every member
+// `PSNative._adState`, `_store`, `_notify` and `_gameCenter` whenever they change and when the page asks (a reloaded page asks again); an ad's progress goes to `_adEvent`, how a buy or a restore went to `_storeResult`. Every member
 // the page reads is feature-detected there, so a newer web bundle on an older shell falls back to
 // the browser's behaviour.
 final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHandler {
 
     static let handlerName = "ps"
     /// Raised whenever the contract gains calls (PSNative.v in bridge.ts).
-    static let bridgeVersion = 2
+    static let bridgeVersion = 3
 
     private let keyStore = KeyStore()
     private let adMob = AdMob()
     private let store = Store()
     private let notifications = Notifications()
+    private let gameCenter = GameCenter()
 
     override func capacitorDidLoad() {
         guard let webView = webView else { return }
@@ -40,6 +42,9 @@ final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHand
         store.start()
         notifications.onChange = { [weak self] status in self?.push("_notify", ["status": status.rawValue]) }
         notifications.start()
+        gameCenter.presenter = self
+        gameCenter.onChange = { [weak self] state in self?.push("_gameCenter", state.json) }
+        gameCenter.start()
         #if DEBUG
         // Safari's Web Inspector, for the day a Mac is at hand (release builds stay closed)
         if #available(iOS 16.4, *) { webView.isInspectable = true }
@@ -99,6 +104,10 @@ final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHand
         case "notifyCancel":
             guard let id = body["id"] as? String else { return }
             notifications.cancel(id: id)
+        case "gameCenter":
+            if let state = gameCenter.state { push("_gameCenter", state.json) }
+        case "gameCenterSignIn":
+            gameCenter.signIn()
         default:
             return
         }
@@ -135,7 +144,7 @@ final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHand
               push: function(v){ last = v; for (var i = 0; i < cbs.length; i++) { try { cbs[i](v); } catch (e) {} } }
             };
           }
-          var ad = feed(), adEvent = feed(), store = feed(), storeResult = feed(), notify = feed();
+          var ad = feed(), adEvent = feed(), store = feed(), storeResult = feed(), notify = feed(), gameCenter = feed();
           window.PSNative = {
             v: c.v, saved: c.saved || {}, languages: c.languages || [], device: c.device || '',
             save: function(k, v){ post({ op: 'save', key: String(k), value: String(v) }); },
@@ -155,15 +164,20 @@ final class PSBridgeViewController: CAPBridgeViewController, WKScriptMessageHand
             notifyAsk: function(){ post({ op: 'notifyAsk' }); },
             notifySchedule: function(id, at, title, body){ post({ op: 'notifySchedule', id: String(id), at: Number(at), title: String(title), body: String(body) }); },
             notifyCancel: function(id){ post({ op: 'notifyCancel', id: String(id) }); },
+            gameCenter: gameCenter.get,
+            onGameCenter: gameCenter.on,
+            gameCenterSignIn: function(){ post({ op: 'gameCenterSignIn' }); },
             _adState: ad.push,
             _adEvent: adEvent.push,
             _store: store.push,
             _storeResult: storeResult.push,
-            _notify: notify.push
+            _notify: notify.push,
+            _gameCenter: gameCenter.push
           };
           post({ op: 'adState' });
           post({ op: 'store' });
           post({ op: 'notifyState' });
+          post({ op: 'gameCenter' });
         })();
         """
     }

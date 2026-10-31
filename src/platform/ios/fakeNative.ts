@@ -1,9 +1,10 @@
-import type { AdState, NotifyState, PSNative, StoreState } from './bridge';
+import type { AdState, GameCenterState, NotifyState, PSNative, StoreState } from './bridge';
 
 // A stand-in for the shell's bridge in a desktop browser (`npm run dev:ios`, then `?native=1`):
 // ads that load after a second and play for one, a store that sells the card at once, EEA
 // privacy options and a notification sheet that says yes, so the shop strip and the settings button can be laid out without a Mac.
-// `?native=owned` starts with the card owned. Development builds only (main.ios.ts).
+// `?native=owned` starts with the card owned; `?native=gc` signs a Game Center player in after
+// half a second (any other mode: signed out, its sheet waiting). Development builds only (main.ios.ts).
 export function installFakeNative(mode: string, scope: Record<string, unknown> = window as unknown as Record<string, unknown>): void {
   if (scope.PSNative) return;
   const adCbs: ((s: AdState) => void)[] = [];
@@ -12,6 +13,13 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
   const resultCbs: Parameters<PSNative['onStoreResult']>[0][] = [];
   const notifyCbs: ((s: NotifyState) => void)[] = [];
   let notify: NotifyState = { status: 'unknown' };
+  const gcCbs: ((s: GameCenterState) => void)[] = [];
+  let gc: GameCenterState | null = null;
+  const pushGc = (next: GameCenterState) => {
+    gc = next;
+    gcCbs.forEach((cb) => cb(next));
+  };
+  setTimeout(() => pushGc(mode === 'gc' ? { alias: 'FakeBrewer', player: 'T:_fake0001', canSignIn: false } : { alias: null, player: null, canSignIn: true }), 500);
   let ad: AdState = { status: 'pending', rewarded: false, interstitial: false, privacyOptions: true, error: null };
   let store: StoreState = { products: [{ id: 'com.gamestao.potionsiege.adfree', price: 'US$3.99' }], owned: mode === 'owned' ? ['com.gamestao.potionsiege.adfree'] : [], canPay: true };
   const pushAd = (next: Partial<AdState>) => {
@@ -24,7 +32,7 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
   };
   setTimeout(() => pushAd({ status: 'on', rewarded: true, interstitial: true }), 1000);
   const native: PSNative = {
-    v: 2,
+    v: 3,
     saved: {},
     save: () => {},
     openUrl: (url) => void window.open(url, '_blank'),
@@ -59,6 +67,9 @@ export function installFakeNative(mode: string, scope: Record<string, unknown> =
       }, 400),
     notifySchedule: (id, at, title, body) => console.info('[fake native] reminder', id, new Date(at).toString(), title, body),
     notifyCancel: (id) => console.info('[fake native] reminder off', id),
+    gameCenter: () => gc,
+    onGameCenter: (cb) => void gcCbs.push(cb),
+    gameCenterSignIn: () => pushGc({ alias: 'FakeBrewer', player: 'T:_fake0001', canSignIn: false }),
   };
   scope.PSNative = native;
 }

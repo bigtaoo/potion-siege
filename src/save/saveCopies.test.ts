@@ -26,6 +26,7 @@ describe('accountOwner', () => {
     expect(accountOwner('u1')).toMatch(/^pg:[0-9a-f]{16}$/);
     expect(accountOwner('u1')).toBe(accountOwner('u1'));
     expect(accountOwner('u1')).not.toBe(accountOwner('u2'));
+    expect([accountOwner('u1', 'cg'), accountOwner('u1', 'gc')]).toEqual([accountOwner('u1').replace('pg:', 'cg:'), accountOwner('u1').replace('pg:', 'gc:')]);
   });
 });
 

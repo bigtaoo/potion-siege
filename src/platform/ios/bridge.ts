@@ -1,7 +1,8 @@
 // window.PSNative: what the iOS shell injects into the page at document start
 // (ios/App/App/PSBridgeViewController.swift, contract in docs/ios.md). Everything is read through
 // psNative() and feature-detected, so a web bundle newer than the shell it runs in degrades to the
-// browser's behaviour instead of throwing. Ported from D:\standing's HKNative, without Game Center.
+// browser's behaviour instead of throwing. Ported from D:\standing's HKNative, with Game Center's
+// player but not its signed identity.
 
 export interface PSNative {
   /** The contract's version, raised when the shell gains calls. */
@@ -46,6 +47,22 @@ export interface PSNative {
   notifySchedule(id: string, at: number, title: string, body: string): void;
   /** Drops a booked notification (v2). */
   notifyCancel(id: string): void;
+  /** Game Center's last answer, null until GameKit has given one (v3). */
+  gameCenter(): GameCenterState | null;
+  /** Called with every new Game Center state (v3). */
+  onGameCenter(cb: (state: GameCenterState) => void): void;
+  /** Shows Apple's Game Center sign-in sheet, when it waits; only from a tap (v3). */
+  gameCenterSignIn(): void;
+}
+
+/** Game Center as the shell sees it (GameCenter.swift). */
+export interface GameCenterState {
+  /** The player's nickname, null when signed out. */
+  alias: string | null;
+  /** teamPlayerID: the same player on every device, null when signed out. */
+  player: string | null;
+  /** Whether Apple's sign-in sheet waits for a tap. */
+  canSignIn: boolean;
 }
 
 /** Local notifications as the shell sees them (Notifications.swift): 'unknown' while never asked. */

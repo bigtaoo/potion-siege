@@ -50,6 +50,8 @@ export interface CgSdkShape {
     /** False where the portal has no accounts (some partner sites). */
     isUserAccountAvailable?: unknown;
     getUser?: () => unknown;
+    /** A JWT whose payload holds the account's `userId`; rejects for a guest. */
+    getUserToken?: () => unknown;
     addAuthListener?: (listener: (user: unknown) => void) => unknown;
   };
   banner?: {
@@ -74,6 +76,8 @@ export const AD_START_MS = 10_000;
 export const AD_PLAY_MS = 120_000;
 /** How long boot waits for the adblock probe; no answer counts as no adblocker. */
 export const ADBLOCK_WAIT_MS = 1500;
+/** How long boot waits for the signed-in player's token; no answer counts as a guest. */
+export const USER_WAIT_MS = 1500;
 const POLL_MS = 50;
 
 /** Runs fn, awaiting a promise, and turns every failure into undefined. */
@@ -265,6 +269,22 @@ export class CrazyGamesSdk {
   async userName(): Promise<string | null> {
     const user = (await settle(() => this.sdk?.user?.getUser?.())) as CgUser | null | undefined;
     return typeof user?.username === 'string' && user.username !== '' ? user.username : null;
+  }
+
+  /** The signed-in account's id, read from its token's payload (the token is not checked here:
+   *  the id only names whose save copy this is); null for a guest, on any failure or after
+   *  USER_WAIT_MS. */
+  async userId(): Promise<string | null> {
+    if (!this.isEnabled()) return null;
+    const token = await this.until(this.now() + USER_WAIT_MS, settle(() => this.sdk?.user?.getUserToken?.()));
+    if (typeof token !== 'string') return null;
+    try {
+      const part = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
+      const id = (JSON.parse(atob(part)) as { userId?: unknown } | null)?.userId;
+      return typeof id === 'string' && id !== '' ? id : null;
+    } catch {
+      return null;
+    }
   }
 
   /** The player's locale as the portal sees it (e.g. 'de-DE'), null without the SDK. */

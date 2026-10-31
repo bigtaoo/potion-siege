@@ -11,13 +11,15 @@ import privacy from '../../../ios/App/App/PrivacyInfo.xcprivacy?raw';
 import sceneDelegate from '../../../ios/App/App/SceneDelegate.swift?raw';
 import storeSwift from '../../../ios/App/App/Store.swift?raw';
 import notifications from '../../../ios/App/App/Notifications.swift?raw';
+import gameCenterSwift from '../../../ios/App/App/GameCenter.swift?raw';
+import entitlements from '../../../ios/App/App/App.entitlements?raw';
 import storyboard from '../../../ios/App/App/Base.lproj/Main.storyboard?raw';
 import { AD_FREE_ID } from './storeKit';
 
 // Nothing on the Windows machine compiles the Swift side (only the macOS CI runner does), so these
 // pin the native project to the web side as text: the names both sides must agree on, and the
 // settings a review or a device test would otherwise be the first to catch (docs/ios.md). From
-// D:\standing's, without Game Center.
+// D:\standing's.
 
 const BUNDLE = 'com.gamestao.potionsiege';
 /** Google's sample app id, which serves only test ads (developers.google.com/admob/ios/test-ads). */
@@ -36,12 +38,21 @@ describe('iOS shell', () => {
   });
 
   it('compiles every Swift file and ships the privacy manifest', () => {
-    for (const file of ['AppDelegate.swift', 'SceneDelegate.swift', 'PSBridgeViewController.swift', 'KeyStore.swift', 'AdMob.swift', 'Store.swift', 'Notifications.swift']) {
+    for (const file of ['AppDelegate.swift', 'SceneDelegate.swift', 'PSBridgeViewController.swift', 'KeyStore.swift', 'AdMob.swift', 'Store.swift', 'Notifications.swift', 'GameCenter.swift']) {
       expect(pbx).toContain(`/* ${file} in Sources */,`);
     }
-    expect(pbx).not.toContain('GameCenter.swift');
     expect(pbx).toContain('/* PrivacyInfo.xcprivacy in Resources */,');
     expect(privacy).toContain('<string>CA92.1</string>');
+  });
+
+  it('signs in to Game Center at launch, its sheet only from a tap', () => {
+    expect(entitlements).toMatch(/<key>com\.apple\.developer\.game-center<\/key>\s*<true\/>/);
+    expect(pbx.match(/CODE_SIGN_ENTITLEMENTS = ([^;]+);/g)).toEqual(['CODE_SIGN_ENTITLEMENTS = App/App.entitlements;', 'CODE_SIGN_ENTITLEMENTS = App/App.entitlements;']);
+    expect(bridge.split('override func capacitorDidLoad')[1].split('override func')[0]).toContain('gameCenter.start()');
+    expect(gameCenterSwift).toContain('GKLocalPlayer.local.authenticateHandler');
+    // the sheet is presented in one place only: signIn(), which the page calls from a tap
+    expect(gameCenterSwift.match(/present\(/g)?.length).toBe(1);
+    expect(gameCenterSwift.split('func start()')[1].split('func signIn()')[0]).not.toContain('present(');
   });
 
   it('roots the window in the bridge view controller', () => {
@@ -60,6 +71,7 @@ describe('iOS shell', () => {
       '_store: store.push', '_storeResult: storeResult.push',
       'notify: notify.get', 'onNotify: notify.on', 'notifyAsk: function', 'notifySchedule: function', 'notifyCancel: function',
       '_notify: notify.push',
+      'gameCenter: gameCenter.get', 'onGameCenter: gameCenter.on', 'gameCenterSignIn: function', '_gameCenter: gameCenter.push',
     ]) {
       expect(bridge).toContain(member);
     }
@@ -67,10 +79,11 @@ describe('iOS shell', () => {
     expect(bridge).toContain("post({ op: 'adState' });");
     expect(bridge).toContain("post({ op: 'store' });");
     expect(bridge).toContain("post({ op: 'notifyState' });");
-    for (const op of ['"adState"', '"showAd"', '"adPrivacy"', '"store"', '"buy"', '"restore"', '"notifyState"', '"notifyAsk"', '"notifySchedule"', '"notifyCancel"']) {
+    expect(bridge).toContain("post({ op: 'gameCenter' });");
+    for (const op of ['"adState"', '"showAd"', '"adPrivacy"', '"store"', '"buy"', '"restore"', '"notifyState"', '"notifyAsk"', '"notifySchedule"', '"notifyCancel"', '"gameCenter"', '"gameCenterSignIn"']) {
       expect(bridge).toContain(`case ${op}:`);
     }
-    for (const receiver of ['_adState', '_adEvent', '_store', '_storeResult', '_notify']) expect(bridge).toContain(`push("${receiver}"`);
+    for (const receiver of ['_adState', '_adEvent', '_store', '_storeResult', '_notify', '_gameCenter']) expect(bridge).toContain(`push("${receiver}"`);
     expect(bridge).toContain('window.PSNative.\\(receiver)(');
     // admob.ts reads these keys and these values
     for (const key of ['"status": status', '"rewarded": rewarded', '"interstitial": interstitial', '"privacyOptions": privacyOptions', '"error": error']) {
@@ -83,8 +96,9 @@ describe('iOS shell', () => {
     expect(storeSwift).toContain('["id": $0, "price": prices[$0] ?? ""]');
     expect(storeSwift).toContain('"owned": owned.sorted(), "canPay": canPay');
     expect(bridge).toContain('["op": op, "outcome": outcome]');
-    // notify.ts reads this version and these states
-    expect(bridge).toContain('static let bridgeVersion = 2');
+    // notify.ts (v2) and gameCenter.ts (v3) read this version and these states
+    expect(bridge).toContain('static let bridgeVersion = 3');
+    expect(gameCenterSwift).toContain('["alias": alias ?? NSNull(), "player": player ?? NSNull(), "canSignIn": canSignIn]');
     expect(bridge).toContain('["status": status.rawValue]');
     const states = notifications.split('enum Status: String {')[1].split('}')[0];
     expect(states.match(/case [a-z]+/g)).toEqual(['case unknown', 'case on', 'case off']);

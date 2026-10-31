@@ -1,7 +1,7 @@
 # iOS release
 
 Potion Siege on the App Store: the web game in a Capacitor shell, built the way D:\standing
-(Holy Kicker, `docs/ios.md` there) ships, minus Game Center. Owner checklist and ids:
+(Holy Kicker, `docs/ios.md` there) ships; Game Center here only owns the save backups (no leaderboards). Owner checklist and ids:
 `D:\cloud\ios\apps\potionsiege.md`.
 
 | | |
@@ -46,11 +46,12 @@ calling `window.PSNative._<name>(json)`. Every member is feature-detected on the
 
 | Member | |
 |---|---|
-| `v`, `saved`, `save(k, v)` | bridge version (2 since the reminders); the mirrored key store |
+| `v`, `saved`, `save(k, v)` | bridge version (3 since Game Center); the mirrored key store |
 | `openUrl(url)`, `languages`, `device` | links in Safari; the phone's languages; model + iOS version |
 | `adState()`, `onAdState`, `onAdEvent`, `showAd(kind)`, `adPrivacy()` | AdMob (below) |
 | `store()`, `onStore`, `onStoreResult`, `buy(id)`, `restore()` | StoreKit (below) |
 | `notify()`, `onNotify`, `notifyAsk()`, `notifySchedule(id, at, title, body)`, `notifyCancel(id)` | local reminders (v2, below) |
+| `gameCenter()`, `onGameCenter`, `gameCenterSignIn()` | Game Center player for the save backups (v3, below) |
 
 `src/platform/ios/shell.test.ts` pins both sides of this contract as text, since nothing on
 Windows compiles the Swift.
@@ -114,6 +115,27 @@ To check on a device:
 - [ ] Denied in the sheet or later in iOS Settings: the row shows the note; turning it back on in
       iOS Settings and returning to the game (didBecomeActive) shows the switch again.
 - [ ] Layout: the card and the settings row on a small phone, the welcome button in the top bar.
+
+## Game Center (save owner)
+
+`GameCenter.swift` signs the local player in at launch (`authenticateHandler`) and pushes
+`_gameCenter({alias, player, canSignIn})`, `player` being `teamPlayerID`. GameKit's sign-in sheet
+is kept and only presented by `gameCenterSignIn()`, i.e. from a tap; there is no button for it yet.
+`src/platform/ios/gameCenter.ts` waits at most `GAME_CENTER_WAIT_MS` (2 s) for the first answer,
+then `IosPlatform.keepCopies()` keeps the saves under owner `gc:<hash of teamPlayerID>` (guest when
+signed out), the same three copies as the web (`src/save/saveCopies.ts`). Nothing about the player
+leaves the phone except that hash, with the backup. Bridge v3, so a new native build; older shells
+keep saves as a guest's.
+
+Setup, before the next release build:
+
+- [ ] App ID `com.gamestao.potionsiege`: Game Center capability on (developer portal).
+- [ ] Regenerate the `Potion Siege App Store` profile so it carries Game Center, and update the
+      `BUILD_PROVISION_PROFILE_BASE64` secret; `App/App.entitlements`
+      (`com.apple.developer.game-center`) does not sign against the old one.
+- [ ] App Store Connect: Game Center on for the app version.
+- [ ] On a phone: signed in, a battle's progress comes back after deleting and reinstalling the
+      app; signed out, the game starts as before with no sheet.
 
 ## Hot updates
 
@@ -215,7 +237,8 @@ card at once and which offers the privacy button. `?native=owned` starts with th
   advertising data, crash, performance and other diagnostics. Purposes: analytics, plus
   third-party advertising for what Google's SDK takes. None linked to the user (the owner's call:
   the install id is random and we have no way to tie it to a person) and none used for
-  tracking. Update it with any new event, SDK or identifier.
+  tracking. Update it with any new event, SDK or identifier. Game Center (2026-10-31): a hash of
+  the player id goes with the save backup; it may need "User ID" (app functionality) added.
 - `app-ads.txt` is already at `https://gamestao.com/app-ads.txt` (one line for the AdMob account).
 - Listing (filled 2026-10-19 through the API from `store/<lang>/app-store/*.txt`, 15 locales):
   Games / Strategy + Casual; age rating cartoon violence (frequent) and ads; free in 174

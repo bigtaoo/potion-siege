@@ -5,7 +5,7 @@
 // there (saveCopies.ts). A game service rather than play statistics: sent whatever the player's
 // statistics choice (public/privacy.html §2).
 
-import type { Owner, SaveCopy } from './saveCopies';
+import { GUEST, type Owner, type SaveCopy } from './saveCopies';
 import type { MirrorCopy } from './saveMirror';
 
 /** How long a change waits before it goes up, so a burst of saves sends one. */
@@ -28,8 +28,8 @@ export interface VaultPost {
   save: string;
 }
 
-/** The account part of a portal owner ('pg:<hash>'), or null for a guest. */
-export const acctOf = (owner: Owner): string | null => (owner.startsWith('pg:') ? owner.slice(3) : null);
+/** The account part of an account's owner ('pg:<hash>', 'cg:…', 'gc:…'), or null for a guest. */
+export const acctOf = (owner: Owner): string | null => (owner === GUEST ? null : owner.slice(owner.indexOf(':') + 1));
 
 export type Get = (url: string, signal: AbortSignal) => Promise<unknown>;
 export type Post = (url: string, body: string) => void;

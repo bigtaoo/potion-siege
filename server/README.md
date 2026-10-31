@@ -73,7 +73,7 @@ ssh blightbloom 'cd /home/deploy/potion-siege/backups && for f in events-*.ndjso
 
 The game also keeps a copy of each player's save here, whatever their statistics choice
 (`src/save/`, privacy policy §2): `POST /s` replaces the copy a device made under its random id
-when it brings the same secret, and `GET /s?acct=<hash>` hands a signed-in Playgama account's
+when it brings the same secret, and `GET /s?acct=<hash>` hands a signed-in account's (Playgama, CrazyGames or Game Center)
 copy with the most battles back to a device whose portal save came up empty
 (`scripts/saveVault.mjs`). One `<id>.json` per device and owner and one `acct-<hash>.json` per
 account in `data/saves`, each deleted 14 months after its last change (`KEEP_MONTHS`). The

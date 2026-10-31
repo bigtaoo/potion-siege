@@ -12,7 +12,7 @@ const copy = (owner: string, save = 's', at = 1): MirrorCopy => ({ owner, save, 
 describe('saveVault', () => {
   it('sits beside the events route and knows an account by its hash', () => {
     expect(vaultUrl('https://ps.example.com/e')).toBe('https://ps.example.com/s');
-    expect([acctOf('pg:12ab'), acctOf(GUEST)]).toEqual(['12ab', null]);
+    expect([acctOf('pg:12ab'), acctOf('cg:34cd'), acctOf('gc:56ef'), acctOf(GUEST)]).toEqual(['12ab', '34cd', '56ef', null]);
   });
 
   it("fetches an account's copy by its hash, never a guest's", async () => {

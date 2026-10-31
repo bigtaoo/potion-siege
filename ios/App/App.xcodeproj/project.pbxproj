@@ -22,6 +22,7 @@
 		4B4B00000000000000000016 /* AdMob.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B00000000000000000006 /* AdMob.swift */; };
 		4B4B00000000000000000017 /* Store.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B00000000000000000007 /* Store.swift */; };
 		4B4B0000000000000000001A /* Notifications.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B0000000000000000000A /* Notifications.swift */; };
+		4B4B0000000000000000001B /* GameCenter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4B4B0000000000000000000B /* GameCenter.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -44,6 +45,8 @@
 		4B4B00000000000000000006 /* AdMob.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AdMob.swift; sourceTree = "<group>"; };
 		4B4B00000000000000000007 /* Store.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Store.swift; sourceTree = "<group>"; };
 		4B4B0000000000000000000A /* Notifications.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Notifications.swift; sourceTree = "<group>"; };
+		4B4B0000000000000000000B /* GameCenter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GameCenter.swift; sourceTree = "<group>"; };
+		4B4B0000000000000000000C /* App.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = App.entitlements; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -96,6 +99,8 @@
 				4B4B00000000000000000006 /* AdMob.swift */,
 				4B4B00000000000000000007 /* Store.swift */,
 				4B4B0000000000000000000A /* Notifications.swift */,
+				4B4B0000000000000000000B /* GameCenter.swift */,
+				4B4B0000000000000000000C /* App.entitlements */,
 				504EC30B1FED79650016851F /* Main.storyboard */,
 				504EC30E1FED79650016851F /* Assets.xcassets */,
 				504EC3101FED79650016851F /* LaunchScreen.storyboard */,
@@ -238,6 +243,7 @@
 				4B4B00000000000000000016 /* AdMob.swift in Sources */,
 				4B4B00000000000000000017 /* Store.swift in Sources */,
 				4B4B0000000000000000001A /* Notifications.swift in Sources */,
+				4B4B0000000000000000001B /* GameCenter.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -375,6 +381,7 @@
 			baseConfigurationReference = FC68EB0AF532CFC21C3344DD /* Pods-App.debug.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;
@@ -395,6 +402,7 @@
 			baseConfigurationReference = AF51FD2D460BCFE21FA515B2 /* Pods-App.release.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = App/App.entitlements;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				INFOPLIST_FILE = App/Info.plist;

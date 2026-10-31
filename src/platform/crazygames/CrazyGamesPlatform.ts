@@ -1,6 +1,8 @@
 // CrazyGames: cloud saves through the SDK's data module (local for guests), the portal's
 // loading and gameplay hooks, and its ads. Adapted from D:\standing's CrazyGamesPlatform.
 
+import { accountOwner, GUEST } from '../../save/saveCopies';
+import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { WebPlatform } from '../web';
 import { SafeStore, type KeyValueStore, type Platform } from '../types';
 import { CrazyGamesSdk } from './sdk';
@@ -27,6 +29,9 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
   /** loadingStop has gone out; until then a gameplayStart only waits for it. */
   private loadingDone = false;
   private startWaiting = false;
+  private signedIn = false;
+  /** Where the save was restored from at boot ('none': the portal's own was the best). */
+  private restored = 'none';
 
   private constructor(private readonly sdk: CrazyGamesSdk) {
     super();
@@ -35,12 +40,18 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     if (store && readable(store)) this.storage = new SafeStore(store);
   }
 
-  /** Waits (bounded) for the SDK, because its data module only exists after init. */
-  static async create(sdk = new CrazyGamesSdk()): Promise<CrazyGamesPlatform> {
+  /** Waits (bounded) for the SDK, because its data module only exists after init, then puts our
+   *  own copies of the save beside the portal's (saveKeeper.ts), per CrazyGames account or guest. */
+  static async create(sdk = new CrazyGamesSdk(), doc: Document = globalThis.document, win: Window = globalThis.window): Promise<CrazyGamesPlatform> {
     await sdk.init();
     sdk.loadingStart();
     const platform = new CrazyGamesPlatform(sdk);
-    platform.adblock = await sdk.hasAdblock();
+    const [adblock, account] = await Promise.all([sdk.hasAdblock(), sdk.userId()]);
+    platform.adblock = adblock;
+    platform.signedIn = account !== null;
+    const keeper = await keepSaves(platform.storage, account ? accountOwner(account, 'cg') : GUEST, { url: vaultFor(false), doc, win });
+    platform.storage = new SafeStore(keeper);
+    if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;
   }
 
@@ -50,11 +61,12 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
   }
 
   /** `app`: where the portal runs the game (a browser or one of its own apps); `basic`: no ads
-   *  yet (Basic Launch). Nothing off the portal. */
+   *  yet (Basic Launch); `signedIn` to a CrazyGames account; `restored`: where the save came from
+   *  (saveCopies.ts). Only the last off the portal. */
   sessionProps(): Record<string, string | boolean> {
-    if (!this.sdk.isEnabled()) return {};
+    if (!this.sdk.isEnabled()) return { restored: this.restored };
     const app = this.sdk.applicationType();
-    return { ...(app ? { app } : {}), basic: !this.sdk.adsAllowed() };
+    return { ...(app ? { app } : {}), basic: !this.sdk.adsAllowed(), signedIn: this.signedIn, restored: this.restored };
   }
 
   /** The portal's country, which decides whether the game asks before sending play statistics. */
