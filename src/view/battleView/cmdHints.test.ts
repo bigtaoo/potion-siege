@@ -9,7 +9,7 @@ import { BALANCE } from '../../sim/types';
 import { SpriteLayer } from '../art';
 import { turnView } from '../landView';
 import { badgeAt, CommanderArt } from './commander';
-import { CommanderHints, drawCellIcon, drawFullGlow, resetCellTip, TIP_SECONDS } from './cmdHints';
+import { CommanderHints, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
 
 const battle = (charge = 0, left: number | null = 2, paused = false) =>
   ({ charge, paused, nextCast: 'bomb', chargedFor: 0, summonsToNextCell: () => left }) as unknown as Battle;
@@ -104,5 +104,17 @@ describe('a full charge', () => {
     expect(hand.visible).toBe(false);
     draw(c, battle(0));
     expect(hand.visible).toBe(false);
+  });
+
+  it("waits while the board's own hand points at a pair, the glow still there", () => {
+    const c = new CommanderArt();
+    handOff.board = true;
+    const over = draw(c, battle(BALANCE.commander.charge));
+    expect(c.hints.hand.visible).toBe(false);
+    expect(c.castTap.visible).toBe(true);
+    expect(over.getLocalBounds().width).toBeGreaterThan(0);
+    handOff.board = false;
+    draw(c, battle(BALANCE.commander.charge));
+    expect(c.hints.hand.visible).toBe(true);
   });
 });

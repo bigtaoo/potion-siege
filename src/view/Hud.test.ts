@@ -209,7 +209,7 @@ describe('the pointer at a pair on a full grid', () => {
     expect(pointing()).toBe(false);
   });
 
-  it('points for a veteran only once the grey summon button is tapped, and no plate says why', () => {
+  it('points for a veteran at once when the grey summon button is tapped, and no plate says why', () => {
     const { h, b, summon, pointing } = hud();
     h.veteran = true;
     h.hint = false;

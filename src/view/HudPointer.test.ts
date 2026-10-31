@@ -9,6 +9,7 @@ import { battleSetup, newMeta } from '../sim/meta';
 import { BALANCE, HERO_KINDS, type BattleEvent } from '../sim/types';
 import { endlessBoss } from '../sim/waves';
 import { t } from '../i18n';
+import { handOff } from './battleView/cmdHints';
 import { fakeArt } from './fakeArt';
 import { Hud } from './Hud';
 
@@ -77,6 +78,26 @@ describe('the pointer at a pair', () => {
     expect(glove).toBeInstanceOf(Sprite);
     h.update(0.1);
     expect(hand.children[0]).toBe(glove);
+  });
+});
+
+describe('the pointer at a pair for a veteran', () => {
+  it('comes by itself after 5 s rather than 2, and takes the hand from the commander meanwhile', () => {
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    h.veteran = true;
+    h.hint = false;
+    fullWithPair(h['battle']!);
+    const arc = h['nudgeArc'] as Graphics;
+    h.update(2.1);
+    expect(arc.visible).toBe(false);
+    expect(handOff.board).toBe(false);
+    h.update(3);
+    expect(arc.visible).toBe(true);
+    expect(handOff.board).toBe(true);
+    expect((h['hintBox'] as Container).visible).toBe(false);
+    h['battle']!.gold = 0;
+    h.update(0.01);
+    expect(handOff.board).toBe(false);
   });
 });
 

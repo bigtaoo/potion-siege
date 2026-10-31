@@ -11,6 +11,7 @@ import { BALANCE, BOSS_KINDS, ENEMY_KINDS, isBoss, type BattleEvent, type BossKi
 import { bossForStage, endlessBoss, endlessChapter, FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
+import { handOff } from './battleView/cmdHints';
 import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
@@ -32,8 +33,11 @@ const BUTTON = { w: 320, h: 150, y: DESIGN_H - 120 };
 /** How long the grid stays full with a pair to fuse and gold for a summon before the board
  *  points at the pair by itself. */
 const NUDGE_AFTER = 2;
-/** Merges after which a player knows how: the board no longer points by itself or explains on
- *  a plate, only when a summon is tapped on a full grid. */
+/** The same for a veteran, who may well be about to fuse: the board points later, at once only when
+ *  a summon is tapped on a full grid. */
+const VETERAN_NUDGE_AFTER = 5;
+/** Merges after which a player knows how: the board points later (VETERAN_NUDGE_AFTER), with no
+ *  plate explaining, and no hand at the next move when idle. */
 export const VETERAN_MERGES = 20;
 /** Seconds a player short of VETERAN_MERGES could act and has not before the hand shows the next
  *  move, as the tutorial does: a pair to fuse, else 强化, else 召唤 (pulsing too). Players who
@@ -81,7 +85,7 @@ export class Hud extends Container {
   hint = true;
   /** The full-grid pointer on the board; off while the tutorial points at things itself. */
   nudge = true;
-  /** Past VETERAN_MERGES: no pointer by itself and no plate, the hand only when asked. */
+  /** Past VETERAN_MERGES: the pointer later and no plate. */
   veteran = false;
   /** Around the two cells that could fuse while the grid is full: pulsing rings, the dragging
    *  arc and the tutorial's hand. Takes no taps, so the drag reaches the board under it. */
@@ -351,7 +355,7 @@ export class Hud extends Container {
     this.summonButton.scale.set(this.upgradeButton.scale.x * (1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2));
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
-    const nudgePair = this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null;
+    const nudgePair = this.nudge && pair && (this.asked || this.fullTime >= (this.veteran ? VETERAN_NUDGE_AFTER : NUDGE_AFTER)) ? pair : null;
     this.pointAt(nudgePair ?? shown, dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
@@ -393,7 +397,7 @@ export class Hud extends Container {
    *  tutorial's merge look, its hand dragging along an arc from one to the other. A button has
    *  the hand alone tapping it, as the tutorial does. */
   private pointAt(pair: [number, number] | 'summon' | 'upgrade' | null, dt: number): void {
-    this.nudgeRings.visible = this.nudgeArc.visible = Array.isArray(pair);
+    this.nudgeRings.visible = this.nudgeArc.visible = handOff.board = Array.isArray(pair);
     this.nudgeHand.visible = pair !== null;
     if (!pair) {
       this.nudgeTime = 0;

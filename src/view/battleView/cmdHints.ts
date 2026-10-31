@@ -19,6 +19,10 @@ const LAND_WRAP = 230;
 /** On an upright field the tip wraps to the room left of it, this far in from the screen edge. */
 const EDGE = 12;
 
+/** One hand at a time: while the board's own hand drags along a pair to fuse (the HUD's, set as it
+ *  draws), the commander's waits; the glow and the call to tap still ask for the cast. */
+export const handOff = { board: false };
+
 /** Lets the tip show again, as on a fresh page load. */
 export function resetCellTip(): void {
   tipLeft = TIP_SECONDS;
@@ -78,8 +82,8 @@ export class CommanderHints extends Container {
 
   /** The hand pointing up at a full badge of radius `r` at `at` from below, bobbing; null hides it. */
   pointAt(at: { x: number; y: number } | null, r: number, time: number): void {
-    this.hand.visible = at !== null;
-    if (!at) return;
+    this.hand.visible = at !== null && !handOff.board;
+    if (!this.hand.visible || !at) return;
     const p = aside(at.x, at.y, 14, r + 12 + Math.abs(Math.sin(time * 4)) * 16);
     this.hand.position.set(p.x, p.y);
     this.hand.rotation = -0.35;
