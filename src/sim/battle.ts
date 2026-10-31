@@ -27,6 +27,7 @@ import { reapDead } from './kills';
 import { pm, TICK_RATE, times, toFp } from './math/fixed';
 import { pick } from './math/pick';
 import { Prng } from './math/prng';
+import { mergedKind } from './mergeKind';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { stepHeroes, stepProjectiles } from './shots';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
@@ -81,6 +82,8 @@ export class Battle {
   summons = 0;
   /** Of them the free ones the setup gives (giftSummons), which leave the price where it was. */
   gifted = 0;
+  /** Of them the free ones a losing streak brings (freeSummons, lossStreak.ts): the first ones. */
+  freed = 0;
   merges = 0;
   /** The tick of the first merge, then of each free summon: the next one comes GIFT_EVERY on. */
   private giftFrom = 0;
@@ -219,8 +222,8 @@ export class Battle {
 
   /** Rises a little faster with every summon, rounded to 5. */
   summonCost(): number {
-    if (this.giftOwed()) return 0;
-    const n = this.summons - this.gifted;
+    if (this.giftOwed() || this.freed < (this.setup.freeSummons ?? 0)) return 0;
+    const n = this.summons - this.gifted - this.freed;
     const cost = (B.summonCostBase + B.summonCostStep * n + B.summonCostSquare * n * n) * (this.setup.modifiers?.summonCost ?? 1);
     return Math.round(cost / 5) * 5;
   }
@@ -341,6 +344,7 @@ export class Battle {
   private doSummon(): boolean {
     if (!this.canSummon()) return false;
     if (this.giftOwed()) (this.gifted++, (this.giftFrom = this.time));
+    else if (this.freed < (this.setup.freeSummons ?? 0)) this.freed++;
     else this.gold -= this.summonCost();
     const slot = pick(this.summonRng, this.freeSlots());
     this.summons++;
@@ -378,7 +382,7 @@ export class Battle {
     this.shotCount.delete(a.id);
     this.shotCount.delete(this.slots[to]!.id);
     this.slots[from] = null;
-    const kind = pick(this.summonRng, this.setup.lineup);
+    const kind = mergedKind(this.summonRng, a.kind, this.setup.lineup);
     this.slots[to] = { id: this.nextId++, kind, star, slot: to, cooldown: K.summonCooldown };
     if (this.merges++ === 0) this.giftFrom = this.time;
     this.events.push({ type: 'merge', slot: to, star, kind });

@@ -7,6 +7,7 @@ import type { Battle } from '../sim/battle';
 import { bookAttempt } from '../sim/challenge';
 import { addProgress, gameDay, rollDay } from '../sim/daily';
 import { bookEndless, endlessPay } from '../sim/endless';
+import { bookLoss } from '../sim/lossStreak';
 import { bookStars, hardReward, runStars } from '../sim/stars';
 import { again, showEnd } from './resultScreen';
 import { endTutorial } from './tutorialFlow';
@@ -33,6 +34,8 @@ export function finish(g: Game, b: Battle): void {
   if (b.result === 'won' && !g.autoplay) addProgress(g.save, 'win');
   const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
   const hard = b.setup.hard === true;
+  // a revived run losing again is still one loss
+  if (!g.autoplay && !(g.revived && !result.won)) bookLoss(g.save, result.stage, result.won, hard);
   // a revived battle ending again pays only what it earned on top
   const { crystals: gain, firstClear } = g.purse.settle(g.save, result, hard ? hardReward(g.save, result) : undefined);
   if (result.won) {

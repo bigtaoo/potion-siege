@@ -63,6 +63,8 @@ export interface MetaSave {
   seen: Partial<Record<SeenTab, string[]>>;
   /** Best stars per stage, normal and hard, and the hard mode switch (stars.ts). */
   stars: StarSave;
+  /** Losses in a row on stages 1-3, reset by a win there (lossStreak.ts). */
+  lossStreak: number;
 }
 
 /** The home tabs whose dot lights once per new thing. */
@@ -99,6 +101,8 @@ export interface BattleSetup {
   hard?: boolean;
   /** The first battle's tutorial: summons free from the first merge to the first upgrade. */
   giftSummons?: number;
+  /** Summons free from the start, after losses in a row on an early stage (lossStreak.ts). */
+  freeSummons?: number;
 }
 
 /** What a daily challenge or a stage's chapter changes inside the battle (the wall, enemy hit
@@ -142,6 +146,7 @@ export function newMeta(): MetaSave {
     chapterChests: [],
     seen: {},
     stars: newStars(),
+    lossStreak: 0,
   };
 }
 
@@ -199,6 +204,7 @@ export function parseMeta(raw: string | null): MetaSave {
     if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
   }
   out.stars = parseStars(data.stars, out.cleared);
+  out.lossStreak = int(data.lossStreak, 0, 99, 0);
   // only a newer build's save has fields worth keeping; this build's own junk is dropped as before
   return newer ? carry(data, out) : out;
 }
