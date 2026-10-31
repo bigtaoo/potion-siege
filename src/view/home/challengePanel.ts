@@ -2,7 +2,7 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge } from '../../sim/challenge';
+import { adPaid, bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge } from '../../sim/challenge';
 import type { MetaSave } from '../../sim/meta';
 import { fit as fitText, ink, LIGHT, lightTile, modifierIcon, P, PillButton } from '../kit';
 import { gem } from '../ui';
@@ -68,8 +68,8 @@ export function challengePanel(m: MetaSave, act: HomeActions, today: string, ads
   box.addChild(fitText(status, 820));
   // the way in, or when the next one comes
   const foot = h / 2 - 130;
-  if (canPlayFree(m, today)) {
-    const go = new PillButton(t('challenge.go'), 520, 140, 'green', act.challenge, 60);
+  if (canPlayFree(m, today) || adPaid(m, today)) {
+    const go = new PillButton(t('challenge.go'), 520, 140, 'green', canPlayFree(m, today) ? act.challenge : act.challengeAd, 60);
     go.y = foot;
     box.addChild(go);
   } else if (ads && canPlayAd(m, today)) {

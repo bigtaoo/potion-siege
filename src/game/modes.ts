@@ -2,7 +2,7 @@
 // bought with a rewarded ad).
 
 import type { Game } from '../app';
-import { beginAttempt, todaysChallenge } from '../sim/challenge';
+import { adPaid, beginAttempt, todaysChallenge } from '../sim/challenge';
 import { gameDay } from '../sim/daily';
 import { beginEndless } from '../sim/endless';
 import { home } from './homeScreen';
@@ -36,8 +36,10 @@ export function playChallenge(g: Game, ad: boolean): void {
   g.platform.gameplayStart();
 }
 
-/** The rewarded ad for a second go at today's challenge; the menu takes no taps while it plays. */
+/** The rewarded ad for a second go at today's challenge; the menu takes no taps while it plays.
+ *  A go whose ad was watched and that was left midway starts again without one. */
 export async function challengeAd(g: Game): Promise<void> {
+  if (adPaid(g.save, gameDay(g.save, new Date()))) return playChallenge(g, true);
   g.menu.interactiveChildren = false;
   let ok = false;
   try {

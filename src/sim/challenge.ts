@@ -25,6 +25,9 @@ export interface ChallengeSave {
   streak: number;
   /** The longest streak there has been (the streak achievements). */
   bestStreak: number;
+  /** The day a rewarded ad bought an attempt that is not booked yet: left midway, it is played
+   *  again without another ad. */
+  paid: string;
 }
 
 /** One day's challenge for one player: the run's seed and modifiers are the day's, the stage
@@ -51,7 +54,7 @@ export interface ChallengeResult {
 }
 
 export function newChallenge(): ChallengeSave {
-  return { date: '', attempts: 0, best: 0, streak: 0, bestStreak: 0 };
+  return { date: '', attempts: 0, best: 0, streak: 0, bestStreak: 0, paid: '' };
 }
 
 /** Reads the stored challenge part, dropping anything that does not fit. */
@@ -61,6 +64,7 @@ export function parseChallenge(v: unknown): ChallengeSave {
   const d = v as Record<string, unknown>;
   const n = (x: unknown, max: number) => Math.min(max, Math.max(0, Math.floor(Number(x)) || 0));
   if (typeof d.date === 'string') out.date = d.date;
+  if (typeof d.paid === 'string') out.paid = d.paid;
   out.attempts = n(d.attempts, BALANCE.challenge.attempts + BALANCE.challenge.adAttempts);
   out.best = n(d.best, 999);
   out.streak = n(d.streak, Number.MAX_SAFE_INTEGER);
@@ -152,6 +156,11 @@ export function canPlayAd(m: MetaSave, today: string): boolean {
   return used >= C.attempts && used < C.attempts + C.adAttempts;
 }
 
+/** The ad attempt is on offer and its ad was watched already: an attempt left midway. */
+export function adPaid(m: MetaSave, today: string): boolean {
+  return m.challenge.paid === today && canPlayAd(m, today);
+}
+
 /** Days in a row played, as it stands today: broken once a day was missed. */
 export function streak(m: MetaSave, today: string): number {
   const s = m.challenge;
@@ -180,6 +189,7 @@ export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | 
     s.bestStreak = Math.max(s.bestStreak, s.streak);
     bonus = streakBonus(s.streak);
   }
+  if (ad) s.paid = today;
   m.crystals += bonus;
   return bonus;
 }
@@ -199,6 +209,7 @@ export function tierReward(tier: number): number {
 export function bookAttempt(m: MetaSave, wave: number): ChallengeResult {
   const s = m.challenge;
   s.attempts = Math.min(C.attempts + C.adAttempts, s.attempts + 1);
+  s.paid = '';
   const before = tierOf(s.best);
   s.best = Math.max(s.best, wave);
   const bestTier = tierOf(s.best);

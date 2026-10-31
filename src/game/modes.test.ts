@@ -60,4 +60,16 @@ describe("the challenge's second go", () => {
     expect(w.game['menu'].interactiveChildren).toBe(true);
     expect(w.events('ad_challenge')).toEqual([{ ok: false }]);
   });
+
+  it('starts a retry left midway again without another ad', async () => {
+    const m = used();
+    m.challenge.paid = m.challenge.date;
+    const w = world(m);
+    home(w.game, 'challenge');
+    tap(w.stage, t('challenge.go'));
+    await flush();
+    expect(w.game['challenge']).not.toBeNull();
+    expect(w.events('ad_challenge')).toEqual([]);
+    expect(w.events('challenge_start')).toMatchObject([{ ad: true }]);
+  });
 });

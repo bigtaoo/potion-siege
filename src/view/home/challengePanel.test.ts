@@ -17,7 +17,7 @@ afterEach(() => vi.useRealTimers());
 /** A save that played today `attempts` times, its best `best`, `streak` days in a row. */
 function played(attempts: number, best = 0, streak = 1): MetaSave {
   const m = newMeta();
-  m.challenge = { date: TODAY, attempts, best, streak, bestStreak: streak };
+  m.challenge = { date: TODAY, attempts, best, streak, bestStreak: streak, paid: '' };
   return m;
 }
 
@@ -70,6 +70,18 @@ describe('challenge panel', () => {
     expect(texts(p)).not.toContain(t('challenge.go'));
     tap(p, t('challenge.retry'));
     expect(calls).toEqual([['challengeAd', []]]);
+  });
+
+  it('lets a retry left midway be played again without another ad, ads or not', () => {
+    const m = played(1);
+    m.challenge.paid = TODAY;
+    for (const ads of [true, false]) {
+      const { act, calls } = loggedActions();
+      const p = challengePanel(m, act, TODAY, ads, PHONE);
+      expect(texts(p)).not.toContain(t('challenge.retry'));
+      tap(p, t('challenge.go'));
+      expect(calls).toEqual([['challengeAd', []]]);
+    }
   });
 
   it('counts down to the next one when there is nothing left to play', () => {

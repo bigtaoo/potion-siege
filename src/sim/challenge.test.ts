@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
 import {
-  attemptsUsed, beginAttempt, bestToday, bookAttempt, canPlayAd, canPlayFree, challengeFresh, challengeLineup, challengeSetup, challengeStage,
+  adPaid, attemptsUsed, beginAttempt, bestToday, bookAttempt, canPlayAd, canPlayFree, challengeFresh, challengeLineup, challengeSetup, challengeStage,
   MODIFIER_IDS, msToTomorrow, newChallenge, parseChallenge, prevDay, streak, tierOf, todaysChallenge, type ModifierId,
 } from './challenge';
 import { battleSetup, newMeta, parseMeta } from './meta';
@@ -171,6 +171,24 @@ describe('daily challenge', () => {
     expect(m.challenge.attempts).toBe(C.attempts + C.adAttempts);
   });
 
+  it('keeps the ad an attempt was bought with until that attempt is booked', () => {
+    const m = newMeta();
+    const d = '2026-10-16';
+    beginAttempt(m, d, false);
+    expect(adPaid(m, d)).toBe(false);
+    bookAttempt(m, 4);
+    expect(adPaid(m, d)).toBe(false);
+    beginAttempt(m, d, true);
+    // left midway: played again without another ad, the next day not at all
+    expect(adPaid(m, d)).toBe(true);
+    expect(adPaid(parseMeta(JSON.stringify(m)), d)).toBe(true);
+    expect(adPaid(m, '2026-10-17')).toBe(false);
+    beginAttempt(m, d, true);
+    bookAttempt(m, 6);
+    expect(adPaid(m, d)).toBe(false);
+    expect(m.challenge.paid).toBe('');
+  });
+
   it('pays the best tier once a day: only what a better attempt adds', () => {
     expect([0, 2, 3, 5, 6, 9, 10, 30].map(tierOf)).toEqual([0, 0, 1, 1, 2, 2, 3, 3]);
     const m = newMeta();
@@ -223,7 +241,7 @@ describe('daily challenge', () => {
 
   it('reads stored challenge parts safely', () => {
     expect(parseChallenge(undefined)).toEqual(newChallenge());
-    expect(parseChallenge({ date: '2026-10-16', attempts: 9, best: -3, streak: 'x' })).toEqual({ date: '2026-10-16', attempts: C.attempts + C.adAttempts, best: 0, streak: 0, bestStreak: 0 });
+    expect(parseChallenge({ date: '2026-10-16', attempts: 9, best: -3, streak: 'x' })).toEqual({ date: '2026-10-16', attempts: C.attempts + C.adAttempts, best: 0, streak: 0, bestStreak: 0, paid: '' });
     // a save from before bestStreak takes the streak it has
     expect(parseChallenge({ date: '2026-10-16', streak: 5 }).bestStreak).toBe(5);
     const m = newMeta();
