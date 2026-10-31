@@ -6,7 +6,8 @@ import type { Graphics } from 'pixi.js';
 import type { HeroKind } from '../sim/types';
 import { INK, snowflake, star } from './potion';
 
-const ICE: [number, number, number] = [0x3fb8e6, 0xa8f4ff, 0xffffff];
+// a deep cyan-blue, not the potion's own pale frost: white on the snow field vanished
+export const ICE: [number, number, number] = [0x1a6fa8, 0x3aa8e0, 0xd8f6ff];
 // deeper than the potion's own stars: pale lilac fades on the stone road
 const ARCANE: [number, number, number] = [0x7a1fc4, 0xa45cf5, 0xf0e0ff];
 const BOLT_FILL = 0xffe94a;
@@ -179,10 +180,15 @@ export function gearBurst(g: Graphics, x: number, y: number, boss: boolean, p: n
   }
 }
 
+/** The ice block's glassy fill. */
+export const ICE_SHELL = 0x5cc6ee;
+
 /** A block of ice round a frozen enemy whose sprite stands with its feet at (x, feet), `h` tall. */
 export function iceShell(g: Graphics, x: number, feet: number, w: number, h: number): void {
   const top = feet - h - 6;
-  g.roundRect(x - w / 2, top, w, h + 12, w * 0.22).fill({ color: 0xbff4ff, alpha: 0.42 }).stroke({ width: 5, color: 0x1f5f8a });
+  // an ink edge under the blue one, so the block reads on snow as well as on stone
+  g.roundRect(x - w / 2, top, w, h + 12, w * 0.22).fill({ color: ICE_SHELL, alpha: 0.5 }).stroke({ width: 9, color: INK, alpha: 0.85 });
+  g.roundRect(x - w / 2, top, w, h + 12, w * 0.22).stroke({ width: 4, color: ICE[0] });
   g.moveTo(x - w * 0.3, top + h * 0.18).lineTo(x - w * 0.3, top + h * 0.45).stroke({ width: 5, color: 0xffffff, alpha: 0.85 });
   g.moveTo(x - w * 0.18, top + h * 0.14).lineTo(x - w * 0.1, top + h * 0.22).stroke({ width: 5, color: 0xffffff, alpha: 0.85 });
 }

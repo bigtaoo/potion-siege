@@ -1,18 +1,21 @@
 // The enemies as the battle draws them: between their last two ticks, farther ones first, each
-// in its art (posed, tinted by what is on it) or its placeholder shape, lit up white as a blow lands
-// and left a moment as a wreck when it dies.
+// in its art (rimmed, in the chapter's metal, posed, tinted by what is on it) or its placeholder
+// shape, lit up white as a blow lands and left a moment as a wreck when it dies.
 
 import type { Graphics } from 'pixi.js';
 import type { Battle } from '../../sim/battle';
+import { chapterOf } from '../../sim/chapters';
 import { FP } from '../../sim/math/fixed';
 import { BALANCE, isBoss, type Enemy, type EnemyKind } from '../../sim/types';
 import { SpriteLayer, enemyTexture } from '../art';
 import { iceShell } from '../effects';
+import { enemyLook, statusTint } from '../enemyLooks';
 import { poseEnemy } from '../enemyPose';
+import { endlessChapter } from '../../sim/waves';
 import { lerpX, lerpY } from '../fixedStep';
 import { hordeFade } from '../hordeFx';
 import { drawUpright, isLand } from '../landView';
-import { ENEMY_ART, drawEnemy } from '../shapes';
+import { ENEMY_ART, drawEnemy, eliteCore } from '../shapes';
 import { EnemyMarks } from './enemyMarks';
 import { EnemyTracks, keep } from './enemyTracks';
 import { Wrecks, flashOver } from './wrecks';
@@ -20,6 +23,11 @@ import { Wrecks, flashOver } from './wrecks';
 /** Farther enemies first (higher on the screen), so nearer ones overlap them. */
 const byDepth = (p: Enemy, q: Enemy): number => p.y - q.y;
 const byDepthLand = (p: Enemy, q: Enemy): number => p.x - q.x;
+
+/** The chapter whose metal the enemies of `b` wear: its stage's, or in endless mode its band's. */
+export function battleChapter(b: Battle): number {
+  return b.setup.endless ? endlessChapter(b.wave) : chapterOf(b.setup.stage);
+}
 
 /** How a whirlwind turns `e` (as drawn) at view time `now`: back and forth while it has hold. */
 function whirl(b: Battle, e: Enemy, now: number): number {
@@ -80,12 +88,13 @@ export class EnemyLayer {
       depth.push(o);
     }
     depth.sort(isLand() ? byDepthLand : byDepth);
+    const chapter = battleChapter(b);
     for (const e of depth) {
       const track = this.tracks.see(e, isBoss(e.kind));
       const fade = hordeFade(e);
       if (fade <= 0) continue;
-      const tex = enemyTexture(e.kind, e);
-      if (!tex) {
+      const art = enemyTexture(e.kind, e);
+      if (!art) {
         drawEnemy(w, e);
         continue;
       }
@@ -98,12 +107,19 @@ export class EnemyLayer {
         }
       }
       const react = this.tracks.reaction(track, whirl(b, e, now));
+      // a boss keeps its own colours; the rest wear the chapter's metal, or their own grey while
+      // something is on them, so the tint of that reads on every chapter
+      const boss = isBoss(e.kind);
+      const tint = statusTint(e);
+      const tex = boss ? art : enemyLook(art, BALANCE.enemies[e.kind].radius, tint === 0xffffff ? chapter : 0);
       const s = poseEnemy(this.art, tex, e, bt, react);
       if (e.freezeTime > 0) {
         drawUpright(w, e.x, e.y, (ox, oy) => iceShell(w, ox, oy + e.radius * ENEMY_ART.feet, e.radius * 2.3, e.radius * ENEMY_ART.height * 0.92));
       }
       s.alpha = fade;
-      s.tint = e.freezeTime > 0 ? 0x9fe8ff : e.slowTime > 0 ? 0xc4dcff : e.burnTime > 0 ? 0xffb27a : e.chargeTime > 0 ? 0xfff2a0 : e.markTime > 0 ? 0xdcb8ff : e.rust > 0 ? 0xe0a878 : e.poisonTime > 0 ? 0xc8f0a0 : 0xffffff;
+      s.tint = tint;
+      // an elite carries a glowing core in its chest
+      if (e.elite && !boss && fade >= 1) eliteCore(w, s.x, s.y, e.radius * ENEMY_ART.height, now + e.id);
       keep(s, track.snap);
       if (react.hit > 0) flashOver(this.flash, track.snap, react.hit * 0.7 * fade);
       const bashing = e.atWall && e.freezeTime <= 0 && e.kind !== 'anvil';

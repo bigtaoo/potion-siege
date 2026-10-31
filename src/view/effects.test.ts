@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { Graphics } from 'pixi.js';
 import type { HeroKind } from '../sim/types';
-import { HIT_TIME, chainBolt, gearBurst, glassShards, gustWave, hitEffect, iceShell, pushLines, rewindWave, stunStars, vortexSwirl } from './effects';
+import { HIT_TIME, ICE, ICE_SHELL, chainBolt, gearBurst, glassShards, gustWave, hitEffect, iceShell, pushLines, rewindWave, stunStars, vortexSwirl } from './effects';
 import { INK } from './potion';
 
 type Call = { m: string; args: unknown[] };
@@ -129,6 +129,16 @@ describe('frozen and winder effects', () => {
   it('stands the ice block on the enemy feet, a little taller than the sprite', () => {
     const rect = named(draw((g) => iceShell(g, 100, 500, 80, 120)), 'roundRect')[0].args;
     expect(rect.slice(0, 4)).toEqual([60, 500 - 126, 80, 132]);
+  });
+
+  it('edges the ice block in ink under a deep blue, so it reads on snow', () => {
+    const calls = draw((g) => iceShell(g, 100, 500, 80, 120));
+    expect(styles(calls, 'fill')[0].color).toBe(ICE_SHELL);
+    const edges = styles(calls, 'stroke').slice(0, 2);
+    expect(edges.map((e) => e.color)).toEqual([INK, ICE[0]]);
+    expect(edges[0].width).toBeGreaterThan(edges[1].width!);
+    // the frost is a real blue now, not white on white
+    expect(ICE[0] & 0xff).toBeGreaterThan((ICE[0] >> 16) + 80);
   });
 
   it('spreads the rewind clock out to its radius and turns the hand back', () => {

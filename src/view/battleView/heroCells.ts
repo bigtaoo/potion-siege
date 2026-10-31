@@ -8,8 +8,8 @@ import { TICK_RATE } from '../../sim/math/fixed';
 import { BALANCE } from '../../sim/types';
 import type { SpriteLayer } from '../art';
 import { stunStars } from '../effects';
-import { aside, isLand } from '../landView';
-import type { PotionLayer } from '../potion';
+import { aside, drawUpright, isLand } from '../landView';
+import { INK, type PotionLayer } from '../potion';
 import { COLORS } from '../ui';
 import { BREW_COLOR, commanderMid } from './commander';
 import { STILL, drawCell, type FigureAnim } from './figures';
@@ -23,6 +23,25 @@ export const FLIGHT = 0.3;
 export const LANDING = 0.25;
 /** How far (view units) a throw at a target that far off to the side leans all the way. */
 const AIM_SPAN = 400;
+/** How much bigger the potions of a level 1-3 cell stand on an upright field, where the cells
+ *  are small on the screen; a field on its side keeps them as they are. */
+export const UPRIGHT_SCALE = 1.18;
+
+/** The size the figures of a level `star` hero stand at in their cell. */
+export function cellScale(star: number): number {
+  return isLand() || star >= BALANCE.maxStar ? 1 : UPRIGHT_SCALE;
+}
+
+/** The corner badge of a cell centred on (x, y), its hero at level `star`: that many gold stars
+ *  on a dark tab, upright on the screen at the cell's top left corner. */
+export function starBadge(g: Graphics, x: number, y: number, star: number): void {
+  const at = aside(x, y, -G.cellW / 2 + 6, -G.cellH / 2 + 4);
+  const w = 12 + star * 18;
+  drawUpright(g, at.x, at.y, (ox, oy) => {
+    g.roundRect(ox, oy, w, 26, 13).fill({ color: INK, alpha: 0.78 }).stroke({ width: 2, color: COLORS.gold });
+    for (let i = 0; i < star; i++) g.star(ox + 15 + i * 18, oy + 13, 5, 8, 3.6, 0).fill(COLORS.gold);
+  });
+}
 
 /** What the view remembers about the hero in a cell, to animate its throws and arrival. */
 export interface CellAnim {
@@ -57,8 +76,8 @@ export function arc(x0: number, y0: number, x1: number, y1: number, k: number): 
 }
 
 /** What marks cell `s` (centred on `c`, its hero at level `star`) besides its heroes: a gold
- *  glow when the held hero can merge into it, a gold ring round a top-level hero, the purple of
- *  the commander's brew bubbling while it lasts. */
+ *  glow when the held hero can merge into it, a gold ring round a top-level hero, its level on a
+ *  badge in the corner (over the heroes), the purple of the commander's brew bubbling while it lasts. */
 function cellMarks(g: Graphics, ho: Graphics, b: Battle, s: number, c: { x: number; y: number }, match: boolean, star: number, t: number): void {
   const x = c.x - G.cellW / 2 + 8;
   const y = c.y - G.cellH / 2 + 8;
@@ -68,6 +87,7 @@ function cellMarks(g: Graphics, ho: Graphics, b: Battle, s: number, c: { x: numb
   // the cell's slab is part of the wall (drawWall)
   if (star >= BALANCE.maxStar) g.roundRect(x, y, w, ht, 12).stroke({ width: 6, color: COLORS.gold });
   if (match) g.roundRect(x, y, w, ht, 20).stroke({ width: 6, color: COLORS.gold });
+  if (star) starBadge(ho, c.x, c.y, star);
   if (!star || b.brewTime <= 0) return;
   const fade = Math.min(1, b.brewTime / TICK_RATE / 0.5);
   g.ellipse(c.x, c.y + 38, 58 + 6 * Math.sin(t * 8 + s), 22).fill({ color: BREW_COLOR, alpha: 0.45 * fade });
@@ -176,7 +196,7 @@ export class HeroCells {
       const mid = aside(c.x, c.y, 0, -10 - hop);
       // while dragging, the heroes it can merge with glow and everything else steps back
       const dim = from !== null && s !== from && !match;
-      drawCell(now, g, ho, art, potions, h.kind, h.star, mid.x, mid.y, 1, s === from ? 0.35 : 1, s, dim, anim);
+      drawCell(now, g, ho, art, potions, h.kind, h.star, mid.x, mid.y, cellScale(h.star), s === from ? 0.35 : 1, s, dim, anim);
       if (stunned) stunStars(ho, c.x, c.y - G.cellH / 2 - 6, now);
     }
     this.flying(b, g, ho, art, potions, now);
@@ -212,7 +232,7 @@ export class HeroCells {
       // a spark trails it
       g.circle(p.x, p.y, 10 * (1 - k) + 4).fill({ color: COLORS.gold, alpha: 0.6 });
       const spin = (1 - k) * Math.PI * 2;
-      drawCell(now, g, ho, art, potions, h.kind, h.star, p.x, p.y, 0.5 + 0.5 * k, 1, slot, false, () => ({ ...STILL, spin }));
+      drawCell(now, g, ho, art, potions, h.kind, h.star, p.x, p.y, (0.5 + 0.5 * k) * cellScale(h.star), 1, slot, false, () => ({ ...STILL, spin }));
     }
   }
 }

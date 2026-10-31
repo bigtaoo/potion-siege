@@ -8,6 +8,7 @@ import { glassShards } from '../effects';
 import type { Floaters } from './floaters';
 import type { FxLayer } from './fxLayer';
 import { BOMB_COLOR, BREW_COLOR } from './commander';
+import { WALL_TOP } from './wall';
 
 const FLAME = 0xffe08a;
 const WHITE = 0xfff8e6;
@@ -16,6 +17,12 @@ const SCORCH = 0x3a2414;
 const HURT = 0xff5a2e;
 /** Seconds the scorch stays on the road. */
 const SCORCH_TIME = 1.6;
+
+/** Whether a flash reaching `reach` out from (x, y) would cover the cells on the wall: then it
+ *  goes under the heroes (fx.mid) instead of over them. */
+export function overWall(y: number, reach: number): boolean {
+  return y + reach > WALL_TOP;
+}
 
 /** The mark on the road while the flask is in the air: the reach it will burst over, closing in
  *  as it comes down, with a cross at its middle. */
@@ -37,8 +44,8 @@ export function flaskBurst(fx: FxLayer, floaters: Floaters, x: number, y: number
     g.circle(x, y, radius * 0.75).fill({ color: SCORCH, alpha: 0.32 * life });
     g.circle(x, y, radius * 0.45).fill({ color: SCORCH, alpha: 0.25 * life });
   }, true);
-  // a white flash over everything for a blink, then the fireball
-  fx.push({ ttl: 0.14, max: 0.14, top: true, draw: (g, life) => g.circle(x, y, radius * 1.1).fill({ color: WHITE, alpha: 0.7 * life }) });
+  // a white flash over everything for a blink (under the heroes by the wall), then the fireball
+  fx.push({ ttl: 0.14, max: 0.14, top: !overWall(y, radius * 1.1), draw: (g, life) => g.circle(x, y, radius * 1.1).fill({ color: WHITE, alpha: 0.7 * life }) });
   fx.effect(0.7, (g, life) => {
     const k = 1 - life;
     g.circle(x, y, radius * (0.5 + k * 0.7)).fill({ color: BOMB_COLOR, alpha: life * 0.5 });
@@ -51,15 +58,18 @@ export function flaskBurst(fx: FxLayer, floaters: Floaters, x: number, y: number
   fx.effect(0.7, (g, life) => glassShards(g, x, y, 1 - life));
   // each enemy caught: a white flash on it and what it took
   for (const h of hits) {
-    fx.push({ ttl: 0.25, max: 0.25, top: true, draw: (g, life) => hitFlash(g, h.x, h.y, life) });
+    fx.push({ ttl: 0.25, max: 0.25, top: !overWall(h.y, HIT_FLASH), draw: (g, life) => hitFlash(g, h.x, h.y, life) });
     if (h.damage > 0) floaters.show(`-${h.damage}`, h.x, h.y - 40, HURT, 1.3);
   }
   // how many it caught, big over the burst
   if (hits.length > 1) floaters.show(`×${hits.length}`, x, y - radius - 10, FLAME, 2);
 }
 
+/** How far the flash on a caught enemy reaches at its widest. */
+const HIT_FLASH = 64;
+
 function hitFlash(g: Graphics, x: number, y: number, life: number): void {
-  g.circle(x, y, 46 + (1 - life) * 18).fill({ color: WHITE, alpha: 0.75 * life });
+  g.circle(x, y, HIT_FLASH - 18 + (1 - life) * 18).fill({ color: WHITE, alpha: 0.75 * life });
 }
 
 /** The brew: a lift of `pct` over each potion on the wall, at `cells`. */

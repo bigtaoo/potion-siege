@@ -49,6 +49,9 @@ export function heroShadow(g: Graphics, x: number, y: number, w: number, alpha =
 
 const ENEMY_COLORS = { grunt: 0x4f8a8b, runner: 0x7aa6c2, brute: 0x6b5b95, boss: 0x3d2c5e, flyer: 0xc9a24a, winder: 0x3f9a96, clock: 0x7a3b22, tripod: 0x3fa7b5, anvil: 0xd2602a, gear: 0x6a3d9a } as const;
 
+/** The halo round an elite's core: hot orange, it reads on every chapter's metal and field. */
+export const ELITE_GLOW = 0xff7a1a;
+
 /** Height of an enemy's art, where its feet go and how high a flyer hangs over its shadow,
  *  relative to its hit circle. */
 export const ENEMY_ART = { height: 3.8, feet: 0.9, lift: 1.1 };
@@ -112,6 +115,18 @@ export function enemyBarBox(e: Enemy, top: number): { x: number; w: number; top:
   // boss on the top lane would lift its bars (the jar bar 14 over them) under it or off the screen
   const edge = e.y - e.x + TITLE_BAR + (e.shieldMax ? 14 : 0);
   return { x: e.x, w, top: Math.max(edge, top) };
+}
+
+/** An elite's glowing core in the chest of its art, `h` tall with its feet on (x, feet) on the
+ *  screen, pulsing with `t` (seconds): a hot halo round a gold gem. */
+export function eliteCore(g: Graphics, x: number, feet: number, h: number, t: number): void {
+  const pulse = 0.5 + 0.5 * Math.sin(t * 6);
+  drawUpright(g, x, feet, (ox, oy) => {
+    const cy = oy - h * 0.5;
+    g.circle(ox, cy, h * (0.13 + 0.04 * pulse)).fill({ color: ELITE_GLOW, alpha: 0.28 + 0.2 * pulse });
+    g.circle(ox, cy, h * 0.065).fill(COLORS.gold).stroke({ width: 3, color: 0x0a1320 });
+    g.circle(ox - h * 0.02, cy - h * 0.02, h * 0.022).fill({ color: 0xfffbe0, alpha: 0.6 + 0.4 * pulse });
+  });
 }
 
 function eliteFrame(g: Graphics, { x, w, top }: { x: number; w: number; top: number }): void {
