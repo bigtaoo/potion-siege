@@ -8,14 +8,16 @@ import { PRIVACY_KEY } from '../../analytics/privacy';
 import { BUILD, LANG_KEY, REMINDERS_KEY, SAVE_KEY } from '../../game/keys';
 import { accountOwner, GUEST } from '../../save/saveCopies';
 import { keepSaves, vaultFor } from '../../save/saveKeeper';
+import { MIRROR_KEY, SaveMirror } from '../../save/saveMirror';
 import { SafeStore, type Platform } from '../types';
 import { WebPlatform } from '../web';
 import { PlaygamaBridge } from './bridge';
 import { BridgeSink, deviceFields } from './bridgeSink';
 import { BridgeStore } from './bridgeStore';
 
-/** Every key the game keeps in its store, read in one call at boot. */
-export const KEYS = [SAVE_KEY, LANG_KEY, PLAYER_KEY, PRIVACY_KEY, REMINDERS_KEY];
+/** Every key the game keeps in its store, read in one call at boot; our save copies too, since
+ *  Playgama keeps games out of the browser's own storage (requirement 3.2.1). */
+export const KEYS = [SAVE_KEY, LANG_KEY, PLAYER_KEY, PRIVACY_KEY, REMINDERS_KEY, MIRROR_KEY];
 
 /** Bridge's stand-ins for a page that is no portal: a developer's own preview and the QA tool. */
 const TEST_PLATFORMS = new Set(['mock', 'qa_tool']);
@@ -81,8 +83,10 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     console.info(`[potion-siege] Playgama Bridge: ${ok ? bridge.platformId() : 'unavailable'}, save: ${saves ? 'bridge' : 'localStorage'}, ${account ? 'signed in' : 'guest'}`);
     // without Bridge the save stays where the browser keeps it (WebPlatform's storage)
     const platform = new PlaygamaPlatform(bridge, saves, doc, win);
-    // our own copies beside the host's store, per owner: a portal account or this browser's guest
-    const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url: vaultFor(platform.collectorBlocked), doc, win });
+    // our own copies beside the host's store, per owner: a portal account or this browser's guest;
+    // with Bridge they live in its store as one more key, so they follow its account like the save
+    const mirror = saves ? new SaveMirror(platform.storage) : undefined;
+    const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url: vaultFor(platform.collectorBlocked), mirror, doc, win });
     platform.storage = new SafeStore(keeper);
     if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;

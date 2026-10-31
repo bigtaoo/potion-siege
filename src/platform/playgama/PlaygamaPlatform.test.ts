@@ -1,5 +1,7 @@
-import { beforeAll, describe, expect, it } from 'vitest';
+import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { SAVE_KEY } from '../../game/keys';
+import { MIRROR_KEY } from '../../save/saveMirror';
+import { saveWith } from '../../save/testSaves';
 import { PlaygamaBridge } from './bridge';
 import { KEYS, PlaygamaPlatform } from './PlaygamaPlatform';
 import { fakeBridge, type FakeBridge } from './testBridge';
@@ -46,6 +48,26 @@ describe('PlaygamaPlatform', () => {
     await tick();
     expect(f.saved).toEqual([[[SAVE_KEY], ['{"v":2}']]]);
     expect(KEYS).toContain(SAVE_KEY);
+  });
+
+  it("keeps our save copies in Bridge's store, never the browser's, and brings the save back from them", async () => {
+    const touched: string[] = [];
+    const spy = { getItem: (k: string) => (touched.push(k), null), setItem: (k: string) => void touched.push(k) };
+    vi.stubGlobal('window', { localStorage: spy });
+    try {
+      const f = fakeBridge();
+      const first = await platform(f);
+      first.storage.setItem(SAVE_KEY, saveWith(3));
+      await tick();
+      const [keys, values] = f.saved[0];
+      expect(keys).toEqual([SAVE_KEY, MIRROR_KEY]);
+      // the portal's store comes back with our copies but no save
+      const again = await platform(fakeBridge({ stored: { [MIRROR_KEY]: values[1] } }));
+      expect([again.storage.getItem(SAVE_KEY), again.sessionProps().restored]).toEqual([saveWith(3), 'mirror']);
+      expect(touched).toEqual([]);
+    } finally {
+      vi.unstubAllGlobals();
+    }
   });
 
   it('sends a waiting save when the page hides or the platform pauses', async () => {

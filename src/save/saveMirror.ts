@@ -1,7 +1,8 @@
-// Our own copy of the save on the device (saveCopies.ts), one per owner, in the browser's storage
-// under MIRROR_KEY. The host's store never touches it: Playgama Bridge moves only the keys the game
-// asks it for into the portal's cloud. Each owner's copy also carries the random id and secret our
-// server keeps it under (saveVault.ts).
+// Our own copy of the save on the device (saveCopies.ts), one per owner, under MIRROR_KEY: in the
+// browser's storage, or on Playgama in Bridge's store (PlaygamaPlatform.ts), which then moves it
+// between the portal's cloud and its guest store with the account, so only our server's copy
+// (saveVault.ts) crosses accounts there. Each owner's copy also carries the random id and secret our
+// server keeps it under.
 
 import type { KeyValueStore } from '../platform/types';
 import type { Owner, SaveCopy } from './saveCopies';
