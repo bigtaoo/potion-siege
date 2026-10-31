@@ -18,6 +18,7 @@
 // potions firing), hits.ts (what each potion's hit does), damage.ts (damage and the statuses),
 // kills.ts, commander.ts, targets.ts (finding enemies) and field.ts (the grid and the units).
 
+import { prepBoss } from './bossPrep';
 import { doCast, stepCommander, stepFlasks } from './commander';
 import { stepEnemies } from './enemyTick';
 import { K, SLOT_COUNT, WALL_ROW } from './field';
@@ -445,6 +446,7 @@ export class Battle {
       p.py = p.y;
     }
     stepWaves(this);
+    prepBoss(this);
     stepEnemies(this);
     stepHeroes(this);
     stepCommander(this);
@@ -461,7 +463,8 @@ export class Battle {
   }
 
   /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */
-  private offer(reason: OfferReason, focus?: HeroKind): boolean {
+  /** Pauses on three skill cards (leaning to `focus`); false when none is left to offer. */
+  offer(reason: OfferReason, focus?: HeroKind): boolean {
     const offer = this.roll(focus);
     if (offer.length === 0) return false;
     this.choices = offer;

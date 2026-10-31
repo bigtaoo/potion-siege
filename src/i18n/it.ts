@@ -17,6 +17,10 @@ export const it: Table = {
   hint: 'Trascina insieme due pozioni uguali: si fondono in una più forte a caso',
   upgradePick: "Potenziamento! Scegli un'abilità",
   ultimatePick: "Pozione suprema! Scegli un'abilità bonus",
+  bossPick: "Arriva il boss! Un'abilità gratis",
+  bossComing: 'Arriva il boss',
+  free: 'Gratis',
+  cellTip: 'Ancora {n} {n|one:evocazione|other:evocazioni} per una casella nuova',
   cellOpen: 'Nuova casella!',
   full: {
     merge: 'Caselle piene\nFondi una coppia',

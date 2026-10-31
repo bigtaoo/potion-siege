@@ -15,6 +15,10 @@ export const en = {
   hint: 'Drag two matching potions together: they fuse into a random stronger one',
   upgradePick: 'Upgrade! Pick a skill',
   ultimatePick: 'Ultimate potion! Pick a bonus skill',
+  bossPick: 'Boss ahead! A free skill',
+  bossComing: 'Boss ahead',
+  free: 'Free',
+  cellTip: '{n} more {n|one:summon|other:summons} for a new cell',
   cellOpen: 'New cell!',
   full: {
     merge: 'Cells full\nFuse a pair',

@@ -17,6 +17,10 @@ export const es: Table = {
   hint: 'Arrastra una poción sobre otra igual: se fusionan en una más fuerte al azar',
   upgradePick: '¡Mejora! Elige una habilidad',
   ultimatePick: '¡Poción suprema! Elige una habilidad extra',
+  bossPick: '¡Jefe a la vista! Una habilidad gratis',
+  bossComing: 'Jefe a la vista',
+  free: 'Gratis',
+  cellTip: '{n} {n|one:invocación|other:invocaciones} más para una casilla nueva',
   cellOpen: '¡Nueva casilla!',
   full: {
     merge: 'Casillas llenas\nFusiona un par',

@@ -17,6 +17,10 @@ export const tr: Table = {
   hint: 'İki aynı iksiri birbirine sürükle: birleşip rastgele daha güçlü bir iksir olurlar',
   upgradePick: 'Güçlendirme! Bir yetenek seç',
   ultimatePick: 'Nihai iksir! Bir bonus yetenek seç',
+  bossPick: 'Patron geliyor! Bedava bir yetenek',
+  bossComing: 'Patron geliyor',
+  free: 'Bedava',
+  cellTip: 'Yeni bir hücre için {n} çağırma daha',
   cellOpen: 'Yeni yuva!',
   full: {
     merge: 'Yer yok\nÇift birleştir',

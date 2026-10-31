@@ -14,6 +14,7 @@ import { handTexture } from './art';
 import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
+import { BossPreview } from './bossPreview';
 import { SpeedButton } from './speedButton';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
@@ -70,6 +71,7 @@ export class Hud extends Container {
   private newcomerTime = 0;
   /** A new chapter boss's card: its art, name, what it does and what it is weak to. */
   private readonly bossCard = new Container();
+  private readonly preview = new BossPreview(BOSS_CARD_Y);
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
   hint = true;
@@ -131,7 +133,7 @@ export class Hud extends Container {
     for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
+    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.preview, this.mods);
     this.addChild(this.nudgeRings, this.nudgeArc, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton, this.nudgeHand);
   }
 
@@ -177,6 +179,7 @@ export class Hud extends Container {
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
     this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.preview.reset();
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.fullTime = 0;
@@ -238,6 +241,7 @@ export class Hud extends Container {
   }
 
   react(events: BattleEvent[]): void {
+    this.preview.react(events, this.battle);
     for (const ev of events) {
       // the merge hint has done its job once the player merges
       if (ev.type === 'merge') this.hint = false;
@@ -369,6 +373,7 @@ export class Hud extends Container {
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
     this.bossCard.alpha = this.newcomer.alpha;
     this.bossCard.scale.set(1 + Math.max(0, this.newcomerTime - 4.8) * 0.8);
+    this.preview.update(dt, b);
   }
 
   /** A tap on the grey summon button: it shakes, and on a full grid the board points at a pair. */

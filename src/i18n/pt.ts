@@ -17,6 +17,10 @@ export const pt: Table = {
   hint: 'Arraste duas poções iguais uma sobre a outra: elas se fundem numa poção aleatória mais forte',
   upgradePick: 'Melhoria! Escolha uma habilidade',
   ultimatePick: 'Poção suprema! Escolha uma habilidade bônus',
+  bossPick: 'Chefe à vista! Uma habilidade grátis',
+  bossComing: 'Chefe à vista',
+  free: 'Grátis',
+  cellTip: 'Mais {n} {n|one:invocação|other:invocações} para uma casa nova',
   cellOpen: 'Novo espaço!',
   full: {
     merge: 'Sem espaço\nFunda um par',

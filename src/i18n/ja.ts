@@ -17,6 +17,10 @@ export const ja: Table = {
   hint: '同じポーションをドラッグで重ねよう：ランダムでより強いポーションに合成',
   upgradePick: '強化！スキルを1つ選ぼう',
   ultimatePick: '究極ポーション！ボーナススキルを1つ選ぼう',
+  bossPick: 'ボス接近！スキルを1つ無料で',
+  bossComing: 'ボス接近',
+  free: '無料',
+  cellTip: 'あと{n}回召喚でマスが1つ増える',
   cellOpen: '新しいマス！',
   full: {
     merge: 'マスが満杯\n合成しよう',

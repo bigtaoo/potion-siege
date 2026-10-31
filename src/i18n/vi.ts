@@ -17,6 +17,10 @@ export const vi: Table = {
   hint: 'Kéo hai bình giống nhau vào nhau: chúng trộn thành một bình ngẫu nhiên mạnh hơn',
   upgradePick: 'Nâng cấp! Chọn một kỹ năng',
   ultimatePick: 'Bình tối thượng! Chọn thêm một kỹ năng',
+  bossPick: 'Trùm sắp tới! Một kỹ năng miễn phí',
+  bossComing: 'Trùm sắp tới',
+  free: 'Miễn phí',
+  cellTip: 'Triệu hồi thêm {n} lần để có thêm một ô',
   cellOpen: 'Ô mới!',
   full: {
     merge: 'Hết ô\nTrộn một cặp',
