@@ -2,6 +2,7 @@
 // run's waves and milestones, before the result screen comes up.
 
 import type { Game } from '../app';
+import { reportScore } from '../platform/leaderboard';
 import { recordChallenge } from '../sim/achievements';
 import type { Battle } from '../sim/battle';
 import { bookAttempt } from '../sim/challenge';
@@ -62,6 +63,7 @@ export function finishChallenge(g: Game, b: Battle, run: NonNullable<Game['chall
   recordChallenge(g.save, run.result.tier);
   g.save.bestWave = Math.max(g.save.bestWave, b.wave);
   g.store();
+  if (!g.autoplay) reportScore(g.platform, 'challenge', b.wave);
   if (run.result.crystals > 0) g.platform.celebrate(); // a new best tier today
   g.run?.onEnd();
   g.perf.end();
@@ -86,6 +88,7 @@ export function finishEndless(g: Game, b: Battle, run: NonNullable<Game['endless
   run.result = run.result ? { ...booked, before: run.result.before, record: b.wave > run.result.before, milestones: run.result.milestones + booked.milestones } : booked;
   g.store();
   if (booked.milestones > 0 || (booked.record && booked.before > 0)) g.platform.celebrate();
+  if (!g.autoplay) reportScore(g.platform, 'endless', g.save.endless.best);
   g.run?.onEnd();
   g.perf.end();
   g.analytics.track('endless_end', { wave: b.wave, best: g.save.endless.best, record: run.result.record, gain, milestones: booked.milestones, revived: g.revived });

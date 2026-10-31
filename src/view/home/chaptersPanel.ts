@@ -1,4 +1,5 @@
-// The chapters panel over the home screen: a row per chapter with its chest and its stages.
+// The chapters panel over the home screen: a row per chapter with its chest, its stages and its
+// star chests.
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
@@ -11,6 +12,7 @@ import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, 
 import { gem, label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
+import { starChestBar } from './starChestBar';
 import { chapterTitle } from './shared';
 import type { HomeActions } from './types';
 
@@ -18,9 +20,14 @@ import type { HomeActions } from './types';
  *  cleared) and a tile a stage - cleared ones brass, the finale red, the chosen one ringed, a dot
  *  on a stage with a twist; a chapter not open yet says what opens it. Tapping an open stage
  *  picks it. Each stage shows its stars; on hard mode the tiles are the hard stages, and a
- *  chapter whose hard mode is not open yet says what opens it. */
+ *  chapter whose hard mode is not open yet says what opens it. Under the stages of an open
+ *  chapter, its star chests (starChestBar.ts). */
 export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const rowH = 186;
+  const rowH = 262;
+  // the name line, the stage tiles and the star chests, down the row
+  const ny = -rowH / 2 + 43;
+  const ty = ny + 86;
+  const sy = rowH / 2 - 42;
   const h = CHAPTER_COUNT * (rowH + 14) + 130;
   const { panel, box } = frame(act, t('chapter.panel'), h, fit);
   const top = -h / 2 + 90;
@@ -34,11 +41,11 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     const [first] = chapterStages(ch);
     const name = ink(chapterTitle(ch), 38, { fontWeight: '900' });
     name.anchor.set(0, 0.5);
-    name.position.set(-400, -50);
+    name.position.set(-400, ny);
     // the chapter's stars, in the mode the switch is on, before the chest
     const stars = ink(`★${chapterStars(m, ch, hard)}/${3 * CHAPTER_SIZE}`, 30, { fill: hard ? P.redInk : P.brassDark, fontWeight: '900' });
     stars.anchor.set(1, 0.5);
-    stars.position.set(95, -50);
+    stars.position.set(95, ny);
     fitText(name, 475 - stars.width - 20);
     r.addChild(name);
     if (chapterOpen(m, ch)) r.addChild(stars);
@@ -46,36 +53,41 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     const opened = m.chapterChests.includes(ch);
     const icon = chestIcon();
     icon.scale.set(0.5);
-    icon.position.set(130, -46);
+    icon.position.set(130, ny + 4);
     if (!waiting && !opened) icon.alpha = 0.55;
     r.addChild(icon);
     if (waiting) {
       const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
-      b.position.set(290, -50);
+      b.position.set(290, ny);
       r.addChild(b);
-      redDot(r, 392, -82);
+      redDot(r, 392, ny - 32);
     } else if (opened) {
       const done = ink(t('chapter.chestDone'), 32, { fill: P.inkSoft, fontWeight: '900' });
       done.anchor.set(0, 0.5);
-      done.position.set(180, -50);
+      done.position.set(180, ny);
       r.addChild(done);
     } else {
-      const g = gem(new Graphics(), 196, -50, 22);
+      const g = gem(new Graphics(), 196, ny, 22);
       const n = ink(String(chapterChest(ch)), 32, { fill: LIGHT.crystal, fontWeight: '900' });
       n.anchor.set(0, 0.5);
-      n.position.set(224, -50);
+      n.position.set(224, ny);
       const c = ink(`${chapterProgress(m, ch)}/${CHAPTER_SIZE}`, 32, { fill: P.inkSoft, fontWeight: '900' });
       c.anchor.set(1, 0.5);
-      c.position.set(400, -50);
+      c.position.set(400, ny);
       r.addChild(g, n, c);
+    }
+    if (open) {
+      const bar = starChestBar(m, act, ch);
+      bar.y = sy;
+      r.addChild(bar);
     }
     if (!open || (hard && !hardOpen(m, ch))) {
       name.alpha = 0.6;
       const text = ink(open ? t('stars.locked', { n: STARS.unlock }) : t('chapter.locked', { n: first - 1 }), 34, { fill: P.inkSoft, fontWeight: '900' });
-      text.position.set(24, 36);
+      text.position.set(24, ty);
       const l = lock();
       l.scale.set(0.6);
-      l.position.set(text.x - text.width / 2 - 36, 36);
+      l.position.set(text.x - text.width / 2 - 36, ty);
       r.addChild(text, l);
       continue;
     }
@@ -83,7 +95,7 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
       const stage = first + i;
       const can = stageOpen(m, stage);
       const tile = tappable(new Container(), () => can && act.pickStage(stage));
-      tile.position.set(-351 + i * 78, 36);
+      tile.position.set(-351 + i * 78, ty);
       const finale = isFinale(stage);
       const won = stageStars(m, stage, hard);
       const cleared = hard ? won > 0 : stage <= m.cleared;

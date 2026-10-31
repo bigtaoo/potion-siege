@@ -6,7 +6,7 @@ vi.mock('./nudges', () => ({ navDots: () => ({ ...lit.nav }) }));
 vi.mock(import('../sim/daily'), async (real) => ({ ...(await real()), canClaimLogin: () => lit.login, tasksClaimable: () => lit.tasks }));
 vi.mock(import('../sim/welcome'), async (real) => ({ ...(await real()), welcomeOn: () => lit.welcome, canClaimWelcome: () => lit.welcome }));
 
-import { homeDots, ONE_DOT_UNTIL } from './homeDots';
+import { homeDots, MAX_DOTS, ONE_DOT_UNTIL } from './homeDots';
 
 const on = (d: Record<string, boolean>) => Object.keys(d).filter((k) => d[k]).sort();
 
@@ -21,6 +21,7 @@ describe('home red dots', () => {
   it('a new player sees only the most important one', () => {
     const m = Object.assign(newMeta(), { runs: 1 });
     expect(on(homeDots(m, '2026-10-23', 'potions'))).toEqual(['battle']);
+    lit.nav.battle = false;
     lit.nav.potions = true;
     expect(on(homeDots(m, '2026-10-23', 'battle'))).toEqual(['potions']);
   });
@@ -31,10 +32,12 @@ describe('home red dots', () => {
     expect(on(homeDots(m, '2026-10-23', 'workshop'))).toEqual(['login']);
   });
 
-  it("the welcome week's gift comes before the daily login", () => {
+  it("the daily login comes before the welcome week's gift, and that before the tasks", () => {
     const m = Object.assign(newMeta(), { runs: 1 });
     lit.nav.battle = false;
     lit.welcome = true;
+    expect(on(homeDots(m, '2026-10-23', 'workshop'))).toEqual(['login']);
+    lit.login = false;
     expect(on(homeDots(m, '2026-10-23', 'workshop'))).toEqual(['welcome']);
   });
 
@@ -43,9 +46,14 @@ describe('home red dots', () => {
     expect(homeDots(m, '2026-10-23', 'battle').battle).toBe(true);
   });
 
-  it('later every dot shows', () => {
+  it('later the two most important show: battle, potions, login, tasks, then the rest', () => {
     const m = Object.assign(newMeta(), { runs: ONE_DOT_UNTIL });
-    expect(on(homeDots(m, '2026-10-23', 'potions'))).toEqual(['battle', 'codex', 'login', 'shop', 'tasks', 'workshop']);
+    expect(MAX_DOTS).toBe(2);
+    expect(on(homeDots(m, '2026-10-23', 'potions'))).toEqual(['battle', 'login']);
+    lit.nav.potions = true;
+    expect(on(homeDots(m, '2026-10-23', 'workshop'))).toEqual(['battle', 'potions']);
+    lit.nav.battle = lit.nav.potions = lit.login = false;
+    expect(on(homeDots(m, '2026-10-23', 'codex'))).toEqual(['tasks', 'workshop']);
   });
 
   it('none lit stays none', () => {

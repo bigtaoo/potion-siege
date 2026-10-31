@@ -27,7 +27,7 @@ describe("the challenge's second go", () => {
     await flush();
     expect(w.game['challenge']).not.toBeNull();
     expect(w.game['menu'].visible).toBe(false);
-    expect(w.save().challenge.attempts).toBe(2);
+    expect(w.save().challenge.attempts).toBe(1); // the retry is charged when it settles
   });
 
   it.each(['closed', 'broke'] as const)('stays home with the retry still on offer when the ad was %s', async (answer) => {

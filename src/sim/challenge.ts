@@ -16,7 +16,8 @@ export type ModifierId = (typeof MODIFIER_IDS)[number];
 export interface ChallengeSave {
   /** The last day a challenge attempt was started. */
   date: string;
-  /** Attempts started on `date`: the free one, then the one a rewarded ad buys. */
+  /** Attempts finished on `date`: the free one, then the one a rewarded ad buys. One left
+   *  midway is not counted (beginAttempt / bookAttempt). */
   attempts: number;
   /** The furthest wave reached on `date`. */
   best: number;
@@ -124,7 +125,7 @@ export function challengeSetup(m: MetaSave, c: Challenge): BattleSetup {
   };
 }
 
-/** Attempts started today. */
+/** Attempts finished today. */
 export function attemptsUsed(m: MetaSave, today: string): number {
   return today > m.challenge.date ? 0 : m.challenge.attempts;
 }
@@ -163,8 +164,9 @@ export function streakBonus(days: number): number {
 }
 
 /** Starts an attempt (`ad`: the one a rewarded ad bought). The first of a day moves the streak
- *  on and pays its bonus (streakBonus). Returns the bonus paid, or null when the attempt is
- *  not on offer. */
+ *  on and pays its bonus (streakBonus); the attempt itself is only charged when it is booked,
+ *  so a run left midway leaves it there to play again. Returns the bonus paid, or null when the
+ *  attempt is not on offer. */
 export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | null {
   if (ad ? !canPlayAd(m, today) : !canPlayFree(m, today)) return null;
   const s = m.challenge;
@@ -177,7 +179,6 @@ export function beginAttempt(m: MetaSave, today: string, ad: boolean): number | 
     s.bestStreak = Math.max(s.bestStreak, s.streak);
     bonus = streakBonus(s.streak);
   }
-  s.attempts++;
   m.crystals += bonus;
   return bonus;
 }
@@ -192,10 +193,11 @@ export function tierReward(tier: number): number {
   return tier > 0 ? C.tiers[tier - 1].reward : 0;
 }
 
-/** Books an attempt that reached `wave` into the day it was started on; pays what a better
- *  tier adds. */
+/** Books an attempt that reached `wave` into the day it was started on: charges it (never past
+ *  the day's free and ad attempts) and pays what a better tier adds. */
 export function bookAttempt(m: MetaSave, wave: number): ChallengeResult {
   const s = m.challenge;
+  s.attempts = Math.min(C.attempts + C.adAttempts, s.attempts + 1);
   const before = tierOf(s.best);
   s.best = Math.max(s.best, wave);
   const bestTier = tierOf(s.best);

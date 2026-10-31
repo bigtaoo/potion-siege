@@ -62,6 +62,9 @@ export interface Platform {
   readonly collectorBlocked?: boolean;
   /** The host's own telemetry, one more analytics sink (Playgama's Bridge events). */
   readonly hostSink?: Sink;
+  /** Sends a score to one of the host's leaderboards (Playgama's, platform/leaderboard.ts);
+   *  absent where there are none. */
+  setScore?(board: string, score: number): void;
 }
 
 /** Hot updates of the game itself (docs/ios.md "Hot updates"), offered on the home screen (view/updatePrompt.ts). */

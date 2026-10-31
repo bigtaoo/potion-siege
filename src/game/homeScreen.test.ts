@@ -209,7 +209,7 @@ describe('the claims and switches on the home screen', () => {
   });
 
   it("opens a finished chapter's chest once", () => {
-    const w = at('battle');
+    const w = at('battle', (m) => m.starChests.fill(3)); // no star chest waiting beside it
     home(w.game, 'chapters');
     tap(w.stage, t('chapter.chestOpen'));
     expect(w.save().chapterChests).toEqual([1]);

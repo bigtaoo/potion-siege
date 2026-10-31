@@ -31,6 +31,8 @@ export interface HomeActions {
   hardMode(on: boolean): boolean;
   /** A finished chapter's one-time chest. */
   claimChapter(chapter: number, at: Container): void;
+  /** The star chests a chapter's stars have reached (starChest.ts). */
+  claimStarChest(chapter: number, at: Container): void;
   hero(kind: HeroKind): void;
   /** A potion on the potions tab's lineup strip was tapped. */
   lineup(kind: HeroKind): void;

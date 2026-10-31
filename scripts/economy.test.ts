@@ -25,6 +25,8 @@ import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, double
 import { bookStars, hardReward, hardSetup, runStars } from '../src/sim/stars';
 import { BALANCE, HERO_KINDS } from '../src/sim/types';
 import { claimWelcome } from '../src/sim/welcome';
+import { openStarChests } from '../src/sim/starChest';
+import { CHAPTER_COUNT } from '../src/sim/chapters';
 import { offFrontier } from './economyStars';
 
 function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
@@ -52,8 +54,8 @@ const OVERHEAD = 0.4;
 const AD_MIN = 0.5;
 const ENDLESS_MIN = 6;
 
-type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'endless' | 'welcome';
-const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'endless', 'welcome'];
+type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'stars' | 'endless' | 'welcome';
+const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'stars', 'endless', 'welcome'];
 
 interface Day {
   day: number;
@@ -198,6 +200,7 @@ it('economy', () => {
           if (!c) break;
           book('achievements', c);
         }
+        for (let ch = 1; ch <= CHAPTER_COUNT; ch++) book('stars', openStarChests(m, ch));
       };
 
       rollDay(m, today);

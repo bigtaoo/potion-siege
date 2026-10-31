@@ -8,6 +8,7 @@ import { claimTier } from '../sim/achievements';
 import { openChapterChest } from '../sim/chapters';
 import { canClaimLogin, claimBonus, claimLogin, claimTask, gameDay, rollDay } from '../sim/daily';
 import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
+import { openStarChests } from '../sim/starChest';
 import { setHardMode, stageOpen, stepStage } from '../sim/stars';
 import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
 import { loginPops, markSeen, upgradeHintKind } from '../view/nudges';
@@ -126,6 +127,10 @@ export function home(g: Game, panel: HomePanel = null): void {
     claimChapter: (ch, at) => {
       const n = openChapterChest(g.save, ch);
       if (n > 0) claimed(g, `chapter_${ch}`, n, panel, at);
+    },
+    claimStarChest: (ch, at) => {
+      const n = openStarChests(g.save, ch);
+      if (n > 0) claimed(g, `starChest_${ch}`, n, panel, at);
     },
     hero: (kind) => {
       const ok = buyHero(g.save, kind);

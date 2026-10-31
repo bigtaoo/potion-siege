@@ -43,6 +43,19 @@ describe('PlaygamaBridge', () => {
     expect([...(await b.load(['a', 'b', 'c']))]).toEqual([['a', 'x'], ['b', '{"n":1}']]);
   });
 
+  it('sends a score only where the platform has leaderboards', async () => {
+    const f = fakeBridge();
+    const b = new PlaygamaBridge(f.global, never);
+    b.setScore('endless', 9);
+    await b.init();
+    b.setScore('endless', 12);
+    const off = fakeBridge({ boards: 'not_available' });
+    const c = new PlaygamaBridge(off.global, never);
+    await c.init();
+    c.setScore('endless', 12);
+    expect([f.scores, off.scores]).toEqual([[['endless', 12]], []]);
+  });
+
   it('reports the sound switch now and on every change', async () => {
     const f = fakeBridge({ audio: false });
     const b = new PlaygamaBridge(f.global, never);
