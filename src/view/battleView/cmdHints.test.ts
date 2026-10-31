@@ -1,12 +1,13 @@
 // The commander's hints (cmdHints.ts): the cell by the count, the first-time line, the glow and
 // the hand at a full charge.
 import '../layout/measure';
-import { Graphics } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { t } from '../../i18n';
 import type { Battle } from '../../sim/battle';
 import { BALANCE } from '../../sim/types';
 import { SpriteLayer } from '../art';
+import { turnView } from '../landView';
 import { badgeAt, CommanderArt } from './commander';
 import { CommanderHints, drawCellIcon, drawFullGlow, resetCellTip, TIP_SECONDS } from './cmdHints';
 
@@ -46,7 +47,9 @@ describe('the first-time line', () => {
     h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
     expect(h.tip.visible).toBe(true);
     expect(h.tip.text).toBe(t('cellTip', { n: 3 }));
-    expect(h.tip.y).toBeLessThan(1700);
+    // beside the count, not over it on the wall's numbers
+    expect(h.tip.y).toBe(1700);
+    expect(h.tip.x).toBeLessThan(500 - 80);
     h.showTip(3, { x: 500, y: 1700 }, 1, TIP_SECONDS);
     h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
     expect(h.tip.visible).toBe(false);
@@ -54,6 +57,21 @@ describe('the first-time line', () => {
     const again = new CommanderHints();
     again.showTip(2, { x: 500, y: 1700 }, 1, 0.1);
     expect(again.tip.visible).toBe(false);
+  });
+
+  it('goes under the commander on a turned field, wrapped to the narrow board', () => {
+    turnView(new Container(), true);
+    try {
+      const h = new CommanderHints();
+      h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
+      // 250 down the screen, which on the lying view is 250 along its x
+      expect(h.tip.x).toBe(750);
+      expect(h.tip.y).toBe(1700);
+      expect(h.tip.anchor.x).toBe(0.5);
+      expect(h.tip.style.wordWrap).toBe(true);
+    } finally {
+      turnView(new Container(), false);
+    }
   });
 
   it('waits while there is no count, and stands still in a pause', () => {
