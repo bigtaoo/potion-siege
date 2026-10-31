@@ -43,7 +43,8 @@ export class RunTracker {
           this.a.track('wave_start', { run: this.run, wave: ev.wave, boss: ev.boss, wall: this.wallPct() });
           break;
         case 'offer':
-          this.a.first(`first_${ev.reason}`, { t: this.a.sessionSeconds, wave: this.battle.wave });
+          // the boss offer is no first-time choice of the player's, and the collector has no first_boss
+          if (ev.reason !== 'boss') this.a.first(`first_${ev.reason}`, { t: this.a.sessionSeconds, wave: this.battle.wave });
           break;
       }
     }

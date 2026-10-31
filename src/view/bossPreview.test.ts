@@ -19,7 +19,7 @@ function lastWave(stage: number): Battle {
 
 describe('BossPreview', () => {
   it('shows the boss once the free skill is picked, for a moment', () => {
-    const b = lastWave(3);
+    const b = lastWave(4);
     const p = new BossPreview();
     p.react(b.drain(), b);
     p.update(0.1, b);
@@ -32,8 +32,8 @@ describe('BossPreview', () => {
     expect(p.visible).toBe(false);
   });
 
-  it('shows on every stage with a last boss', () => {
-    for (const stage of [1, 11, 45]) {
+  it('shows on every stage from 4 with a last boss', () => {
+    for (const stage of [4, 11, 45]) {
       const b = lastWave(stage);
       const p = new BossPreview();
       p.react(b.drain(), b);
@@ -44,7 +44,7 @@ describe('BossPreview', () => {
   });
 
   it('clears on reset and on a battle without one', () => {
-    const b = lastWave(3);
+    const b = lastWave(4);
     const p = new BossPreview();
     p.react(b.drain(), b);
     p.reset();

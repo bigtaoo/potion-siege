@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { Battle } from './battle';
-import { BOSS_CHARGE, weakFielded } from './bossPrep';
+import { BOSS_CHARGE, PREP_FROM, weakFielded } from './bossPrep';
 import { resist } from './enemies';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { BALANCE, isBoss } from './types';
 
 /** A battle with wave 9 just cleared, stepped until the last wave sets out. */
-function lastWave(setup: BattleSetup = { ...BASE_SETUP, stage: 3 }): Battle {
+function lastWave(setup: BattleSetup = { ...BASE_SETUP, stage: 4 }): Battle {
   const b = new Battle(5, setup);
   b.gold = 1e6;
   for (let i = 0; i < 4; i++) b.summon();
@@ -42,7 +42,7 @@ describe('bossPrep', () => {
   });
 
   it('caps the charge at full', () => {
-    const b = new Battle(5, { ...BASE_SETUP, stage: 3 });
+    const b = new Battle(5, { ...BASE_SETUP, stage: 4 });
     b.charge = BALANCE.commander.charge - 1;
     b.wave = BALANCE.waves.count - 1;
     b.pending = [];
@@ -51,9 +51,10 @@ describe('bossPrep', () => {
     expect(b.charge).toBe(BALANCE.commander.charge);
   });
 
-  it('leaves endless mode and the earlier waves alone', () => {
-    expect(lastWave({ ...BASE_SETUP, stage: 3, endless: true }).choices).toBeNull();
-    const b = new Battle(5, { ...BASE_SETUP, stage: 3 });
+  it('leaves endless mode, stages 1-3 and the earlier waves alone', () => {
+    expect(lastWave({ ...BASE_SETUP, stage: 4, endless: true }).choices).toBeNull();
+    expect(lastWave({ ...BASE_SETUP, stage: PREP_FROM - 1 }).choices).toBeNull();
+    const b = new Battle(5, { ...BASE_SETUP, stage: 4 });
     for (let i = 0; i < 600 && b.wave < 3; i++) b.step();
     expect(b.choices).toBeNull();
   });
