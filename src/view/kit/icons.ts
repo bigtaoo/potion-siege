@@ -1,10 +1,10 @@
 // Pictures in the workshop menus: a hero's bottle, the stand-in flask, enemy art, the BOSS tag,
 // the padlock and the drawn icons.
 
-import { Container, Graphics, Sprite } from 'pixi.js';
+import { Container, Graphics } from 'pixi.js';
 import { enemyTexture, ultimateTexture } from '../art';
 import { COLORS, HERO_COLORS, label } from '../ui';
-import { shrunk } from '../shrink';
+import { sharp } from '../shrink';
 import { slab } from '../stone';
 import type { EnemyKind, HeroKind } from '../../sim/types';
 import { t } from '../../i18n';
@@ -14,15 +14,7 @@ import { P } from './palette';
 export function bottle(kind: HeroKind, h: number): Container {
   const c = new Container();
   const full = ultimateTexture(kind);
-  if (full) {
-    const tex = shrunk(full, h);
-    const s = new Sprite(tex);
-    s.anchor.set(0.5);
-    s.scale.set(h / Math.max(tex.width, tex.height));
-    c.addChild(s);
-  } else {
-    c.addChild(flask(new Graphics(), 0, h * 0.45, h * 0.9, HERO_COLORS[kind], true));
-  }
+  c.addChild(full ? sharp(full, h) : flask(new Graphics(), 0, h * 0.45, h * 0.9, HERO_COLORS[kind], true));
   return c;
 }
 
@@ -50,13 +42,7 @@ export function flask(g: Graphics, x: number, feet: number, h: number, color: nu
 export function enemySprite(kind: EnemyKind, w: number, h: number = w): Container {
   const c = new Container();
   const full = enemyTexture(kind);
-  if (full) {
-    const tex = shrunk(full, Math.max(w, h));
-    const s = new Sprite(tex);
-    s.anchor.set(0.5);
-    s.scale.set(Math.min(w / tex.width, h / tex.height));
-    c.addChild(s);
-  }
+  if (full) c.addChild(sharp(full, Math.max(full.width, full.height) * Math.min(w / full.width, h / full.height)));
   return c;
 }
 

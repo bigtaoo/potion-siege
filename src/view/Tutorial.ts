@@ -7,6 +7,7 @@ import { Container, Graphics, Sprite, type Text } from 'pixi.js';
 import { t } from '../i18n';
 import { TUTORIAL_STEPS, type TutorialCue } from '../sim/tutorial';
 import { handTexture } from './art';
+import { sharp } from './shrink';
 import { balanced, fit, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
 
 export interface Rect {
@@ -212,10 +213,9 @@ export class TutorialLayer extends Container {
 function handArt(): Sprite | undefined {
   const tex = handTexture();
   if (!tex) return undefined;
-  const art = new Sprite(tex);
+  const art = sharp(tex, Math.max(tex.width, tex.height) * 0.58 * (417 / tex.height));
   // the fingertip, in the art's own pixels; the painting points straight up, back of the hand to the viewer
   art.anchor.set(147 / tex.width, 14 / tex.height);
-  art.scale.set(0.58 * (417 / tex.height));
   return art;
 }
 

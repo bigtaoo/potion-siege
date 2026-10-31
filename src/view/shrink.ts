@@ -1,39 +1,61 @@
-// Smaller copies of a big picture for the places that show it small. A 400 px bottle drawn 28
-// units tall samples one texel in ten: the outlines break up into noise. Halving it on a canvas
-// until it is just over the size it is drawn at averages every texel in, as mipmaps would, but
-// only for the small uses: a card drawing the full picture keeps it sharp.
+// Smaller copies of a big picture for the places that show it small. A 400 px bottle drawn 60
+// device px tall samples one texel in seven: the outlines break up into noise. Halving it on a
+// canvas until it is just over the size it lands on screen averages every texel in, as mipmaps
+// would, but only for the small uses: a card drawing the full picture keeps it sharp.
 
-import { Texture, type TextureSource } from 'pixi.js';
-
-/** Device pixels a menu unit can take at most (a full-size menu on a phone's 3x screen is about
- *  half a unit to a pixel, times 3); a copy never goes below the size drawn times this. */
-const DENSITY = 1.5;
+import { Matrix, Sprite, Texture, type Renderer, type TextureSource } from 'pixi.js';
 
 const made = new WeakMap<TextureSource, Map<number, Texture>>();
+const onScreen = new Matrix();
 
-/** `tex`, or a copy halved as often as it stays at least `h` x DENSITY px on its longer side. */
-export function shrunk(tex: Texture, h: number): Texture {
-  const src = tex.source;
-  const halvings = halvingsFor(Math.max(tex.width, tex.height), h);
-  // only whole pictures loaded from a file: not a frame of a sheet, nor one drawn in code
-  const whole = tex.frame.width === src.width && tex.frame.height === src.height;
-  if (halvings === 0 || !whole || !canDraw(src.resource)) return tex;
-  let copies = made.get(src);
-  if (!copies) made.set(src, (copies = new Map()));
-  let copy = copies.get(halvings);
-  if (!copy) {
-    copy = halve(src.resource, src.pixelWidth, src.pixelHeight, halvings);
-    if (!copy) return tex;
-    copies.set(halvings, copy);
-  }
-  return copy;
+/** A sprite of `full`, centred and `long` units on its longer side, that draws from the copy
+ *  halved as often as it stays at least as big as it lands on screen. The screen size is read
+ *  each time it is drawn, so it follows the menu's scale and the renderer's resolution. */
+export function sharp(full: Texture, long: number): Sprite {
+  const s = new Sprite(full);
+  s.anchor.set(0.5);
+  const big = Math.max(full.width, full.height);
+  const fit = (tex: Texture) => s.scale.set(long / Math.max(tex.width, tex.height));
+  fit(full);
+  let shown = 0;
+  s.onRender = (r: Renderer) => {
+    if (!s.parent) return;
+    // worldTransform is not kept up to date under render groups: walk up to the stage instead
+    const m = s.parent.getGlobalTransform(onScreen);
+    const n = halvingsFor(big, long * Math.hypot(m.a, m.b) * r.resolution);
+    if (n === shown) return;
+    shown = n;
+    const tex = copyAt(full, n);
+    if (s.texture !== tex) {
+      s.texture = tex;
+      fit(tex);
+    }
+  };
+  return s;
 }
 
-/** How often a picture `big` px on its longer side halves and stays at least `h` x DENSITY px. */
-export function halvingsFor(big: number, h: number): number {
+/** How often a picture `big` px on its longer side halves and stays at least `px` px. */
+export function halvingsFor(big: number, px: number): number {
   let n = 0;
-  while (big / 2 ** (n + 1) >= h * DENSITY) n++;
+  while (px > 0 && big / 2 ** (n + 1) >= px) n++;
   return n;
+}
+
+/** `full` halved `n` times, made once per picture and level; `full` itself for 0 or for what a
+ *  canvas cannot copy (a frame of a sheet, a picture drawn in code). */
+export function copyAt(full: Texture, n: number): Texture {
+  const src = full.source;
+  const whole = full.frame.width === src.width && full.frame.height === src.height;
+  if (n === 0 || !whole || !canDraw(src.resource)) return full;
+  let copies = made.get(src);
+  if (!copies) made.set(src, (copies = new Map()));
+  let copy = copies.get(n);
+  if (!copy) {
+    copy = halve(src.resource, src.pixelWidth, src.pixelHeight, n);
+    if (!copy) return full;
+    copies.set(n, copy);
+  }
+  return copy;
 }
 
 function canDraw(r: unknown): r is CanvasImageSource {
