@@ -11,6 +11,7 @@ import type { Lesson, Rect } from '../view/Tutorial';
 import { isLand } from '../view/landView';
 import { DESIGN_H, DESIGN_W, type MenuFit } from '../view/viewport';
 import { LAND } from '../view/wideLayout';
+import { idlePulse } from './idlePulse';
 
 /** The tutorial starts with the first battle of stage 1 on a save that has not seen it. */
 export function beginTutorial(g: Game): void {
@@ -51,6 +52,7 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
   // the pick shows over the skill cards, every other step over the battle itself
   const up = step === 'pick' ? g.overlay.visible : !g.overlay.visible;
   g.hud.pulse = up && (step === 'summon' || step === 'more' || step === 'again');
+  if (idlePulse(b, g.root.visible ? dt : 0)) g.hud.pulse = true;
   g.lessons.scale.set(m.scale);
   g.lessons.show(step && up && b ? lessonFor(g, step, b, m) : null, m.w, m.h, m.wide, dt);
 }

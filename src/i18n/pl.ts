@@ -17,6 +17,10 @@ export const pl: Table = {
   hint: 'Przeciągnij dwie takie same mikstury na siebie: połączą się w losową, silniejszą',
   upgradePick: 'Ulepszenie! Wybierz umiejętność',
   ultimatePick: 'Arcymikstura! Wybierz dodatkową umiejętność',
+  bossPick: 'Nadchodzi boss! Darmowa umiejętność',
+  bossComing: 'Nadchodzi boss',
+  free: 'Za darmo',
+  cellTip: 'Jeszcze {n} {n|one:przywołanie|few:przywołania|many:przywołań|other:przywołania} do nowego pola',
   cellOpen: 'Nowe pole!',
   full: {
     merge: 'Pola pełne\nPołącz parę',

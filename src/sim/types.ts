@@ -10,7 +10,7 @@ export type HeroKind = (typeof HERO_KINDS)[number];
  *  potion (MetaSave.lineup), and every summon and merge rolls one of the four. */
 export const LINEUP = BALANCE.lineup as readonly HeroKind[];
 
-export type OfferReason = 'upgrade' | 'ultimate';
+export type OfferReason = 'upgrade' | 'ultimate' | 'boss';
 
 /** The clockwork army: the first four from stage 1, weakest first, then the two that join on
  *  later stages, then the bosses of the later chapters. */

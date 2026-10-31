@@ -17,6 +17,10 @@ export const ko: Table = {
   hint: '같은 포션 두 개를 끌어다 합치면 더 강한 포션이 무작위로 나와요',
   upgradePick: '강화! 스킬을 고르세요',
   ultimatePick: '궁극의 포션! 보너스 스킬을 고르세요',
+  bossPick: '보스 등장! 무료 스킬 하나',
+  bossComing: '보스 등장',
+  free: '무료',
+  cellTip: '{n}번 더 소환하면 칸이 하나 늘어요',
   cellOpen: '새 칸 열림!',
   full: {
     merge: '칸이 꽉 찼어요\n한 쌍 합성',

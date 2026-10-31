@@ -36,6 +36,8 @@ const PAD = 14;
 const NARROW = 480;
 /** The gap between a card over the field and what it points at, room for its tail. */
 const BESIDE = 90;
+/** How far below the bottle's middle the dragging fingertip sits, the hand under it. */
+export const DRAG_BELOW = 46;
 
 export class TutorialLayer extends Container {
   private readonly dim = new Graphics();
@@ -133,8 +135,9 @@ export class TutorialLayer extends Container {
       // room for the hand between the card and what it points at
       y = side === 'above' ? target.y - (lesson.step === 'pick' ? 30 : 190) - ch / 2 : target.y + target.h + 60 + ch / 2;
       if (lesson.step === 'pick') y = Math.max(y, ch / 2 + 20);
-      // a tall screen's card over a button would hide the potions just summoned: it and its tail (48) stay above them
-      if (button && !wide && lesson.keep?.length) y = Math.min(y, bounds(lesson.keep).y - 60 - ch / 2);
+      // a tall screen's card over a button would hide the wall cells, where the first potions land
+      // (audit V5): it stays in the page's upper half
+      if (button && !wide) y = Math.min(y, h / 2 - ch / 2);
     } else if (narrow) {
       x = side === 'right' ? target.x + target.w + BESIDE + cw / 2 : target.x - BESIDE - cw / 2;
       y = target.y + target.h / 2;
@@ -190,7 +193,9 @@ export class TutorialLayer extends Container {
       const k = clamp((cycle - 0.15) / 0.65, 0, 1);
       const e = k * k * (3 - 2 * k);
       const p = quad(from, mid, to, e);
-      this.hand.position.set(p.x, p.y);
+      // pointing up from below the bottles (audit V5), so the hand never hides the one to drag
+      this.hand.rotation = -0.35;
+      this.hand.position.set(p.x, p.y + DRAG_BELOW);
       this.hand.alpha = cycle > 0.9 ? 1 - (cycle - 0.9) * 10 : Math.min(1, cycle * 10);
       this.hand.scale.set(cycle < 0.15 ? 1.08 - cycle * 0.5 : 1);
     } else {

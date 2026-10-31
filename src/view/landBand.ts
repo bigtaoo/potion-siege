@@ -16,7 +16,7 @@ export function landBand(): Graphics {
   for (let y = RAIL, row = 0; y < h; y += PLANK, row++) {
     g.rect(0, y, w, 4).fill({ color: P.woodDark, alpha: 0.7 });
     g.rect(0, y + 4, w, 3).fill({ color: P.woodLight, alpha: 0.25 });
-    for (let x = row % 2 ? 260 : 520; x < w; x += 520) g.rect(x, y, 4, PLANK).fill({ color: P.woodDark, alpha: 0.55 });
+    for (let x = row % 2 ? 260 : 520; x < w; x += 520) g.rect(x, y, 4, Math.min(PLANK, h - y)).fill({ color: P.woodDark, alpha: 0.55 });
   }
   // the field's shadow on the shelf, and the shelf's own darker front edge
   for (let i = 1; i <= 6; i++) g.rect(0, RAIL, w, 10 * i).fill({ color: 0x000000, alpha: 0.06 });

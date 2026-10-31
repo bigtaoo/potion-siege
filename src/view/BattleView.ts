@@ -84,6 +84,7 @@ export class BattleView extends Container {
     this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.dead, this.enemies.art, this.enemies.flash, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
+    this.addChildAt(this.cmd.hints, this.children.indexOf(this.wallText));
     this.field.build(this);
     this.enemies.onBlow = (x, y, r, kind) => this.blow(x, y, r, kind);
     this.eventMode = 'static';

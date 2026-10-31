@@ -14,9 +14,13 @@ import { handTexture } from './art';
 import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
+import { BossPreview } from './bossPreview';
+import { HudPlates } from './hudPlates';
 import { SpeedButton } from './speedButton';
+import { summonPrice } from './summonPrice';
 import { Button, COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
+import { BAND_BUTTON } from './wideLayout';
 
 const HINT_SECONDS = 25;
 /** The wave banner's height; a boss wave's goes down the field, out of the way of the boss
@@ -37,6 +41,7 @@ export const VETERAN_MERGES = 20;
 const IDLE_SUMMON_AFTER = 4;
 
 export class Hud extends Container {
+  private readonly plates = new HudPlates();
   private readonly coin = new Graphics();
   private readonly waveText = label('', 56);
   private readonly stageText = label('', 44, { fill: COLORS.gold });
@@ -70,6 +75,7 @@ export class Hud extends Container {
   private newcomerTime = 0;
   /** A new chapter boss's card: its art, name, what it does and what it is weak to. */
   private readonly bossCard = new Container();
+  private readonly preview = new BossPreview(BOSS_CARD_Y);
   private battle: Battle | null = null;
   /** Off while the tutorial does the explaining. */
   hint = true;
@@ -131,7 +137,7 @@ export class Hud extends Container {
     for (const o of [this.nudgeRings, this.nudgeArc, this.nudgeHand]) o.eventMode = 'none';
     this.nudgeHand.addChild(pointingHand());
     this.nudgeHand.rotation = Math.PI - 0.35;
-    this.addChild(this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.mods);
+    this.addChild(this.plates, this.coin, this.waveText, this.stageText, this.goldText, this.hintBox, this.banner, this.newcomer, this.bossCard, this.preview, this.mods);
     this.addChild(this.nudgeRings, this.nudgeArc, this.upgradeButton, this.summonButton, this.pauseButton, this.speedButton, this.nudgeHand);
   }
 
@@ -143,6 +149,7 @@ export class Hud extends Container {
     const y = band ?? BUTTON.y;
     this.upgradeButton.position.set(190, y);
     this.summonButton.position.set(DESIGN_W - 190, y);
+    this.upgradeButton.scale.set(band === null ? 1 : BAND_BUTTON);
     this.legible(this.boost, true);
   }
 
@@ -156,7 +163,7 @@ export class Hud extends Container {
     const top = Math.min(this.boost, 1.25);
     this.goldText.scale.set(top);
     if (this.band === null) return;
-    const room = this.upgradeButton.x - BUTTON.w / 2 - 12 - this.goldText.x;
+    const room = this.upgradeButton.x - (BUTTON.w * BAND_BUTTON) / 2 - 12 - this.goldText.x;
     if (this.goldText.width > room) this.goldText.scale.set((top * room) / this.goldText.width);
   }
 
@@ -177,6 +184,7 @@ export class Hud extends Container {
     this.newcomerTime = 0;
     this.newcomer.alpha = 0;
     this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.preview.reset();
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
     this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.fullTime = 0;
@@ -238,6 +246,7 @@ export class Hud extends Container {
   }
 
   react(events: BattleEvent[]): void {
+    this.preview.react(events, this.battle);
     for (const ev of events) {
       // the merge hint has done its job once the player merges
       if (ev.type === 'merge') this.hint = false;
@@ -325,8 +334,9 @@ export class Hud extends Container {
     // a full grid says so on the button, and what to do about it, rather than just going grey
     const full = !b.paused && !b.result && b.freeSlots().length === 0;
     const pair = full ? mergeablePair(b) : null;
-    this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}\n● ${b.summonCost()}`;
+    this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}${summonPrice(b)}`;
     this.summonButton.setEnabled(b.canSummon());
+    this.plates.fit([{ text: this.waveText }, { text: this.stageText }, { text: this.goldText, coin: { ...this.coinAt(), r: 26 * Math.min(this.boost, 1.25) } }]);
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     // the next move for a player who has stopped: a pair to fuse, else 强化, else 召唤
@@ -338,7 +348,7 @@ export class Hud extends Container {
     this.acted = acted;
     const shown = this.idleSummon >= IDLE_SUMMON_AFTER ? next : null;
     this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
-    this.summonButton.scale.set(1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2);
+    this.summonButton.scale.set(this.upgradeButton.scale.x * (1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2));
     if (!full) this.asked = false;
     this.fullTime = pair && b.gold >= b.summonCost() ? this.fullTime + dt : 0;
     const nudgePair = this.nudge && pair && (this.asked || (!this.veteran && this.fullTime >= NUDGE_AFTER)) ? pair : null;
@@ -369,6 +379,7 @@ export class Hud extends Container {
     this.newcomer.alpha = Math.min(1, this.newcomerTime);
     this.bossCard.alpha = this.newcomer.alpha;
     this.bossCard.scale.set(1 + Math.max(0, this.newcomerTime - 4.8) * 0.8);
+    this.preview.update(dt, b);
   }
 
   /** A tap on the grey summon button: it shakes, and on a full grid the board points at a pair. */

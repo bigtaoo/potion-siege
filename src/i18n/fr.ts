@@ -17,6 +17,10 @@ export const fr: Table = {
   hint: 'Fais glisser deux potions identiques l’une sur l’autre : elles fusionnent en une potion plus forte, au hasard',
   upgradePick: 'Amélioration ! Choisis une compétence',
   ultimatePick: 'Potion ultime ! Choisis une compétence bonus',
+  bossPick: 'Boss en approche ! Une compétence offerte',
+  bossComing: 'Boss en approche',
+  free: 'Gratuit',
+  cellTip: 'Encore {n} {n|one:invocation|other:invocations} pour une case de plus',
   cellOpen: 'Nouvelle case !',
   full: {
     merge: 'Cases pleines\nFusionnes-en 2',

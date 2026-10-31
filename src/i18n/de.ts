@@ -17,6 +17,10 @@ export const de: Table = {
   hint: 'Zieh zwei gleiche Tränke zusammen: Sie mischen sich zu einem zufälligen stärkeren',
   upgradePick: 'Aufgewertet! Wähle eine Fähigkeit',
   ultimatePick: 'Ultratrank! Wähle eine Bonus-Fähigkeit',
+  bossPick: 'Boss voraus! Eine Gratis-Fähigkeit',
+  bossComing: 'Boss voraus',
+  free: 'Gratis',
+  cellTip: 'Noch {n} {n|one:Beschwörung|other:Beschwörungen} bis zu einem neuen Feld',
   cellOpen: 'Neues Feld!',
   full: {
     merge: 'Felder voll\nPaar mischen',

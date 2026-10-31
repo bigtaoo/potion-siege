@@ -17,6 +17,10 @@ export const id: Table = {
   hint: 'Seret dua ramuan yang sama jadi satu: keduanya bergabung jadi ramuan acak yang lebih kuat',
   upgradePick: 'Perkuat! Pilih satu skill',
   ultimatePick: 'Ramuan pamungkas! Pilih skill bonus',
+  bossPick: 'Bos datang! Satu skill gratis',
+  bossComing: 'Bos datang',
+  free: 'Gratis',
+  cellTip: '{n} panggilan lagi untuk petak baru',
   cellOpen: 'Petak baru!',
   full: {
     merge: 'Petak penuh\nGabung sepasang',

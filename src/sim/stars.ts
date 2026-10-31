@@ -6,6 +6,7 @@
 // Called `stageStars` / `hardStars` where it reads better, as "star" is a potion's merge level.
 
 import { CHAPTER_COUNT, CHAPTER_SIZE, chapterOf, chapterProgress, chapterStages } from './chapters';
+import { lossAssist } from './lossStreak';
 import { battleSetup, stageHp, workshopValue, type BattleSetup, type MetaSave, type Reward, type RunResult } from './meta';
 import { EXTRA_SUMMONS } from './tutorial';
 import { BALANCE } from './types';
@@ -148,7 +149,7 @@ export function stageSetup(m: MetaSave): BattleSetup {
   const setup = battleSetup(m);
   if (playingHard(m)) return hardSetup(setup);
   // the tutorial's 召唤 twice more while 强化's gold comes in, free so 强化 comes no later
-  return m.tutorial || setup.stage !== 1 ? setup : { ...setup, giftSummons: EXTRA_SUMMONS };
+  return lossAssist(m.tutorial || setup.stage !== 1 ? setup : { ...setup, giftSummons: EXTRA_SUMMONS }, m.lossStreak);
 }
 
 export function hardSetup(setup: BattleSetup): BattleSetup {

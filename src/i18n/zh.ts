@@ -16,6 +16,10 @@ export const zh: Table = {
   hint: '把两瓶相同的药剂拖到一起：合成一瓶随机的更强药剂',
   upgradePick: '强化：选择一个技能',
   ultimatePick: '终极药剂！选择一个额外技能',
+  bossPick: '首领来袭！免费选一个技能',
+  bossComing: '首领来袭',
+  free: '免费',
+  cellTip: '再召唤 {n} 次多一个塔格',
   cellOpen: '新格子！',
   full: {
     merge: '格子满了\n合成腾位',

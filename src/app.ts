@@ -432,7 +432,7 @@ export class Game {
     // no ad in the tutorial's first pick: it is there to teach the cards
     const canReroll = b.canReroll() && !this.autoplay && !this.tutorial && this.platform.rewardedAvailable();
     if (canReroll) this.run?.onRerollOffer();
-    const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : 'upgradePick');
+    const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : b.choiceReason === 'boss' ? 'bossPick' : 'upgradePick');
     const choices = b.choices ?? [];
     const top = !this.autoplay && topPick(this.save) ? suggestSkill(b, choices) : null;
     this.overlay.showSkills(choices, b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null, top);

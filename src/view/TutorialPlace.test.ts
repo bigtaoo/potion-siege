@@ -2,7 +2,7 @@
 import './layout/measure';
 import type { Container } from 'pixi.js';
 import { describe, expect, it } from 'vitest';
-import { TutorialLayer, type Lesson, type Rect } from './Tutorial';
+import { DRAG_BELOW, TutorialLayer, type Lesson, type Rect } from './Tutorial';
 
 const card = (l: TutorialLayer) => l['card'] as Container;
 const hand = (l: TutorialLayer) => l['hand'] as Container;
@@ -56,13 +56,12 @@ describe('the card over 召唤 on a tall screen', () => {
   });
   const bottom = (l: TutorialLayer) => card(l).y + card(l).children[1].height / 2;
 
-  it('stands clear of the potions already summoned', () => {
+  it('stands in the upper half, clear of the wall cells the first potions land on', () => {
     const l = new TutorialLayer(() => {});
     l.show(summon(), 1080, 1920, false, 0.1);
-    const near = bottom(l);
-    expect(near).toBeGreaterThan(1300);
-    l.show(summon([{ x: 300, y: 1300, w: 150, h: 150 }]), 1080, 1920, false, 0.1);
     // the panel's drawn height takes in its shadow
+    expect(bottom(l)).toBeLessThanOrEqual(960 + 20);
+    l.show(summon([{ x: 300, y: 1300, w: 150, h: 150 }]), 1080, 1920, false, 0.1);
     expect(bottom(l)).toBeLessThan(1300 - 45);
   });
 
@@ -85,5 +84,15 @@ describe('the merge hand', () => {
     l.show(lesson, 1080, 1920, false, 1.2);
     expect(hand(l).alpha).toBeLessThan(1);
     expect(hand(l).alpha).toBeGreaterThan(0);
+  });
+
+  it('points up from below the bottle it drags, never over it', () => {
+    const l = new TutorialLayer(() => {});
+    const lesson = merge(400, 1000, { x: 0, y: 0, w: 1080, h: 1400 });
+    l.show(lesson, 1080, 1920, false, 0.01);
+    // at the start of the cycle the fingertip is under the source's middle, the hand below it
+    expect(hand(l).y).toBe(lesson.from.y + DRAG_BELOW);
+    expect(Math.abs(hand(l).rotation)).toBeLessThan(Math.PI / 2);
+    expect(hand(l).getBounds().minY).toBeGreaterThan(lesson.from.y);
   });
 });
