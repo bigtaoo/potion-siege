@@ -16,7 +16,7 @@ import type { MenuFit } from './viewport';
 import { battleTab } from './home/battleTab';
 import { boardPanel } from './home/boardPanel';
 import { challengePanel } from './home/challengePanel';
-import { chaptersPanel } from './home/chaptersPanel';
+import { chaptersPanel, scrollChapters } from './home/chaptersPanel';
 import { consentPanel } from './home/consentPanel';
 import { frame } from './home/frame';
 import { heroPanel } from './home/heroPanel';
@@ -67,6 +67,7 @@ export function buildHome(
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
   // the achievements are sorted afresh, from the top, when the codex is opened again
   if (tab !== 'codex') scrollFeats();
+  if (panel !== 'chapters') scrollChapters();
   topBar(root, m, act, left, w, wide, dots, !!extras.board);
   nav(root, act, tab, fit, { ...dots, [tab]: false }, hint !== null && tab !== 'potions' && !panel);
   if (panel === 'login') root.addChild(loginPanel(m, act, today, fit));

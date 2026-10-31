@@ -1,5 +1,5 @@
 // The chapters panel over the home screen: a row per chapter with its chest, its stages and its
-// star chests.
+// star chests, in a list that scrolls once the page is too short for all five at full size.
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
@@ -10,11 +10,29 @@ import type { MetaSave } from '../../sim/meta';
 import { chapterStars, hardOpen, STARS, stageOpen, stageStars } from '../../sim/stars';
 import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, redDot, starRow, tappable } from '../kit';
 import { gem, label } from '../ui';
+import { scrollList } from '../scroll';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
 import { starChestBar } from './starChestBar';
 import { chapterTitle } from './shared';
 import type { HomeActions } from './types';
+
+const ROW_H = 300;
+const GAP = 18;
+/** The list's window: as wide as a row and the scroll thumb, from under the title plate to the
+ *  board's foot. */
+const VIEW_W = 900;
+const HEAD = 90;
+const FOOT = 30;
+
+/** How far down the list is scrolled, kept over a rebuild (a chest claimed); null opens it at the
+ *  chosen stage's chapter. */
+let scrolled: number | null = null;
+
+/** The next chapters panel opens at the chosen stage's chapter. */
+export function scrollChapters(): void {
+  scrolled = null;
+}
 
 /** The five chapters, a row each: the name, the one-time chest (its button once every stage is
  *  cleared) and a tile a stage - cleared ones brass, the finale red, the chosen one ringed, a dot
@@ -23,19 +41,25 @@ import type { HomeActions } from './types';
  *  chapter whose hard mode is not open yet says what opens it. Under the stages of an open
  *  chapter, its star chests (starChestBar.ts). */
 export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const rowH = 262;
+  const rowH = ROW_H;
   // the name line, the stage tiles and the star chests, down the row
-  const ny = -rowH / 2 + 43;
-  const ty = ny + 86;
-  const sy = rowH / 2 - 42;
-  const h = CHAPTER_COUNT * (rowH + 14) + 130;
+  const ny = -rowH / 2 + 48;
+  const ty = ny + 100;
+  const sy = rowH / 2 - 50;
+  const full = 16 + CHAPTER_COUNT * rowH + (CHAPTER_COUNT - 1) * GAP;
+  // as tall as the rows need, or as the page has room for at full size; the rows scroll in it
+  const h = Math.min(full + HEAD + FOOT, Math.max(700, fit.h - 140));
   const { panel, box } = frame(act, t('chapter.panel'), h, fit);
-  const top = -h / 2 + 90;
+  const rowY = (ch: number) => 8 + (ch - 1) * (rowH + GAP);
+  const at = Math.min(CHAPTER_COUNT, Math.ceil(m.stage / CHAPTER_SIZE));
+  const list = scrollList(VIEW_W, h - HEAD - FOOT, scrolled ?? rowY(at) - 8, (y) => (scrolled = y));
+  list.view.position.set(-VIEW_W / 2, -h / 2 + HEAD);
+  box.addChild(list.view);
   const hard = m.stars.hardMode;
   for (let ch = 1; ch <= CHAPTER_COUNT; ch++) {
     const r = new Container();
-    r.position.set(0, top + (ch - 1) * (rowH + 14) + rowH / 2);
-    box.addChild(r);
+    r.position.set(VIEW_W / 2, rowY(ch) + rowH / 2);
+    list.content.addChild(r);
     r.addChild(lightTile(860, rowH, 26));
     const open = chapterOpen(m, ch);
     const [first] = chapterStages(ch);
@@ -111,5 +135,7 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
       r.addChild(tile);
     }
   }
+  list.fill(full);
+  scrolled = list.offset;
   return panel;
 }
