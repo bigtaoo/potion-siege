@@ -298,18 +298,19 @@ function boardPost(text, res) {
   // no copy yet (it goes up a little after a change), or not this device's
   if (!save) return res.writeHead(404, cors).end();
   try {
-    return res.writeHead(boards.post(post.id, save, Date.now()) === 'posted' ? 204 : 422, cors).end();
+    return res.writeHead(boards.post(post.id, save, Date.now(), post.platform) === 'posted' ? 204 : 422, cors).end();
   } catch (err) {
     console.log(`collector: could not post scores: ${err}`);
     return res.writeHead(503, cors).end();
   }
 }
 
-/** GET /l?board=<board>[&n=<rows>][&me=<id>]: the board's top rows and the asker's own. */
+/** GET /l?board=<board>[&n=<rows>][&me=<id>][&platform=<name>][&day=<date>]: the board's top rows
+ *  and the asker's own, all platforms' unless one is named. */
 function boardRows(url, res) {
   const q = boardQuery(url);
   if (!q) return res.writeHead(400, cors).end();
-  res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(boards.top(q.board, q.n, q.me)));
+  res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(boards.top(q.board, q.n, q.me, q)));
 }
 
 createServer((req, res) => {

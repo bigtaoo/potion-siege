@@ -1,7 +1,9 @@
 // Our server's leaderboards (POST /l and GET /l, scripts/leaderboard.mjs). A player is their save
 // copy on the server (save/saveVault.ts): a post names the copy's id and brings its secret, and the
 // server ranks the scores of the copy it holds, so the copy goes out first (flush) and the post
-// follows POST_MS later. The numbers handed to submit() only decide whether anything changed.
+// follows POST_MS later. The numbers handed to submit() and daily() only decide whether anything
+// changed. A post names the platform it came from, so the server keeps every host's scores (Playgama's
+// too, beside Bridge's boards) and reads a board per platform or across all.
 
 import type { BoardId, BoardPage, BoardRow, Leaderboard, Scores } from './types';
 
@@ -48,16 +50,32 @@ const rowOf = (r: unknown, me = false): BoardRow | null => {
 export class ServerBoard implements Leaderboard {
   private sent = '';
   private timer: unknown = null;
+  private scores: Scores = { endless: 0, stars: 0 };
+  private wave = 0;
 
   constructor(
     private readonly url: string,
     private readonly copies: CopySource,
     private readonly io: { get?: Get; post?: Post; later?: (fn: () => void, ms: number) => unknown } = {},
+    private readonly platform = '',
   ) {}
 
   submit(scores: Scores): void {
-    const key = `${scores.endless}/${scores.stars}`;
-    if (key === this.sent || (scores.endless === 0 && scores.stars === 0) || this.timer !== null) return;
+    this.scores = { endless: scores.endless, stars: scores.stars };
+    this.post();
+  }
+
+  /** The server reads the day's wave from the copy's challenge; this only says a run ended. */
+  daily(wave: number): void {
+    if (!(wave >= 1)) return;
+    this.wave = Math.floor(wave);
+    this.post();
+  }
+
+  private post(): void {
+    const { endless, stars } = this.scores;
+    const key = `${endless}/${stars}/${this.wave}`;
+    if (key === this.sent || (endless === 0 && stars === 0 && this.wave === 0) || this.timer !== null) return;
     try {
       this.copies.flush();
     } catch {
@@ -70,7 +88,7 @@ export class ServerBoard implements Leaderboard {
       if (!copy) return;
       this.sent = key;
       try {
-        (this.io.post ?? fetchPost)(this.url, JSON.stringify({ id: copy.id, token: copy.token }));
+        (this.io.post ?? fetchPost)(this.url, JSON.stringify({ id: copy.id, token: copy.token, ...(this.platform ? { platform: this.platform } : {}) }));
       } catch {
         this.sent = '';
       }
@@ -94,5 +112,7 @@ export class ServerBoard implements Leaderboard {
   }
 }
 
-/** The server board for the save route `vault`, or null where no copy goes to our server. */
-export const serverBoard = (vault: string | null, copies: CopySource): ServerBoard | null => (vault ? new ServerBoard(boardUrl(vault), copies) : null);
+/** The server board for the save route `vault`, posting as `platform`, or null where no copy goes
+ *  to our server. */
+export const serverBoard = (vault: string | null, copies: CopySource, platform = ''): ServerBoard | null =>
+  vault ? new ServerBoard(boardUrl(vault), copies, {}, platform) : null;

@@ -1,6 +1,7 @@
 // The leaderboards the home screen shows: our server's on the web, CrazyGames and iOS
 // (serverBoard.ts, scripts/leaderboard.mjs), Playgama's through Bridge where its SaaS boards are set
-// up (bridgeBoard.ts), none elsewhere. Two boards: endless's best wave and the total stars.
+// up (bridgeBoard.ts), with every score sent to ours there too (backedBoard.ts). Two boards shown:
+// endless's best wave and the total stars; the daily challenge's wave goes to the boards that rank it.
 
 export type BoardId = 'endless' | 'stars';
 export const BOARD_IDS: readonly BoardId[] = ['endless', 'stars'];
@@ -28,7 +29,7 @@ export interface Leaderboard {
   submit(scores: Scores): void;
   /** The top rows of `board` and this player's own; null when they cannot be had (offline). */
   top(board: BoardId): Promise<BoardPage | null>;
-  /** The wave a daily challenge run reached, on a host with a board for it (Playgama's
-   *  'daily_challenge'); absent elsewhere. Never throws. */
+  /** The wave a daily challenge run reached, for the boards that rank it ('daily_challenge' on
+   *  Playgama's and on ours). Never throws. */
   daily?(wave: number): void;
 }

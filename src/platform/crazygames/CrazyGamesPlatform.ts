@@ -53,7 +53,7 @@ export class CrazyGamesPlatform extends WebPlatform implements Platform {
     const url = vaultFor(false);
     const keeper = await keepSaves(platform.storage, account ? accountOwner(account, 'cg') : GUEST, { url, doc, win });
     platform.storage = new SafeStore(keeper);
-    platform.leaderboard = serverBoard(url, keeper);
+    platform.leaderboard = serverBoard(url, keeper, platform.name);
     if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;
   }

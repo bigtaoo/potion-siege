@@ -71,6 +71,17 @@ describe('leaderboards on the collector', () => {
     expect(String(state.files.get('/data/boards/endless.json'))).not.toContain(TOKEN);
   });
 
+  it('keeps the platform a post came from and reads a board for one platform', async () => {
+    const handler = await load();
+    const other = 'c'.repeat(24);
+    copy(handler, save(23));
+    copy(handler, save(30), other, 'd'.repeat(32));
+    request(handler, 'POST', '/l', JSON.stringify({ id: ID, token: TOKEN, platform: 'playgama' }));
+    request(handler, 'POST', '/l', JSON.stringify({ id: other, token: 'd'.repeat(32), platform: 'web' }));
+    expect(rows(handler, 'board=endless').page.total).toBe(2);
+    expect(rows(handler, 'board=endless&platform=playgama').page.rows).toEqual([{ rank: 1, tag: tagOf(ID), score: 23 }]);
+  });
+
   it("takes the copy's newest save, never a number from the request", async () => {
     const handler = await load();
     copy(handler, save(10));

@@ -69,7 +69,7 @@ export class IosPlatform extends WebPlatform implements Platform {
     const url = vaultFor(false);
     const keeper = await keepSaves(this.storage, player ? accountOwner(player, 'gc') : GUEST, { url, doc, win });
     this.storage = new SafeStore(keeper);
-    this.leaderboard = serverBoard(url, keeper);
+    this.leaderboard = serverBoard(url, keeper, this.name);
     if (keeper.restored) this.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
   }
 

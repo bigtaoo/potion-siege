@@ -1,9 +1,15 @@
-// The leaderboards the collector keeps (POST /l and GET /l, scripts/collector.mjs) for the hosts
-// with none of their own (web, CrazyGames, iOS; Playgama ranks through Bridge). A player is their
+// The leaderboards the collector keeps (POST /l and GET /l, scripts/collector.mjs): the ones the
+// game shows where the host has none of its own (web, CrazyGames, iOS), and on every host the
+// record of all scores, Playgama's too (it shows Bridge's boards, which hold its own players only),
+// as a backup and for analysis. Each entry keeps the platform it was last posted from, so a board
+// reads per platform or across all of them. A player is their
 // save copy (scripts/saveVault.mjs): POST /l names the copy's id and brings its secret, and the
 // scores are read from the copy the server already holds, never taken from the request, so a
 // player cannot post a number their own save does not back. A save that could not have been
 // played (more stars than battles, a wave no run reaches) posts nothing.
+//
+// The daily challenge's board ranks one day's furthest wave (the save's challenge.best on
+// challenge.date); a later day's post starts the entry over.
 //
 // One `<board>.json` per board in `<data>/boards`: each entry the copy's id, its score, when it
 // first reached it and when it was last posted. The boards show a short tag hashed from the id,
@@ -26,7 +32,11 @@ export const MAX_ROWS = 50;
 /** A POST /l body: an id and a secret. */
 export const MAX_POST = 1024;
 
-export const BOARDS = ['endless', 'stars'];
+export const BOARDS = ['endless', 'stars', 'daily_challenge'];
+
+/** A platform as the game names itself (Platform.name: web, crazygames, ios, playgama). */
+const PLATFORM = /^[a-z][a-z0-9_]{1,23}$/;
+const DAY = /^\d{4}-\d{2}-\d{2}$/;
 
 const ID = /^[0-9a-f]{24}$/;
 const TOKEN = /^[0-9a-f]{32}$/;
@@ -43,8 +53,15 @@ function starList(v) {
   return v;
 }
 
+/** The daily challenge's best wave and its day; a 0 score without a day it can stand on. */
+function dailyOf(c) {
+  const best = count(c?.best ?? 0, ENDLESS_MAX);
+  if (best === null) return null;
+  return typeof c?.date === 'string' && DAY.test(c.date) ? { score: best, day: c.date } : { score: 0, day: '' };
+}
+
 /**
- * A save's scores, { endless, stars }, or null when the save could not have been played: stars on
+ * A save's scores, { endless, stars, daily_challenge, day }, or null when the save could not have been played: stars on
  * a stage not cleared, more stars than battles, an endless wave before endless opens or past any run.
  */
 export function scoresOf(saveText) {
@@ -62,29 +79,40 @@ export function scoresOf(saveText) {
   const endlessRuns = count(en.runs ?? 0, Number.MAX_SAFE_INTEGER);
   const normal = starList(save.stars?.normal);
   const hard = starList(save.stars?.hard);
-  if (runs === null || cleared === null || best === null || endlessRuns === null || !normal || !hard) return null;
+  const daily = dailyOf(save.challenge);
+  if (!daily || runs === null || cleared === null || best === null || endlessRuns === null || !normal || !hard) return null;
   if (normal.some((s, i) => s > 0 && i >= cleared) || hard.some((s, i) => s > 0 && normal[i] === 0)) return null;
   const stars = [...normal, ...hard].reduce((a, b) => a + b, 0);
   if (stars > 3 * runs) return null;
   if (best > 0 && (cleared < ENDLESS_UNLOCK || endlessRuns === 0)) return null;
-  return { endless: best, stars };
+  return { endless: best, stars, daily_challenge: daily.score, day: daily.day };
 }
 
-/** What the collector takes of a posted body: the copy's id and secret; null when it is not that. */
+/** What the collector takes of a posted body: the copy's id and secret and the platform it came
+ *  from ('' when it named none it could); null when it is not that. */
 export function cleanPost(body) {
   if (!body || typeof body !== 'object' || Array.isArray(body)) return null;
   if (typeof body.id !== 'string' || !ID.test(body.id) || typeof body.token !== 'string' || !TOKEN.test(body.token)) return null;
-  return { id: body.id, token: body.token };
+  return { id: body.id, token: body.token, platform: typeof body.platform === 'string' && PLATFORM.test(body.platform) ? body.platform : '' };
 }
 
-/** GET /l's query: the board, how many rows, and whose rank to add; null without a known board. */
+/** GET /l's query: the board, how many rows, whose rank to add, and the platform and (daily
+ *  board) day to read it for; null without a known board. */
 export function boardQuery(url) {
   const q = new URL(url, 'http://x').searchParams;
   const board = q.get('board');
   if (!BOARDS.includes(board)) return null;
   const n = Number(q.get('n') ?? 10);
   const me = q.get('me');
-  return { board, n: Number.isInteger(n) ? Math.min(MAX_ROWS, Math.max(1, n)) : 10, me: me && ID.test(me) ? me : null };
+  const platform = q.get('platform');
+  const day = q.get('day');
+  return {
+    board,
+    n: Number.isInteger(n) ? Math.min(MAX_ROWS, Math.max(1, n)) : 10,
+    me: me && ID.test(me) ? me : null,
+    platform: platform && PLATFORM.test(platform) ? platform : null,
+    day: day && DAY.test(day) ? day : null,
+  };
 }
 
 /** Higher scores first, then whoever reached theirs first. */
@@ -99,12 +127,13 @@ export class Leaderboards {
   }
 
   /**
-   * Posts the scores of `save` (the copy's save text) for the copy `id` at `now`: 'posted', or
+   * Posts the scores of `save` (the copy's save text) for the copy `id` at `now` from `platform`
+   * ('' for none named): 'posted', or
    * 'implausible' when the save could not have been played. A score of 0 is not ranked; a lower
    * score than the entry's replaces it (a save restored from an older copy), and only a higher one
-   * moves when it was reached.
+   * moves when it was reached; on the daily board a new day starts the entry over.
    */
-  post(id, save, now) {
+  post(id, save, now, platform = '') {
     const scores = scoresOf(save);
     if (!scores) return 'implausible';
     for (const board of BOARDS) {
@@ -112,8 +141,10 @@ export class Leaderboards {
       const i = list.findIndex((e) => e.id === id);
       const was = i >= 0 ? list[i] : null;
       const score = scores[board];
+      const daily = board === 'daily_challenge';
+      const same = was && (!daily || was.day === scores.day);
       if (i >= 0) list.splice(i, 1);
-      if (score > 0) list.push({ id, score, reached: was && was.score >= score ? was.reached : now, at: now });
+      if (score > 0) list.push({ id, score, reached: same && was.score >= score ? was.reached : now, at: now, ...(platform ? { platform } : {}), ...(daily ? { day: scores.day } : {}) });
       list.sort(order);
       if (list.length > MAX_ENTRIES) list.length = MAX_ENTRIES;
       if (was || score > 0) this.write(board);
@@ -121,9 +152,13 @@ export class Leaderboards {
     return 'posted';
   }
 
-  /** The top `n` rows of `board` and, when `me` is on it, their row too. Ties share a rank. */
-  top(board, n, me = null) {
-    const list = this.boards[board];
+  /** The top `n` rows of `board` and, when `me` is on it, their row too: only `platform`'s
+   *  entries when one is named, and on the daily board only `day`'s (by default the latest day
+   *  posted). Ties share a rank. */
+  top(board, n, me = null, { platform = null, day = null } = {}) {
+    const all = this.boards[board];
+    const on = board === 'daily_challenge' ? (day ?? all.reduce((d, e) => (e.day > d ? e.day : d), '')) : null;
+    const list = all.filter((e) => (!platform || e.platform === platform) && (on === null || e.day === on));
     const rows = [];
     let mine = null;
     let rank = 0;
@@ -133,7 +168,7 @@ export class Leaderboards {
       if (i < n) rows.push(me === e.id ? { ...row, me: true } : row);
       if (me === e.id) mine = row;
     });
-    return { board, total: list.length, rows, me: mine };
+    return { board, total: list.length, rows, me: mine, ...(on !== null ? { day: on } : {}) };
   }
 
   /** Drops the entries not posted for KEEP_MONTHS; how many went. */

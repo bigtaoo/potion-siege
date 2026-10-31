@@ -7,7 +7,9 @@ import { PLAYER_KEY, type Sink } from '../../analytics/analytics';
 import { PRIVACY_KEY } from '../../analytics/privacy';
 import { BUILD, LANG_KEY, REMINDERS_KEY, SAVE_KEY } from '../../game/keys';
 import { accountOwner, GUEST } from '../../save/saveCopies';
+import { backed } from '../../board/backedBoard';
 import { bridgeBoard } from '../../board/bridgeBoard';
+import { serverBoard } from '../../board/serverBoard';
 import { keepSaves, vaultFor } from '../../save/saveKeeper';
 import { MIRROR_KEY, SaveMirror } from '../../save/saveMirror';
 import { SafeStore, type Platform } from '../types';
@@ -87,10 +89,12 @@ export class PlaygamaPlatform extends WebPlatform implements Platform {
     // our own copies beside the host's store, per owner: a portal account or this browser's guest;
     // with Bridge they live in its store as one more key, so they follow its account like the save
     const mirror = saves ? new SaveMirror(platform.storage) : undefined;
-    const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url: vaultFor(platform.collectorBlocked), mirror, doc, win });
+    const url = vaultFor(platform.collectorBlocked);
+    const keeper = await keepSaves(platform.storage, account ? accountOwner(account) : GUEST, { url, mirror, doc, win });
     platform.storage = new SafeStore(keeper);
-    // Bridge's own boards (its SaaS leaderboards); the sandbox's CSP keeps ours out
-    platform.leaderboard = ok ? bridgeBoard(bridge) : null;
+    // Bridge's boards are the ones shown (its SaaS leaderboards, Playgama's players only); every score
+    // also goes to ours, the record of all hosts, except where the sandbox's CSP keeps it out
+    platform.leaderboard = backed(ok ? bridgeBoard(bridge) : null, serverBoard(url, keeper, platform.name));
     if (keeper.restored) platform.restored = keeper.restored.adopted ? `${keeper.restored.source}-adopted` : keeper.restored.source;
     return platform;
   }

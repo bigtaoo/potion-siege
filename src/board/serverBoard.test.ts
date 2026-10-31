@@ -125,10 +125,25 @@ describe('ServerBoard', () => {
     expect(await b.top('stars')).toBeNull();
   });
 
+  it('names its platform in each post, and posts when a daily challenge run ended', () => {
+    const posted: string[] = [];
+    const waiting: (() => void)[] = [];
+    const b = new ServerBoard('/l', { copyKey: () => KEY, flush() {} }, { post: (_u, body) => void posted.push(body), later: (fn) => waiting.push(fn) }, 'playgama');
+    b.daily(0);
+    expect(waiting).toHaveLength(0);
+    b.daily(6.7);
+    waiting.shift()!();
+    b.submit({ endless: 0, stars: 0 }); // the same as posted
+    expect(waiting).toHaveLength(0);
+    b.daily(8);
+    waiting.shift()!();
+    expect(posted).toEqual([JSON.stringify({ ...KEY, platform: 'playgama' }), JSON.stringify({ ...KEY, platform: 'playgama' })]);
+  });
+
   it('sits beside the save route, and is none where no copy goes to our server', () => {
     expect(boardUrl('https://c.example.com/s')).toBe('https://c.example.com/l');
     const copies = { copyKey: () => null, flush() {} };
     expect(serverBoard(null, copies)).toBeNull();
-    expect(serverBoard('/s', copies)).toBeInstanceOf(ServerBoard);
+    expect(serverBoard('/s', copies, 'ios')).toBeInstanceOf(ServerBoard);
   });
 });

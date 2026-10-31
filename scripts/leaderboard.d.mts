@@ -7,9 +7,9 @@ export const ENDLESS_MAX: number;
 export const MAX_ENTRIES: number;
 export const MAX_ROWS: number;
 export const MAX_POST: number;
-export const BOARDS: readonly ('endless' | 'stars')[];
+export const BOARDS: readonly ('endless' | 'stars' | 'daily_challenge')[];
 
-export type BoardId = 'endless' | 'stars';
+export type BoardId = 'endless' | 'stars' | 'daily_challenge';
 
 /** One row of a board as GET /l hands it out. */
 export interface BoardRow {
@@ -24,12 +24,22 @@ export interface BoardPage {
   total: number;
   rows: BoardRow[];
   me: BoardRow | null;
+  /** The day the daily board was read for. */
+  day?: string;
+}
+
+export interface BoardQuery {
+  board: BoardId;
+  n: number;
+  me: string | null;
+  platform: string | null;
+  day: string | null;
 }
 
 export function tagOf(id: string): string;
-export function scoresOf(saveText: string): { endless: number; stars: number } | null;
-export function cleanPost(body: unknown): { id: string; token: string } | null;
-export function boardQuery(url: string): { board: BoardId; n: number; me: string | null } | null;
+export function scoresOf(saveText: string): { endless: number; stars: number; daily_challenge: number; day: string } | null;
+export function cleanPost(body: unknown): { id: string; token: string; platform: string } | null;
+export function boardQuery(url: string): BoardQuery | null;
 
 /** One ranked player as a board file keeps them. */
 export interface BoardEntry {
@@ -37,12 +47,14 @@ export interface BoardEntry {
   score: number;
   reached: number;
   at: number;
+  platform?: string;
+  day?: string;
 }
 
 export class Leaderboards {
   boards: Record<BoardId, BoardEntry[]>;
   constructor(dir: string, log?: (line: string) => void);
-  post(id: string, save: string, now: number): 'posted' | 'implausible';
-  top(board: BoardId, n: number, me?: string | null): BoardPage;
+  post(id: string, save: string, now: number, platform?: string): 'posted' | 'implausible';
+  top(board: BoardId, n: number, me?: string | null, only?: { platform?: string | null; day?: string | null }): BoardPage;
   prune(now: number): number;
 }

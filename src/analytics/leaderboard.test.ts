@@ -38,9 +38,9 @@ describe('leaderboard scores', () => {
   it("reads a real save's endless best and its stars, normal and hard", () => {
     const m = JSON.parse(save({ best: 23 })) as ReturnType<typeof newMeta>;
     m.stars.hard[0] = 3;
-    expect(scoresOf(JSON.stringify(m))).toEqual({ endless: 23, stars: totalStars(m) });
-    expect(scoresOf(JSON.stringify(newMeta()))).toEqual({ endless: 0, stars: 0 });
-    expect(scoresOf('{}')).toEqual({ endless: 0, stars: 0 });
+    expect(scoresOf(JSON.stringify(m))).toEqual({ endless: 23, stars: totalStars(m), daily_challenge: 0, day: '' });
+    expect(scoresOf(JSON.stringify(newMeta()))).toEqual({ endless: 0, stars: 0, daily_challenge: 0, day: '' });
+    expect(scoresOf('{}')).toEqual({ endless: 0, stars: 0, daily_challenge: 0, day: '' });
   });
 
   it('turns down saves no one could have played', () => {
@@ -65,18 +65,18 @@ describe('leaderboard scores', () => {
       JSON.stringify({ stars: { normal: 'x' } }),
     ];
     for (const s of bad) expect(scoresOf(s), s).toBeNull();
-    expect(scoresOf(save({ best: ENDLESS_MAX }))).toEqual({ endless: ENDLESS_MAX, stars: 24 });
+    expect(scoresOf(save({ best: ENDLESS_MAX }))).toMatchObject({ endless: ENDLESS_MAX, stars: 24 });
     // an endless run quit midway counts in endless.runs but not in runs
-    expect(scoresOf(save({ runs: 10, stars: 1, best: 4, endlessRuns: 20 }))).toEqual({ endless: 4, stars: 12 });
+    expect(scoresOf(save({ runs: 10, stars: 1, best: 4, endlessRuns: 20 }))).toMatchObject({ endless: 4, stars: 12 });
   });
 
   it('takes an id and a secret from a post, and a known board from a query', () => {
     const token = 'c'.repeat(32);
-    expect(cleanPost({ id: ID, token, extra: 1 })).toEqual({ id: ID, token });
+    expect(cleanPost({ id: ID, token, extra: 1 })).toEqual({ id: ID, token, platform: '' });
     for (const b of [null, [], 'x', { id: ID }, { id: 'A'.repeat(24), token }, { id: ID, token: 5 }]) expect(cleanPost(b)).toBeNull();
-    expect(boardQuery('/l?board=stars')).toEqual({ board: 'stars', n: 10, me: null });
-    expect(boardQuery(`/l?board=endless&n=3&me=${ID}`)).toEqual({ board: 'endless', n: 3, me: ID });
-    expect(boardQuery('/l?board=endless&n=500&me=zz')).toEqual({ board: 'endless', n: 50, me: null });
+    expect(boardQuery('/l?board=stars')).toEqual({ board: 'stars', n: 10, me: null, platform: null, day: null });
+    expect(boardQuery(`/l?board=endless&n=3&me=${ID}`)).toMatchObject({ board: 'endless', n: 3, me: ID });
+    expect(boardQuery('/l?board=endless&n=500&me=zz')).toMatchObject({ board: 'endless', n: 50, me: null });
     expect(boardQuery('/l?board=endless&n=0')?.n).toBe(1);
     expect(boardQuery('/l?board=endless&n=x')?.n).toBe(10);
     expect(boardQuery('/l?board=gold')).toBeNull();

@@ -11,7 +11,7 @@ async function start(): Promise<void> {
   const url = vaultFor(false);
   const keeper = await keepSaves(platform.storage, GUEST, { url, doc: document, win: window });
   platform.storage = new SafeStore(keeper);
-  platform.leaderboard = serverBoard(url, keeper);
+  platform.leaderboard = serverBoard(url, keeper, platform.name);
   await boot(platform);
 }
 
