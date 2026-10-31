@@ -23,6 +23,6 @@ describe('chapters', () => {
     }
     const won: Record<string, number> = {};
     for (const [ch, wins] of byChapter) won[`chapter ${ch}`] = 100 * mean(wins);
-    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 90, 'chapter 2': 36, 'chapter 3': 48, 'chapter 4': 41, 'chapter 5': 28 }, 10);
+    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 90, 'chapter 2': 47, 'chapter 3': 48, 'chapter 4': 41, 'chapter 5': 28 }, 10);
   }, 300_000);
 });

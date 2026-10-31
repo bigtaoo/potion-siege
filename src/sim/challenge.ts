@@ -118,7 +118,8 @@ export function challengeSetup(m: MetaSave, c: Challenge): BattleSetup {
     ...s,
     enemyHp: s.enemyHp * (has('critDay') ? X.critDay.hp : 1) * (has('swift') ? X.swift.hp : 1),
     wallHp: s.wallHp * (has('ironWall') ? X.ironWall.wall : 1),
-    startGold: has('goldRain') ? X.goldRain.startGold : s.startGold,
+    // the rain replaces the base purse, not the workshop's bonus on top of it
+    startGold: has('goldRain') ? X.goldRain.startGold + s.startGold - BALANCE.startGold : s.startGold,
     lineup: challengeLineup(m, c),
     modifiers,
   };
