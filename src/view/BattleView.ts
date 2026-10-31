@@ -7,9 +7,9 @@ import { t as tr } from '../i18n';
 import { SLOT_COUNT, slotCenter, type Battle } from '../sim/battle';
 import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE } from '../sim/math/fixed';
-import { BALANCE, type BattleEvent } from '../sim/types';
+import { BALANCE, type BattleEvent, type EnemyKind } from '../sim/types';
 import { SpriteLayer, loadField, potionLook } from './art';
-import { HIT_TIME, chainBolt, gearBurst, glassShards, stunStars, gustWave, hitEffect, pushLines, rewindWave, vortexSwirl } from './effects';
+import { HIT_TIME, chainBolt, gearBurst, glassShards, gustWave, hitEffect, pushLines, rewindWave, vortexSwirl } from './effects';
 import { PotionLayer, throwingHand } from './potion';
 import { healthTube } from './stone';
 import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
@@ -20,7 +20,9 @@ import { BOMB_COLOR, BREW_COLOR, CommanderArt, badgeAt, commanderMid, landNumber
 import { EnemyLayer } from './battleView/enemies';
 import { brewLift, flaskBurst, landingMark } from './battleView/castFx';
 import { FieldArt, fieldOf } from './battleView/field';
-import { FIGURES, drawCell, type FigureAnim } from './battleView/figures';
+import { FIGURES, drawCell } from './battleView/figures';
+import { FLIGHT, HeroCells } from './battleView/heroCells';
+import { BLOWS_PER_FRAME, HEAVY, wallBlow } from './battleView/wallBlows';
 import { Floaters } from './battleView/floaters';
 import { KillFx } from './battleView/killFx';
 import { FxLayer } from './battleView/fxLayer';
@@ -29,22 +31,12 @@ import { ShotLayer } from './battleView/shots';
 import { starMark } from './battleView/starMark';
 import { BAR_H, BAR_Y, WALL_TOP, drawWallTop } from './battleView/wall';
 import { reducedMotion } from './media';
-import { aside, isLand, keepUpright } from './landView';
+import { isLand, keepUpright } from './landView';
 
 const F = BALANCE.field;
 const G = BALANCE.grid;
 /** Seconds without touching the grid before a mergeable pair starts hopping. */
 const HINT_AFTER = 5;
-/** Seconds before a throw that the arm starts drawing back. */
-const WIND_UP = 0.25;
-
-/** What the view remembers about the hero in a cell, to animate its throws and arrival. */
-interface CellAnim {
-  id: number;
-  shots: number;
-  lastShot: number;
-  born: number;
-}
 
 export class BattleView extends Container {
   private readonly field = new FieldArt();
@@ -65,8 +57,8 @@ export class BattleView extends Container {
   private readonly dragArt = new SpriteLayer();
   private readonly dragPotions = new PotionLayer();
   private readonly fx = new FxLayer();
-  private cellAnims: (CellAnim | null)[] = [];
   private readonly merges = new MergeAnims(this.fx);
+  private readonly heroes = new HeroCells(this.merges);
   private readonly drag = new Graphics();
   private readonly wallText: Text;
   private readonly cmd = new CommanderArt();
@@ -83,14 +75,17 @@ export class BattleView extends Container {
   private battle: Battle | null = null;
   private time = 0;
   private idle = 0;
+  /** Enemy blows on the wall so far this frame. */
+  private blows = 0;
 
   constructor() {
     super();
     this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
-    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.art, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.dead, this.enemies.art, this.enemies.flash, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
     this.field.build(this);
+    this.enemies.onBlow = (x, y, r, kind) => this.blow(x, y, r, kind);
     this.eventMode = 'static';
     // the grid for the drags, and the commander for the casts
     const grid = new Rectangle(G.x0, G.y0, G.cellW * G.cols, G.cellH * G.rows);
@@ -111,7 +106,7 @@ export class BattleView extends Container {
     this.fx.clear();
     this.dragFrom = null;
     this.cmd.reset();
-    this.cellAnims = [];
+    this.heroes.clear();
     this.shots.clear();
     this.merges.clear();
     this.floaters.hideAll();
@@ -137,20 +132,24 @@ export class BattleView extends Container {
           }
           break;
         case 'hit':
+          this.enemies.tracks.strike(ev.x, ev.y, ev.radius);
           // the fire blast is wide, so it goes on the ground and the enemies in it stay visible
           this.fx.effect(HIT_TIME[ev.kind], (g, life) => hitEffect(g, ev.kind, ev.x, ev.y, ev.radius, 1 - life), ev.kind === 'fire');
           break;
         case 'chain': {
           const pts = ev.points;
+          for (const p of pts) this.enemies.tracks.strike(p.x, p.y, 20);
           this.fx.effect(0.22, (g, life) => chainBolt(g, pts, life));
           break;
         }
         case 'shot': {
-          const a = this.cellAnims[ev.slot];
+          const b = this.battle;
+          const p = b?.projectiles.find((o) => o.id === ev.projectile);
+          const c = slotCenter(ev.slot);
+          // the battle time at the start of the tick it threw in, where the frame after begins
+          const a = b && this.heroes.shot(ev.slot, (b.time - 1) / TICK_RATE, p ? p.tx / FP : c.x, p ? p.ty / FP : 0);
           if (a) {
-            a.shots++;
-            a.lastShot = this.time;
-            const h = this.battle?.slots[ev.slot];
+            const h = b.slots[ev.slot];
             const look = h && potionLook(h.kind);
             if (h && look && h.star < BALANCE.maxStar) {
               // the figure that just threw, and where its hand is
@@ -163,6 +162,7 @@ export class BattleView extends Container {
           break;
         }
         case 'kill':
+          this.enemies.tracks.died(ev.x, ev.y);
           this.fx.effect(ev.boss ? 0.9 : 0.6, (g, life) => gearBurst(g, ev.x, ev.y, ev.boss, 1 - life));
           if (ev.boss) {
             if (ev.gold > 0) this.floaters.show(`+${ev.gold}`, ev.x, ev.y, COLORS.gold);
@@ -173,7 +173,14 @@ export class BattleView extends Container {
           const c = slotCenter(ev.slot);
           // the commander nods its flask at each summon
           this.cmd.nod = this.time;
-          this.fx.burst(c.x, c.y, 80, COLORS.gold, 0.35);
+          this.heroes.summoned(ev.slot, this.time);
+          // it leaves the flask in a flash and lands in its cell in another
+          const m = commanderMid();
+          this.fx.burst(m.x, m.y, 60, COLORS.gold, 0.25);
+          const land = FLIGHT / (FLIGHT + 0.35);
+          this.fx.effect(FLIGHT + 0.35, (g, life) => {
+            if (life < 1 - land) g.circle(c.x, c.y, 80 * (1.2 - life * 0.5)).fill({ color: COLORS.gold, alpha: (life / (1 - land)) * 0.45 });
+          });
           break;
         }
         case 'merge':
@@ -219,9 +226,6 @@ export class BattleView extends Container {
           if (ev.last) this.floaters.show(tr('wallDone'), DESIGN_W / 2, WALL_TOP - 80, COLORS.gold);
           break;
         }
-        case 'wallHit':
-          this.shake = Math.max(this.shake, 0.08);
-          break;
         case 'rewind':
           this.fx.effect(0.7, (g, life) => rewindWave(g, ev.x, ev.y, ev.radius, 1 - life), true);
           break;
@@ -263,6 +267,7 @@ export class BattleView extends Container {
           this.fx.effect(0.5, (g, life) => gustWave(g, F.left, F.right, ev.y, ev.depth, 1 - life), true);
           break;
         case 'push': {
+          this.enemies.tracks.pushed(ev.id);
           // the lines trail the enemy as it flies back
           const e = this.battle?.enemies.find((o) => o.id === ev.id);
           const r = e ? e.radius / FP : 36;
@@ -289,9 +294,15 @@ export class BattleView extends Container {
     this.time += dt;
     this.field.update(dt);
     const t = this.time;
+    // the battle's own clock, between its ticks: it stops with the battle and keeps its pace
+    const bt = Math.max(0, (b.time - 1 + alpha) / TICK_RATE);
+    // idle figures redraw every other frame only while the frames come fast enough
+    this.potions.skip = this.dragPotions.skip = dt < 1 / 45;
+    this.blows = 0;
     const w = this.world.clear();
     const u = this.under.clear();
-    this.enemies.draw(b, alpha, t, w, u);
+    this.enemies.soft = reducedMotion();
+    this.enemies.draw(b, alpha, bt, t, w, u);
     this.shots.draw(b, alpha, t, w);
     this.cmd.drawThrown(w, t, this.shots.art);
     this.shots.art.end();
@@ -325,54 +336,7 @@ export class BattleView extends Container {
     const hint = this.idle > HINT_AFTER ? mergeablePair(b) : null;
     this.drawWall(b);
     const foes = b.enemies.some((e) => e.hp > 0);
-    for (let s = 0; s < SLOT_COUNT; s++) {
-      const h = b.slots[s];
-      const c = slotCenter(s);
-      const x = c.x - G.cellW / 2 + 8;
-      const y = c.y - G.cellH / 2 + 8;
-      const w = G.cellW - 16;
-      const ht = G.cellH - 16;
-      // while dragging, the heroes it can merge with glow and everything else steps back
-      const match = from !== null && b.canMerge(from, s);
-      const dim = from !== null && s !== from && !match;
-      // cells not built yet are just ground
-      if (!b.isOpen(s)) continue;
-      if (match) g.roundRect(x - 10, y - 10, w + 20, ht + 20, 32).fill({ color: COLORS.gold, alpha: 0.3 + 0.2 * Math.sin(t * 10) });
-      // the cell's slab is part of the wall (drawWall); an ultimate hero's is ringed in gold
-      if (h && h.star >= BALANCE.maxStar) g.roundRect(x, y, w, ht, 12).stroke({ width: 6, color: COLORS.gold });
-      if (match) g.roundRect(x, y, w, ht, 20).stroke({ width: 6, color: COLORS.gold });
-      if (!h) {
-        this.cellAnims[s] = null;
-        continue;
-      }
-      // the commander's brew: every potion on the wall bubbles purple while it lasts
-      if (b.brewTime > 0) {
-        const fade = Math.min(1, b.brewTime / TICK_RATE / 0.5);
-        g.ellipse(c.x, c.y + 38, 58 + 6 * Math.sin(t * 8 + s), 22).fill({ color: BREW_COLOR, alpha: 0.45 * fade });
-        for (let i = 0; i < 3; i++) {
-          const k = (t * 0.9 + i / 3 + s * 0.37) % 1;
-          ho.circle(c.x + Math.sin(s * 3 + i * 2.1) * 40, c.y + 40 - k * 110, 7 * (1 - k) + 3).fill({ color: BREW_COLOR, alpha: (1 - k) * 0.8 * fade });
-        }
-      }
-      let a = this.cellAnims[s];
-      if (!a || a.id !== h.id) a = this.cellAnims[s] = { id: h.id, shots: 0, lastShot: -99, born: this.merges.bornAt(s, t) };
-      // the figures of a cell take turns to throw; the next one draws back just before
-      const cell = a;
-      const n = h.star >= BALANCE.maxStar ? 1 : h.star;
-      // the cooldown is in thousandths of a tick
-      const left = h.cooldown / (TICK_RATE * 1000);
-      // with nothing to shoot at the cooldown keeps resetting to a few hundredths: no wind-up then
-      const wind = foes && left > 0 && left < WIND_UP ? 1 - left / WIND_UP : 0;
-      const anim = (i: number): FigureAnim => ({
-        wind: i === cell.shots % n ? wind : 0,
-        since: cell.shots > 0 && i === (cell.shots - 1) % n ? t - cell.lastShot : Infinity,
-        pop: t - cell.born,
-      });
-      const hop = hint?.includes(s) ? Math.abs(Math.sin(t * 7)) * 16 : 0;
-      const mid = aside(c.x, c.y, 0, -10 - hop);
-      drawCell(this.time, g, ho, this.heroArt, this.potions, h.kind, h.star, mid.x, mid.y, 1, s === from ? 0.35 : 1, s, dim, anim);
-      if (h.stunTime) stunStars(ho, c.x, c.y - G.cellH / 2 - 6, t);
-    }
+    this.heroes.draw(b, g, ho, this.heroArt, this.potions, t, bt, from, hint, foes);
     this.merges.swirls(g, ho, this.heroArt, this.potions, b, this.time);
     this.cmd.draw(g, ho, this.heroArt, b, dt, this.time);
     this.heroArt.end();
@@ -382,11 +346,22 @@ export class BattleView extends Container {
     this.dragArt.begin();
     this.dragPotions.begin();
     const held = from !== null ? b.slots[from] : null;
-    if (held) drawCell(this.time, d, d, this.dragArt, this.dragPotions, held.kind, held.star, this.dragPos.x, this.dragPos.y, 1.15, 1, 0);
+    if (held) {
+      const anim = this.heroes.held(this.dragPos, dt);
+      drawCell(this.time, d, d, this.dragArt, this.dragPotions, held.kind, held.star, this.dragPos.x, this.dragPos.y, 1.15, 1, 0, false, () => anim);
+    }
     this.merges.dives(d, this.dragArt, this.dragPotions, this.time);
     this.dragArt.end();
     this.dragPotions.end();
     keepUpright(this, this.wall);
+  }
+
+  /** An enemy's blow lands on the wall: dust and chips for the first few a frame, and a heavy
+   *  one's shakes the screen a little. */
+  private blow(x: number, y: number, r: number, kind: EnemyKind): void {
+    if (this.blows++ >= BLOWS_PER_FRAME) return;
+    wallBlow(this.fx, x, y, r, kind);
+    if (HEAVY.has(kind)) this.shake = Math.max(this.shake, 0.06);
   }
 
   /** The wall from above, redrawn only when a cell is built (see drawWallTop). */
@@ -417,6 +392,7 @@ export class BattleView extends Container {
     if (s === null || !this.battle?.slots[s] || this.battle.paused) return;
     this.dragFrom = s;
     this.dragPos = this.toLocal(e.global);
+    this.heroes.drop(this.dragPos);
   }
 
   private onMove(e: FederatedPointerEvent): void {
@@ -429,7 +405,15 @@ export class BattleView extends Container {
     const b = this.battle;
     if (to !== null && b) {
       const held = b.slots[this.dragFrom];
+      const there = b.slots[to];
       if (held && b.canMerge(this.dragFrom, to)) this.merges.drop(this.dragFrom, to, held.kind, held.star, this.dragPos, this.time);
+      else if (held && to !== this.dragFrom && b.isOpen(to)) {
+        // moved, or swapped with the one there: each lands in its new cell
+        this.heroes.moved(held.id, this.time);
+        if (there) this.heroes.moved(there.id, this.time);
+        const c = slotCenter(to);
+        this.fx.burst(c.x, c.y + 40, 50, 0xd8c8a8, 0.25);
+      }
       b.move(this.dragFrom, to);
     }
     this.dragFrom = null;

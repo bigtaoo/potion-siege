@@ -69,6 +69,14 @@ describe('the heroes of a cell', () => {
       expect(c.shown().art[0].tint).not.toBe(bright);
     });
 
+    it('leans the big hero the way it throws', () => {
+      const c = cell();
+      c.draw(TOP, { anim: () => ({ ...STILL, since: 0, aim: 1 }) });
+      expect(c.shown().art[0].rotation).toBeCloseTo(0.14);
+      c.draw(TOP, { anim: () => ({ ...STILL, wind: 1, aim: -1 }) });
+      expect(c.shown().art[0].rotation).toBeCloseTo(-0.14 * 0.4);
+    });
+
     it('squashes the big hero as a merge lands in it, and grows it as it pops in', () => {
       const c = cell();
       c.draw(TOP);

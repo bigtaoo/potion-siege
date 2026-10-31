@@ -46,6 +46,8 @@ export interface PotionPose {
   squash?: number;
   /** Extra turn in radians on top of the sway (wobbling as a merge lands in it). */
   spin?: number;
+  /** -1 to 1: which way (left or right on the screen) it throws, so it leans that way. */
+  aim?: number;
 }
 
 /** Scale of something appearing `pop` seconds ago: grows from nothing, overshoots, settles. */
@@ -93,7 +95,8 @@ class PotionFigure extends Container {
     this.addChild(this.back, this.body, this.front);
   }
 
-  draw(look: PotionLook, pose: PotionPose): void {
+  /** `skip`: whether it may leave its strokes as they are this frame, see PotionLayer.skip. */
+  draw(look: PotionLook, pose: PotionPose, skip = true): void {
     const t = pose.time + pose.phase * 0.77;
     const bh = pose.height * (look.size ?? 1);
     const bw = (bh * look.body.width) / look.body.height;
@@ -110,7 +113,7 @@ class PotionFigure extends Container {
     this.position.set(pose.x, pose.feet - r * bh * 0.14);
     const sq = pose.squash ?? 0;
     this.scale.set(grow * jiggle * (1 + sq) * (1 - breath * 0.025 + w * 0.16 - r * 0.08), (grow / jiggle) * (1 - sq) * (1 + breath * 0.03 - w * 0.2 + r * 0.16));
-    this.rotation = (pose.tilt ?? Math.sin(t * 1.7) * 0.04 - w * 0.22 + r * 0.1) + (pose.spin ?? 0);
+    this.rotation = (pose.tilt ?? Math.sin(t * 1.7) * 0.04 - w * 0.22 + r * 0.1) + (pose.spin ?? 0) + (pose.aim ?? 0) * 0.14 * (r + w * 0.4);
     this.alpha = pose.alpha;
     this.tint = pose.dim ? 0x5a5a5a : 0xffffff;
 
@@ -121,7 +124,7 @@ class PotionFigure extends Container {
     const blink = !pose.dim && (t * 0.31 + pose.phase * 0.17) % 1 < 0.035;
     this.beat = !this.beat;
     const same = look === this.drawnLook && bh === this.drawnHeight && pose.dim === this.drawnDim && blink === this.drawnBlink;
-    if (same && this.beat && w === 0 && r === 0 && pose.tilt === undefined) return;
+    if (same && skip && this.beat && w === 0 && r === 0 && pose.tilt === undefined) return;
     this.drawnLook = look;
     this.drawnHeight = bh;
     this.drawnDim = pose.dim;
@@ -389,6 +392,9 @@ export function stillPotion(look: PotionLook, pose: PotionPose): Container {
 /** Potions reused frame to frame: begin(), put() each one, end(). */
 export class PotionLayer extends Container {
   private used = 0;
+  /** Whether idle figures redraw every other frame only: worth it at a high frame rate, but at a
+   *  low one their limbs and marks would move in steps (BattleView sets it each frame). */
+  skip = true;
 
   begin(): void {
     this.used = 0;
@@ -402,7 +408,7 @@ export class PotionLayer extends Container {
     }
     this.used++;
     p.visible = true;
-    p.draw(look, pose);
+    p.draw(look, pose, this.skip);
   }
 
   end(): void {

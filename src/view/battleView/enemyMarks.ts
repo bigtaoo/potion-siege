@@ -81,14 +81,16 @@ export class EnemyMarks {
   }
 
   /** The HP bar over an enemy's art (and the tripod's jar bar over that), unless untouched; an
-   *  elite's gold frame under them is Graphics (drawEnemy's `over`). */
-  hp(e: Enemy): void {
+   *  elite's gold frame under them is Graphics (drawEnemy's `over`). `trail`: the hit points the
+   *  bar still shows in white behind the red, draining after a hit. */
+  hp(e: Enemy, trail = e.hp): void {
     if (!barsShown(e)) return;
     const { x, w, top } = enemyBarBox(e, artBarTop(e));
     // the bars' top left, as an offset from the enemy on the screen
     const dx = x - w / 2 - e.x;
     let p = aside(e.x, e.y, dx, top - e.y);
     this.bars.put(p.x, p.y, w, 10, COLORS.hpBack);
+    if (trail > e.hp) this.bars.put(p.x, p.y, (w * Math.min(e.maxHp, trail)) / e.maxHp, 10, 0xffffff);
     this.bars.put(p.x, p.y, (w * Math.max(0, e.hp)) / e.maxHp, 10, COLORS.hp);
     if (e.shieldMax) {
       p = aside(e.x, e.y, dx, top - 14 - e.y);

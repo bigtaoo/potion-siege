@@ -1,9 +1,10 @@
 import { Container, Graphics, type Sprite } from 'pixi.js';
-import { afterEach, beforeAll, describe, expect, it } from 'vitest';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { Battle } from '../../sim/battle';
 import { FP } from '../../sim/math/fixed';
 import { battleSetup, newMeta } from '../../sim/meta';
 import { BALANCE, type Enemy } from '../../sim/types';
+import { BASH_EVERY } from '../enemyGait';
 import { fakeArt } from '../fakeArt';
 import { turnView } from '../landView';
 import { EnemyLayer } from './enemies';
@@ -21,13 +22,13 @@ function layer() {
   const b = new Battle(1, battleSetup(newMeta(), 1));
   const w = new Graphics();
   const u = new Graphics();
-  const draw = (list: Enemy[]) => {
+  const draw = (list: Enemy[], now = 1, bt = 1) => {
     b.enemies = list;
-    enemies.draw(b, 1, 1, w.clear(), u.clear());
+    enemies.draw(b, 1, bt, now, w.clear(), u.clear());
     const vis = (c: Container) => c.children.filter((s) => s.visible) as Sprite[];
-    return { art: vis(enemies.art), shadows: vis(enemies.marks.shadows), bars: vis(enemies.marks.bars) };
+    return { art: vis(enemies.art), shadows: vis(enemies.marks.shadows), bars: vis(enemies.marks.bars), flash: vis(enemies.flash), dead: vis(enemies.dead) };
   };
-  return { enemies, w, u, draw };
+  return { enemies, b, w, u, draw };
 }
 
 describe('the enemies as drawn', () => {
@@ -62,7 +63,7 @@ describe('the enemies as drawn', () => {
       const { enemies, w, u } = layer();
       const b = new Battle(1, battleSetup(newMeta(), 1));
       b.enemies = [foe(1, 400, 700, { py: 600 * FP })];
-      enemies.draw(b, 0.25, 1, w, u);
+      enemies.draw(b, 0.25, 1, 1, w, u);
       expect(enemies.marks.shadows.children[0].y).toBe(625 + 32);
     });
 
@@ -105,6 +106,57 @@ describe('the enemies as drawn', () => {
       expect(tint({ rust: 1, poisonTime: 1 })).toBe(0xe0a878);
       expect(tint({ poisonTime: 1 })).toBe(0xc8f0a0);
       expect(tint({})).toBe(0xffffff);
+    });
+
+    it('lights one up white as a blow lands on it, not as it burns', () => {
+      const { enemies, draw } = layer();
+      draw([foe(1, 400, 600)], 1);
+      expect(draw([foe(1, 400, 600, { hp: 90 })], 1.02).flash.length).toBe(0);
+      enemies.tracks.strike(400, 600, 10);
+      const lit = draw([foe(1, 400, 600, { hp: 80 })], 1.04).flash;
+      expect(lit.length).toBe(1);
+      expect(lit[0].blendMode).toBe('add');
+      expect(draw([foe(1, 400, 600, { hp: 80 })], 1.5).flash.length).toBe(0);
+    });
+
+    it('leaves a wreck where one died, and forgets them all in a new battle', () => {
+      const { enemies, draw } = layer();
+      draw([foe(1, 400, 600)], 1);
+      enemies.tracks.died(400, 600);
+      const d = draw([], 1.02);
+      expect(d.dead.length).toBe(1);
+      expect(d.flash.length).toBe(1);
+      expect(draw([], 2).dead.length).toBe(0);
+      draw([foe(2, 400, 600)], 2);
+      enemies.tracks.died(400, 600);
+      enemies.soft = true;
+      expect(draw([], 2.02).dead.length).toBe(1);
+      enemies.draw(new Battle(2, battleSetup(newMeta(), 1)), 1, 1, 2.03, new Graphics(), new Graphics());
+      expect(enemies.dead.children.filter((s) => s.visible).length).toBe(0);
+    });
+
+    it('tells of each blow one beats on the wall, but not frozen or as the anvil', () => {
+      const { enemies, draw } = layer();
+      const onBlow = vi.fn();
+      enemies.onBlow = onBlow;
+      const every = BASH_EVERY.grunt;
+      // id 0 starts its swing at 0
+      for (const c of [0.5, 0.75, 0.8]) draw([foe(0, 400, 600, { atWall: true })], c, c * every);
+      expect(onBlow).toHaveBeenCalledTimes(1);
+      expect(onBlow).toHaveBeenCalledWith(400, 600, 40, 'grunt');
+      for (const c of [1.5, 1.75]) draw([foe(0, 400, 600, { atWall: true, freezeTime: 5 })], c, c * every);
+      for (const c of [2.5, 2.75]) draw([foe(0, 400, 600, { atWall: true, kind: 'anvil' })], c, c * BASH_EVERY.anvil);
+      expect(onBlow).toHaveBeenCalledTimes(1);
+    });
+
+    it('turns one caught in a whirlwind back and forth, but not a boss', () => {
+      const { b, draw } = layer();
+      const still = draw([foe(1, 400, 600)], 0.1).art[0].rotation;
+      b.vortices.push({ x: 400 * FP, y: 600 * FP } as (typeof b.vortices)[number]);
+      expect(draw([foe(1, 400, 600)], 0.1).art[0].rotation).toBeCloseTo(still + Math.sin(2.2) * 0.18);
+      const boss = draw([foe(1, 400, 600, { kind: 'boss' })], 0.1).art[0].rotation;
+      b.vortices.length = 0;
+      expect(draw([foe(1, 400, 600, { kind: 'boss' })], 0.1).art[0].rotation).toBeCloseTo(boss);
     });
 
     it('does not carry a boss\'s jar bar over to a new enemy in its place', () => {

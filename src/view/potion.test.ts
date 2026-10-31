@@ -124,6 +124,14 @@ describe('a still potion', () => {
     expect(stillPotion(look('flame'), pose({ spin: 0.3, time: 0 })).rotation).toBeCloseTo(0.3);
   });
 
+  it('leans the way it throws, as it throws and a little as it winds up', () => {
+    const at = (o: Partial<PotionPose>) => stillPotion(look('flame'), pose({ time: 0, ...o })).rotation;
+    expect(at({ since: 0, aim: 1 }) - at({ since: 0 })).toBeCloseTo(0.14);
+    expect(at({ since: 0, aim: -1 }) - at({ since: 0 })).toBeCloseTo(-0.14);
+    expect(at({ wind: 1, aim: 1 }) - at({ wind: 1 })).toBeCloseTo(0.14 * 0.4);
+    expect(at({ aim: 1 })).toBeCloseTo(at({}));
+  });
+
   it('blinks now and then, with lids of its liquid, but never when dimmed', () => {
     const { front } = parts(stillPotion(look('flame'), pose({ time: 0 })));
     expect(countColor(front, 'fill', LID)).toBe(2);
@@ -268,6 +276,20 @@ describe('PotionLayer', () => {
     expect(redraws(4, () => [[l, pose()], [l, pose()]])).toEqual([2, 2]);
     expect(redraws(1, () => [[l, pose()], [l, pose()]])).toEqual([1, 0]);
     expect(redraws(2, () => [[l, pose()], [l, pose()]])).toEqual([1, 1]);
+  });
+
+  it('redraws every idle figure every frame when it may not skip (a low frame rate)', () => {
+    const l = look('flame');
+    const layer = new PotionLayer();
+    layer.skip = false;
+    layer.begin();
+    layer.put(l, pose());
+    const spy = vi.spyOn(parts(layer.children[0]).front, 'clear');
+    for (let f = 0; f < 4; f++) {
+      layer.begin();
+      layer.put(l, pose());
+    }
+    expect(spy.mock.calls.length).toBe(4);
   });
 
   it('redraws at once while winding up, recoiling or pouring', () => {

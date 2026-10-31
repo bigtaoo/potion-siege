@@ -29,6 +29,8 @@ export interface FigureAnim {
   /** Squash (above 0) or stretch (below 0), and an extra turn, as a merge lands in it. */
   squash?: number;
   spin?: number;
+  /** -1 to 1: which way (left or right on the screen) it throws, so it leans that way. */
+  aim?: number;
 }
 export const STILL: FigureAnim = { wind: 0, since: Infinity, pop: Infinity };
 
@@ -86,5 +88,5 @@ function figure(time: number, under: Graphics, over: Graphics, layer: SpriteLaye
   const sq = anim.squash ?? 0;
   s.scale.x *= grow * (1 + sq) * (1 + anim.wind * 0.06 - r * 0.06);
   s.scale.y *= grow * (1 - sq) * (1 + Math.sin(time * 3 + phase) * 0.025 - anim.wind * 0.08 + r * 0.1);
-  s.rotation = (anim.tilt ?? 0) + (anim.spin ?? 0);
+  s.rotation = (anim.tilt ?? 0) + (anim.spin ?? 0) + (anim.aim ?? 0) * 0.14 * (r + anim.wind * 0.4);
 }

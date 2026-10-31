@@ -41,6 +41,20 @@ describe('the marks under and over each enemy', () => {
     expect(jarBack.y).toBe(back.y - 14);
   });
 
+  it('leaves the HP just lost as a white trail behind the red', () => {
+    const marks = new EnemyMarks();
+    marks.begin();
+    marks.hp(foe({ hp: 25 }), 60);
+    marks.end();
+    const [back, trail, hp] = shown(marks.bars);
+    expect(trail.width / back.width).toBeCloseTo(0.6);
+    expect(hp.width / back.width).toBeCloseTo(0.25);
+    marks.begin();
+    marks.hp(foe({ hp: 25 }), 250);
+    marks.end();
+    expect(shown(marks.bars)[1].width).toBe(back.width);
+  });
+
   it('shows an untouched enemy whose shield is chipped, and an empty bar for one past dead', () => {
     const marks = new EnemyMarks();
     frame(marks, [foe({ shieldMax: 50, shield: 49 }), foe({ id: 2, hp: -5 })]);
