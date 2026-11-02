@@ -5,9 +5,8 @@ import './view/layout/measure';
 import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import type { Container } from 'pixi.js';
 import { t } from './i18n';
-import { TICK_RATE } from './sim/math/fixed';
 import { newMeta } from './sim/meta';
-import { HOLD_AFTER_SECONDS, SLOW_PACE, Tutorial } from './sim/tutorial';
+import { Tutorial } from './sim/tutorial';
 import { pace } from './game/tutorialFlow';
 import { home } from './game/homeScreen';
 import { liveWorld, pageVisible } from './game/flowHelpers';
@@ -39,15 +38,18 @@ describe('a frame through the ticker', () => {
     expect(w.game.calm()).toBe(false);
   });
 
-  it("draws a tutorial step's slow motion at full rate but leaves it out of the measure", () => {
+  it('leaves a battle the tutorial holds out of the measure, and moves nothing in its frames', () => {
     const w = liveWorld();
     play(w);
     const b = w.game.battle!;
     w.game.tutorial = new Tutorial();
-    while (b.time < HOLD_AFTER_SECONDS * TICK_RATE) b.step();
-    expect(pace(w.game, b)).toBe(SLOW_PACE);
+    expect(pace(w.game, b)).toBe(1);
+    while (pace(w.game, b) > 0) b.step();
     expect(w.game.calm()).toBe(false);
     expect(w.game['measured']()).toBe(false);
+    const time = b.time;
+    w.frame(50);
+    expect(b.time).toBe(time);
   });
 
   it('settles a battle whose frame threw as lost and puts the home screen up', () => {

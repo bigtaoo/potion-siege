@@ -5,7 +5,7 @@ import { FP, TICK_RATE } from './math/fixed';
 import { BASE_SETUP, FIRST_SEED, newMeta } from './meta';
 import { stageSetup } from './stars';
 import { checkReplay, takeReplay } from './replay';
-import { EXTRA_SUMMONS, HOLD_AFTER_SECONDS, mergeablePair, SLOW_PACE, STOP_GAP, Tutorial } from './tutorial';
+import { EXTRA_SUMMONS, mergeablePair, STOP_GAP, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -31,6 +31,11 @@ function run(b: Battle, tut: Tutorial, secs: number): number {
 
 /** How far the nearest enemy stands from the wall, in world units. */
 const gap = (b: Battle) => Math.min(...b.enemies.map((e) => (b.wallFront(e.x) - e.radius - e.y) / FP));
+
+/** Steps the battle on its own until the crowd is STOP_GAP short of the wall. */
+function toStop(b: Battle): void {
+  while (!b.enemies.length || gap(b) > STOP_GAP) b.step();
+}
 
 /** Sets the battle's clock to `secs` played. */
 const at = (b: Battle, secs: number) => (b.time = Math.round(secs * TICK_RATE));
@@ -152,7 +157,7 @@ describe('tutorial', () => {
       b.summon();
       tut.update(b, b.drain());
     }
-    at(b, b.seconds + HOLD_AFTER_SECONDS);
+    toStop(b);
     b.gold = b.upgradeCost() - 1;
     expect(b.canSummon()).toBe(true);
     const pair = mergeablePair(b);
@@ -165,20 +170,16 @@ describe('tutorial', () => {
     }
     b.gold = b.upgradeCost();
     expect(tut.showing(b)).toBe('upgrade');
-    expect(tut.pace(b)).toBeLessThan(1);
+    expect(tut.pace(b)).toBe(0);
   });
 
-  it('lets the crowd walk in for HOLD_AFTER_SECONDS, then creeps on in slow motion and stops short of the wall', () => {
+  it('runs at full speed while a step points, and stops the crowd short of the wall', () => {
     const b = new Battle(FIRST_SEED, BASE_SETUP);
     const tut = new Tutorial();
+    expect(tut.showing(b)).toBe('summon');
     expect(tut.pace(b)).toBe(1);
-    while (tut.pace(b) === 1) b.step();
-    expect(b.time).toBe(HOLD_AFTER_SECONDS * TICK_RATE);
-    expect(tut.pace(b)).toBe(SLOW_PACE);
-    // the same ticks, a fifth as many a second: the crowd keeps coming down
-    const far = gap(b);
-    expect(run(b, tut, 10)).toBe(10 * TICK_RATE * SLOW_PACE);
-    expect(gap(b)).toBeLessThan(far);
+    // no slow motion: it read as the game stuttering (owner 11-02)
+    expect(run(b, tut, 3)).toBe(3 * TICK_RATE);
     // however long the player waits, the crowd stops a cell short and the wall is never touched
     const wall = b.wall;
     run(b, tut, 600);
@@ -213,27 +214,30 @@ describe('tutorial', () => {
     }
   });
 
-  it('goes on the moment the player does the step, and slows again at the next one', () => {
+  it('goes on the moment the player does the step, and stops again at the next one', () => {
     const b = new Battle(FIRST_SEED, stageSetup(newMeta()));
     const tut = new Tutorial();
     run(b, tut, 10);
     b.summon();
     tut.update(b, b.drain());
     expect(tut.step).toBe('merge');
-    expect(tut.pace(b)).toBe(SLOW_PACE);
+    toStop(b);
+    expect(tut.pace(b)).toBe(0);
     mergeFirst(b, tut);
     expect(tut.step).toBe('upgrade');
-    // 强化 is not affordable yet: 召唤 again while its gold comes in, then 强化, slowed at each
+    // 强化 is not affordable yet: 召唤 again while its gold comes in, then 强化, stopped at each
     for (let i = 0; i < EXTRA_SUMMONS; i++) {
       run(b, tut, GIFT_EVERY + 1);
       expect(tut.showing(b)).toBe('again');
-      expect(tut.pace(b)).toBeLessThan(1);
+      toStop(b);
+      expect(tut.pace(b)).toBe(0);
       b.summon();
       tut.update(b, b.drain());
     }
     run(b, tut, 60);
     expect(tut.showing(b)).toBe('upgrade');
-    expect(tut.pace(b)).toBeLessThan(1);
+    toStop(b);
+    expect(tut.pace(b)).toBe(0);
     b.upgrade();
     tut.update(b, b.drain());
     // the pick pauses the battle by itself; the tutorial does not slow it
@@ -242,7 +246,7 @@ describe('tutorial', () => {
     expect(tut.pace(b)).toBe(1);
   });
 
-  it('keeps the replay whole: commands given in slow motion play back to the same battle', () => {
+  it('keeps the replay whole: commands given while the crowd stands play back to the same battle', () => {
     const b = new Battle(FIRST_SEED, BASE_SETUP);
     const tut = new Tutorial();
     run(b, tut, 10);
@@ -255,11 +259,11 @@ describe('tutorial', () => {
     expect(checkReplay(takeReplay(b))).toBe(true);
   });
 
-  it('slows nothing once skipped', () => {
+  it('stops nothing once skipped', () => {
     const b = new Battle(1);
     const tut = new Tutorial();
-    run(b, tut, HOLD_AFTER_SECONDS + 1);
-    expect(tut.pace(b)).toBeLessThan(1);
+    toStop(b);
+    expect(tut.pace(b)).toBe(0);
     tut.skip();
     expect(tut.done).toBe(true);
     expect(tut.showing(b)).toBeNull();

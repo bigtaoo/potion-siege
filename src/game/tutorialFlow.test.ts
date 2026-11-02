@@ -3,9 +3,8 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import type { Game } from '../app';
 import { t } from '../i18n';
 import { Battle, WALL_ROW } from '../sim/battle';
-import { TICK_RATE } from '../sim/math/fixed';
 import { newMeta } from '../sim/meta';
-import { HOLD_AFTER_SECONDS, mergeablePair, SLOW_PACE, Tutorial } from '../sim/tutorial';
+import { mergeablePair, Tutorial } from '../sim/tutorial';
 import { BALANCE } from '../sim/types';
 import { REST_AFTER_MOVE } from '../view/moveRest';
 import type { Lesson, Rect } from '../view/Tutorial';
@@ -27,25 +26,27 @@ function game(over: Partial<Game> = {}) {
   return { g, sent, analytics };
 }
 
-/** A first battle past the walk-in, where the summon step slows it. */
+/** A first battle whose crowd has walked up short of the wall, where the summon step holds it. */
 function waiting(): Battle {
   const b = new Battle(1);
-  while (b.time < HOLD_AFTER_SECONDS * TICK_RATE) b.step();
+  const g = game().g;
+  while (pace(g, b) > 0) b.step();
   b.drain();
   return b;
 }
 
 describe('tutorial flow', () => {
-  it('slows the battle while a step waits, never under autoplay or with no tutorial', () => {
+  it('holds the battle while a step waits, never under autoplay or with no tutorial', () => {
     const b = waiting();
-    expect(pace(game().g, b)).toBe(SLOW_PACE);
+    expect(pace(game().g, b)).toBe(0);
     expect(pace(game({ autoplay: true }).g, b)).toBe(1);
     expect(pace(game({ tutorial: null }).g, b)).toBe(1);
   });
 
-  it('logs a step with the real seconds the slowed battle waited for it, and no assist', () => {
+  it('logs a step with the real seconds the held battle waited for it, and no assist', () => {
     const { g, sent, analytics } = game();
     const b = waiting();
+    const held = Math.round(b.seconds);
     analytics.sessionSeconds = 4;
     logStep(g, g.tutorial!, b);
     expect(sent).toEqual([]);
@@ -53,7 +54,7 @@ describe('tutorial flow', () => {
     b.summon();
     g.tutorial!.update(b, b.drain());
     logStep(g, g.tutorial!, b);
-    expect(sent).toEqual([{ name: 'tutorial_step', props: { step: 'summon', shownT: HOLD_AFTER_SECONDS, doneT: HOLD_AFTER_SECONDS, waitS: 27 } }]);
+    expect(sent).toEqual([{ name: 'tutorial_step', props: { step: 'summon', shownT: held, doneT: held, waitS: 27 } }]);
     expect(g.tutLog).toEqual({ step: 'merge', shownT: null, shownS: null });
   });
 

@@ -1,17 +1,16 @@
 // The first battle's tutorial: summon, merge, then the first 强化 and its skill pick, each shown
 // when its moment comes. Pure rules over the battle. Nothing is ever done for the player: while a
-// step points, the shell runs the battle in slow motion (SLOW_PACE: fewer of the same ticks per
-// second, so the replay only sees the player's own commands, just later) until the player does
-// it, and the pick pauses the battle by itself. The crowd keeps creeping down, so the screen is
-// never a still picture, but stops STOP_GAP short of the wall: waiting can never lose the battle.
-// The slow motion starts after HOLD_AFTER_SECONDS so the crowd is seen walking in. While the merge
-// step has no pair yet it points at 召唤 instead, and so does the 强化 step for EXTRA_SUMMONS more
-// summons while its gold comes in, and once those are given, at whatever else can be done (a pair
-// to fuse, a paid summon) at full speed: the wait for 100 gold is never a blank. The view draws
-// the pointer.
+// step points the battle runs on at full speed, but stands still once the crowd is STOP_GAP short
+// of the wall, until the player does it (the shell runs no ticks then, so the replay only sees the
+// player's own commands, just later): waiting can never lose the battle. The pick pauses the
+// battle by itself. A slow motion in between read as the game stuttering (owner 11-02). While the
+// merge step has no pair yet it points at 召唤 instead, and so does the 强化 step for
+// EXTRA_SUMMONS more summons while its gold comes in, and once those are given, at whatever else
+// can be done (a pair to fuse, a paid summon): the wait for 100 gold is never a blank. The view
+// draws the pointer.
 
 import { SLOT_COUNT, type Battle } from './battle';
-import { FP, TICK_RATE } from './math/fixed';
+import { FP } from './math/fixed';
 import { BALANCE, type BattleEvent } from './types';
 
 export const TUTORIAL_STEPS = ['summon', 'merge', 'upgrade', 'pick'] as const;
@@ -27,17 +26,9 @@ export type TutorialCue = TutorialStep | 'more' | 'again';
  *  unevenly to go by). */
 export const EXTRA_SUMMONS = 2;
 
-/** Battle seconds before the first slow motion: the opening crowd walks a fifth of the way down
- *  (the wall is about 15 s off) at full speed, so the player sees at once what is coming. */
-export const HOLD_AFTER_SECONDS = 2;
-
-/** The battle's speed while a step points: the crowd creeps on at a fifth of its pace, so the
- *  wall's 13 s left at the first hold last about a minute of waiting before the stop below. */
-export const SLOW_PACE = 0.2;
-
 /** While a step points the battle stands still once an enemy is this close to the wall (world
- *  units, one cell): at the creep's few units a tick none ever reaches it, so no idle player
- *  loses the wall to the tutorial. */
+ *  units, one cell): checked before every tick, and no enemy walks a cell in one, so no idle
+ *  player loses the wall to the tutorial. */
 export const STOP_GAP = BALANCE.grid.cellH;
 
 /** The first two slots that could merge, or null. */
@@ -84,16 +75,16 @@ export class Tutorial {
     else if (this.step === 'pick' && !b.choices) this.step = null;
   }
 
-  /** How fast the battle runs now: 1, or SLOW_PACE while a step points and waits for the player
-   *  (the pick pauses the battle by itself), or 0 once the crowd is STOP_GAP short of the wall.
-   *  The 强化 step's pointers at a pair or a paid summon only fill its wait and slow nothing.
-   *  Checked before every tick, so a step that comes up mid-frame slows the battle there. */
+  /** How fast the battle runs now: 1, or 0 while a step points and waits for the player once
+   *  the crowd is STOP_GAP short of the wall (the pick pauses the battle by itself). The 强化
+   *  step's pointers at a pair or a paid summon only fill its wait and stop nothing. Checked
+   *  before every tick, so a step that comes up mid-frame stops the battle there. */
   pace(b: Battle): number {
     const s = this.showing(b);
-    if (s === null || s === 'pick' || b.time < HOLD_AFTER_SECONDS * TICK_RATE) return 1;
+    if (s === null || s === 'pick') return 1;
     if (this.step === 'upgrade' && s !== 'upgrade' && !b.giftReady()) return 1;
     const gap = STOP_GAP * FP;
-    return b.enemies.some((e) => e.y + e.radius + gap >= b.wallFront(e.x)) ? 0 : SLOW_PACE;
+    return b.enemies.some((e) => e.y + e.radius + gap >= b.wallFront(e.x)) ? 0 : 1;
   }
 
   skip(): void {

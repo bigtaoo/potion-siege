@@ -1,5 +1,5 @@
 // The first battle's tutorial as the game runs it: begun and ended, moved on each frame, the
-// battle slowed while a step waits for the player, its steps logged, and the page rect each step
+// battle held short of the wall while a step waits for the player, its steps logged, and the page rect each step
 // points at, each no sooner than REST_AFTER_MOVE after the player's last move.
 
 import type { Game } from '../app';
@@ -66,7 +66,7 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
 }
 
 /** `tutorial_step` once a step is done: when it first showed and was done (battle seconds, the
- *  same while the battle crept on slowly for it) and how long the player took over it (`waitS`, session
+ *  same while the battle stood still for it) and how long the player took over it (`waitS`, session
  *  seconds). */
 export function logStep(g: Game, tut: Tutorial, b: Battle): void {
   const log = g.tutLog;

@@ -1,6 +1,6 @@
 // How each kind of clockwork enemy walks, driven by how far it has come down the field, not by the
 // clock: one that is frozen, slowed, waiting or at the wall stops stepping, and at the battle's
-// fast forward or the tutorial's slow motion its feet keep pace with the ground.
+// fast forward its feet keep pace with the ground.
 
 import { BALANCE, type Enemy, type EnemyKind } from '../sim/types';
 

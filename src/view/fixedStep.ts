@@ -2,7 +2,7 @@
 // standing's client/src/game/fixedStep.ts): frame time builds up in an accumulator, each whole
 // tick of it runs one battle step, and what is left over is how far the view interpolates
 // between the last two states. A speed above 1 feeds the accumulator faster (fast forward:
-// twice the ticks per second), below 1 slower (the tutorial's slow motion). Pure, tested without Pixi.
+// twice the ticks per second), below 1 slower, 0 not at all. Pure, tested without Pixi.
 
 import { FP, TICK_RATE } from '../sim/math/fixed';
 
