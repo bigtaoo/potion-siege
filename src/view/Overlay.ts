@@ -88,7 +88,7 @@ export class Overlay extends Container {
     return box;
   }
 
-  /** The hand over the suggested card taps on. */
+  /** The hand over the suggested card, or the result's way on, taps on. */
   tick(dt: number): void {
     if (this.nudge && !this.nudge.destroyed) this.nudge.update(dt);
   }
@@ -179,5 +179,10 @@ export class Overlay extends Container {
         y += sec.h;
       }
     });
+    if (more.pointOn) {
+      // the hand's fingertip a little below the button's middle, over its words
+      this.nudge = new CardNudge(buttons.c.x + buttons.main.x, buttons.c.y + buttons.main.y + 10);
+      box.addChild(this.nudge);
+    }
   }
 }

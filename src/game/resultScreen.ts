@@ -10,7 +10,7 @@ import { doublesLeft, endOffers, maxStage } from '../sim/meta';
 import { HERO_KINDS } from '../sim/types';
 import { FEEDBACK_RUN, FeedbackAsk } from '../view/feedback';
 import type { HomeTab } from '../view/Home';
-import { lossStep, lossTips, offersNext } from '../view/nudges';
+import { lossStep, lossTips, offersNext, pointOn } from '../view/nudges';
 import { starsTip } from './battleTips';
 import { home } from './homeScreen';
 
@@ -68,6 +68,7 @@ export function showEnd(g: Game, b: Battle): void {
     adBlocked: missed,
     stars: g.stars ?? undefined,
     starsTip: starsTip(g),
+    pointOn: won && !g.autoplay && !g.endless && !b.setup.hard && pointOn(g.save),
   });
 }
 

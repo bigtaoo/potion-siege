@@ -7,6 +7,7 @@ import { FIRST_STAGE } from '../sim/waves';
 import {
   anyChestWaiting, canUpgradeLineup, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, dotKeys, LOGIN_AFTER_RUNS, loginPops, markSeen, navDots, newOnTab, NEXT_UNTIL, offersNext,
   upgradeHintKind,
+  pointOn,
   topPick,
   TOP_PICK_UNTIL,
   lossStep,
@@ -264,6 +265,16 @@ describe('first battles', () => {
     expect(topPick(m)).toBe(true);
     m.runs = TOP_PICK_UNTIL;
     expect(topPick(m)).toBe(false);
+  });
+
+  it("taps the way on in the same battles' results, the run just played counted", () => {
+    const m = newMeta();
+    m.runs = 1;
+    expect(pointOn(m)).toBe(true);
+    m.runs = TOP_PICK_UNTIL;
+    expect(pointOn(m)).toBe(true);
+    m.runs = TOP_PICK_UNTIL + 1;
+    expect(pointOn(m)).toBe(false);
   });
 
   it('singles out a potion level after a loss, else the workshop, else an easier stage', () => {

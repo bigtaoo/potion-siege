@@ -32,6 +32,9 @@ export interface EndExtras {
   stars?: StarsResult;
   /** The first won result: what the stars take and give, in place of the rule. */
   starsTip?: boolean;
+  /** A hand taps the way on, 下一关 or else Continue (a new player's first wins, nudges.ts
+   *  pointOn). */
+  pointOn?: boolean;
 }
 
 export interface EndlessEnd {

@@ -3,6 +3,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Container, Graphics, Sprite, Text, type Texture } from 'pixi.js';
 import { t } from '../../i18n';
 import { fillColors, picture } from '../kit/kitTestBits';
+import { Overlay } from '../Overlay';
+import { PillButton } from '../kit';
 import { CARD_NUDGE, CardNudge, nudgeOn, tapPose, topTag } from './cardNudge';
 
 const art = vi.hoisted(() => ({ hand: undefined as Texture | undefined }));
@@ -114,5 +116,41 @@ describe('topTag', () => {
     expect(fillColors(tag.children[0] as Graphics)).toEqual([0x4cc35a]);
     expect((tag.children[1] as Text).text).toBe(t('topPick'));
     expect(tag.children[0].width).toBeGreaterThanOrEqual(150);
+  });
+});
+
+describe("the result's way on", () => {
+  beforeEach(() => vi.stubGlobal('window', new EventTarget()));
+  afterEach(() => vi.unstubAllGlobals());
+
+  /** A won result, the hand asked for or not, and with 下一关 or Continue alone. */
+  function result(pointOn: boolean, next: boolean): { nudge: CardNudge | undefined; main: Container } {
+    const o = new Overlay();
+    o.layout(1080, 1920);
+    o.showEnd(true, 'stats', { crystals: 10, firstClear: false, unlocked: [] }, () => {}, null, {
+      onDouble: null,
+      doubled: false,
+      dealt: [],
+      onTip: null,
+      onNext: next ? () => {} : null,
+      pointOn,
+    });
+    const box = o.children[1] as Container;
+    const nudge = box.children.find((c) => c instanceof CardNudge) as CardNudge | undefined;
+    const want = t(next ? 'nextStage' : 'continue');
+    const all = (c: Container): Container[] => [c, ...c.children.flatMap((k) => all(k as Container))];
+    const main = all(box).find((c) => c instanceof PillButton && all(c).some((k) => k instanceof Text && k.text === want))!;
+    return { nudge, main };
+  }
+
+  it("taps the big button of a new player's win, 下一关 or else Continue, and nothing otherwise", () => {
+    for (const next of [true, false]) {
+      const { nudge, main } = result(true, next);
+      expect(nudge).toBeDefined();
+      const at = main.parent!.position;
+      expect(nudge!.x).toBeCloseTo(at.x + main.x);
+      expect(nudge!.y).toBeCloseTo(at.y + main.y + 10);
+    }
+    expect(result(false, false).nudge).toBeUndefined();
   });
 });

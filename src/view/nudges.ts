@@ -145,6 +145,12 @@ export function topPick(m: MetaSave): boolean {
   return m.runs < TOP_PICK_UNTIL;
 }
 
+/** A won result of the same first battles (the run already counted) gets the tapping hand on
+ *  its way on: a new player left alone on the first win's board did not see what to tap. */
+export function pointOn(m: MetaSave): boolean {
+  return m.runs <= TOP_PICK_UNTIL;
+}
+
 /** The one tip a lost battle's result singles out: a fielded potion's level the crystals now
  *  pay for, else a workshop level, else an easier stage once there is one; null when none of
  *  them is there to do. */
