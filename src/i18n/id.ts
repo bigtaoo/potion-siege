@@ -196,7 +196,7 @@ export const id: Table = {
   allDone: 'Bonus Semua Tugas',
   allDoneCount: '{n}/{total} diklaim',
   lang: { name: 'Bahasa Indonesia' },
-  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', shake: 'Getar layar', haptics: 'Getaran', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', shake: 'Getar layar', haptics: 'Getaran', hints: 'Petunjuk', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Jeda', resume: 'Lanjut', giveUp: 'Menyerah', confirm: 'Ketuk lagi untuk menyerah' },
   rotate: 'Putar ponsel ke posisi tegak',
   privacy: {

@@ -57,7 +57,7 @@ import { finish } from './game/ending';
 import { faultHandler } from './game/faultRecover';
 import { gameHandle, type GameHandle } from './game/handle';
 import { Haptics } from './game/haptics';
-import { home } from './game/homeScreen';
+import { home, homeFrame } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { openPause, pauseFrame, PauseLayer } from './game/pause';
 import { urlSwitches } from './game/switches';
@@ -373,9 +373,7 @@ export class Game {
     if (this.menu.visible) {
       this.lessons.visible = false;
       this.menu.scale.set(m.scale);
-      // the pointer's hand pushes toward what it points at and back
-      const hand = this.hintHand && !this.hintHand.destroyed ? this.hintHand.children[0] : null;
-      if (hand) hand.y = 14 + Math.sin(performance.now() / 160) * 14;
+      homeFrame(this, dt);
       const old = this.menuFit;
       // a new page size is a new layout
       if (!old || old.wide !== m.wide || Math.abs(old.w - m.w) > 1 || Math.abs(old.h - m.h) > 1) home(this, this.panel);

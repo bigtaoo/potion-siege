@@ -12,6 +12,7 @@ import { t } from '../i18n';
 import { handOff } from './battleView/cmdHints';
 import { fakeArt } from './fakeArt';
 import { Hud } from './Hud';
+import { IDLE_AFTER } from './nextMove';
 
 function hud(b: Battle) {
   const h = new Hud(() => {}, () => {}, () => {});
@@ -113,27 +114,28 @@ describe('召唤 pulsing again after the tutorial', () => {
     return h;
   }
 
-  it('swells once a new player could summon for 4 s and has not', () => {
-    expect(scale(idle(3.5))).toBe(1);
-    expect(scale(idle(4))).toBeGreaterThan(1);
+  it('swells once a player could summon for IDLE_AFTER and has not', () => {
+    expect(scale(idle(IDLE_AFTER - 0.5))).toBe(1);
+    expect(scale(idle(IDLE_AFTER))).toBeGreaterThan(1);
   });
 
   it('starts the wait over at each summon', () => {
-    const h = idle(4);
+    const h = idle(IDLE_AFTER);
     const b = h['battle']!;
     b.summon();
     h.update(0.3);
     expect(scale(h)).toBe(1);
-    h.update(3.5);
+    h.update(IDLE_AFTER - 0.5);
     expect(scale(h)).toBe(1);
   });
 
-  it('stays still for a veteran, during the tutorial and with no gold for a summon', () => {
-    expect(scale(idle(5, { veteran: true }))).toBe(1);
-    expect(scale(idle(5, { nudge: false }))).toBe(1);
+  it('swells for a veteran too, and stays still with hints off, during the tutorial and with no gold for a summon', () => {
+    expect(scale(idle(IDLE_AFTER, { veteran: true }))).toBeGreaterThan(1);
+    expect(scale(idle(IDLE_AFTER, { hints: false }))).toBe(1);
+    expect(scale(idle(IDLE_AFTER, { nudge: false }))).toBe(1);
     const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
     h['battle']!.gold = 0;
-    h.update(5);
+    h.update(IDLE_AFTER);
     h.update(0.3);
     expect(scale(h)).toBe(1);
   });
@@ -150,9 +152,9 @@ describe('the hand on 召唤 after the tutorial', () => {
     return h;
   }
 
-  it('taps the button alone, with no rings, arc or merge hint, once a new player idles 4 s', () => {
-    expect(hand(idle(3.5)).visible).toBe(false);
-    const h = idle(4);
+  it('taps the button alone, with no rings, arc or merge hint, once a player idles IDLE_AFTER', () => {
+    expect(hand(idle(IDLE_AFTER - 0.5)).visible).toBe(false);
+    const h = idle(IDLE_AFTER);
     const button = h['summonButton'] as Container;
     expect(hand(h).visible).toBe(true);
     expect((h['nudgeRings'] as Container).visible).toBe(false);
@@ -162,13 +164,14 @@ describe('the hand on 召唤 after the tutorial', () => {
     expect(h.children.indexOf(hand(h))).toBeGreaterThan(h.children.indexOf(button));
   });
 
-  it('goes at a summon and stays away for a veteran or during the tutorial', () => {
-    const h = idle(4);
+  it('goes at a summon and stays away with hints off or during the tutorial, not for a veteran', () => {
+    const h = idle(IDLE_AFTER);
     h['battle']!.summon();
     h.update(0.3);
     expect(hand(h).visible).toBe(false);
-    expect(hand(idle(5, { veteran: true })).visible).toBe(false);
-    expect(hand(idle(5, { nudge: false })).visible).toBe(false);
+    expect(hand(idle(IDLE_AFTER, { veteran: true })).visible).toBe(true);
+    expect(hand(idle(IDLE_AFTER, { hints: false })).visible).toBe(false);
+    expect(hand(idle(IDLE_AFTER, { nudge: false })).visible).toBe(false);
   });
 });
 
@@ -187,7 +190,7 @@ describe('the idle hand picks the next move', () => {
     pairOnly(b);
     b.gold = b.summonCost() * 3;
     const h = hud(b);
-    h.update(4);
+    h.update(IDLE_AFTER);
     h.update(0.3);
     expect((h['nudgeArc'] as Container).visible).toBe(true);
     expect((h['hintText'] as { text: string }).text).toBe(t('hint'));
@@ -198,7 +201,7 @@ describe('the idle hand picks the next move', () => {
     const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
     const b = h['battle']!;
     b.gold = b.upgradeCost();
-    h.update(4);
+    h.update(IDLE_AFTER);
     h.update(0.3);
     const button = h['upgradeButton'] as Container;
     expect(hand(h).visible).toBe(true);

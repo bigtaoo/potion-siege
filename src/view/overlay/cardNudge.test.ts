@@ -17,6 +17,10 @@ describe('skill card nudge', () => {
     expect(CARD_NUDGE.after).toBeLessThan(1);
     expect(nudgeOn(5, CARD_NUDGE.rest - 0.1)).toBe(false);
     expect(nudgeOn(5, CARD_NUDGE.rest)).toBe(true);
+    // a later player's result waits that long of both
+    expect(nudgeOn(19, 30, 20)).toBe(false);
+    expect(nudgeOn(30, 19, 20)).toBe(false);
+    expect(nudgeOn(20, 20, 20)).toBe(true);
   });
 
   it('taps down onto the card, rests, lifts, and repeats every beat', () => {
@@ -133,7 +137,7 @@ describe("the result's way on", () => {
       dealt: [],
       onTip: null,
       onNext: next ? () => {} : null,
-      pointOn,
+      pointWait: pointOn ? 0 : null,
     });
     const box = o.children[1] as Container;
     const nudge = box.children.find((c) => c instanceof CardNudge) as CardNudge | undefined;
@@ -166,7 +170,7 @@ describe("the result's way on", () => {
         tipTabs: ['workshop', 'potions'],
         ready,
         onNext: null,
-        pointOn: true,
+        pointWait: 0,
       });
       const box = o.children[1] as Container;
       const nudge = box.children.find((c) => c instanceof CardNudge) as CardNudge;

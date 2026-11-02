@@ -196,7 +196,7 @@ export const th: Table = {
   allDone: 'โบนัสทำครบทุกภารกิจ',
   allDoneCount: 'รับแล้ว {n}/{total}',
   lang: { name: 'ไทย' },
-  sound: { language: 'ภาษา', settings: 'ตั้งค่า', music: 'ดนตรี', sfx: 'เสียงเอฟเฟกต์', shake: 'จอสั่น', haptics: 'การสั่น', on: 'เปิด', off: 'ปิด', privacy: 'ตัวเลือกความเป็นส่วนตัวโฆษณา', policy: 'นโยบายความเป็นส่วนตัว', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'ภาษา', settings: 'ตั้งค่า', music: 'ดนตรี', sfx: 'เสียงเอฟเฟกต์', shake: 'จอสั่น', haptics: 'การสั่น', hints: 'คำแนะนำ', on: 'เปิด', off: 'ปิด', privacy: 'ตัวเลือกความเป็นส่วนตัวโฆษณา', policy: 'นโยบายความเป็นส่วนตัว', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'หยุดชั่วคราว', resume: 'เล่นต่อ', giveUp: 'ยอมแพ้', confirm: 'แตะอีกครั้งเพื่อยอมแพ้' },
   rotate: 'กรุณาหมุนโทรศัพท์เป็นแนวตั้ง',
   privacy: {

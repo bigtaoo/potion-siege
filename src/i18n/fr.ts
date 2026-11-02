@@ -196,7 +196,7 @@ export const fr: Table = {
   allDone: 'Bonus toutes tâches',
   allDoneCount: '{n}/{total} récupérés',
   lang: { name: 'Français' },
-  sound: { language: 'Langue', settings: 'Paramètres', music: 'Musique', sfx: 'Sons', shake: 'Tremblement d’écran', haptics: 'Vibration', on: 'OUI', off: 'NON', privacy: 'Pubs et vie privée', policy: 'Confidentialité', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Langue', settings: 'Paramètres', music: 'Musique', sfx: 'Sons', shake: 'Tremblement d’écran', haptics: 'Vibration', hints: 'Astuces', on: 'OUI', off: 'NON', privacy: 'Pubs et vie privée', policy: 'Confidentialité', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pause', resume: 'Reprendre', giveUp: 'Abandonner', confirm: 'Touchez encore pour abandonner' },
   rotate: 'Tenez le téléphone à la verticale',
   privacy: {

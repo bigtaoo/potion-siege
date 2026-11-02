@@ -7,7 +7,8 @@ import { FIRST_STAGE } from '../sim/waves';
 import {
   anyChestWaiting, canUpgradeLineup, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, dotKeys, LOGIN_AFTER_RUNS, loginPops, markSeen, navDots, newOnTab, NEXT_UNTIL, offersNext,
   upgradeHintKind,
-  pointOn,
+  pointWait,
+  IDLE_HINT,
   topPick,
   TOP_PICK_UNTIL,
   lossStep,
@@ -267,14 +268,32 @@ describe('first battles', () => {
     expect(topPick(m)).toBe(false);
   });
 
-  it("taps the way on in the same battles' results, the run just played counted", () => {
+  it("taps the way on at once in the same battles' results, the run just played counted", () => {
     const m = newMeta();
+    m.crystals = 0;
     m.runs = 1;
-    expect(pointOn(m)).toBe(true);
+    expect(pointWait(m, false, true)).toBe(0);
     m.runs = TOP_PICK_UNTIL;
-    expect(pointOn(m)).toBe(true);
+    expect(pointWait(m, true, true)).toBe(0);
+    // endless and hard are not the first battles' boards
+    expect(pointWait(m, false, false)).toBe(IDLE_HINT.home);
     m.runs = TOP_PICK_UNTIL + 1;
-    expect(pointOn(m)).toBe(false);
+    expect(pointWait(m, false, true)).toBe(IDLE_HINT.home);
+  });
+
+  it('waits less on a lost result whose crystals pay for its step, and not at all with hints off', () => {
+    const m = newMeta();
+    m.runs = 10;
+    m.crystals = 0;
+    m.stage = 2;
+    expect(pointWait(m, true, true)).toBe(IDLE_HINT.home);
+    m.crystals = 10_000;
+    expect(pointWait(m, true, true)).toBe(IDLE_HINT.loss);
+    expect(pointWait(m, false, true)).toBe(IDLE_HINT.home);
+    m.sound.hints = false;
+    expect(pointWait(m, true, true)).toBeNull();
+    m.runs = 1;
+    expect(pointWait(m, true, true)).toBe(0);
   });
 
   it('singles out a potion level after a loss, else the workshop, else an easier stage', () => {

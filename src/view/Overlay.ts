@@ -181,13 +181,14 @@ export class Overlay extends Container {
       }
     });
     const lit = tipRows?.lit;
-    if (more.pointOn && lit) {
+    const wait = more.pointWait;
+    if (wait != null && lit) {
       // a lost battle's tip to do first: the hand on its arrow
-      this.nudge = new CardNudge(tipRows.c.x + cw / 2 - 46, tipRows.c.y + lit.y + 10);
+      this.nudge = new CardNudge(tipRows.c.x + cw / 2 - 46, tipRows.c.y + lit.y + 10, wait);
       box.addChild(this.nudge);
-    } else if (more.pointOn) {
+    } else if (wait != null) {
       // the hand's fingertip a little below the button's middle, over its words
-      this.nudge = new CardNudge(buttons.c.x + buttons.main.x, buttons.c.y + buttons.main.y + 10);
+      this.nudge = new CardNudge(buttons.c.x + buttons.main.x, buttons.c.y + buttons.main.y + 10, wait);
       box.addChild(this.nudge);
     }
   }

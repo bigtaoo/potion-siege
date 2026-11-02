@@ -196,7 +196,7 @@ export const ko: Table = {
   allDone: '모든 임무 완료 보너스',
   allDoneCount: '{n}/{total} 받음',
   lang: { name: '한국어' },
-  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', shake: '화면 흔들림', haptics: '진동', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', shake: '화면 흔들림', haptics: '진동', hints: '도움말', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: '일시 정지', resume: '계속하기', giveUp: '포기', confirm: '한 번 더 누르면 포기' },
   rotate: '휴대폰을 세로로 돌려 주세요',
   privacy: {

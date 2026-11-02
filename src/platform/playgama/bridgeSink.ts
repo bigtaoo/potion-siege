@@ -73,6 +73,9 @@ export class BridgeEvents {
       // the home guide's steps and the battles' one-time words (game/homeGuide.ts), each once
       case 'guide_step':
         return ['guide_step', { step_id: String(p.id ?? ''), chapter: Number(p.chapter) || 0, result: String(p.result ?? ''), wait_sec: Number(p.waitS) || 0, run: Number(p.run) || 0 }];
+      // a later player's idle hand (game/homeIdle.ts) coming up, and the hint taken
+      case 'idle_hint':
+        return ['idle_hint', { where: String(p.where ?? ''), target: String(p.target ?? ''), result: String(p.result ?? ''), run: Number(p.run) || 0 }];
       // the first tap or key ever: seconds since the page loaded and since the run started
       case 'first_input':
         return ['first_input', { load_sec: Number(p.t) || 0, ...wall }];

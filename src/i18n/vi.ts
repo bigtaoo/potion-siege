@@ -196,7 +196,7 @@ export const vi: Table = {
   allDone: 'Thưởng xong tất cả',
   allDoneCount: 'Đã nhận {n}/{total}',
   lang: { name: 'Tiếng Việt' },
-  sound: { language: 'Ngôn ngữ', settings: 'Cài đặt', music: 'Nhạc', sfx: 'Âm thanh', shake: 'Rung màn hình', haptics: 'Rung máy', on: 'BẬT', off: 'TẮT', privacy: 'Quyền riêng tư quảng cáo', policy: 'Chính sách bảo mật', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Ngôn ngữ', settings: 'Cài đặt', music: 'Nhạc', sfx: 'Âm thanh', shake: 'Rung màn hình', haptics: 'Rung máy', hints: 'Gợi ý', on: 'BẬT', off: 'TẮT', privacy: 'Quyền riêng tư quảng cáo', policy: 'Chính sách bảo mật', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Tạm dừng', resume: 'Tiếp tục', giveUp: 'Bỏ cuộc', confirm: 'Chạm lần nữa để bỏ cuộc' },
   rotate: 'Hãy xoay điện thoại dọc',
   privacy: {

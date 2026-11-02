@@ -1,16 +1,16 @@
-// The switches the settings panel and the pause panel share: music, sound effects, screen shake
-// and, where the device can, vibration, each with its icon.
+// The switches the settings panel and the pause panel share: music, sound effects, screen shake,
+// where the device can vibration, and the hints when the player stands still, each with its icon.
 
 import { Graphics } from 'pixi.js';
 import type { MetaSave } from '../sim/meta';
 import { P } from './kit';
 import { shakeOn } from './media';
 
-export type SoundSwitch = 'music' | 'sfx' | 'shake' | 'haptics';
+export type SoundSwitch = 'music' | 'sfx' | 'shake' | 'haptics' | 'hints';
 
 /** The switches in their order: vibration only where the device has it. */
 export function soundSwitches(vibrate: boolean): SoundSwitch[] {
-  return vibrate ? ['music', 'sfx', 'shake', 'haptics'] : ['music', 'sfx', 'shake'];
+  return vibrate ? ['music', 'sfx', 'shake', 'haptics', 'hints'] : ['music', 'sfx', 'shake', 'hints'];
 }
 
 /** What a switch shows: screen shake follows the system's reduced motion until it is set. */
@@ -29,6 +29,7 @@ export function switchIcon(which: SoundSwitch, on: boolean): Graphics {
   if (which === 'music') return noteIcon();
   if (which === 'sfx') return speakerIcon(on);
   if (which === 'shake') return shakeIcon();
+  if (which === 'hints') return bulbIcon();
   return phoneIcon();
 }
 
@@ -87,4 +88,18 @@ function phoneIcon(): Graphics {
     .moveTo(-22, -16).lineTo(-28, -8).lineTo(-22, 0).lineTo(-28, 8).lineTo(-22, 16)
     .moveTo(22, -16).lineTo(28, -8).lineTo(22, 0).lineTo(28, 8).lineTo(22, 16)
     .stroke({ width: 4, color: P.cream, cap: 'round', join: 'round' });
+}
+
+/** A light bulb on its screw base: a hint. */
+function bulbIcon(): Graphics {
+  return new Graphics()
+    .circle(0, -8, 20)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line })
+    .roundRect(-10, 10, 20, 18, 4)
+    .fill(P.cream)
+    .stroke({ width: 4, color: P.line })
+    .moveTo(-10, 18)
+    .lineTo(10, 18)
+    .stroke({ width: 3, color: P.line });
 }

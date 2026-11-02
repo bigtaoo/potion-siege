@@ -110,6 +110,7 @@ function draw(g: Game): void {
     flip: (which: Parameters<typeof flipSwitch>[1]) => {
       flipSwitch(g.save, which);
       g.audio.prefs(g.save.sound);
+      g.hud.hints = g.save.sound.hints;
       g.store();
       draw(g);
     },

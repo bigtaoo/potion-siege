@@ -145,10 +145,19 @@ export function topPick(m: MetaSave): boolean {
   return m.runs < TOP_PICK_UNTIL;
 }
 
-/** A won result of the same first battles (the run already counted) gets the tapping hand on
- *  its way on: a new player left alone on the first win's board did not see what to tap. */
-export function pointOn(m: MetaSave): boolean {
-  return m.runs <= TOP_PICK_UNTIL;
+/** Seconds a later player sits still before a hand shows what to tap: on the home screen and a
+ *  result, and on a lost result whose crystals pay for the step it lights (game/homeIdle.ts). */
+export const IDLE_HINT = { home: 20, loss: 5 };
+
+/** Seconds of quiet before the tapping hand on a result's way on, or null for none. The same first
+ *  battles (the run already counted, a stage's own result) get it at once: a new player left alone
+ *  on the first win's board did not see what to tap. Later, only with hints on (the settings
+ *  switch), after IDLE_HINT. */
+export function pointWait(m: MetaSave, lost: boolean, stage: boolean): number | null {
+  if (stage && m.runs <= TOP_PICK_UNTIL) return 0;
+  if (!m.sound.hints) return null;
+  const step = lost ? lossStep(m) : null;
+  return step === 'potions' || step === 'workshop' ? IDLE_HINT.loss : IDLE_HINT.home;
 }
 
 /** The one tip a lost battle's result singles out: a fielded potion's level the crystals now

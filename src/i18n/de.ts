@@ -196,7 +196,7 @@ export const de: Table = {
   allDone: 'Komplettbonus',
   allDoneCount: '{n}/{total} abgeholt',
   lang: { name: 'Deutsch' },
-  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', shake: 'Bildschirmwackeln', haptics: 'Vibration', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', shake: 'Bildschirmwackeln', haptics: 'Vibration', hints: 'Hinweise', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pause', resume: 'Weiter', giveUp: 'Aufgeben', confirm: 'Nochmal tippen zum Aufgeben' },
   rotate: 'Bitte das Handy hochkant halten',
   privacy: {

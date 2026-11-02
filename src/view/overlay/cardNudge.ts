@@ -14,9 +14,10 @@ import { label } from '../ui';
  *  before it comes back, and one tap's length. The cards waited 5 s for it before (11-02). */
 export const CARD_NUDGE = { after: 0.5, rest: 1, beat: 1.2 };
 
-/** The hand is up `open` seconds after the cards opened, `quiet` after the player last touched them. */
-export function nudgeOn(open: number, quiet: number): boolean {
-  return open >= CARD_NUDGE.after && quiet >= CARD_NUDGE.rest;
+/** The hand is up `open` seconds after the cards opened, `quiet` after the player last touched
+ *  them; one that `wait`s (a later player's result) wants that long of both. */
+export function nudgeOn(open: number, quiet: number, wait = 0): boolean {
+  return open >= Math.max(CARD_NUDGE.after, wait) && quiet >= Math.max(CARD_NUDGE.rest, wait);
 }
 
 /** Input that means the player is at the cards: a press, a drag or a key. A mouse only passing
@@ -61,7 +62,7 @@ export class CardNudge extends Container {
     if (acting(e)) this.quiet = 0;
   };
 
-  constructor(x: number, y: number) {
+  constructor(x: number, y: number, private readonly wait = 0) {
     super();
     this.position.set(x, y);
     this.eventMode = 'none';
@@ -69,7 +70,7 @@ export class CardNudge extends Container {
     this.addChild(this.ring, this.hand);
     this.visible = false;
     // a touch, drag or key means the player is choosing: the hand goes until they let go a while
-    for (const type of EVENTS) window.addEventListener(type, this.touch);
+    if (typeof window !== 'undefined') for (const type of EVENTS) window.addEventListener(type, this.touch);
   }
 
   update(dt: number): void {
@@ -77,7 +78,7 @@ export class CardNudge extends Container {
     this.quiet = this.down ? 0 : this.quiet + dt;
     // the tap starts from its top as the hand comes up
     this.shown = this.visible ? this.shown + dt : 0;
-    this.visible = nudgeOn(this.open, this.quiet);
+    this.visible = nudgeOn(this.open, this.quiet, this.wait);
     if (!this.visible) return;
     // the hand's art came in after the pick opened
     if (handTexture() && !(this.hand.children[0] instanceof Sprite)) {
@@ -91,7 +92,7 @@ export class CardNudge extends Container {
   }
 
   override destroy(options?: Parameters<Container['destroy']>[0]): void {
-    for (const type of EVENTS) window.removeEventListener(type, this.touch);
+    if (typeof window !== 'undefined') for (const type of EVENTS) window.removeEventListener(type, this.touch);
     super.destroy(options);
   }
 }

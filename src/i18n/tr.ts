@@ -196,7 +196,7 @@ export const tr: Table = {
   allDone: 'Tüm Görevler Bonusu',
   allDoneCount: '{n}/{total} alındı',
   lang: { name: 'Türkçe' },
-  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', shake: 'Ekran sarsıntısı', haptics: 'Titreşim', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', shake: 'Ekran sarsıntısı', haptics: 'Titreşim', hints: 'İpuçları', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Duraklatıldı', resume: 'Devam', giveUp: 'Pes et', confirm: 'Pes etmek için tekrar dokun' },
   rotate: 'Telefonu dik tutun',
   privacy: {

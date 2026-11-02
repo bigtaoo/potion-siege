@@ -58,8 +58,9 @@ export interface MetaSave {
   /** Endless mode's best wave and the milestones it has paid. */
   endless: EndlessSave;
   /** The settings' music and sound effects toggles, the screen shake (null: as the system's
-   *  reduced motion says, view/media.ts) and the vibration where the device has it. */
-  sound: { music: boolean; sfx: boolean; shake: boolean | null; haptics: boolean };
+   *  reduced motion says, view/media.ts), the vibration where the device has it, and the hints
+   *  that come up when the player stands still past the first battles (game/homeIdle.ts). */
+  sound: { music: boolean; sfx: boolean; shake: boolean | null; haptics: boolean; hints: boolean };
   achievements: AchievementSave;
   /** The chapters whose one-time crystal chest has been opened. */
   chapterChests: number[];
@@ -149,7 +150,7 @@ export function newMeta(): MetaSave {
     challenge: newChallenge(),
     welcome: newWelcome(),
     endless: newEndless(),
-    sound: { music: true, sfx: true, shake: null, haptics: true },
+    sound: { music: true, sfx: true, shake: null, haptics: true, hints: true },
     achievements: newAchievements(),
     chapterChests: [],
     starChests: newStarChests(),
@@ -202,7 +203,7 @@ export function parseMeta(raw: string | null): MetaSave {
   out.welcome = parseWelcome(data.welcome, out.runs);
   out.endless = parseEndless(data.endless);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
-  out.sound = { music: sound.music !== false, sfx: sound.sfx !== false, shake: typeof sound.shake === 'boolean' ? sound.shake : null, haptics: sound.haptics !== false };
+  out.sound = { music: sound.music !== false, sfx: sound.sfx !== false, shake: typeof sound.shake === 'boolean' ? sound.shake : null, haptics: sound.haptics !== false, hints: sound.hints !== false };
   out.achievements = parseAchievements(data.achievements, out.cleared);
   // a save from before chapters keeps the chests of the chapters it finished for the home
   // screen to open

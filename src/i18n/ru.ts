@@ -196,7 +196,7 @@ export const ru: Table = {
   allDone: 'Бонус за все задания',
   allDoneCount: 'Забрано {n}/{total}',
   lang: { name: 'Русский' },
-  sound: { language: 'Язык', settings: 'Настройки', music: 'Музыка', sfx: 'Звуки', shake: 'Тряска экрана', haptics: 'Вибрация', on: 'ВКЛ', off: 'ВЫКЛ', privacy: 'Реклама и данные', policy: 'Конфиденциальность', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Язык', settings: 'Настройки', music: 'Музыка', sfx: 'Звуки', shake: 'Тряска экрана', haptics: 'Вибрация', hints: 'Подсказки', on: 'ВКЛ', off: 'ВЫКЛ', privacy: 'Реклама и данные', policy: 'Конфиденциальность', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Пауза', resume: 'Продолжить', giveUp: 'Сдаться', confirm: 'Нажмите ещё раз, чтобы сдаться' },
   rotate: 'Поверните телефон вертикально',
   privacy: {

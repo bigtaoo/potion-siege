@@ -71,7 +71,7 @@ const toBattle: Rule = {
   tap: (act) => (act === 'play' ? 'done' : 'path'),
 };
 
-const RULES: Record<GuideStep, Rule> = {
+export const RULES: Record<GuideStep, Rule> = {
   gift: {
     can: (m, today) => welcomeOn(m) && canClaimWelcome(m, today),
     aim: (_m, w) => inPanel('welcome', 'top_welcome', 'claim_welcome')(w),

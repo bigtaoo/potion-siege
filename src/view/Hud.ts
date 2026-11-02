@@ -39,7 +39,7 @@ const NUDGE_AFTER = 2;
  *  a summon is tapped on a full grid. */
 const VETERAN_NUDGE_AFTER = 5;
 /** Merges after which a player knows how: the board points later (VETERAN_NUDGE_AFTER), with no
- *  plate explaining, and no hand at the next move when idle. */
+ *  plate explaining. */
 export const VETERAN_MERGES = 20;
 
 export class Hud extends Container {
@@ -88,6 +88,8 @@ export class Hud extends Container {
   nudge = true;
   /** Past VETERAN_MERGES: the pointer later and no plate. */
   veteran = false;
+  /** The settings' hints switch: the hand at the next move when idle, past the early battles. */
+  hints = true;
   /** Stage 1's boss gets the new-enemy card too, once (game/battleTips.ts). */
   firstBoss = false;
   /** Around the two cells that could fuse while the grid is full: pulsing rings, the dragging
@@ -109,8 +111,9 @@ export class Hud extends Container {
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
-  /** The hand at the next move when the grid is not full (nextMove.ts). */
-  private readonly next = new NextMove();
+  /** The hand at the next move when the grid is not full (nextMove.ts); its `onHint` reports the
+   *  idle hand. */
+  readonly next = new NextMove();
   /** One of the player's first battles: the hand shows each move as soon as it can be made. */
   private early = false;
 
@@ -360,7 +363,7 @@ export class Hud extends Container {
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     // the next move: at once in the first battles, else for a player who has stopped
-    const shown = this.next.update(b, this.early, this.nudge && (this.early || !this.veteran), dt);
+    const shown = this.next.update(b, this.early, this.nudge && (this.early || this.hints), dt);
     this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
     this.summonButton.scale.set(this.upgradeButton.scale.x * (1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2));
     if (!full) this.asked = false;

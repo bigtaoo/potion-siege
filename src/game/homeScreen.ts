@@ -1,5 +1,6 @@
 // The home screen built over an idle battle: the panels that open by themselves (consent,
-// welcome gifts, login), the upgrade pointer, and what each of its buttons does.
+// welcome gifts, login), the upgrade pointer, the guide's and the idle hand, and what each of its
+// buttons does.
 
 import type { Game } from '../app';
 import { CONSENT_AFTER_RUNS } from '../analytics/privacy';
@@ -17,6 +18,7 @@ import { fitMenu } from '../view/viewport';
 import { boardView, fetchBoard, submitScores } from './boardFlow';
 import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
 import { drawGuide, guideActs, guideAim, guideSkip } from './homeGuide';
+import { idleActs, idleHome } from './homeIdle';
 import { challengeAd, playChallenge, playEndless } from './modes';
 import { reminderBook } from './reminderBook';
 import { claimWelcomeGift, enterHome, remindAnswer, welcomePops, welcomeVisit } from './returnHooks';
@@ -71,7 +73,7 @@ export function home(g: Game, panel: HomePanel = null): void {
   const hint = g.autoplay || panel ? null : aim ? aim.hint : upgradeHintKind(g.save);
   if (hint) g.analytics.first(g.tab === 'potions' ? 'hint_upgrade_button' : 'hint_upgrade_tab', { run: g.save.runs });
   g.hintOnButton = !!hint && g.tab === 'potions';
-  const root = g.menu.addChild(buildHome(g.save, guideActs(g, {
+  const root = g.menu.addChild(buildHome(g.save, idleActs(g, guideActs(g, {
     tab: (tab) => {
       if (g.hintOnButton && tab !== 'potions') hintDone(g, false);
       g.tab = tab;
@@ -196,13 +198,17 @@ export function home(g: Game, panel: HomePanel = null): void {
       g.root.visible = true;
       g.platform.gameplayStart();
     },
-  }, aim), g.tab, panel, today, fit, g.picked, !g.autoplay && g.platform.rewardedAvailable(), hint, { ...extras(g), guiding: !!aim?.target }));
+  }, aim)), g.tab, panel, today, fit, g.picked, !g.autoplay && g.platform.rewardedAvailable(), hint, { ...extras(g), guiding: !!aim?.target }));
   drawGuide(g, root, aim, () => {
     guideSkip(g, aim?.step);
     home(g, g.panel);
   });
   g.hintHand = g.menu.getChildByLabel('hintHand', true);
+  // past the guide, a hand once the player sits still (homeIdle.ts)
+  idleHome(g, root, !!aim?.target || !!hint);
 }
+
+export { homeFrame } from './homeIdle';
 
 /** The ad-free card and the ad privacy options, where the host has them (iOS), the link to
  *  our privacy policy (everywhere but CrazyGames), and the play statistics switch with the

@@ -15,6 +15,12 @@ describe('BridgeEvents', () => {
     expect(m.map('guide_step', {})).toEqual(['guide_step', { step_id: '', chapter: 0, result: '', wait_sec: 0, run: 0 }]);
   });
 
+  it('passes the idle hand on', () => {
+    const m = new BridgeEvents();
+    expect(m.map('idle_hint', { where: 'home', target: 'login', result: 'shown', run: 7 })).toEqual(['idle_hint', { where: 'home', target: 'login', result: 'shown', run: 7 }]);
+    expect(m.map('idle_hint', {})).toEqual(['idle_hint', { where: '', target: '', result: '', run: 0 }]);
+  });
+
   it('makes runs a progression funnel by stage, carrying the stage to the run end', () => {
     const m = new BridgeEvents();
     expect(m.map('run_start', { run: 3, cause: 'next', stage: 4 })).toEqual(['progression_started', { step_id: 'stage_4', step_index: 4, mode: 'story', run: 3, cause: 'next' }]);

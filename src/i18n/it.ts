@@ -196,7 +196,7 @@ export const it: Table = {
   allDone: 'Bonus completamento',
   allDoneCount: '{n}/{total} riscossi',
   lang: { name: 'Italiano' },
-  sound: { language: 'Lingua', settings: 'Impostazioni', music: 'Musica', sfx: 'Effetti', shake: 'Scossa schermo', haptics: 'Vibrazione', on: 'SÌ', off: 'NO', privacy: 'Scelte privacy annunci', policy: 'Informativa privacy', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Lingua', settings: 'Impostazioni', music: 'Musica', sfx: 'Effetti', shake: 'Scossa schermo', haptics: 'Vibrazione', hints: 'Suggerimenti', on: 'SÌ', off: 'NO', privacy: 'Scelte privacy annunci', policy: 'Informativa privacy', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pausa', resume: 'Riprendi', giveUp: 'Arrenditi', confirm: 'Tocca ancora per arrenderti' },
   rotate: 'Tieni il telefono in verticale',
   privacy: {
