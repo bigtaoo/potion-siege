@@ -62,6 +62,19 @@ describe('the one-time home pointers', () => {
     expect(aimed(w)).toBe('endless');
   });
 
+  it("points at an open panel's own claim before its close, the claim going round no step", () => {
+    const w = back(10, 10, (m) => {
+      m.guide.push('chapterChest', 'starChest');
+      m.daily.lastClaim = '';
+    });
+    home(w.game, 'login');
+    expect(aimed(w)).toBe('claim_login');
+    press(w, 'claim_login');
+    // claimed: the claim is gone, and no step was counted done or gone round
+    expect(steps(w)).toEqual([]);
+    expect(aimed(w)).not.toBe('claim_login');
+  });
+
   it('shows a new potion its place in the lineup, and counts a tap elsewhere as gone round', () => {
     const w = back(5, 5, (m) => m.unlocked.push('poison'));
     expect(aimed(w)).toBe('tab_potions');

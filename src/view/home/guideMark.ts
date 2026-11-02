@@ -1,11 +1,12 @@
 // The home guide's mark on a button (game/homeGuide.ts): the tutorial's hand at it and a line on
 // a cream card beside the hand, with a skip link. Nothing of it takes taps but the skip link, so
-// the button under the hand is still the one tapped.
+// the button under the hand is still the one tapped. Both go where they cover least (hintPlace.ts).
 
 import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../../i18n';
 import { balanced, fit as fitText, ink, LIGHT, lightPanel, lightTile, P, tappable } from '../kit';
 import type { MenuFit } from '../viewport';
+import { boxIn, cheapest, cost, obstacles, overlap, placeCard, type Obstacle } from './hintPlace';
 import { RAIL } from './nav';
 import { pointer } from './pointer';
 
@@ -17,27 +18,33 @@ export interface Box {
 }
 
 /** Where the hand comes from: below a button high on the page, above one low on it, and from
- *  the right of the wide page's rail of tabs. */
-export function handSide(r: Box, fit: MenuFit): 'below' | 'above' | 'right' {
+ *  the right of the wide page's rail of tabs; `side`, level from the right, onto a wide card's
+ *  right end. */
+export type Side = 'below' | 'above' | 'right' | 'side' | 'inside';
+
+export function handSide(r: Box, fit: MenuFit): Side {
   if (fit.wide && r.x + r.w <= RAIL + 10) return 'right';
   return r.y + r.h / 2 > fit.h * 0.55 ? 'above' : 'below';
 }
 
-/** The hand's fingertip and turn for a button at `r` (0 points up). */
-export function handAt(r: Box, side: 'below' | 'above' | 'right'): { x: number; y: number; rotation: number } {
+/** The hand's fingertip and turn for a button at `r` (0 points up); `inside` a big one (a card)
+ *  it rests on the card's own lower half, off what lies round it. */
+export function handAt(r: Box, side: Side): { x: number; y: number; rotation: number } {
   const cx = r.x + r.w / 2;
+  if (side === 'inside') return { x: cx + r.w * 0.1, y: r.y + r.h * 0.42, rotation: 0 };
   if (side === 'right') return { x: r.x + r.w * 0.7, y: r.y + r.h * 0.7, rotation: -0.6 };
+  if (side === 'side') return { x: r.x + r.w - 40, y: r.y + r.h * 0.45, rotation: -Math.PI / 2 };
   if (side === 'above') return { x: cx + 8, y: r.y + 10, rotation: Math.PI + 0.15 };
   return { x: cx + r.w * 0.15, y: r.y + r.h - 10, rotation: 0 };
 }
 
 /** The card's centre for a `cw` x `ch` card: past the hand, kept on the page. */
-export function cardAt(r: Box, side: 'below' | 'above' | 'right', cw: number, ch: number, fit: MenuFit): { x: number; y: number } {
+export function cardAt(r: Box, side: Side, cw: number, ch: number, fit: MenuFit): { x: number; y: number } {
   const clamp = (v: number, lo: number, hi: number) => Math.max(lo, Math.min(hi, v));
   const reach = 200;
   let x = r.x + r.w / 2;
   let y: number;
-  if (side === 'right') {
+  if (side === 'right' || side === 'side') {
     x = r.x + r.w + reach + cw / 2;
     y = r.y + r.h / 2;
   } else y = side === 'above' ? r.y - reach - ch / 2 : r.y + r.h + reach + ch / 2;
@@ -49,29 +56,48 @@ export function cardAt(r: Box, side: 'below' | 'above' | 'right', cw: number, ch
  *  (`inPanel`) has both from below, so the line sits past the panel's foot, not over what the
  *  panel shows. */
 export function guideMark(root: Container, target: Container, text: string | null, hand: boolean, fit: MenuFit, onSkip: (() => void) | null, inPanel = false): void {
-  const b = target.getBounds();
-  const a = root.toLocal({ x: b.x, y: b.y });
-  const z = root.toLocal({ x: b.x + b.width, y: b.y + b.height });
-  const r: Box = { x: a.x, y: a.y, w: z.x - a.x, h: z.y - a.y };
-  const side = inPanel ? 'below' : handSide(r, fit);
+  const r = boxIn(root, target);
+  const obs = obstacles(root, target, fit);
+  const side = handPick(r, fit, inPanel, obs);
   const mark = new Container();
   mark.label = 'guideMark';
-  if (text) mark.addChild(card(r, side, text, fit, onSkip));
+  const hands = obs.filter((o) => o.weight >= 1000).map((o) => o.box);
   if (hand) {
     const at = handAt(r, side);
-    mark.addChild(glow(r), pointer(at.x, at.y, at.rotation, 0.8));
+    const p = pointer(at.x, at.y, at.rotation, 0.8);
+    const pb = p.getBounds();
+    hands.push({ x: pb.x, y: pb.y, w: pb.width, h: pb.height });
+    mark.addChild(glow(r), p);
   }
+  if (text) mark.addChildAt(card(r, side, text, fit, onSkip, obs, hands), 0);
   root.addChild(mark);
 }
 
-function card(r: Box, side: 'below' | 'above' | 'right', text: string, fit: MenuFit, onSkip: (() => void) | null): Container {
-  const cw = Math.min(fit.wide ? 640 : 820, fit.w - 80);
+/** The side the hand comes from: the usual one (below in a panel), unless another covers less
+ *  of the buttons round the target or stays more on the page. */
+function handPick(r: Box, fit: MenuFit, inPanel: boolean, obs: Obstacle[]): Side {
+  const first = inPanel ? 'below' : handSide(r, fit);
+  const sides: Side[] = [first, ...(['below', 'above', 'right'] as const).filter((s) => s !== first)];
+  if (r.w >= 400) sides.push('side');
+  if (r.h >= 300 && r.w >= 200) sides.push('inside');
+  // a hand a few units past the edge is still whole on the screen
+  const page: Box = { x: -30, y: -30, w: fit.w + 60, h: fit.h + 60 };
+  return cheapest(sides, (s) => {
+    const at = handAt(r, s);
+    const pb = pointer(at.x, at.y, at.rotation, 0.8).getBounds();
+    const b: Box = { x: pb.x, y: pb.y, w: pb.width, h: pb.height };
+    return cost(b, obs, []) + (b.w * b.h - overlap(b, page)) * 30;
+  });
+}
+
+function card(r: Box, side: Side, text: string, fit: MenuFit, onSkip: (() => void) | null, obs: Obstacle[], hands: Box[]): Container {
+  const cw = Math.min(fit.wide ? 760 : 820, fit.w - 80);
   const body: Text = balanced(text, 44, cw - (onSkip ? 300 : 80), { fill: LIGHT.edge, lineHeight: 58 });
   const ch = Math.max(130, body.height + 60);
   const c = new Container();
   c.label = 'guideCard';
   c.eventMode = 'passive';
-  const at = cardAt(r, side, cw, ch, fit);
+  const at = placeCard(r, cardAt(r, side, cw, ch, fit), cw, ch, fit, obs, hands);
   c.position.set(at.x, at.y);
   const panel = lightPanel(cw, ch);
   panel.eventMode = 'none';

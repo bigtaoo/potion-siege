@@ -154,7 +154,7 @@ export const en = {
     crystals: { name: 'Crystal Sieve', desc: 'Crystals +{p}%' },
     now: 'Now: {text}',
     next: 'Next: {text}',
-    none: 'not upgraded',
+    none: 'no bonus yet',
   },
   store: {
     daily: 'Daily Freebies',
@@ -177,6 +177,7 @@ export const en = {
     },
   },
   login: 'Daily Reward',
+  top: { login: 'Reward', tasks: 'Tasks', settings: 'Settings' },
   welcome: { title: 'Welcome Gifts', button: 'Gifts', note: 'A gift for each day you play this week' },
   remind: {
     setting: 'Reminders',
@@ -194,6 +195,7 @@ export const en = {
   claimed: 'Claimed',
   tomorrow: 'Back tomorrow',
   tasks: 'Daily Tasks',
+  tasksNext: 'New tasks in {time}',
   allDone: 'All Tasks Bonus',
   allDoneCount: '{n}/{total} claimed',
   /** The language's own name, for the picker. */
@@ -277,7 +279,7 @@ export const en = {
   },
   codex: {
     page: { potions: 'Potions', enemies: 'Enemies', feats: 'Achievements' },
-    heroes: 'Potions',
+    heroes: 'Star forms',
     monsters: 'Clockwork Army',
     locked: 'Locked',
     hp: 'HP {n}',
@@ -297,10 +299,13 @@ export const en = {
     speed: 'Speed {n}',
     wallDps: 'Siege {n}/s',
     resist: 'Damage taken',
+    more: 'Hurts it more',
+    less: 'Hurts it less',
   },
   ach: {
     title: 'Achievements',
     count: '{n}/{total} claimed',
+    claimAll: 'Claim all',
     done: 'Complete',
     stages: { name: 'Siege Breaker', desc: 'Clear stage {n}' },
     level: { name: 'Master Brewer', desc: 'Raise a potion to Lv {n}' },

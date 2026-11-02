@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
-  achievementsClaimable, claimTier, nextTier, recordChallenge, recordEvents, TRACK_IDS, TRACKS, trackProgress, trackReady,
+  achievementsClaimable, claimAllTiers, claimTier, nextTier, readyTiers, recordChallenge, recordEvents, TRACK_IDS, TRACKS, trackProgress, trackReady,
 } from './achievements';
 import { claimLogin } from './daily';
 import { newMeta, parseMeta } from './meta';
@@ -40,6 +40,18 @@ describe('achievements', () => {
     while (claimTier(m, 'stages') > 0);
     expect(nextTier(m, 'stages')).toBeNull();
     expect(trackReady(m, 'stages')).toBe(false);
+  });
+
+  it('counts every tier reached, several on one track, and claims them all at once', () => {
+    const m = newMeta();
+    m.cleared = 6;
+    m.achievements.stats.kills = 1500;
+    // stages 1 and 5, and the first kills tier
+    expect(readyTiers(m)).toBe(3);
+    expect(claimAllTiers(m)).toBe(30 + 100 + 80);
+    expect(m.crystals).toBe(210);
+    expect(readyTiers(m)).toBe(0);
+    expect(claimAllTiers(m)).toBe(0);
   });
 
   it('counts merges, kills, ultimates and the kinds beaten from battle events', () => {

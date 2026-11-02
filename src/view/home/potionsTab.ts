@@ -40,7 +40,9 @@ export function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Ar
     root.addChild(card);
     return card;
   });
-  // over all the cards: up at the hinted potion's price button from below it
+  // over all the cards: up at the hinted potion's price button from below it, or down at it from
+  // above when a card lies below (the hand would hang over that card's name)
   const i = hint ? HERO_KINDS.indexOf(hint) : -1;
-  if (i >= 0) root.addChild(pointer(cards[i].x + cw * 0.22, cards[i].y + ch / 2 - 34, 0, 0.8));
+  if (i >= 0 && i + cols < n) root.addChild(pointer(cards[i].x + cw * 0.18, cards[i].y + ch / 2 - 92, Math.PI + 0.15, 0.8));
+  else if (i >= 0) root.addChild(pointer(cards[i].x + cw * 0.22, cards[i].y + ch / 2 - 34, 0, 0.8));
 }

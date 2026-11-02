@@ -154,7 +154,7 @@ export const ko: Table = {
     crystals: { name: '크리스탈 거름망', desc: '크리스탈 +{p}%' },
     now: '현재: {text}',
     next: '다음: {text}',
-    none: '강화 안 함',
+    none: '보너스 없음',
   },
   store: {
     daily: '매일 무료 선물',
@@ -177,6 +177,7 @@ export const ko: Table = {
     },
   },
   login: '출석 보상',
+  top: { login: '출석', tasks: '임무', settings: '설정' },
   welcome: { title: '환영 선물', button: '선물', note: '이번 주에 플레이하는 날마다 선물을 드려요' },
   remind: {
     setting: '알림',
@@ -194,6 +195,7 @@ export const ko: Table = {
   claimed: '받음',
   tomorrow: '내일 또 와요',
   tasks: '일일 임무',
+  tasksNext: '새 임무까지 {time}',
   allDone: '모든 임무 완료 보너스',
   allDoneCount: '{n}/{total} 받음',
   lang: { name: '한국어' },
@@ -275,7 +277,7 @@ export const ko: Table = {
   },
   codex: {
     page: { potions: '포션', enemies: '적', feats: '업적' },
-    heroes: '포션',
+    heroes: '별 단계',
     monsters: '태엽 군단',
     locked: '잠김',
     hp: '체력 {n}',
@@ -295,10 +297,13 @@ export const ko: Table = {
     speed: '속도 {n}',
     wallDps: '공성 {n}/초',
     resist: '받는 피해',
+    more: '잘 통함',
+    less: '덜 통함',
   },
   ach: {
     title: '업적',
     count: '{n}/{total} 받음',
+    claimAll: '모두 받기',
     done: '완료',
     stages: { name: '포위 돌파', desc: '스테이지 {n} 클리어' },
     level: { name: '양조 장인', desc: '포션 하나를 Lv {n}까지 올리기' },

@@ -8,16 +8,17 @@ import { chestIcon, fit as fitText, ink, lightTile, P, paperCard, PillButton } f
 import { label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
+import { untilMidnight } from './shared';
 import type { HomeActions } from './types';
 
 /** Today's three tasks: what to do, how far along, and the claim button; then the bonus for
  *  claiming all three. */
 export function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const h = 870;
+  const h = 960;
   const { panel, box } = frame(act, t('tasks'), h, fit);
   m.daily.tasks.forEach((task, i) => {
     const r = new Container();
-    r.position.set(0, -255 + i * 190);
+    r.position.set(0, -285 + i * 190);
     const goal = taskGoal(task.id);
     const desc = ink(t(`task.${task.id}`, { n: goal }), 40);
     desc.anchor.set(0, 0.5);
@@ -46,13 +47,17 @@ export function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Contain
     box.addChild(r);
   });
   box.addChild(bonusRow(m, act));
+  // when today's tasks make way for new ones
+  const next = untilMidnight('tasksNext', 34);
+  next.y = 412;
+  box.addChild(next);
   return panel;
 }
 
 /** The chest for claiming all of today's tasks: how many are claimed, and its button. */
 function bonusRow(m: MetaSave, act: HomeActions): Container {
   const r = new Container();
-  r.position.set(0, 330);
+  r.position.set(0, 300);
   const icon = chestIcon();
   icon.scale.set(0.8);
   icon.position.set(-360, 0);

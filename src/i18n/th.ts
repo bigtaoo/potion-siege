@@ -154,7 +154,7 @@ export const th: Table = {
     crystals: { name: 'ตะแกรงคริสตัล', desc: 'คริสตัล +{p}%' },
     now: 'ตอนนี้: {text}',
     next: 'ถัดไป: {text}',
-    none: 'ยังไม่อัปเกรด',
+    none: 'ยังไม่มีโบนัส',
   },
   store: {
     daily: 'ของฟรีรายวัน',
@@ -177,6 +177,7 @@ export const th: Table = {
     },
   },
   login: 'รางวัลรายวัน',
+  top: { login: 'รางวัล', tasks: 'ภารกิจ', settings: 'ตั้งค่า' },
   welcome: { title: 'ของขวัญต้อนรับ', button: 'ของขวัญ', note: 'รับของขวัญทุกวันที่เล่นในสัปดาห์นี้' },
   remind: {
     setting: 'การแจ้งเตือน',
@@ -194,6 +195,7 @@ export const th: Table = {
   claimed: 'รับแล้ว',
   tomorrow: 'กลับมาพรุ่งนี้',
   tasks: 'ภารกิจรายวัน',
+  tasksNext: 'ภารกิจใหม่ใน {time}',
   allDone: 'โบนัสทำครบทุกภารกิจ',
   allDoneCount: 'รับแล้ว {n}/{total}',
   lang: { name: 'ไทย' },
@@ -275,7 +277,7 @@ export const th: Table = {
   },
   codex: {
     page: { potions: 'โพชั่น', enemies: 'ศัตรู', feats: 'ความสำเร็จ' },
-    heroes: 'โพชั่น',
+    heroes: 'ร่างตามดาว',
     monsters: 'กองทัพไขลาน',
     locked: 'ล็อกอยู่',
     hp: 'พลังชีวิต {n}',
@@ -295,10 +297,13 @@ export const th: Table = {
     speed: 'ความเร็ว {n}',
     wallDps: 'ตีกำแพง {n}/วิ',
     resist: 'ความเสียหายที่ได้รับ',
+    more: 'ได้ผลมาก',
+    less: 'ได้ผลน้อย',
   },
   ach: {
     title: 'ความสำเร็จ',
     count: 'รับแล้ว {n}/{total}',
+    claimAll: 'รับทั้งหมด',
     done: 'สำเร็จ',
     stages: { name: 'ผู้ทลายล้อม', desc: 'ผ่านด่าน {n}' },
     level: { name: 'ปรมาจารย์ปรุงยา', desc: 'อัปโพชั่นถึง Lv {n}' },

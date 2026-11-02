@@ -154,7 +154,7 @@ export const vi: Table = {
     crystals: { name: 'Rây Pha Lê', desc: 'Pha lê +{p}%' },
     now: 'Hiện tại: {text}',
     next: 'Tiếp theo: {text}',
-    none: 'chưa nâng cấp',
+    none: 'chưa có thưởng',
   },
   store: {
     daily: 'Quà hằng ngày',
@@ -177,6 +177,7 @@ export const vi: Table = {
     },
   },
   login: 'Thưởng hằng ngày',
+  top: { login: 'Thưởng', tasks: 'Nhiệm vụ', settings: 'Cài đặt' },
   welcome: { title: 'Quà chào mừng', button: 'Quà', note: 'Mỗi ngày chơi trong tuần này nhận một món quà' },
   remind: {
     setting: 'Nhắc nhở',
@@ -194,6 +195,7 @@ export const vi: Table = {
   claimed: 'Đã nhận',
   tomorrow: 'Hẹn ngày mai',
   tasks: 'Nhiệm vụ ngày',
+  tasksNext: 'Nhiệm vụ mới sau {time}',
   allDone: 'Thưởng xong tất cả',
   allDoneCount: 'Đã nhận {n}/{total}',
   lang: { name: 'Tiếng Việt' },
@@ -275,7 +277,7 @@ export const vi: Table = {
   },
   codex: {
     page: { potions: 'Bình thuốc', enemies: 'Kẻ địch', feats: 'Thành tựu' },
-    heroes: 'Bình thuốc',
+    heroes: 'Dạng theo sao',
     monsters: 'Quân đoàn Dây cót',
     locked: 'Đã khóa',
     hp: 'HP {n}',
@@ -295,10 +297,13 @@ export const vi: Table = {
     speed: 'Tốc độ {n}',
     wallDps: 'Công thành {n}/s',
     resist: 'Sát thương nhận',
+    more: 'Gây thêm sát thương',
+    less: 'Gây ít sát thương',
   },
   ach: {
     title: 'Thành tựu',
     count: 'Đã nhận {n}/{total}',
+    claimAll: 'Nhận tất cả',
     done: 'Hoàn thành',
     stages: { name: 'Phá Vây', desc: 'Qua màn {n}' },
     level: { name: 'Bậc Thầy Pha Chế', desc: 'Nâng một bình lên Lv {n}' },

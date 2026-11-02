@@ -6,7 +6,7 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { formatAmount, t } from '../../i18n';
-import { nextTier, TRACK_IDS, TRACKS, trackProgress, trackReady, type TrackId } from '../../sim/achievements';
+import { nextTier, readyTiers, TRACK_IDS, TRACKS, trackProgress, trackReady, type TrackId } from '../../sim/achievements';
 import { CHALLENGE_TIERS } from '../../sim/challenge';
 import type { MetaSave } from '../../sim/meta';
 import {
@@ -47,8 +47,9 @@ export function featOrder(m: MetaSave): TrackId[] {
 }
 
 /** Every track on one board: a column of rows on a portrait page, two on a landscape one (left
- *  to right, so the order reads along the lines). */
-export function featsBoard(root: Container, m: MetaSave, a: CodexArea, top: number, claim: (id: TrackId, at: Container) => void): void {
+ *  to right, so the order reads along the lines). The count claimed on the right of the title;
+ *  on its left, while two tiers or more wait, a button that claims them all (`claim(null)`). */
+export function featsBoard(root: Container, m: MetaSave, a: CodexArea, top: number, claim: (id: TrackId | null, at: Container) => void): void {
   const bottom = a.y + a.h - 24;
   const w = a.wide ? a.w - 80 : Math.min(1000, a.w - 60);
   const h = bottom - top;
@@ -56,11 +57,18 @@ export function featsBoard(root: Container, m: MetaSave, a: CodexArea, top: numb
   c.position.set(a.x + a.w / 2, top + h / 2);
   const tiers = TRACK_IDS.reduce((n, id) => n + TRACKS[id].length, 0);
   const got = TRACK_IDS.reduce((n, id) => n + m.achievements.claimed[id], 0);
-  const note = ink(t('ach.count', { n: got, total: tiers }), 30, { fill: P.inkSoft });
+  const side = w / 2 - 34 - (c.children[1] as Container).width / 2 - 6;
+  const note = ink(t('ach.count', { n: got, total: tiers }), 38);
   note.anchor.set(1, 0.5);
-  note.position.set(w / 2 - 34, -h / 2 + 58);
-  fit(note, w / 2 - 34 - (c.children[1] as Container).width / 2 - 6);
+  note.position.set(w / 2 - 34, -h / 2 + 50);
+  fit(note, side);
   c.addChild(note);
+  if (readyTiers(m) >= 2) {
+    const all: PillButton = new PillButton(t('ach.claimAll'), Math.min(280, side), 68, 'green', () => claim(null, all), 30, true);
+    all.position.set(-w / 2 + 34 + all.width / 2, -h / 2 + 50);
+    all.label = 'claim_all';
+    c.addChild(all);
+  }
 
   const cols = a.wide ? 2 : 1;
   const rw = (w - 60 - (cols - 1) * 30) / cols;
@@ -99,7 +107,7 @@ function featRow(m: MetaSave, id: TrackId, rw: number, rh: number, claim: (at: C
   r.addChild(icon);
   const pips = new Graphics();
   tiers.forEach((_, i) => {
-    pips.circle(ix + (i - (tiers.length - 1) / 2) * 22, rh / 2 - 18, 7).fill(i < m.achievements.claimed[id] ? P.brass : LIGHT.inset).stroke({ width: 2, color: LIGHT.edge });
+    pips.circle(ix + (i - (tiers.length - 1) / 2) * 28, rh / 2 - 20, 11).fill(i < m.achievements.claimed[id] ? P.brass : LIGHT.inset).stroke({ width: 3, color: LIGHT.edge });
   });
   r.addChild(pips);
 

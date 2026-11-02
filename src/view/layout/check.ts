@@ -126,7 +126,9 @@ export function overflows(root: Container, page: Rect, buttons: readonly (abstra
           for (const b of pressable) {
             // a button in another layer (the page under a panel) is not in the way
             if (inside(c, b) || !inside(b, level)) continue;
-            const bb = b.getBounds();
+            // nor one scrolled out of its list's window
+            const bb = unmasked(b, b.getBounds());
+            if (!bb) continue;
             const w = Math.min(tb.x + tb.width - pad, bb.x + bb.width) - Math.max(tb.x + pad, bb.x);
             const h = Math.min(tb.y + tb.height - vpad, bb.y + bb.height) - Math.max(tb.y + vpad, bb.y);
             if (w >= 1 && h >= 1) {

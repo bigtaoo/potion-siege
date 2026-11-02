@@ -28,7 +28,7 @@ import { settingsPanel } from './home/settingsPanel';
 import type { Area } from './home/shared';
 import { shopTab } from './home/shopTab';
 import { tasksPanel } from './home/tasksPanel';
-import { topBar } from './home/topBar';
+import { barEnd, topBar } from './home/topBar';
 import type { HomeActions, HomeExtras, HomePanel, HomeTab } from './home/types';
 import { remindPanel } from './home/remindPanel';
 import { welcomePanel } from './home/welcomePanel';
@@ -56,14 +56,15 @@ export function buildHome(
   const { w, h, wide } = fit;
   root.addChild(workshopWall(w, h));
   const left = wide ? RAIL : 0;
-  const top = wide ? TOP - 20 : TOP;
+  // under the wide page's bigger top bar
+  const top = wide ? TOP + 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
   // the red-dot rules are in nudges.ts and homeDots.ts; never on the tab already open
   const dots = homeDots(m, today, tab, hint !== null || !!extras.guiding);
   if (tab === 'battle') battleTab(root, m, act, area, today, dots.battle);
   else if (tab === 'potions') potionsTab(root, m, act, area, picked, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
-  else if (tab === 'codex') root.addChild(buildCodex(m, area, act.claimTier, act.panel));
+  else if (tab === 'codex') root.addChild(buildCodex(m, { ...area, bar: left + barEnd(m, wide, !!extras.board) }, act.claimTier, act.panel));
   else shopTab(root, m, act, area, today, ads, ads || !!extras.adsHosted, extras.adFree ?? null);
   // the achievements are sorted afresh, from the top, when the codex is opened again
   if (tab !== 'codex') scrollFeats();

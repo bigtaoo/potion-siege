@@ -154,7 +154,7 @@ export const fr: Table = {
     crystals: { name: 'Tamis à cristaux', desc: 'Cristaux +{p}%' },
     now: 'Actuel : {text}',
     next: 'Suivant : {text}',
-    none: 'non amélioré',
+    none: 'aucun bonus',
   },
   store: {
     daily: 'Cadeaux du jour',
@@ -177,6 +177,7 @@ export const fr: Table = {
     },
   },
   login: 'Bonus du jour',
+  top: { login: 'Bonus', tasks: 'Tâches', settings: 'Réglages' },
   welcome: { title: 'Cadeaux de bienvenue', button: 'Cadeaux', note: 'Un cadeau pour chaque jour de jeu cette semaine' },
   remind: {
     setting: 'Rappels',
@@ -194,6 +195,7 @@ export const fr: Table = {
   claimed: 'Récupéré',
   tomorrow: 'Reviens demain',
   tasks: 'Tâches du jour',
+  tasksNext: 'Nouvelles tâches dans {time}',
   allDone: 'Bonus toutes tâches',
   allDoneCount: '{n}/{total} récupérés',
   lang: { name: 'Français' },
@@ -275,7 +277,7 @@ export const fr: Table = {
   },
   codex: {
     page: { potions: 'Potions', enemies: 'Ennemis', feats: 'Succès' },
-    heroes: 'Potions',
+    heroes: 'Formes étoilées',
     monsters: 'Armée mécanique',
     locked: 'Verrouillé',
     hp: 'PV {n}',
@@ -295,10 +297,13 @@ export const fr: Table = {
     speed: 'Vitesse {n}',
     wallDps: 'Siège {n}/s',
     resist: 'Dégâts subis',
+    more: 'Plus efficace',
+    less: 'Moins efficace',
   },
   ach: {
     title: 'Succès',
     count: '{n}/{total} récupérés',
+    claimAll: 'Tout récupérer',
     done: 'Terminé',
     stages: { name: 'Briseur de siège', desc: 'Termine l’étape {n}' },
     level: { name: 'Maître apothicaire', desc: 'Monte une potion au Niv. {n}' },

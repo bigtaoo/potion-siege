@@ -1,13 +1,15 @@
 // The daily tasks panel as the player meets it on the home screen (tasksPanel.ts, the claims in
 // game/homeScreen.ts): today's tasks set in the save, claimed by their buttons' English captions.
 import '../layout/measure';
-import { beforeAll, describe, expect, it } from 'vitest';
+import { Container, Text } from 'pixi.js';
+import { afterEach, beforeAll, describe, expect, it, vi } from 'vitest';
 import { t } from '../../i18n';
 import { home } from '../../game/homeScreen';
 import { buttons, englishPage, tap, texts, veteran, world, type World } from '../../game/testWorld';
 import { ALL_DONE_BONUS, gameDay, taskGoal, taskReward, type DailyTask } from '../../sim/daily';
 
 beforeAll(englishPage);
+afterEach(() => vi.useRealTimers());
 
 /** A veteran whose tasks today are `tasks` (play pays 75, summon 60, win 100), on the panel. */
 function tasks(list: DailyTask[], bonus = false): World {
@@ -18,7 +20,7 @@ function tasks(list: DailyTask[], bonus = false): World {
   const w = world(m);
   w.game['tab'] = 'battle';
   home(w.game);
-  tap(w.stage, t('tasks'));
+  tap(w.stage, t('top.tasks'));
   expect(w.game['panel']).toBe('tasks');
   return w;
 }
@@ -105,5 +107,15 @@ describe('the daily tasks panel', () => {
     expect(w.game['panel']).toBeNull();
     expect(texts(w.stage)).not.toContain(t('allDone'));
     expect(w.events('dialog')).toContainEqual({ id: 'tasks', action: 'close', run: 8 });
+  });
+
+  it('counts down to the new tasks at midnight', () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date(2026, 9, 28, 21, 15, 5));
+    const w = tasks([task('play', 2), task('summon', false), task('win', false)]);
+    const find = (c: Container): Text | undefined => (c instanceof Text && c.onRender ? c : c.children.map(find).find(Boolean));
+    const clock = find(w.stage)!;
+    clock.onRender!(null as never);
+    expect(clock.text).toBe(t('tasksNext', { time: '02:44:55' }));
   });
 });

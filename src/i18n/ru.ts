@@ -154,7 +154,7 @@ export const ru: Table = {
     crystals: { name: 'Кристальное сито', desc: 'Кристаллы +{p}%' },
     now: 'Сейчас: {text}',
     next: 'Далее: {text}',
-    none: 'не улучшено',
+    none: 'бонуса пока нет',
   },
   store: {
     daily: 'Подарки дня',
@@ -177,6 +177,7 @@ export const ru: Table = {
     },
   },
   login: 'Награда дня',
+  top: { login: 'Награда', tasks: 'Задания', settings: 'Опции' },
   welcome: { title: 'Подарки новичку', button: 'Подарки', note: 'Подарок за каждый день игры на этой неделе' },
   remind: {
     setting: 'Напоминания',
@@ -194,6 +195,7 @@ export const ru: Table = {
   claimed: 'Забрано',
   tomorrow: 'Приходи завтра',
   tasks: 'Задания дня',
+  tasksNext: 'Новые задания через {time}',
   allDone: 'Бонус за все задания',
   allDoneCount: 'Забрано {n}/{total}',
   lang: { name: 'Русский' },
@@ -275,7 +277,7 @@ export const ru: Table = {
   },
   codex: {
     page: { potions: 'Зелья', enemies: 'Враги', feats: 'Достижения' },
-    heroes: 'Зелья',
+    heroes: 'Звёздные формы',
     monsters: 'Заводная армия',
     locked: 'Закрыто',
     hp: 'ОЗ {n}',
@@ -295,10 +297,13 @@ export const ru: Table = {
     speed: 'Скорость {n}',
     wallDps: 'Осада {n}/с',
     resist: 'Получаемый урон',
+    more: 'Бьёт сильнее',
+    less: 'Бьёт слабее',
   },
   ach: {
     title: 'Достижения',
     count: 'Забрано {n}/{total}',
+    claimAll: 'Забрать всё',
     done: 'Выполнено',
     stages: { name: 'Осадолом', desc: 'Пройди этап {n}' },
     level: { name: 'Мастер-зельевар', desc: 'Подними зелье до ур. {n}' },

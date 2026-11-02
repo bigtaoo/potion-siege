@@ -48,7 +48,7 @@ function list(root: Container): { view: Container; content: Container; rows: Map
 
 const at = (y: number) => ({ global: { x: 300, y }, stopPropagation() {} }) as never;
 
-function build(m: MetaSave, claim: (id: TrackId, b: Container) => void = () => {}): Container {
+function build(m: MetaSave, claim: (id: TrackId | null, b: Container) => void = () => {}): Container {
   return buildCodex(m, AREA, claim, () => {});
 }
 
@@ -105,6 +105,18 @@ describe('achievements list', () => {
     expect(list(build(m)).content.y).toBe(-300);
   });
 
+  it('offers to claim them all while two tiers or more wait, and only then', () => {
+    setCodexPage('feats');
+    const m = meta();
+    const claimed: (TrackId | null)[] = [];
+    const all = build(m, (id) => claimed.push(id)).getChildByLabel('claim_all', true) as PillButton;
+    expect(all).not.toBeNull();
+    all.emit('pointertap', at(0));
+    expect(claimed).toEqual([null]);
+    claimTier(m, 'kills');
+    expect(build(m).getChildByLabel('claim_all', true)).toBeNull();
+  });
+
   it('holds the list inside its ends', () => {
     setCodexPage('feats');
     scrollFeats(1e6);
@@ -124,9 +136,9 @@ describe('achievements list', () => {
     const m = meta();
     let tapped: Container | null = null;
     let rebuilt: Container | null = null;
-    const claim = (id: TrackId, b: Container) => {
+    const claim = (id: TrackId | null, b: Container) => {
       tapped = b;
-      claimTier(m, id);
+      claimTier(m, id!);
       rebuilt = build(m, claim);
     };
     const before = list(build(m, claim));

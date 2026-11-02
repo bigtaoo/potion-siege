@@ -44,13 +44,36 @@ export function enemiesPage(root: Container, m: MetaSave, a: CodexArea, top: num
   const rows = Math.ceil(ARMY.length / cols);
   const gap = 18;
   const cw = (w - 80 - gap * (cols - 1)) / cols;
-  const ch = Math.min(a.wide ? 420 : 360, (h - HEAD - FOOT - gap * (rows - 1)) / rows);
+  const ch = Math.min(a.wide ? 420 : 360, (h - HEAD - FOOT - LEGEND - gap * (rows - 1)) / rows);
   ARMY.forEach((kind, i) => {
     const card = tappable(enemyCard(kind, m.stage, cw, ch), () => open(kind));
     card.position.set(-w / 2 + 40 + cw / 2 + (i % cols) * (cw + gap), -h / 2 + HEAD + ch / 2 + Math.floor(i / cols) * (ch + gap));
     c.addChild(card);
   });
+  const key = legend();
+  key.y = -h / 2 + HEAD + rows * ch + (rows - 1) * gap + LEGEND / 2 + 4;
+  c.addChild(key);
   root.addChild(c);
+}
+
+/** Room under the cards for the line saying what the + and − badges mean. */
+const LEGEND = 56;
+
+/** The + badge and what it means, then the − badge and what it means, centred on one line. */
+function legend(): Container {
+  const c = new Container();
+  let x = 0;
+  for (const weak of [true, false]) {
+    const b = badge(weak, 22);
+    const text = ink(t(weak ? 'codex.more' : 'codex.less'), 28, { fill: P.inkSoft });
+    b.x = x + 12;
+    text.anchor.set(0, 0.5);
+    text.x = x + 34;
+    c.addChild(b, text);
+    x = text.x + text.width + 40;
+  }
+  c.x = -(x - 40) / 2;
+  return c;
 }
 
 /** The art with the element it fears most (+) and the one it shrugs off most (−) in its top
@@ -79,13 +102,19 @@ function element(el: HeroKind, weak: boolean, r: number, x: number, y: number): 
   const c = new Container();
   c.position.set(x, y);
   const b = bottle(el, r * 1.5);
-  const badge = new Container();
-  badge.position.set(r * 0.75, r * 0.75);
-  const bar = r * 0.6;
+  const sign = badge(weak, r * 0.55);
+  sign.position.set(r * 0.75, r * 0.75);
+  c.addChild(new Graphics().circle(0, 0, r).fill(HERO_COLORS[el]).stroke({ width: 4, color: P.line }), b, sign);
+  return c;
+}
+
+/** A green + disc (hurts it more) or a red − one (less), `r` across the middle. */
+function badge(weak: boolean, r: number): Container {
+  const c = new Container();
+  const bar = r * 1.1;
   const sign = new Graphics().roundRect(-bar / 2, -bar / 8, bar, bar / 4, bar / 8);
   if (weak) sign.roundRect(-bar / 8, -bar / 2, bar / 4, bar, bar / 8);
-  badge.addChild(new Graphics().circle(0, 0, r * 0.55).fill(weak ? WEAK : STRONG).stroke({ width: 3, color: P.line }), sign.fill(P.cream));
-  c.addChild(new Graphics().circle(0, 0, r).fill(HERO_COLORS[el]).stroke({ width: 4, color: P.line }), b, badge);
+  c.addChild(new Graphics().circle(0, 0, r).fill(weak ? WEAK : STRONG).stroke({ width: 3, color: P.line }), sign.fill(P.cream));
   return c;
 }
 

@@ -154,7 +154,7 @@ export const ja: Table = {
     crystals: { name: 'クリスタルふるい', desc: 'クリスタル +{p}%' },
     now: '現在：{text}',
     next: '次：{text}',
-    none: '未強化',
+    none: 'ボーナスなし',
   },
   store: {
     daily: '毎日のプレゼント',
@@ -177,6 +177,7 @@ export const ja: Table = {
     },
   },
   login: 'ログインボーナス',
+  top: { login: 'ボーナス', tasks: '任務', settings: '設定' },
   welcome: { title: 'ウェルカムギフト', button: 'ギフト', note: '今週は遊んだ日ごとにギフトをプレゼント' },
   remind: {
     setting: '通知',
@@ -194,6 +195,7 @@ export const ja: Table = {
   claimed: '受け取り済み',
   tomorrow: 'また明日',
   tasks: 'デイリー任務',
+  tasksNext: '新しい任務まで {time}',
   allDone: '全達成ボーナス',
   allDoneCount: '受け取り済み {n}/{total}',
   lang: { name: '日本語' },
@@ -275,7 +277,7 @@ export const ja: Table = {
   },
   codex: {
     page: { potions: 'ポーション', enemies: '敵', feats: '実績' },
-    heroes: 'ポーション',
+    heroes: '星ごとの姿',
     monsters: 'ゼンマイ軍団',
     locked: '未解放',
     hp: 'HP {n}',
@@ -295,10 +297,13 @@ export const ja: Table = {
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
     resist: '被ダメージ',
+    more: 'よく効く',
+    less: '効きにくい',
   },
   ach: {
     title: '実績',
     count: '受け取り済み {n}/{total}',
+    claimAll: 'すべて受け取る',
     done: '達成',
     stages: { name: '包囲突破', desc: 'ステージ{n}をクリア' },
     level: { name: '調合の達人', desc: 'ポーションをLv {n}まで育てる' },

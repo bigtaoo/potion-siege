@@ -8,9 +8,22 @@ import { CHAPTER_SIZE } from '../../sim/chapters';
 import type { MetaSave } from '../../sim/meta';
 import { chapterStars } from '../../sim/stars';
 import { nextStarChest, STAR_CHESTS, starChestsOpened, starChestsWaiting } from '../../sim/starChest';
-import { chestIcon, ink, LIGHT, P, PillButton, redDot } from '../kit';
+import { chestIcon, ink, LIGHT, P, PillButton, redDot, starIcon } from '../kit';
 import { gem } from '../ui';
 import type { HomeActions } from './types';
+
+/** Puts `icon` (about 100 across before `k`) in front of a `w` by `h` pill button's caption,
+ *  the pair centred, the caption shrunk to make room where it must. */
+export function leadIcon(b: PillButton, icon: Container, w: number, h: number, k: number): void {
+  const text = b.children[1] as Container;
+  const room = w - h * 0.6 - 100 * k - 6;
+  if (text.width > room) text.scale.set((text.scale.x * room) / text.width);
+  const span = 100 * k + 6 + text.width;
+  icon.scale.set(k);
+  icon.position.set(-span / 2 + 50 * k, -4);
+  text.x = span / 2 - text.width / 2;
+  b.addChild(icon);
+}
 
 const BAR_X = -400;
 const BAR_W = 520;
@@ -43,6 +56,8 @@ export function starChestBar(m: MetaSave, act: HomeActions, ch: number): Contain
   const waiting = starChestsWaiting(m, ch);
   if (waiting > 0) {
     const b: PillButton = new PillButton(t('chapter.chestOpen'), 190, 64, 'green', () => act.claimStarChest(ch, b), 32);
+    // a star on it, where the chapter's own chest button has a chest
+    leadIcon(b, starIcon(), 190, 64, 0.6);
     b.label = 'star_chest';
     b.position.set(end + 10, 0);
     c.addChild(b);

@@ -141,6 +141,20 @@ export function claimTier(m: MetaSave, id: TrackId): number {
   return reward;
 }
 
+/** Tiers reached and waiting, over every track (a track can have several in a row). */
+export function readyTiers(m: MetaSave): number {
+  let n = 0;
+  for (const id of TRACK_IDS) for (let i = m.achievements.claimed[id]; i < TRACKS[id].length && trackProgress(m, id, i) >= TRACKS[id][i].goal; i++) n++;
+  return n;
+}
+
+/** Claims every tier reached, each track's in order; the crystals they paid. */
+export function claimAllTiers(m: MetaSave): number {
+  let paid = 0;
+  for (const id of TRACK_IDS) for (let n = claimTier(m, id); n > 0; n = claimTier(m, id)) paid += n;
+  return paid;
+}
+
 /** Counts a battle's events toward the lifetime stats. */
 export function recordEvents(m: MetaSave, events: readonly BattleEvent[]): void {
   const s = m.achievements.stats;

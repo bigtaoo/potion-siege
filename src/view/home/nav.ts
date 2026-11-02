@@ -56,12 +56,13 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
       icon.scale.set(0.95);
       slot.addChild(md);
     } else {
-      icon.y = -22;
-      icon.scale.set(on ? 0.95 : 0.8);
+      icon.y = wide ? -28 : -22;
+      // a wide page has room for bigger icons down the rail
+      icon.scale.set((on ? 0.95 : 0.8) * (wide ? 1.15 : 1));
     }
     // inside the lit tab's plate (span - 28 wide), and in the rail inside the rail
     const cap = fitText(ink(t(`tabs.${id}`), 34, { fill: on ? P.brassDark : P.ink }), Math.min(span, RAIL) - 40);
-    cap.y = big ? (wide ? 108 : 74) : 58;
+    cap.y = big ? (wide ? 108 : 74) : wide ? 68 : 58;
     slot.addChild(icon, cap);
     if (dots[id]) redDot(slot, big ? 70 : 46, big ? (wide ? -96 : -110) : -62);
     if (!on) slot.alpha = big ? 1 : 0.85;

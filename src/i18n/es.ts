@@ -154,7 +154,7 @@ export const es: Table = {
     crystals: { name: 'Criba de cristales', desc: 'Cristales +{p}%' },
     now: 'Ahora: {text}',
     next: 'Siguiente: {text}',
-    none: 'sin mejorar',
+    none: 'aún sin bonus',
   },
   store: {
     daily: 'Regalos diarios',
@@ -177,6 +177,7 @@ export const es: Table = {
     },
   },
   login: 'Recompensa diaria',
+  top: { login: 'Premio', tasks: 'Tareas', settings: 'Ajustes' },
   welcome: { title: 'Regalos de bienvenida', button: 'Regalos', note: 'Un regalo por cada día que juegues esta semana' },
   remind: {
     setting: 'Recordatorios',
@@ -194,6 +195,7 @@ export const es: Table = {
   claimed: 'Recogido',
   tomorrow: 'Vuelve mañana',
   tasks: 'Tareas diarias',
+  tasksNext: 'Nuevas tareas en {time}',
   allDone: 'Premio por todas',
   allDoneCount: '{n}/{total} recogidas',
   lang: { name: 'Español' },
@@ -275,7 +277,7 @@ export const es: Table = {
   },
   codex: {
     page: { potions: 'Pociones', enemies: 'Enemigos', feats: 'Logros' },
-    heroes: 'Pociones',
+    heroes: 'Formas por estrellas',
     monsters: 'Ejército de relojería',
     locked: 'Bloqueado',
     hp: 'PV {n}',
@@ -295,10 +297,13 @@ export const es: Table = {
     speed: 'Velocidad {n}',
     wallDps: 'Asedio {n}/s',
     resist: 'Daño recibido',
+    more: 'Le daña más',
+    less: 'Le daña menos',
   },
   ach: {
     title: 'Logros',
     count: '{n}/{total} recogidos',
+    claimAll: 'Recoger todo',
     done: 'Completado',
     stages: { name: 'Rompeasedios', desc: 'Supera la fase {n}' },
     level: { name: 'Maestro de pociones', desc: 'Sube una poción al Nv. {n}' },

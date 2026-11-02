@@ -31,10 +31,10 @@ export function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: numb
   name.y = top + 50;
   const role = fitText(ink(t(`role.${kind}`), 28, { fill: P.inkSoft, fontWeight: '900' }), cw - 40);
   role.y = top + 124;
-  const size = Math.min(220, cw - 60);
-  const glow = new Graphics().circle(0, top + 262, size * 0.48).fill({ color: HERO_COLORS[kind], alpha: open ? 0.18 : 0 });
+  const size = Math.min(190, cw - 60);
+  const glow = new Graphics().circle(0, top + 250, size * 0.48).fill({ color: HERO_COLORS[kind], alpha: open ? 0.18 : 0 });
   const bt = open ? bottle(kind, size) : flask(new Graphics(), 0, size * 0.42, size * 0.84, P.locked);
-  bt.y = top + 262;
+  bt.y = top + 250;
   c.addChild(name, role, glow, bt);
   if (!open) {
     const l = lock(P.cream, P.locked);
@@ -48,25 +48,30 @@ export function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: numb
     return c;
   }
   const level = ink(t('level', { n: lv }), 50);
-  level.y = top + 404;
+  level.y = top + 382;
   c.addChild(level);
   const next = nextMilestone(m, kind);
   if (next) {
     const what = 'perk' in next ? perkText(next.perk) : t(`skill.${next.skill}.name`);
     const line = fitText(ink(t('nextUnlock', { n: next.level, what }), 28, { fill: P.greenInk, fontWeight: '900' }), cw - 30);
-    line.y = top + 452;
+    line.y = top + 426;
     c.addChild(line);
   }
-  // the milestones as pips, lit once reached
+  // the milestones as pips, lit once reached; in two rows when one would make them too small
   const ms = MILESTONES[kind];
-  const gap = Math.min(76, (cw - 24) / Math.max(1, ms.length));
-  const pw = Math.min(64, gap - 5);
+  const one = (cw - 24) / Math.max(1, ms.length);
+  const perRow = one < 52 ? Math.ceil(ms.length / 2) : ms.length;
+  const gap = Math.min(76, (cw - 24) / perRow);
+  const pw = Math.min(70, gap - 6);
   ms.forEach((s, i) => {
     const on = lv >= s.level;
+    const col = i % perRow;
+    const row = Math.floor(i / perRow);
+    const inRow = Math.min(perRow, ms.length - row * perRow);
     const pip = new Container();
-    pip.position.set((i - (ms.length - 1) / 2) * gap, top + 504);
+    pip.position.set((col - (inRow - 1) / 2) * gap, top + (perRow < ms.length ? 466 + row * 42 : 486));
     pip.addChild(new Graphics().roundRect(-pw / 2, -18, pw, 36, 10).fill(on ? P.brass : P.paperDark).stroke({ width: 3, color: on ? P.line : P.inkSoft }));
-    pip.addChild(fitText(ink(String(s.level), 24, { fill: on ? P.line : P.inkSoft }), pw - 4));
+    pip.addChild(fitText(ink(String(s.level), 28, { fill: on ? P.line : P.inkSoft, fontWeight: '900' }), pw - 8));
     c.addChild(pip);
   });
   const cost = heroCost(lv);
@@ -80,19 +85,20 @@ export function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: numb
     b.label = `price_${kind}`;
     c.addChild(b);
   }
-  if (pick) c.addChild(pickBadge(cw / 2 - 14, top + 14));
+  if (pick) c.addChild(pickBadge(cw, top));
   if (!fielded) c.alpha = BENCH_ALPHA;
   return c;
 }
 
-/** The corner badge on the potion worth levelling first: a green tag tilted over the corner. */
-function pickBadge(x: number, y: number): Container {
+/** The badge on the potion worth levelling first: a green tag on the top edge of a `cw` wide
+ *  card, in from its right corner so the next card or the screen's edge never cuts it. */
+function pickBadge(cw: number, top: number): Container {
   const b = new Container();
   b.label = 'topPick';
-  b.position.set(x, y);
-  b.rotation = 0.22;
-  const tx = fitText(label(t('topPick'), 26, { stroke: { color: P.line, width: 5 } }), 170);
+  const tx = fitText(label(t('topPick'), 26, { stroke: { color: P.line, width: 5 } }), Math.min(200, cw - 60));
   const w = tx.width + 30;
+  b.position.set(cw / 2 - w / 2 - 12, top + 2);
+  b.rotation = 0.05;
   b.addChild(new Graphics().roundRect(-w / 2, -21, w, 42, 21).fill(P.green).stroke({ width: 4, color: P.line }), tx);
   return b;
 }

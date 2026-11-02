@@ -154,7 +154,7 @@ export const pl: Table = {
     crystals: { name: 'Sito kryształów', desc: 'Kryształy +{p}%' },
     now: 'Teraz: {text}',
     next: 'Następny: {text}',
-    none: 'brak ulepszeń',
+    none: 'brak bonusu',
   },
   store: {
     daily: 'Dzienne gratisy',
@@ -177,6 +177,7 @@ export const pl: Table = {
     },
   },
   login: 'Dzienna nagroda',
+  top: { login: 'Nagroda', tasks: 'Zadania', settings: 'Opcje' },
   welcome: { title: 'Prezenty powitalne', button: 'Prezenty', note: 'Prezent za każdy dzień gry w tym tygodniu' },
   remind: {
     setting: 'Przypomnienia',
@@ -194,6 +195,7 @@ export const pl: Table = {
   claimed: 'Odebrano',
   tomorrow: 'Wróć jutro',
   tasks: 'Zadania dzienne',
+  tasksNext: 'Nowe zadania za {time}',
   allDone: 'Premia za komplet',
   allDoneCount: 'Odebrano {n}/{total}',
   lang: { name: 'Polski' },
@@ -275,7 +277,7 @@ export const pl: Table = {
   },
   codex: {
     page: { potions: 'Mikstury', enemies: 'Wrogowie', feats: 'Osiągnięcia' },
-    heroes: 'Mikstury',
+    heroes: 'Formy gwiazdek',
     monsters: 'Mechaniczna armia',
     locked: 'Zablokowane',
     hp: 'PŻ {n}',
@@ -295,10 +297,13 @@ export const pl: Table = {
     speed: 'Szybkość {n}',
     wallDps: 'Oblężenie {n}/s',
     resist: 'Otrzymywane obrażenia',
+    more: 'Rani mocniej',
+    less: 'Rani słabiej',
   },
   ach: {
     title: 'Osiągnięcia',
     count: 'Odebrano {n}/{total}',
+    claimAll: 'Odbierz wszystko',
     done: 'Ukończone',
     stages: { name: 'Pogromca Oblężeń', desc: 'Ukończ etap {n}' },
     level: { name: 'Mistrz Mikstur', desc: 'Podnieś miksturę do poz. {n}' },

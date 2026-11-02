@@ -2,13 +2,13 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { adPaid, bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, msToTomorrow, streak, tierOf, todaysChallenge } from '../../sim/challenge';
+import { adPaid, bestToday, canPlayAd, canPlayFree, CHALLENGE_TIERS, streak, tierOf, todaysChallenge } from '../../sim/challenge';
 import type { MetaSave } from '../../sim/meta';
 import { fit as fitText, ink, LIGHT, lightTile, modifierIcon, P, PillButton } from '../kit';
 import { gem } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
-import { adIcon, tick } from './shared';
+import { adIcon, tick, untilMidnight } from './shared';
 import type { HomeActions } from './types';
 
 /** Today's challenge in full, over the page: the two modifiers, the reward tiers (those reached
@@ -83,15 +83,8 @@ export function challengePanel(m: MetaSave, act: HomeActions, today: string, ads
     again.y = foot;
     box.addChild(again);
   } else {
-    const left = ink('', 40, { fill: P.inkSoft });
+    const left = untilMidnight('challenge.next', 40);
     left.y = foot;
-    let shown = '';
-    left.onRender = () => {
-      const secs = Math.ceil(msToTomorrow(new Date()) / 1000);
-      const p = (v: number) => String(v).padStart(2, '0');
-      const text = t('challenge.next', { time: `${p(Math.floor(secs / 3600))}:${p(Math.floor(secs / 60) % 60)}:${p(secs % 60)}` });
-      if (text !== shown) left.text = shown = text;
-    };
     box.addChild(left);
   }
   return panel;

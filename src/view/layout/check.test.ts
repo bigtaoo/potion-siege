@@ -78,4 +78,16 @@ describe('overflows', () => {
     const found = overflows(root, PAGE, [Btn]);
     expect(found.map((o) => [o.text, o.side])).toEqual([['runs into it', 'button']]);
   });
+
+  it("leaves out a button scrolled out of its list's window, under a title over the list", () => {
+    const root = new Container();
+    const mask = box(0, 200, 1000, 400);
+    const list = new Container();
+    list.mask = mask;
+    const btn = new Btn();
+    btn.addChild(box(300, 100, 200, 60));
+    list.addChild(btn);
+    root.addChild(box(0, 0, 1000, 800), mask, list, words('title', 320, 105));
+    expect(overflows(root, PAGE, [Btn])).toEqual([]);
+  });
 });

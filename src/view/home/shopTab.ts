@@ -39,9 +39,13 @@ export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area,
   if (a.wide) {
     const gap = 40;
     const dw = Math.min(showAd ? 780 : 640, (a.w - 3 * gap) * (!showAd ? 0.4 : cols === 3 ? 0.42 : 0.46));
-    const uw = a.w - 3 * gap - dw;
-    dailyPanel(root, m, act, today, ads, showAd, a.x + gap + dw / 2, top + room / 2, dw, room);
-    unlockPanel(root, m, act, locked, cols, a.x + 2 * gap + dw + uw / 2, top + room / 2, uw, room, room);
+    // one or two potions left: the unlock panel only as wide as their cards (and its hint) need,
+    // the pair of panels in the middle rather than a wide board with a card in a corner
+    const shown = Math.min(cols, locked.length);
+    const uw = Math.min(a.w - 3 * gap - dw, cols === 2 ? Math.max(860, shown * 460 + (shown - 1) * CARD_GAP + 100) : Infinity);
+    const x0 = a.x + (a.w - dw - gap - uw) / 2;
+    dailyPanel(root, m, act, today, ads, showAd, x0 + dw / 2, top + room / 2, dw, room);
+    unlockPanel(root, m, act, locked, cols, x0 + dw + gap + uw / 2, top + room / 2, uw, room, room);
     return;
   }
   const pw = Math.min(1000, a.w - 60);

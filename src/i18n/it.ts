@@ -154,7 +154,7 @@ export const it: Table = {
     crystals: { name: 'Setaccio Cristalli', desc: 'Cristalli +{p}%' },
     now: 'Ora: {text}',
     next: 'Prossimo: {text}',
-    none: 'non potenziato',
+    none: 'nessun bonus',
   },
   store: {
     daily: 'Omaggi del giorno',
@@ -177,6 +177,7 @@ export const it: Table = {
     },
   },
   login: 'Premio giornaliero',
+  top: { login: 'Premio', tasks: 'Missioni', settings: 'Opzioni' },
   welcome: { title: 'Regali di benvenuto', button: 'Regali', note: 'Un regalo per ogni giorno di gioco questa settimana' },
   remind: {
     setting: 'Promemoria',
@@ -194,6 +195,7 @@ export const it: Table = {
   claimed: 'Riscosso',
   tomorrow: 'Torna domani',
   tasks: 'Missioni giornaliere',
+  tasksNext: 'Nuove missioni tra {time}',
   allDone: 'Bonus completamento',
   allDoneCount: '{n}/{total} riscossi',
   lang: { name: 'Italiano' },
@@ -275,7 +277,7 @@ export const it: Table = {
   },
   codex: {
     page: { potions: 'Pozioni', enemies: 'Nemici', feats: 'Obiettivi' },
-    heroes: 'Pozioni',
+    heroes: 'Forme a stelle',
     monsters: 'Armata a Molla',
     locked: 'Bloccato',
     hp: 'PV {n}',
@@ -295,10 +297,13 @@ export const it: Table = {
     speed: 'Velocità {n}',
     wallDps: 'Assedio {n}/s',
     resist: 'Danni subiti',
+    more: 'Più efficace',
+    less: 'Meno efficace',
   },
   ach: {
     title: 'Obiettivi',
     count: '{n}/{total} riscossi',
+    claimAll: 'Riscuoti tutto',
     done: 'Completato',
     stages: { name: 'Rompiassedio', desc: 'Supera il livello {n}' },
     level: { name: 'Maestro Pozionista', desc: 'Porta una pozione al Liv. {n}' },

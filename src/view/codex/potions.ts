@@ -1,7 +1,7 @@
 // The potions page: each potion a row, its name and level, then its four star forms from one star
 // to the ultimate (the ones not in the game yet greyed out and locked) under one row of stars.
 
-import { Container, Graphics } from 'pixi.js';
+import { Container, Graphics, type Text } from 'pixi.js';
 import { t } from '../../i18n';
 import { heroUnlocked, unlockStage, type MetaSave } from '../../sim/meta';
 import { BALANCE, HERO_KINDS, type HeroKind } from '../../sim/types';
@@ -29,8 +29,13 @@ export function potionsPage(root: Container, m: MetaSave, a: CodexArea, top: num
   const g = new Graphics();
   for (let s = 1; s <= BALANCE.maxStar; s++) stars(g, x0 + slotW * (s - 0.5), -h / 2 + HEAD + STARS / 2 - 6, s);
   c.addChild(g);
+  // every name at the size of the longest, so the column reads as one
+  const { sw } = slots(rw, rh);
+  const names = HERO_KINDS.map((kind) => label(t(`hero.${kind}`), Math.min(38, rh * 0.3), { stroke: { color: P.line, width: 7 } }));
+  const k = Math.min(1, ...names.map((n) => (sw - 24) / n.width));
   HERO_KINDS.forEach((kind, i) => {
-    const r = heroRow(m, kind, rw, rh);
+    names[i].scale.set(k);
+    const r = heroRow(m, kind, rw, rh, names[i]);
     r.y = -h / 2 + HEAD + STARS + rh / 2 + i * (rh + gap);
     c.addChild(r);
   });
@@ -45,8 +50,8 @@ function slots(rw: number, rh: number): { sw: number; x0: number; slotW: number 
   return { sw, x0, slotW: (rw / 2 - 10 - x0) / BALANCE.maxStar };
 }
 
-/** A potion's name and level, then its forms from one star to the ultimate. */
-function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container {
+/** A potion's `name` and level, then its forms from one star to the ultimate. */
+function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number, name: Text): Container {
   const look = potionLook(kind);
   const open = heroUnlocked(m, kind);
   const r = new Container();
@@ -55,7 +60,6 @@ function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number): Container
   const sx = -rw / 2 + 10 + sw / 2;
   const ph = rh - 20;
   r.addChild(new Graphics().roundRect(-rw / 2 + 10, -ph / 2, sw, ph, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: LIGHT.edge }));
-  const name = fit(label(t(`hero.${kind}`), Math.min(38, rh * 0.3), { stroke: { color: P.line, width: 7 } }), sw - 24);
   name.position.set(sx, -ph * 0.17);
   const at = unlockStage(kind);
   const sub = fit(label(open ? t('level', { n: m.heroes[kind] }) : at ? t('unlockAt', { n: at }) : t('codex.locked'), Math.min(30, rh * 0.25), { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);

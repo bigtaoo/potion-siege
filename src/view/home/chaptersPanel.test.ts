@@ -32,8 +32,28 @@ describe('the chapters panel', () => {
     expect((panel.children[1] as Container).scale.x).toBe(1);
     const { view, content } = list(panel);
     const start = content.y;
-    view.emit('wheel', { deltaY: 400 } as never);
-    expect(content.y).toBe(start - 400);
+    view.emit('wheel', { deltaY: 200 } as never);
+    expect(content.y).toBe(start - 200);
+  });
+
+  it('keeps a chapter not open yet to a short row: its name and what opens it', () => {
+    const { content } = list(chaptersPanel(newMeta(), loggedActions().act, PHONE));
+    const [open, locked, next] = content.children as Container[];
+    expect(open.height).toBeGreaterThan(locked.height + 100);
+    expect(next.y - locked.y).toBeLessThan(locked.y - open.y);
+  });
+
+  it('marks the chapter chest button with a chest and the star chests one with a star', () => {
+    const m = newMeta();
+    m.cleared = 10;
+    for (let s = 1; s <= 10; s++) m.stars.normal[s - 1] = 3;
+    const panel = chaptersPanel(m, loggedActions().act, PHONE);
+    for (const id of ['chapter_chest', 'star_chest']) {
+      const b = panel.getChildByLabel(id, true) as Container;
+      // the pill, its caption and the icon in front
+      expect(b.children).toHaveLength(3);
+      expect(b.children[2].x).toBeLessThan(b.children[1].x);
+    }
   });
 
   it("opens at the chosen stage's chapter and keeps its place over a rebuild", () => {
