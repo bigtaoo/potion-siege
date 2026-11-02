@@ -1,13 +1,13 @@
 // What the commander's casts look like where they land: the mark the flask is thrown at, its
 // burst (a flash, a fireball, a shock ring, a scorch left on the road), every enemy it caught
-// flashing with what it took, and the brew's lift over each potion on the wall.
+// flashing with what it took; the frost's cold burst and the acid's splash and pool.
 
 import type { Graphics } from 'pixi.js';
 import type { FlaskHit } from '../../sim/types';
 import { glassShards } from '../effects';
 import type { Floaters } from './floaters';
 import type { FxLayer } from './fxLayer';
-import { BOMB_COLOR, BREW_COLOR } from './commander';
+import { ACID_COLOR, BOMB_COLOR, FROST_COLOR } from './spellLook';
 import { WALL_TOP } from './wall';
 
 const FLAME = 0xffe08a;
@@ -26,12 +26,12 @@ export function overWall(y: number, reach: number): boolean {
 
 /** The mark on the road while the flask is in the air: the reach it will burst over, closing in
  *  as it comes down, with a cross at its middle. */
-export function landingMark(fx: FxLayer, x: number, y: number, radius: number, flight: number): void {
+export function landingMark(fx: FxLayer, x: number, y: number, radius: number, flight: number, color = BOMB_COLOR): void {
   fx.effect(flight, (g, life) => {
     const k = 1 - life;
     const pulse = 0.5 + 0.5 * Math.sin(k * Math.PI * 6);
-    g.circle(x, y, radius).fill({ color: BOMB_COLOR, alpha: 0.1 + 0.12 * k });
-    g.circle(x, y, radius * (1.25 - 0.25 * k)).stroke({ width: 8, color: BOMB_COLOR, alpha: 0.55 + 0.35 * pulse });
+    g.circle(x, y, radius).fill({ color, alpha: 0.1 + 0.12 * k });
+    g.circle(x, y, radius * (1.25 - 0.25 * k)).stroke({ width: 8, color, alpha: 0.55 + 0.35 * pulse });
     const c = 26 + 14 * life;
     g.moveTo(x - c, y).lineTo(x + c, y).moveTo(x, y - c).lineTo(x, y + c).stroke({ width: 7, color: WHITE, alpha: 0.8 });
   }, true);
@@ -72,7 +72,39 @@ function hitFlash(g: Graphics, x: number, y: number, life: number): void {
   g.circle(x, y, HIT_FLASH - 18 + (1 - life) * 18).fill({ color: WHITE, alpha: 0.75 * life });
 }
 
-/** The brew: a lift of `pct` over each potion on the wall, at `cells`. */
-export function brewLift(floaters: Floaters, cells: readonly { x: number; y: number }[], pct: number): void {
-  for (const c of cells) floaters.show(`+${pct}%`, c.x, c.y - 40, BREW_COLOR);
+/** The frost bursts at (x, y) over `radius`: a cold flash, a ring of frost running out, and a
+ *  crust of ice on each enemy it caught. */
+export function frostBurst(fx: FxLayer, x: number, y: number, radius: number, hits: readonly FlaskHit[]): void {
+  fx.push({ ttl: 0.18, max: 0.18, top: !overWall(y, radius), draw: (g, life) => g.circle(x, y, radius).fill({ color: WHITE, alpha: 0.6 * life }) });
+  fx.effect(0.8, (g, life) => {
+    const k = 1 - life;
+    g.circle(x, y, radius * (0.3 + k * 0.8)).fill({ color: FROST_COLOR, alpha: life * 0.35 });
+    g.circle(x, y, radius * (0.4 + k * 0.8)).stroke({ width: 16 * life, color: WHITE, alpha: life });
+  });
+  fx.effect(0.7, (g, life) => glassShards(g, x, y, 1 - life));
+  for (const h of hits) {
+    fx.effect(0.6, (g, life) => g.circle(h.x, h.y, 46).fill({ color: FROST_COLOR, alpha: 0.55 * life }).stroke({ width: 4, color: WHITE, alpha: life }));
+  }
+}
+
+/** The acid splashes down at (x, y): a green burst, then the pool stays (acidPool, each frame). */
+export function acidSplash(fx: FxLayer, x: number, y: number, radius: number): void {
+  fx.effect(0.5, (g, life) => {
+    const k = 1 - life;
+    g.circle(x, y, radius * (0.4 + k * 0.7)).fill({ color: ACID_COLOR, alpha: life * 0.5 });
+  });
+  fx.effect(0.7, (g, life) => glassShards(g, x, y, 1 - life));
+}
+
+/** An acid pool at (x, y) at `t` seconds, `left` of it still to go (0–1 over its last half second):
+ *  a green puddle with bubbles rising and popping across it. */
+export function acidPool(g: Graphics, x: number, y: number, radius: number, t: number, left: number): void {
+  g.circle(x, y, radius).fill({ color: ACID_COLOR, alpha: 0.28 * left }).stroke({ width: 5, color: ACID_COLOR, alpha: 0.6 * left });
+  g.circle(x, y, radius * 0.6).fill({ color: ACID_COLOR, alpha: 0.18 * left });
+  for (let i = 0; i < 7; i++) {
+    const a = i * 2.4 + x * 0.01;
+    const d = radius * (0.2 + ((i * 37) % 70) / 100);
+    const p = (t * 1.3 + i * 0.37) % 1;
+    g.circle(x + Math.cos(a) * d, y + Math.sin(a) * d * 0.8, 6 + p * 10).stroke({ width: 3, color: 0xe6ffb0, alpha: (1 - p) * 0.8 * left });
+  }
 }

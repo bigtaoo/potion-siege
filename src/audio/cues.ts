@@ -49,12 +49,13 @@ export function battleCues(events: readonly BattleEvent[]): Cue[] {
         if (ev.reason !== 'ultimate') out.push({ id: 'tap' });
         break;
       case 'cast':
-        // the flask leaves the hand with a low pour; the brew bubbles up like a level up
-        out.push(ev.skill === 'bomb' ? { id: 'merge', rate: 0.75 } : { id: 'levelup' });
+        // the flask leaves the hand with a low pour
+        out.push({ id: 'merge', rate: 0.75 });
         break;
       case 'flask':
-        // a boom of its own, not a fire potion's whoosh lost among the others
-        out.push({ id: 'blast', pan: pan(ev.x) });
+        // the bomb: a boom of its own, not a fire potion's whoosh lost among the others; the frost
+        // and the acid: their potions' own sounds, deeper and louder
+        out.push(ev.skill === 'bomb' ? { id: 'blast', pan: pan(ev.x) } : { id: ev.skill === 'frost' ? 'hitIce' : 'hitPoison', pan: pan(ev.x), rate: 0.7, gain: 1 });
         break;
       case 'cellOpen':
         out.push({ id: 'crystal' });

@@ -12,8 +12,8 @@ import { challengeFor, SAVES, type SaveId } from './setupCatalog';
 import { bookStars, runStars } from './stars';
 
 const TODAY = '2026-10-22';
-/** Ticks the bot plays at most: half an hour, past where even the maxed save falls in endless. */
-const CAP = 1800 * 30;
+/** Ticks the bot plays at most: forty minutes, past where even the maxed save falls in endless (about 31). */
+const CAP = 2400 * 30;
 
 /** Plays the bot to the battle's end (or the cap); `b` may be one revived. */
 function botPlay(b: Battle): Battle {

@@ -19,7 +19,7 @@
 // kills.ts, commander.ts, targets.ts (finding enemies) and field.ts (the grid and the units).
 
 import { prepBoss } from './bossPrep';
-import { doCast, stepCommander, stepFlasks } from './commander';
+import { doCast, SPELLS, stepCommander } from './commander';
 import { stepEnemies } from './enemyTick';
 import { K, SLOT_COUNT, WALL_ROW } from './field';
 import { fixedMods, type Fixed } from './fixedMods';
@@ -33,7 +33,8 @@ import { BASE_SETUP, type BattleSetup } from './meta';
 import { stepHeroes, stepProjectiles } from './shots';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { startWave, stepWaves } from './spawn';
-import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Projectile, type Vortex } from './types';
+import { stepFlasks } from './spells';
+import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Pool, type Projectile, type Vortex } from './types';
 import type { Spawn } from './waves';
 
 /** Battle seconds from the first merge to the first of the setup's free summons, and between
@@ -59,8 +60,10 @@ export type Command =
   /** The reroll was offered and not taken (the ad failed): the offer keeps its cards. */
   | { type: 'noReroll' }
   | { type: 'revive' }
-  /** Tapping the commander once it is charged: the next of its skills. */
-  | { type: 'cast' };
+  /** The commander's next spell once it is charged, thrown at (x, y) in FP where the player
+   *  dragged it; with no point (a plain tap, and every replay from before the drag) at the
+   *  thickest crowd. */
+  | { type: 'cast'; x?: number; y?: number };
 
 /** A command and the tick it was applied on. */
 export type Stamped = Command & { tick: number };
@@ -100,12 +103,12 @@ export class Battle {
   /** What the horde's deaths have earned towards the next charge, coin and burst; the battle's
    *  own, like the fields after `commands`. */
   readonly shares = new Shares();
-  /** Skills cast so far: they go in turn, the flask first. */
+  /** Spells cast so far: they go in turn (SPELLS), the bomb first. */
   casts = 0;
-  /** Ticks of the brew left: every potion throws faster while it lasts. */
-  brewTime = 0;
   /** The commander's flasks in the air. */
   flasks: Flask[] = [];
+  /** The acid pools on the road. */
+  pools: Pool[] = [];
   kills = 0;
   /** Ticks played (the pauses for a pick do not count). */
   time = 0;
@@ -183,7 +186,7 @@ export class Battle {
 
   /** The skill the commander casts next. */
   get nextCast(): CommanderSkill {
-    return this.casts % 2 === 0 ? 'bomb' : 'brew';
+    return SPELLS[this.casts % SPELLS.length];
   }
 
   canCast(): boolean {
@@ -304,7 +307,7 @@ export class Battle {
         done = this.doRevive();
         break;
       case 'cast':
-        done = doCast(this);
+        done = doCast(this, Number.isFinite(cmd.x) && Number.isFinite(cmd.y) ? { x: cmd.x!, y: cmd.y! } : undefined);
         break;
     }
     if (done || this.dice() !== dice) this.commands.push({ ...cmd, tick: this.time });
@@ -337,9 +340,9 @@ export class Battle {
     return this.apply({ type: 'choose', id });
   }
 
-  /** Casts the commander's next skill once it is charged. */
-  cast(): boolean {
-    return this.apply({ type: 'cast' });
+  /** Casts the commander's next spell once it is charged: at `at` (FP), or at the thickest crowd. */
+  cast(at?: { x: number; y: number }): boolean {
+    return this.apply(at ? { type: 'cast', x: at.x, y: at.y } : { type: 'cast' });
   }
 
   /** Puts the wall back up after a lost battle (the rewarded revive). */

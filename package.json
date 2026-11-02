@@ -44,6 +44,7 @@
     "contextloss": "node scripts/contextLoss.mjs",
     "sweep": "vitest run --config scripts/vitest.sweep.config.js",
     "targeting": "vitest run --config scripts/vitest.targeting.config.js",
+    "spells": "vitest run --config scripts/vitest.spells.config.js",
     "smoke": "node scripts/smoke.mjs",
     "replays": "vitest run --config scripts/vitest.replays.config.js",
     "gaps": "vitest run --config scripts/vitest.gaps.config.js",

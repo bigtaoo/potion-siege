@@ -24,11 +24,13 @@ function after(runs: number): MetaSave {
   return m;
 }
 
-/** Plays the battle out with the bot's hands (autoplay itself gets no words). */
-function botToEnd(w: World): void {
+/** Plays the battle out with the bot's hands (autoplay itself gets no words); `hold` keeps the
+ *  wall whole, so stage 1 on a random seed is always won. */
+function botToEnd(w: World, hold = false): void {
   const g = w.game;
   for (let i = 0; i < 20_000 && !g['ended']; i++) {
     const b = g['battle']!;
+    if (hold) b.wall = b.wallMax;
     if (b.choices) g['pick'](b.choices[0]);
     else botAct(b);
     g['tick'](0.005);
@@ -84,7 +86,7 @@ describe('the one-time words in battle', () => {
     m.guide = [];
     const w = world(m);
     play(w);
-    botToEnd(w);
+    botToEnd(w, true);
     expect(marked(w)).toEqual(expect.arrayContaining(['bossCard', 'stars']));
     expect(texts(w.game['overlay'])).toContain(t('guide.stars'));
     const again = veteran();
@@ -92,7 +94,7 @@ describe('the one-time words in battle', () => {
     again.guide = ['bossCard', 'stars'];
     const w2 = world(again);
     play(w2);
-    botToEnd(w2);
+    botToEnd(w2, true);
     expect(marked(w2)).toEqual([]);
     expect(texts(w2.game['overlay'])).not.toContain(t('guide.stars'));
   });

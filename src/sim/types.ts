@@ -144,16 +144,31 @@ export interface Projectile {
   gust?: boolean;
 }
 
-/** The commander's two skills, cast in turn: a big flask thrown into the thick of the enemies,
- *  and a brew that quickens every potion on the wall for a while. */
-export type CommanderSkill = 'bomb' | 'brew';
+/** The commander's three spells, cast in turn, each a flask thrown where the player drags it:
+ *  a bomb that bursts and knocks back, a frost that freezes, an acid that leaves a pool. */
+export type CommanderSkill = 'bomb' | 'frost' | 'acid';
 
-/** The commander's flask in the air: it lands on (x, y) when `time` runs out. */
+/** Who chose where a cast landed: the player's drag (or click on the road), the player's plain
+ *  tap (the thickest crowd), or the commander itself once charged too long. */
+export type CastHow = 'drag' | 'tap' | 'auto';
+
+/** The commander's flask in the air: it lands on (x, y) when `time` runs out. `power` is the
+ *  bomb's damage or the acid's damage a second (FP), worked out from the board as it is thrown. */
 export interface Flask {
+  skill: CommanderSkill;
+  how: CastHow;
   x: number;
   y: number;
   time: number;
-  damage: number;
+  power: number;
+}
+
+/** An acid pool on the road: what walks in it takes `perTick` and is slowed, until `time` runs out. */
+export interface Pool {
+  x: number;
+  y: number;
+  time: number;
+  perTick: number;
 }
 
 /** One enemy a landed flask burst on, in field pixels: where, what it took, whether it fell. */
@@ -181,10 +196,10 @@ export type BattleEvent =
   | { type: 'shot'; slot: number; projectile: number }
   | { type: 'summon'; slot: number }
   | { type: 'merge'; slot: number; star: number; kind: HeroKind }
-  /** The commander cast a skill: the flask aimed at (x, y), or the brew (x, y unused). */
-  | { type: 'cast'; skill: CommanderSkill; x: number; y: number; flight: number }
-  /** The commander's flask burst on (x, y). */
-  | { type: 'flask'; x: number; y: number; radius: number; hits: FlaskHit[] }
+  /** The commander cast a spell: its flask thrown at (x, y). */
+  | { type: 'cast'; skill: CommanderSkill; how: CastHow; x: number; y: number; flight: number }
+  /** The commander's flask landed on (x, y) and caught `hits` within `radius`. */
+  | { type: 'flask'; skill: CommanderSkill; how: CastHow; x: number; y: number; radius: number; hits: FlaskHit[] }
   /** Enough summons for the commander to build a new cell onto the wall. */
   | { type: 'cellOpen'; slot: number; last: boolean }
   | { type: 'wave'; wave: number; boss: boolean }

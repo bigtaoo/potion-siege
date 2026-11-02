@@ -51,18 +51,18 @@ describe('the commander with its art', () => {
     expect(c.castTap.visible).toBe(true);
   });
 
-  it('rises on its toes for the brew without leaning', () => {
-    const c = new CommanderArt();
-    c.cast = { at: 10, skill: 'brew' };
-    const [s] = drawAt(c, 10.25);
-    expect(s.rotation).toBe(0);
-    const [still] = drawAt(c, 12);
-    expect(s.y).toBeLessThan(still.y);
+  it('leans back and flings every spell, the frost and the acid too', () => {
+    for (const skill of ['frost', 'acid'] as const) {
+      const c = new CommanderArt();
+      c.cast = { at: 10, skill };
+      const [back] = drawAt(c, 10.1);
+      expect(back.rotation).toBeLessThan(0);
+    }
   });
 
   it('throws the fire flask as art, spinning on its way', () => {
     const c = new CommanderArt();
-    c.thrown = [{ x: 500, y: 600, at: 1, flight: 1 }];
+    c.thrown = [{ x: 500, y: 600, at: 1, flight: 1, skill: 'bomb' }];
     const g = new Graphics();
     const art = new SpriteLayer();
     art.begin();

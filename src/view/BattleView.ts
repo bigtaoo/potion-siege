@@ -16,9 +16,11 @@ import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
 import { COLORS, label } from './ui';
 import { P } from './kit/palette';
 import { DESIGN_W } from './viewport';
-import { BOMB_COLOR, BREW_COLOR, CommanderArt, badgeAt, commanderMid, landNumbersAt, onCommander } from './battleView/commander';
+import { CommanderArt, badgeAt, commanderMid, landNumbersAt, onCommander } from './battleView/commander';
+import { CastAim } from './battleView/castAim';
+import { SPELL_COLOR, SPELL_WORD } from './battleView/spellLook';
 import { EnemyLayer } from './battleView/enemies';
-import { brewLift, flaskBurst, landingMark } from './battleView/castFx';
+import { acidPool, acidSplash, flaskBurst, frostBurst, landingMark } from './battleView/castFx';
 import { FieldArt, fieldOf } from './battleView/field';
 import { FIGURES, drawCell } from './battleView/figures';
 import { FLIGHT, HeroCells } from './battleView/heroCells';
@@ -62,6 +64,7 @@ export class BattleView extends Container {
   private readonly drag = new Graphics();
   private readonly wallText: Text;
   private readonly cmd = new CommanderArt();
+  private readonly aim = new CastAim();
   private readonly floaters = new Floaters();
   /** The coins flying off each kill and the kill streak; `kills.landed` is the HUD's to set. */
   readonly kills = new KillFx();
@@ -81,16 +84,16 @@ export class BattleView extends Container {
   constructor() {
     super();
     this.wallText = label('', 40, { stroke: { color: P.umber, width: 6 } });
-    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.dead, this.enemies.art, this.enemies.flash, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
+    this.addChild(this.field.ground, this.wall, this.enemies.marks.shadows, this.under, this.fx.ground, this.enemies.dead, this.enemies.art, this.enemies.flash, this.world, this.enemies.marks.bars, this.shots.art, this.fx.mid, this.grid, this.heroArt, this.potions, this.heroOver, this.fx.top, this.aim.g, this.wallText, this.kills, this.floaters, this.drag, this.dragArt, this.dragPotions);
     this.addChildAt(this.cmd.count, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.castTap, this.children.indexOf(this.wallText));
     this.addChildAt(this.cmd.hints, this.children.indexOf(this.wallText));
     this.field.build(this);
     this.enemies.onBlow = (x, y, r, kind) => this.blow(x, y, r, kind);
     this.eventMode = 'static';
-    // the grid for the drags, and the commander for the casts
+    // the grid for the drags, the commander for the casts, everything while a spell is picked up
     const grid = new Rectangle(G.x0, G.y0, G.cellW * G.cols, G.cellH * G.rows);
-    this.hitArea = { contains: (x: number, y: number) => grid.contains(x, y) || onCommander(x, y) };
+    this.hitArea = { contains: (x: number, y: number) => this.aim.active || grid.contains(x, y) || onCommander(x, y) };
     this.on('pointerdown', (e) => this.onDown(e));
     this.on('globalpointermove', (e) => this.onMove(e));
     this.on('pointerup', (e) => this.onUp(e));
@@ -107,6 +110,7 @@ export class BattleView extends Container {
     this.fx.clear();
     this.dragFrom = null;
     this.cmd.reset();
+    this.aim.reset();
     this.heroes.clear();
     this.shots.clear();
     this.merges.clear();
@@ -190,31 +194,23 @@ export class BattleView extends Container {
           if (!this.merges.fusing(ev.slot)) this.merges.fused(this.battle, ev.slot);
           break;
         case 'cast': {
-          // the commander draws back and flings a flask, or raises the brew over the wall
-          const bomb = ev.skill === 'bomb';
-          const color = bomb ? BOMB_COLOR : BREW_COLOR;
+          // the commander draws back and flings the flask at its mark
+          const color = SPELL_COLOR[ev.skill];
           this.cmd.cast = { at: this.time, skill: ev.skill };
           const badge = badgeAt();
           this.fx.burst(badge.x, badge.y, 110, color, 0.4);
-          if (bomb) {
-            this.cmd.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight });
-            landingMark(this.fx, ev.x, ev.y, BALANCE.commander.bomb.radius, ev.flight);
-          } else {
-            const mid = commanderMid();
-            this.fx.effect(0.7, (g, life) => {
-              g.circle(mid.x, mid.y, 120 + (1 - life) * 700).stroke({ width: 18 * life, color, alpha: life * 0.6 });
-            }, true);
-            const b = this.battle;
-            if (b) brewLift(this.floaters, b.slots.flatMap((h, s) => (h && b.isOpen(s) ? [slotCenter(s)] : [])), Math.round(BALANCE.commander.brew.speed * 100));
-          }
-          this.floaters.show(tr(bomb ? 'castBomb' : 'castBrew'), DESIGN_W / 2, WALL_TOP - 60, color);
+          this.cmd.thrown.push({ x: ev.x, y: ev.y, at: this.time, flight: ev.flight, skill: ev.skill });
+          landingMark(this.fx, ev.x, ev.y, BALANCE.commander[ev.skill].radius, ev.flight, color);
+          this.floaters.show(tr(SPELL_WORD[ev.skill]), DESIGN_W / 2, WALL_TOP - 60, color);
           break;
         }
         case 'flask': {
-          // the flask bursts: a flash, a fireball, a ring, glass, and what each enemy took
+          // the flask comes down: the bomb's fire, the frost's cold, the acid's splash
           this.cmd.thrown.shift();
-          flaskBurst(this.fx, this.floaters, ev.x, ev.y, ev.radius, ev.hits);
-          this.shake = Math.max(this.shake, ev.hits.length > 0 ? 0.4 : 0.25);
+          if (ev.skill === 'bomb') flaskBurst(this.fx, this.floaters, ev.x, ev.y, ev.radius, ev.hits);
+          else if (ev.skill === 'frost') frostBurst(this.fx, ev.x, ev.y, ev.radius, ev.hits);
+          else acidSplash(this.fx, ev.x, ev.y, ev.radius);
+          this.shake = Math.max(this.shake, ev.skill === 'bomb' && ev.hits.length > 0 ? 0.4 : 0.25);
           break;
         }
         case 'cellOpen': {
@@ -304,6 +300,7 @@ export class BattleView extends Container {
     this.enemies.draw(b, alpha, bt, t, w, u);
     this.shots.draw(b, alpha, t, w);
     this.cmd.drawThrown(w, t, this.shots.art);
+    this.aim.draw(b);
     this.shots.art.end();
     // wall health
     const frac = Math.max(0, b.wall / b.wallMax);
@@ -322,6 +319,7 @@ export class BattleView extends Container {
     this.wallText.position.set(numbers.x, numbers.y);
 
     this.fx.update(dt);
+    for (const p of b.pools) acidPool(this.fx.ground, p.x / FP, p.y / FP, BALANCE.commander.acid.radius, t, Math.min(1, p.time / TICK_RATE / 0.5));
     for (const v of b.vortices) vortexSwirl(this.fx.ground, v.x / FP, v.y / FP, BALANCE.skills.vortexRadius, t, Math.min(1, v.time / TICK_RATE / 0.4));
     this.floaters.update(dt);
     this.kills.update(dt);
@@ -381,11 +379,7 @@ export class BattleView extends Container {
   }
 
   private onDown(e: FederatedPointerEvent): void {
-    const p = this.toLocal(e.global);
-    if (onCommander(p.x, p.y)) {
-      if (this.battle?.canCast()) this.battle.cast();
-      return;
-    }
+    if (this.aim.down(this.battle, this.toLocal(e.global))) return;
     const s = this.slotAt(e);
     this.idle = 0;
     if (s === null || !this.battle?.slots[s] || this.battle.paused) return;
@@ -395,10 +389,12 @@ export class BattleView extends Container {
   }
 
   private onMove(e: FederatedPointerEvent): void {
+    if (this.aim.active) this.aim.move(this.toLocal(e.global));
     if (this.dragFrom !== null) this.dragPos = this.toLocal(e.global);
   }
 
   private onUp(e: FederatedPointerEvent): void {
+    this.aim.up(this.battle, this.toLocal(e.global), e.pointerType === 'mouse');
     if (this.dragFrom === null) return;
     const to = this.slotAt(e);
     const b = this.battle;
