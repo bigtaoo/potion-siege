@@ -13,6 +13,7 @@ import { GUIDE_LATER } from '../sim/guide';
 import { newMeta, type MetaSave } from '../sim/meta';
 import { WELCOME_GIFTS } from '../sim/welcome';
 import { home } from './homeScreen';
+import { pickSkill } from './skillOffer';
 
 type Answer = 'watched' | 'closed' | 'failed' | 'broke';
 
@@ -169,7 +170,7 @@ export function tap(root: Container, caption: string): void {
 }
 
 /** Runs the battle on, picking the first card at each offer, until its result screen is up. */
-export function playToEnd(w: World, pick = (g: Game) => g['pick'](g['battle']!.choices![0])): void {
+export function playToEnd(w: World, pick = (g: Game) => pickSkill(g, g['battle']!.choices![0])): void {
   const g = w.game;
   for (let i = 0; i < 2000 && !g['ended']; i++) {
     g['tick'](0.1);

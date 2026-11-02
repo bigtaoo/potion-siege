@@ -11,6 +11,7 @@ import { REST_AFTER_MOVE } from '../view/moveRest';
 import type { Lesson, Rect } from '../view/Tutorial';
 import { beginTutorial, endTutorial, logStep, pace } from './tutorialFlow';
 import { englishPage, tap, world, type World } from './testWorld';
+import { pickSkill } from './skillOffer';
 
 beforeAll(async () => {
   await englishPage();
@@ -211,7 +212,7 @@ describe('the lessons over the first battle', () => {
     expect(pick.holes).toEqual([]);
     expect(pick.clear.w).toBeGreaterThan(0);
 
-    g['pick'](b.choices![0]);
+    pickSkill(g, b.choices![0]);
     frame(g);
     expect(g.tutorial).toBeNull();
     expect(last(lessons)).toBeNull();

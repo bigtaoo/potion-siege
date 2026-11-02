@@ -11,6 +11,7 @@ import { maxedSave } from '../sim/setupCatalog';
 import type { MetaSave } from '../sim/meta';
 import { home } from './homeScreen';
 import { buttons, englishPage, flush, play, playToEnd, tap, veteran, world, type World } from './testWorld';
+import { pickSkill } from './skillOffer';
 
 beforeAll(async () => {
   await englishPage();
@@ -31,7 +32,7 @@ function botToEnd(w: World): void {
   const g = w.game;
   for (let i = 0; i < 20_000 && !g['ended']; i++) {
     const b = g['battle']!;
-    if (b.choices && g['overlay'].visible) g['pick'](b.choices[0]);
+    if (b.choices && g['overlay'].visible) pickSkill(g, b.choices[0]);
     else botAct(b);
     g['tick'](0.1);
   }

@@ -6,6 +6,7 @@ import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { t } from './i18n';
 import { liveWorld } from './game/flowHelpers';
 import { englishPage, flush, play, playToEnd, tap, texts, veteran, world } from './game/testWorld';
+import { pickSkill } from './game/skillOffer';
 
 beforeAll(englishPage);
 
@@ -61,7 +62,7 @@ describe('the bot at an offer', () => {
     const b = g.battle!;
     b['offer']('upgrade');
     const before = JSON.stringify(g.save.daily);
-    g['pick'](b.choices![0]);
+    pickSkill(g, b.choices![0]);
     expect(b.choices).toBeNull();
     expect(JSON.stringify(g.save.daily)).toBe(before);
   });
@@ -96,7 +97,7 @@ describe('the skill cards', () => {
     playToEnd(w);
     const g = w.game;
     const play_ = vi.spyOn(g.audio, 'play');
-    g['pick']('fireChain');
+    pickSkill(g, 'fireChain');
     expect(play_).not.toHaveBeenCalledWith('levelup');
     expect(g['overlay'].visible).toBe(false);
   });

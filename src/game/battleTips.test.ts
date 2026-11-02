@@ -8,6 +8,7 @@ import { botAct } from '../sim/bot';
 import { GUIDE_LATER } from '../sim/guide';
 import { newMeta, type MetaSave } from '../sim/meta';
 import { englishPage, play, texts, veteran, world, type World } from './testWorld';
+import { pickSkill } from './skillOffer';
 
 beforeAll(englishPage);
 // the pick's hand listens on the window for the player's touches
@@ -32,7 +33,7 @@ function botToEnd(w: World, hold = false): void {
   for (let i = 0; i < 20_000 && !g['ended']; i++) {
     const b = g['battle']!;
     if (hold) b.wall = b.wallMax;
-    if (b.choices) g['pick'](b.choices[0]);
+    if (b.choices) pickSkill(g, b.choices[0]);
     else botAct(b);
     g['tick'](0.005);
   }
@@ -55,7 +56,7 @@ describe('the one-time words in battle', () => {
     b.upgrade();
     g['tick'](0.01);
     expect(g.hud.noted).toBe('');
-    g['pick'](b.choices![0]);
+    pickSkill(g, b.choices![0]);
     b.gold = 10_000;
     g['tick'](0.01);
     expect(marked(w)).toEqual(['upgrade2']);
@@ -72,7 +73,7 @@ describe('the one-time words in battle', () => {
     b.upgrade();
     g['tick'](0.01);
     expect(texts(g['overlay'])).toContain(tip);
-    g['pick'](b.choices![0]);
+    pickSkill(g, b.choices![0]);
     b.gold = 10_000;
     b.upgrade();
     g['tick'](0.01);

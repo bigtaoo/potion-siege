@@ -16,19 +16,18 @@ import { deviceTimeZone, PrivacyChoice, privacyRegion } from './analytics/privac
 import { PerfReport } from './analytics/perfReport';
 import { RunTracker } from './analytics/runTracker';
 import { GameAudio } from './audio/engine';
-import { detectLocale, loadLocale, setLocale, t } from './i18n';
+import { detectLocale, loadLocale, setLocale } from './i18n';
 import { AdPacing } from './platform/adPacing';
 import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { canHurry, FAST } from './game/battleSpeed';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
 import { endlessSetup, type EndlessResult } from './sim/endless';
-import { addProgress, gameDay, rollDay } from './sim/daily';
+import { gameDay, rollDay } from './sim/daily';
 import { chapterOf } from './sim/chapters';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
 import { stageSetup, type StarsResult } from './sim/stars';
 import { botAct } from './sim/bot';
-import { suggestSkill } from './sim/suggest';
 import { Tutorial, type TutorialStep } from './sim/tutorial';
 import type { BattleEvent, HeroKind } from './sim/types';
 import { loadArt, restOfArt } from './view/art';
@@ -61,6 +60,7 @@ import { home, homeFrame } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { openPause, pauseFrame, PauseLayer } from './game/pause';
 import { urlSwitches } from './game/switches';
+import { showSkills } from './game/skillOffer';
 import { createAnalytics, device, loadedBeacon, showLocale, trackSessionStart } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
 import { beginTutorial, endTutorial, lesson, pace } from './game/tutorialFlow';
@@ -343,13 +343,14 @@ export class Game {
 
   /** A battle frame worth measuring: a run on screen and moving, no menu, overlay or skill pick up, the tab visible. */
   private measured(): boolean {
-    const b = this.battle;
-    return !!(this.run && b && !b.paused && pace(this, b) === 1 && !this.pause.open && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
+    return !this.calm() && pace(this, this.battle!) === 1;
   }
 
-  /** Nothing fast on screen: the frame loop drops to its calm rate. */
+  /** Nothing moving on screen: the frame loop drops to its calm rate. A tutorial step's slow
+   *  motion still moves (the crowd creeps, the hand bobs): at 30 fps it read as a stutter. */
   calm(): boolean {
-    return !this.measured();
+    const b = this.battle;
+    return !(this.run && b && !b.paused && !this.pause.open && !this.menu.visible && !this.overlay.visible && !this.ended && document.visibilityState === 'visible');
   }
 
   /** Where the player is, for an `anomaly`; anything but `run` is drawn at full density. */
@@ -405,7 +406,7 @@ export class Game {
       this.hud.react(events);
       // an offer made on the tick's last step (or by the bot's own upgrade) would otherwise open the overlay
       if (this.autoplay && b.choices) botAct(b);
-      if (b.choices) this.showSkills(b);
+      if (b.choices) showSkills(this, b);
       else if (b.result) finish(this, b);
     }
     lesson(this, b, events, m, this.pause.open ? 0 : dt);
@@ -426,25 +427,6 @@ export class Game {
     this.wall.addChild(sideBackdrop(m.w, m.h, boardX / m.scale));
   }
 
-  private showSkills(b: Battle): void {
-    // no ad in the tutorial's first pick: it is there to teach the cards
-    const canReroll = b.canReroll() && !this.autoplay && !this.tutorial && this.platform.rewardedAvailable();
-    if (canReroll) this.run?.onRerollOffer();
-    const title = t(b.choiceReason === 'ultimate' ? 'ultimatePick' : b.choiceReason === 'boss' ? 'bossPick' : 'upgradePick');
-    const choices = b.choices ?? [];
-    const top = !this.autoplay && topPick(this.save) ? suggestSkill(b, choices) : null;
-    this.overlay.showSkills(choices, b.skills, title, (id) => this.pick(id), canReroll ? () => void this.reroll(b) : null, top);
-  }
-
-  /** The rewarded refresh: a new set of cards for the waiting offer. */
-  private async reroll(b: Battle): Promise<void> {
-    const ok = await this.watch();
-    this.run?.onRerollResult(ok);
-    if (ok) b.reroll();
-    else b.apply({ type: 'noReroll' }); // one offer of the ad per pick, even when it failed
-    if (b.choices && this.overlay.visible) this.showSkills(b);
-  }
-
   /** Plays a rewarded ad over the overlay that is up, which takes no taps until it is over; an
    *  ad that broke counts as not watched. */
   async watch(): Promise<boolean> {
@@ -459,16 +441,6 @@ export class Game {
       this.overlay.interactiveChildren = true;
       this.mute(false);
     }
-  }
-
-  private pick(id: Parameters<Battle['choose']>[0]): void {
-    if (this.battle?.choices) {
-      this.run?.onSkillPick(id, this.battle.choices);
-      if (!this.autoplay) addProgress(this.save, 'skill');
-      this.audio.play('levelup');
-    }
-    this.battle?.choose(id);
-    this.overlay.hide();
   }
 
   /** Writes the save; the bot's battles (?autoplay) play on it in memory but never keep it, nor

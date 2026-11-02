@@ -16,6 +16,7 @@ import { englishPage, play, world, type World } from '../src/game/testWorld';
 import type { Battle } from '../src/sim/battle';
 import { newMeta, type MetaSave } from '../src/sim/meta';
 import { mergeablePair } from '../src/sim/tutorial';
+import { pickSkill } from '../src/game/skillOffer';
 
 const FRAME = 1 / 30;
 /** Seconds from a pointer showing to the fake player doing it. */
@@ -59,7 +60,7 @@ function doable(g: Game, b: Battle): boolean {
 }
 
 function act(g: Game, b: Battle, m: Move): void {
-  if (m === 'pick') g['pick'](b.choices![0]);
+  if (m === 'pick') pickSkill(g, b.choices![0]);
   else if (m === 'summon') b.summon();
   else if (m === 'upgrade') b.upgrade();
   else if (m === 'cast') b.cast();
