@@ -23,7 +23,7 @@ export const ko: Table = {
   cellTip: '{n}번 더 소환하면 칸이 하나 늘어요',
   cellOpen: '새 칸 열림!',
   guide: {
-    gift: '신규 선물: 매일 하나씩 받을 수 있어요',
+    gift: '환영 선물: 플레이한 날마다 하나씩, 총 7개',
     upgrade: '크리스탈로 포션 강화: 피해량 증가',
     toBattle1: '강해진 포션으로 스테이지 {n}에 도전!',
     toBattle: '스테이지 {n}로!',
@@ -43,7 +43,7 @@ export const ko: Table = {
     endless: '무한 모드 개방: 몇 웨이브를 버틸까요?',
     hard: '어려움 모드 개방: 더 어려운 스테이지, 더 많은 별',
     castTip: '지휘관을 적 무리로 끌어 직접 조준하세요',
-    flyerTip: '비행 적에게는 바람, 불, 번개가 가장 강해요',
+    flyerTip: '비행 적에게는 불과 번개가 가장 강해요. 10스테이지부터는 바람도',
     speedTip: '이긴 적 있는 스테이지: ×1을 탭해 1.5배속',
   },
   full: {
@@ -55,6 +55,7 @@ export const ko: Table = {
   tutorial: {
     step: '튜토리얼 {n}/{total}',
     skip: '건너뛰기',
+    skipSure: '정말요? 한 번 더 탭',
     summon: '소환을 눌러 포션을 만들어 보세요',
     merge: '같은 포션이 두 개! 하나를 다른 하나 위로 끌어다 놓으면 더 강한 포션으로 합성돼요',
     more: '아직 같은 짝이 없어요: 소환을 한 번 더 눌러 보세요',
@@ -196,7 +197,7 @@ export const ko: Table = {
   allDone: '모든 임무 완료 보너스',
   allDoneCount: '{n}/{total} 받음',
   lang: { name: '한국어' },
-  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', shake: '화면 흔들림', haptics: '진동', hints: '도움말', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: '언어', settings: '설정', music: '음악', sfx: '효과음', shake: '화면 흔들림', haptics: '진동', hints: '도움말', hintsEarly: '처음 {n}번의 전투에서는 항상 켜져 있어요', on: '켬', off: '끔', privacy: '광고 개인정보 설정', policy: '개인정보 처리방침', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: '일시 정지', resume: '계속하기', giveUp: '포기', confirm: '한 번 더 누르면 포기' },
   rotate: '휴대폰을 세로로 돌려 주세요',
   privacy: {

@@ -7,6 +7,7 @@ import { beforeAll, describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { botAct } from '../sim/bot';
 import { dayOf } from '../sim/daily';
+import { GUIDE_CHAPTERS } from '../sim/guide';
 import { maxedSave } from '../sim/setupCatalog';
 import type { MetaSave } from '../sim/meta';
 import { home } from './homeScreen';
@@ -81,7 +82,7 @@ describe('each mode, home to result to home', () => {
   });
 
   it('an early win goes straight into the next stage', async () => {
-    const m: MetaSave = { ...maxedSave(), cleared: 1, stage: 2, runs: 1, tutorial: true, upgradeHint: true };
+    const m: MetaSave = { ...maxedSave(), cleared: 1, stage: 2, runs: 1, tutorial: true, upgradeHint: true, guide: [...GUIDE_CHAPTERS.flat()] };
     const w = world(m, () => {}, BOT);
     play(w);
     botToEnd(w);

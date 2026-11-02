@@ -1,10 +1,12 @@
 // The switches the settings panel and the pause panel share: music, sound effects, screen shake,
 // where the device can vibration, and the hints when the player stands still, each with its icon.
 
-import { Graphics } from 'pixi.js';
+import { Graphics, type Container, type Text } from 'pixi.js';
+import { t } from '../i18n';
 import type { MetaSave } from '../sim/meta';
-import { P } from './kit';
+import { fit as fitText, ink, P } from './kit';
 import { shakeOn } from './media';
+import { TOP_PICK_UNTIL } from './nudges';
 
 export type SoundSwitch = 'music' | 'sfx' | 'shake' | 'haptics' | 'hints';
 
@@ -22,6 +24,19 @@ export function switchOn(m: MetaSave, which: SoundSwitch): boolean {
 export function flipSwitch(m: MetaSave, which: SoundSwitch): void {
   if (which === 'shake') m.sound.shake = !shakeOn(m.sound.shake);
   else m.sound[which] = !m.sound[which];
+}
+
+/** The hints switch does nothing in the first battles, which always point (nudges.ts): there it
+ *  stands greyed with a line saying so under its name, and still keeps the choice for later. */
+export function earlyNote(m: MetaSave, which: SoundSwitch, name: Text, sw: Container, width: number): Text | null {
+  if (which !== 'hints' || m.runs >= TOP_PICK_UNTIL) return null;
+  name.y -= 20;
+  sw.alpha = 0.5;
+  const note = ink(t('sound.hintsEarly', { n: TOP_PICK_UNTIL }), 28, { fill: P.inkSoft });
+  note.anchor.set(0, 0.5);
+  note.position.set(name.x, name.y + 44);
+  fitText(note, width);
+  return note;
 }
 
 /** A switch's icon, drawn on a medal 56 across. */

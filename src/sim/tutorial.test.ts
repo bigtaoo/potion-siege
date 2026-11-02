@@ -6,7 +6,7 @@ import { FP, TICK_RATE } from './math/fixed';
 import { BASE_SETUP, FIRST_SEED, newMeta } from './meta';
 import { stageSetup } from './stars';
 import { checkReplay, takeReplay } from './replay';
-import { EXTRA_SUMMONS, mergeablePair, STOP_GAP, Tutorial } from './tutorial';
+import { EXTRA_SUMMONS, mergeablePair, REST_GAP, STOP_GAP, Tutorial } from './tutorial';
 import { BALANCE } from './types';
 
 const W = WALL_ROW * BALANCE.grid.cols;
@@ -149,7 +149,7 @@ describe('tutorial', () => {
     expect(tut.showing(b)).toBe(mergeablePair(b) ? 'merge' : null);
   });
 
-  it('fills the rest of the wait for 强化 with a pair to fuse or a paid summon, at full speed', () => {
+  it('fills the rest of the wait for 强化 with a pair to fuse, never a paid summon, at full speed', () => {
     const b = new Battle(FIRST_SEED, stageSetup(newMeta()));
     const tut = new Tutorial();
     b.gold = 1e5;
@@ -165,7 +165,7 @@ describe('tutorial', () => {
     b.gold = b.upgradeCost() - 1;
     expect(b.canSummon()).toBe(true);
     const pair = mergeablePair(b);
-    expect(tut.showing(b)).toBe(pair ? 'merge' : 'again');
+    expect(tut.showing(b)).toBe(pair ? 'merge' : null);
     expect(tut.pace(b)).toBe(1);
     if (pair) {
       b.move(pair[0], pair[1]);
@@ -206,6 +206,18 @@ describe('tutorial', () => {
     expect(gap(b)).toBeGreaterThan(STOP_GAP - 10);
     expect(gap(b)).toBeLessThanOrEqual(STOP_GAP);
     expect(b.wall).toBe(wall);
+    expect(b.enemies.every((e) => !e.atWall)).toBe(true);
+  });
+
+  it('lets the crowd walk on to REST_GAP while resting, the first step too, never onto the wall', () => {
+    const b = new Battle(FIRST_SEED, BASE_SETUP);
+    const tut = new Tutorial();
+    run(b, tut, 600);
+    expect(tut.pace(b)).toBe(0);
+    expect(tut.pace(b, true)).toBe(1);
+    while (tut.pace(b, true) > 0) b.step();
+    expect(gap(b)).toBeGreaterThan(REST_GAP - 10);
+    expect(gap(b)).toBeLessThanOrEqual(REST_GAP);
     expect(b.enemies.every((e) => !e.atWall)).toBe(true);
   });
 

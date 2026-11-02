@@ -5,7 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { t } from '../i18n';
 import type { MetaSave } from '../sim/meta';
 import { fit as fitText, ink, lightPanel, lightTile, medal, P, PillButton, plate, tappable, toggle } from './kit';
-import { soundSwitches, switchIcon, switchOn, type SoundSwitch } from './soundSwitches';
+import { earlyNote, soundSwitches, switchIcon, switchOn, type SoundSwitch } from './soundSwitches';
 import { label } from './ui';
 import type { MenuFit } from './viewport';
 
@@ -54,6 +54,8 @@ export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate
     const sw = toggle(on);
     sw.position.set(255, -4);
     r.addChild(lightTile(860, ROW - 20), icon, name, sw);
+    const note = earlyNote(m, which, name, sw, 440);
+    if (note) r.addChild(note);
     box.addChild(r);
   });
   if (canGiveUp) {

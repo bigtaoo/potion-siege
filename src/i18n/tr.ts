@@ -23,7 +23,7 @@ export const tr: Table = {
   cellTip: 'Yeni bir hücre için {n} çağırma daha',
   cellOpen: 'Yeni yuva!',
   guide: {
-    gift: 'Başlangıç hediyesi: her gün bir tane var',
+    gift: 'Hoş geldin hediyesi: oynadığın her gün bir tane, toplam 7',
     upgrade: 'Kristalleri bir iksire harca: daha sert vurur',
     toBattle1: "Güçlenen iksirlerinle aşama {n}'i dene!",
     toBattle: "Aşama {n}'e devam!",
@@ -43,7 +43,7 @@ export const tr: Table = {
     endless: "Sonsuz mod açıldı: kaç dalga dayanırsın?",
     hard: "Zor mod açıldı: daha sert bölümler, daha çok yıldız",
     castTip: "Büyüyü kendin nişanlamak için komutanı kalabalığa sürükle",
-    flyerTip: "Rüzgâr, ateş ve şimşek uçanlara en çok vurur",
+    flyerTip: 'Ateş ve şimşek uçanlara en çok vurur, 10. bölümden itibaren rüzgâr da',
     speedTip: "Burayı kazandın: 1,5× hız için ×1'e dokun",
   },
   full: {
@@ -55,6 +55,7 @@ export const tr: Table = {
   tutorial: {
     step: 'Eğitim {n}/{total}',
     skip: 'Geç',
+    skipSure: 'Emin misin? Tekrar dokun',
     summon: 'Bir iksir yapmak için Çağır düğmesine dokun',
     merge: 'İki aynı iksir! Daha güçlü bir iksir için birini diğerinin üstüne sürükle',
     more: 'Henüz eş yok: bir iksir daha için Çağır düğmesine dokun',
@@ -196,7 +197,7 @@ export const tr: Table = {
   allDone: 'Tüm Görevler Bonusu',
   allDoneCount: '{n}/{total} alındı',
   lang: { name: 'Türkçe' },
-  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', shake: 'Ekran sarsıntısı', haptics: 'Titreşim', hints: 'İpuçları', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Dil', settings: 'Ayarlar', music: 'Müzik', sfx: 'Ses', shake: 'Ekran sarsıntısı', haptics: 'Titreşim', hints: 'İpuçları', hintsEarly: 'İlk {n} savaşta hep açık', on: 'AÇIK', off: 'KAPALI', privacy: 'Reklam gizliliği seçenekleri', policy: 'Gizlilik politikası', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Duraklatıldı', resume: 'Devam', giveUp: 'Pes et', confirm: 'Pes etmek için tekrar dokun' },
   rotate: 'Telefonu dik tutun',
   privacy: {

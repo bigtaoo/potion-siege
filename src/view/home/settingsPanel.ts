@@ -5,7 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { getLocale, localeName, t } from '../../i18n';
 import type { MetaSave } from '../../sim/meta';
 import { fit as fitText, ink, inkWrapped, lightTile, medal, P, PillButton, tappable, toggle } from '../kit';
-import { soundSwitches, switchIcon, switchOn } from '../soundSwitches';
+import { earlyNote, soundSwitches, switchIcon, switchOn } from '../soundSwitches';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
 import { remindRow } from './remindPanel';
@@ -48,6 +48,8 @@ export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, priva
     const sw = toggle(on);
     sw.position.set(255, -4);
     r.addChild(lightTile(860, 160), icon, name, sw);
+    const note = earlyNote(m, which, name, sw, 440);
+    if (note) r.addChild(note);
     box.addChild(r);
   });
   // the language: its own name on a button that opens the picker

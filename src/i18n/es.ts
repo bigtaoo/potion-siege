@@ -23,7 +23,7 @@ export const es: Table = {
   cellTip: '{n} {n|one:invocación|other:invocaciones} más para una casilla nueva',
   cellOpen: '¡Nueva casilla!',
   guide: {
-    gift: 'Un regalo de bienvenida: hay uno cada día',
+    gift: 'Regalo de bienvenida: uno por cada día que juegues, 7 en total',
     upgrade: 'Gasta cristales en una poción: pega más fuerte',
     toBattle1: '¡Prueba la fase {n} con tus pociones mejoradas!',
     toBattle: '¡A la fase {n}!',
@@ -43,7 +43,7 @@ export const es: Table = {
     endless: 'El modo infinito está abierto: ¿cuántas oleadas aguantas?',
     hard: 'El modo difícil está abierto: niveles más duros, más estrellas',
     castTip: 'Arrastra al comandante sobre la multitud para apuntar tú mismo',
-    flyerTip: 'Viento, fuego y rayo dañan más a los voladores',
+    flyerTip: 'Fuego y rayo dañan más a los voladores, y viento desde el nivel 10',
     speedTip: 'Ya ganaste aquí: toca ×1 para ir a 1,5×',
   },
   full: {
@@ -55,6 +55,7 @@ export const es: Table = {
   tutorial: {
     step: 'Paso {n}/{total}',
     skip: 'Saltar',
+    skipSure: '¿Seguro? Toca otra vez',
     summon: 'Toca Invocar para preparar una poción',
     merge: '¡Dos pociones iguales! Arrastra una sobre la otra para fusionarlas en una más fuerte',
     more: 'Aún no hay pareja: toca Invocar para otra poción',
@@ -196,7 +197,7 @@ export const es: Table = {
   allDone: 'Premio por todas',
   allDoneCount: '{n}/{total} recogidas',
   lang: { name: 'Español' },
-  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Sonido', shake: 'Temblor de pantalla', haptics: 'Vibración', hints: 'Pistas', on: 'SÍ', off: 'NO', privacy: 'Privacidad de anuncios', policy: 'Política de privacidad', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Idioma', settings: 'Ajustes', music: 'Música', sfx: 'Sonido', shake: 'Temblor de pantalla', haptics: 'Vibración', hints: 'Pistas', hintsEarly: 'Siempre activo en las primeras {n} batallas', on: 'SÍ', off: 'NO', privacy: 'Privacidad de anuncios', policy: 'Política de privacidad', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pausa', resume: 'Seguir', giveUp: 'Rendirse', confirm: 'Toca otra vez para rendirte' },
   rotate: 'Pon el móvil en vertical',
   privacy: {

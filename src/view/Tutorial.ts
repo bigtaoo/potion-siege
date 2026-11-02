@@ -40,6 +40,9 @@ const PAD = 14;
 const NARROW = 480;
 /** The gap between a card over the field and what it points at, room for its tail. */
 const BESIDE = 90;
+/** Seconds the skip button asks to be sure after its first tap: a stray tap on it ended the
+ *  tutorial for good. */
+export const SKIP_SURE = 3;
 /** How far below the bottle's middle the dragging fingertip sits, the hand under it. */
 export const DRAG_BELOW = 46;
 
@@ -53,6 +56,8 @@ export class TutorialLayer extends Container {
   private holes: Rect[] = [];
   private key = '';
   private time = 0;
+  /** When the skip button was first tapped. */
+  private armed = -Infinity;
 
   constructor(private readonly onSkip: () => void) {
     super();
@@ -79,7 +84,7 @@ export class TutorialLayer extends Container {
     this.hand.visible = !pick;
     this.useHandArt();
 
-    const key = `${lesson.step}|${lesson.of ?? ''}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${lesson.keep?.length ?? 0}`;
+    const key = `${lesson.step}|${lesson.of ?? ''}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${lesson.keep?.length ?? 0}|${this.sure()}`;
     if (key !== this.key) {
       this.key = key;
       this.drawDim(w, h);
@@ -127,7 +132,7 @@ export class TutorialLayer extends Container {
     const n = TUTORIAL_STEPS.indexOf(lesson.of ?? (lesson.step === 'more' ? 'merge' : lesson.step === 'again' ? 'upgrade' : lesson.step)) + 1;
     const head = ink(t('tutorial.step', { n, total: TUTORIAL_STEPS.length }), 32, { fill: P.inkSoft });
     const body = balanced(t(`tutorial.${lesson.step === 'again' ? 'summon' : lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
-    const skip = skipButton(() => this.onSkip());
+    const skip = skipButton(this.sure(), () => this.tapSkip());
     // the step and the skip button share the top row on a roomy card; a narrow one has skip below
     const roomy = cw >= 600;
     const ch = roomy ? 132 + 22 + body.height + 72 : 76 + head.height + 18 + body.height + 30 + 70 + 56;
@@ -169,6 +174,21 @@ export class TutorialLayer extends Container {
   }
 
   /** Swaps the drawn glove for the painted one once it has loaded. */
+  /** Whether the skip button waits for its second tap. */
+  private sure(): boolean {
+    return this.time - this.armed < SKIP_SURE;
+  }
+
+  private tapSkip(): void {
+    if (this.sure()) {
+      this.armed = -Infinity;
+      this.onSkip();
+    } else {
+      this.armed = this.time;
+      this.key = '';
+    }
+  }
+
   private useHandArt(): void {
     if (this.hand.children[0] instanceof Sprite) return;
     const art = handArt();
@@ -261,9 +281,9 @@ function tail(cw: number, ch: number, dx: number, dy: number, side: 'left' | 'ri
   return g;
 }
 
-function skipButton(onTap: () => void): Container {
+function skipButton(sure: boolean, onTap: () => void): Container {
   const c = new Container();
-  const text: Text = fit(ink(`${t('tutorial.skip')} ›`, 36, { fill: LIGHT.edge }), 200);
+  const text: Text = fit(ink(sure ? t('tutorial.skipSure') : `${t('tutorial.skip')} ›`, sure ? 30 : 36, { fill: sure ? P.redInk : LIGHT.edge }), 200);
   text.y = -4;
   c.addChild(lightTile(220, 70), text);
   return tappable(c, onTap);

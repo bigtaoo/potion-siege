@@ -3,6 +3,7 @@
 
 import { nextTier, TRACK_IDS, trackReady } from '../sim/achievements';
 import { CHAPTER_COUNT, chestWaiting } from '../sim/chapters';
+import { guideLeft } from '../sim/guide';
 import { chestReady, heroCost, heroUnlocked, maxStage, unlockPrice, WORKSHOP_IDS, workshopCost, type MetaSave, type SeenTab } from '../sim/meta';
 import { anyStarChestWaiting } from '../sim/starChest';
 import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
@@ -108,9 +109,10 @@ export const NEXT_UNTIL = 3;
 
 /** The result of winning `stage` offers the next stage straight away; not while the one-time
  *  upgrade pointer waits, so the first win goes home to spend its crystals (Playgama players
- *  gave up stage 2 within seconds to get there). */
+ *  gave up stage 2 within seconds to get there), nor while the home guide's chapter for this run
+ *  has steps left: going on past it skipped that chapter for good. */
 export function offersNext(m: MetaSave, stage: number): boolean {
-  return (m.runs < NEXT_UNTIL || m.cleared < NEXT_UNTIL) && stage < maxStage(m) && upgradeHintKind(m) === null;
+  return (m.runs < NEXT_UNTIL || m.cleared < NEXT_UNTIL) && stage < maxStage(m) && upgradeHintKind(m) === null && guideLeft(m).length === 0;
 }
 
 /** Runs before the daily login opens by itself on the home screen; its button and dot are

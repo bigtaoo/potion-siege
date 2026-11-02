@@ -1,13 +1,14 @@
 // The first battle's tutorial: summon, merge, then the first 强化 and its skill pick, each shown
 // when its moment comes. Pure rules over the battle. Nothing is ever done for the player: while a
 // step points the battle runs on at full speed, but stands still once the crowd is STOP_GAP short
-// of the wall (the first step, 召唤, already half way down the field), until the player does it (the shell runs no ticks then, so the replay only sees the
-// player's own commands, just later): waiting can never lose the battle. The pick pauses the
+// of the wall (召唤 already half way down the field) until the player does it (the shell runs no
+// ticks then, so the replay only sees the player's own commands, just later): waiting can never
+// lose the battle. The pick pauses the
 // battle by itself. A slow motion in between read as the game stuttering (owner 11-02). While the
 // merge step has no pair yet it points at 召唤 instead, and so does the 强化 step for
-// EXTRA_SUMMONS more summons while its gold comes in, and once those are given, at whatever else
-// can be done (a pair to fuse, a paid summon): the wait for 100 gold is never a blank. The view
-// draws the pointer.
+// EXTRA_SUMMONS free summons while its gold comes in, and once those are given, at a pair to fuse
+// if there is one. Never at a paid summon: a quick player spent 强化's gold on them and met 强化
+// at 59 s. The view draws the pointer.
 
 import { SLOT_COUNT, type Battle } from './battle';
 import { K } from './field';
@@ -31,6 +32,10 @@ export const EXTRA_SUMMONS = 2;
  *  units, one cell): checked before every tick, and no enemy walks a cell in one, so no idle
  *  player loses the wall to the tutorial. */
 export const STOP_GAP = BALANCE.grid.cellH;
+
+/** How close to the wall the crowd may walk while the next step's hand waits out the rest after
+ *  the player's move (world units, a quarter cell): it walks on, but never onto the wall. */
+export const REST_GAP = STOP_GAP / 4;
 
 /** The first two slots that could merge, or null. */
 export function mergeablePair(b: Battle): [number, number] | null {
@@ -58,7 +63,7 @@ export class Tutorial {
         if (b.canUpgrade()) return 'upgrade';
         if (b.giftReady()) return b.canSummon() ? 'again' : null;
         if (b.paused) return null;
-        return mergeablePair(b) ? 'merge' : b.canSummon() ? 'again' : null;
+        return mergeablePair(b) ? 'merge' : null;
       case 'pick':
         return b.choices ? 'pick' : null;
       default:
@@ -77,15 +82,17 @@ export class Tutorial {
   }
 
   /** How fast the battle runs now: 1, or 0 while a step points and waits for the player once
-   *  the crowd is STOP_GAP short of the wall (half way down the field for 召唤) (the pick pauses the battle by itself). The 强化
-   *  step's pointers at a pair or a paid summon only fill its wait and stop nothing. Checked
-   *  before every tick, so a step that comes up mid-frame stops the battle there. */
-  pace(b: Battle): number {
+   *  the crowd is STOP_GAP short of the wall (half way down the field for 召唤; REST_GAP while
+   *  `resting`, the hand hidden after a move) (the pick pauses the battle by itself). The 强化
+   *  step's pointer at a pair only fills its wait and stops nothing. Checked before every tick,
+   *  so a step that comes up mid-frame stops the battle there. */
+  pace(b: Battle, resting = false): number {
     const s = this.showing(b);
     if (s === null || s === 'pick') return 1;
     if (this.step === 'upgrade' && s !== 'upgrade' && !b.giftReady()) return 1;
     // the first step stops early: a new player meets the crowd before it is on the wall (owner 11-02)
-    const line = this.step === 'summon' ? (x: number) => (K.top + b.wallFront(x)) / 2 : (x: number) => b.wallFront(x) - STOP_GAP * FP;
+    const gap = resting ? REST_GAP : STOP_GAP;
+    const line = this.step === 'summon' && !resting ? (x: number) => (K.top + b.wallFront(x)) / 2 : (x: number) => b.wallFront(x) - gap * FP;
     return b.enemies.some((e) => e.y + e.radius >= line(e.x)) ? 0 : 1;
   }
 

@@ -22,7 +22,7 @@ export const zh: Table = {
   cellTip: '再召唤 {n} 次多一个塔格',
   cellOpen: '新格子！',
   guide: {
-    gift: '新手礼包，每天都能领一份',
+    gift: '新手礼物：每玩一天领一份，共 7 份',
     upgrade: '用钻石升级药剂，伤害更高',
     toBattle1: '去第 {n} 关试试变强的药剂！',
     toBattle: '继续第 {n} 关！',
@@ -35,14 +35,14 @@ export const zh: Table = {
     skip: '跳过',
     upgrade2: '强化一次，换一个新技能',
     stars: '城墙剩 50% 得 2 星、80% 得 3 星，星星能换宝箱',
-    pickTip: '推荐的最适合你现在的药剂',
+    pickTip: '标着推荐的技能最配你现在的药剂',
     lineup: '新药剂到了：点它换进出战阵容',
     chapterChest: '章节通关：打开章节宝箱',
     starChest: '星星攒满了一个宝箱：打开它',
     endless: '无尽模式开放了：你能守住几波？',
     hard: '困难模式开放了：更难的关卡，更多星星',
     castTip: '把指挥官拖到敌群上，自己瞄准法术',
-    flyerTip: '风、火、雷对飞行敌人伤害最高',
+    flyerTip: '火和雷对飞行敌人伤害最高，第 10 关起还有风',
     speedTip: '这关赢过：点 ×1 切到 1.5 倍速',
   },
   full: {
@@ -54,6 +54,7 @@ export const zh: Table = {
   tutorial: {
     step: '新手教学 {n}/{total}',
     skip: '跳过',
+    skipSure: '确定？再点一次',
     summon: '点击召唤，召来一瓶药剂',
     merge: '两瓶相同的药剂！把它们拖到一起，合成一瓶更强的药剂',
     more: '还没有相同的一对：再点召唤，多召来一瓶药剂',
@@ -196,7 +197,7 @@ export const zh: Table = {
   allDoneCount: '已领取 {n}/{total}',
   /** The language's own name, for the picker. */
   lang: { name: '简体中文' },
-  sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', shake: '屏幕震动', haptics: '手机振动', hints: '操作提示', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
+  sound: { language: '语言', settings: '设置', music: '音乐', sfx: '音效', shake: '屏幕震动', haptics: '手机振动', hints: '操作提示', hintsEarly: '前 {n} 场战斗总是开启', on: '开', off: '关', privacy: '广告隐私选项', policy: '隐私政策', policyPage: 'https://p.gamestao.com/privacy#zh' },
   pause: { title: '已暂停', resume: '继续', giveUp: '放弃', confirm: '再点一次放弃' },
   rotate: '请竖屏握持手机',
   privacy: {

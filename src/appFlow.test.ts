@@ -224,12 +224,14 @@ describe('autoplay', () => {
 });
 
 describe('a new player', () => {
-  it('lands in the first battle with the tutorial, which the skip button ends', () => {
+  it('lands in the first battle with the tutorial, which the skip button ends on a second tap', () => {
     const w = liveWorld(newMeta());
     expect(w.game.menu.visible).toBe(false);
     expect(w.game.tutorial).not.toBeNull();
     w.frame();
     tap(w.stage, `${t('tutorial.skip')} ›`);
+    w.frame();
+    tap(w.stage, t('tutorial.skipSure'));
     expect(w.game.tutorial).toBeNull();
   });
 });

@@ -6,8 +6,9 @@ import { Battle, WALL_ROW } from '../sim/battle';
 import { newMeta } from '../sim/meta';
 import { mergeablePair, Tutorial } from '../sim/tutorial';
 import { BALANCE } from '../sim/types';
+import { handOff } from '../view/battleView/cmdHints';
 import { REST_AFTER_MOVE } from '../view/moveRest';
-import type { Lesson, Rect } from '../view/Tutorial';
+import { SKIP_SURE, type Lesson, type Rect } from '../view/Tutorial';
 import { beginTutorial, endTutorial, logStep, pace } from './tutorialFlow';
 import { englishPage, tap, world, type World } from './testWorld';
 import { pickSkill } from './skillOffer';
@@ -158,6 +159,15 @@ describe('endTutorial', () => {
     expect([g.hud.hint, g.hud.nudge]).toEqual([false, true]);
   });
 
+  it('asks again from the start once SKIP_SURE has gone by', () => {
+    const { w, g, lessons } = first();
+    until(g, lessons, 'summon');
+    tap(w.stage, `${t('tutorial.skip')} ›`);
+    for (let i = 0; i < SKIP_SURE * 60 + 2; i++) frame(g);
+    tap(w.stage, `${t('tutorial.skip')} ›`);
+    expect(g.tutorial).not.toBeNull();
+  });
+
   it('does nothing with no tutorial running', () => {
     const { w, g } = first();
     endTutorial(g, true);
@@ -165,10 +175,13 @@ describe('endTutorial', () => {
     expect(w.events('tutorial_end')).toHaveLength(1);
   });
 
-  it("ends from the card's skip button", () => {
+  it("ends from the card's skip button, tapped again within SKIP_SURE to be sure", () => {
     const { w, g, lessons } = first();
     until(g, lessons, 'summon');
     tap(w.stage, `${t('tutorial.skip')} ›`);
+    expect(g.tutorial).not.toBeNull();
+    frame(g);
+    tap(w.stage, t('tutorial.skipSure'));
     expect(g.tutorial).toBeNull();
     expect(w.events('tutorial_end')).toEqual([{ step: 'summon', skipped: true }]);
     frame(g);
@@ -260,6 +273,15 @@ describe('the lessons over the first battle', () => {
     const shown = b.time;
     frame(g);
     expect(b.time).toBe(shown);
+  });
+
+  it("keeps the commander's hand off while a step points", () => {
+    const { g, lessons } = first();
+    until(g, lessons, 'summon');
+    expect(handOff.lesson).toBe(true);
+    endTutorial(g, true);
+    frame(g);
+    expect(handOff.lesson).toBe(false);
   });
 
   it('hides while the board itself is hidden', () => {

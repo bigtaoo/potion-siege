@@ -19,6 +19,8 @@ describe('startLevel', () => {
   it('puts desktops and strong phones on high, the resolution the game always had', () => {
     expect(LEVELS[startLevel(PC)]).toMatchObject({ name: 'high', resolution: 2, fps: 60 });
     expect(startLevel(PHONE)).toBe(HIGH);
+    // a Galaxy A16: 4 GB, 8 cores, Mali-G57 MC2, steady at 60 fps at 2x
+    expect(startLevel({ ...PHONE, gpu: 'Mali-G57 MC2', memoryGB: 4, cores: 8 })).toBe(HIGH);
     expect(HIGH).toBe(TOP);
   });
 

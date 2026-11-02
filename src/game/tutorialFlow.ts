@@ -12,6 +12,7 @@ import { isLand } from '../view/landView';
 import { MoveRest } from '../view/moveRest';
 import { DESIGN_H, DESIGN_W, type MenuFit } from '../view/viewport';
 import { LAND } from '../view/wideLayout';
+import { handOff } from '../view/battleView/cmdHints';
 import { battleTips } from './battleTips';
 import { idlePulse } from './idlePulse';
 
@@ -28,10 +29,10 @@ export function beginTutorial(g: Game): void {
 }
 
 /** The battle's speed before its next tick: 0 while a tutorial step waits for the player (see
- *  Tutorial.pace), else 1. Not while the next step's hand waits out REST_AFTER_MOVE: with nothing
- *  pointed at, a standing crowd read as the game hanging (owner 11-02). */
+ *  Tutorial.pace), else 1. While the next step's hand waits out REST_AFTER_MOVE the crowd walks on
+ *  to the wall's edge: with nothing pointed at, a standing crowd read as the game hanging (owner 11-02). */
 export function pace(g: Game, b: Battle): number {
-  return g.autoplay || !g.tutorial || rest.resting(b) ? 1 : g.tutorial.pace(b);
+  return g.autoplay || !g.tutorial ? 1 : g.tutorial.pace(b, rest.resting(b));
 }
 
 /** Done or skipped: never again on this save. */
@@ -60,9 +61,11 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
   // the pick shows over the skill cards, every other step over the battle itself
   const up = step === 'pick' ? g.overlay.visible : !g.overlay.visible;
   g.hud.pulse = up && (step === 'summon' || step === 'more' || step === 'again');
-  if (idlePulse(b, g.root.visible ? dt : 0)) g.hud.pulse = true;
+  // not while 强化 waits for its gold: a paid summon then spends it (a quick player met 强化 at 59 s)
+  if (idlePulse(b, g.root.visible ? dt : 0) && g.tutorial?.step !== 'upgrade') g.hud.pulse = true;
   g.lessons.scale.set(m.scale);
   const shown = step && up && b ? lessonFor(g, step, b, m) : null;
+  handOff.lesson = shown !== null;
   g.lessons.show(shown && g.tutorial?.step ? { ...shown, of: g.tutorial.step } : shown, m.w, m.h, m.wide, dt);
 }
 

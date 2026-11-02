@@ -23,7 +23,7 @@ export const id: Table = {
   cellTip: '{n} panggilan lagi untuk petak baru',
   cellOpen: 'Petak baru!',
   guide: {
-    gift: 'Hadiah pemula: ada satu setiap hari',
+    gift: 'Hadiah sambutan: satu tiap hari kamu main, total 7',
     upgrade: 'Pakai kristal untuk ramuan: serangannya lebih kuat',
     toBattle1: 'Coba tahap {n} dengan ramuan yang lebih kuat!',
     toBattle: 'Lanjut ke tahap {n}!',
@@ -43,7 +43,7 @@ export const id: Table = {
     endless: 'Mode tanpa akhir terbuka: berapa gelombang yang bisa kamu tahan?',
     hard: 'Mode sulit terbuka: tahap lebih berat, lebih banyak bintang',
     castTip: 'Seret komandan ke kerumunan untuk membidik sendiri',
-    flyerTip: 'Angin, api, dan petir paling kuat melawan musuh terbang',
+    flyerTip: 'Api dan petir paling kuat melawan musuh terbang, dan angin mulai level 10',
     speedTip: 'Pernah menang di sini: ketuk ×1 untuk kecepatan 1,5×',
   },
   full: {
@@ -55,6 +55,7 @@ export const id: Table = {
   tutorial: {
     step: 'Panduan {n}/{total}',
     skip: 'Lewati',
+    skipSure: 'Yakin? Ketuk lagi',
     summon: 'Ketuk Panggil untuk meracik ramuan',
     merge: 'Dua ramuan yang sama! Seret satu ke yang lain untuk menggabungkannya jadi ramuan yang lebih kuat',
     more: 'Belum ada pasangan: ketuk Panggil untuk satu ramuan lagi',
@@ -196,7 +197,7 @@ export const id: Table = {
   allDone: 'Bonus Semua Tugas',
   allDoneCount: '{n}/{total} diklaim',
   lang: { name: 'Bahasa Indonesia' },
-  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', shake: 'Getar layar', haptics: 'Getaran', hints: 'Petunjuk', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Bahasa', settings: 'Pengaturan', music: 'Musik', sfx: 'Suara', shake: 'Getar layar', haptics: 'Getaran', hints: 'Petunjuk', hintsEarly: 'Selalu aktif di {n} pertempuran pertama', on: 'AKTIF', off: 'MATI', privacy: 'Pilihan privasi iklan', policy: 'Kebijakan privasi', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Jeda', resume: 'Lanjut', giveUp: 'Menyerah', confirm: 'Ketuk lagi untuk menyerah' },
   rotate: 'Putar ponsel ke posisi tegak',
   privacy: {

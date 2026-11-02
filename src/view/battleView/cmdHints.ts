@@ -34,8 +34,9 @@ export interface DragTo {
 }
 
 /** One hand at a time: while the board's own hand drags along a pair to fuse (the HUD's, set as it
- *  draws), the commander's waits; the glow and the call to tap still ask for the cast. */
-export const handOff = { board: false };
+ *  draws) or a tutorial step points (the lessons', set as they show), the commander's waits; the
+ *  glow and the call to tap still ask for the cast. */
+export const handOff = { board: false, lesson: false };
 
 /** Lets the tip show again, as on a fresh page load. */
 export function resetCellTip(): void {
@@ -102,7 +103,7 @@ export class CommanderHints extends Container {
    *  to `to.pick()` (asked once a drag, so it stays on one crowd), the ring there as it rests; with
    *  nobody on the road, pointing up at the badge from below, bobbing. Null hides it. */
   pointAt(at: Point | null, r: number, dt: number, to: DragTo | null = null): void {
-    this.hand.visible = at !== null && !handOff.board;
+    this.hand.visible = at !== null && !handOff.board && !handOff.lesson;
     this.trail.clear();
     if (!this.hand.visible || !at) {
       this.dragTime = 0;

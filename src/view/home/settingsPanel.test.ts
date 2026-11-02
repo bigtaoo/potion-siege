@@ -9,14 +9,15 @@ import { LANG_KEY, REMINDERS_KEY } from '../../game/keys';
 import { home } from '../../game/homeScreen';
 import { buttons, englishPage, flush, tap, texts, veteran, world, type Host, type World } from '../../game/testWorld';
 import type { Notifier } from '../../platform/types';
+import { TOP_PICK_UNTIL } from '../nudges';
 import { switchOn, type SoundSwitch } from '../soundSwitches';
 
 beforeAll(englishPage);
 afterEach(() => void setLocale('en'));
 
 /** A host with what `extra` adds (vibration, links, a clipboard, notifications). */
-function settings(extra: Partial<Record<'vibrate' | 'openUrl' | 'adPrivacy' | 'copyText' | 'notify', unknown>> = {}): World {
-  const w = world(veteran(), (h: Host) => Object.assign(h, extra));
+function settings(extra: Partial<Record<'vibrate' | 'openUrl' | 'adPrivacy' | 'copyText' | 'notify', unknown>> = {}, save = veteran()): World {
+  const w = world(save, (h: Host) => Object.assign(h, extra));
   w.game['tab'] = 'battle';
   home(w.game);
   tap(w.stage, t('sound.settings'));
@@ -75,6 +76,16 @@ describe('the settings panel', () => {
     expect(reads(w, caption)).toBe(t(was ? 'sound.off' : 'sound.on'));
     tap(w.stage, caption);
     expect(switchOn(w.save(), which)).toBe(was);
+  });
+
+  it('says the hints are on anyway in the first battles, and keeps the choice for later', () => {
+    const early = { ...veteran(), runs: 1 };
+    const w = settings({}, early);
+    const note = t('sound.hintsEarly', { n: TOP_PICK_UNTIL });
+    expect(texts(row(w, t('sound.hints')))).toContain(note);
+    tap(w.stage, t('sound.hints'));
+    expect(w.save().sound.hints).toBe(!early.sound.hints);
+    expect(texts(settings().stage)).not.toContain(note);
   });
 
   it('shows the vibration switch only where the device can vibrate', () => {

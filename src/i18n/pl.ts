@@ -23,7 +23,7 @@ export const pl: Table = {
   cellTip: 'Jeszcze {n} {n|one:przywołanie|few:przywołania|many:przywołań|other:przywołania} do nowego pola',
   cellOpen: 'Nowe pole!',
   guide: {
-    gift: 'Prezent na start: jeden każdego dnia',
+    gift: 'Prezent powitalny: jeden za każdy dzień gry, razem 7',
     upgrade: 'Wydaj kryształy na miksturę: mocniej uderza',
     toBattle1: 'Spróbuj etapu {n} z mocniejszymi miksturami!',
     toBattle: 'Dalej, etap {n}!',
@@ -43,7 +43,7 @@ export const pl: Table = {
     endless: 'Tryb bez końca otwarty: ile fal wytrzymasz?',
     hard: 'Tryb trudny otwarty: twardsze etapy, więcej gwiazdek',
     castTip: 'Przeciągnij dowódcę na tłum, by celować samemu',
-    flyerTip: 'Wiatr, ogień i błyskawica najmocniej ranią latających',
+    flyerTip: 'Ogień i błyskawica najmocniej ranią latających, a od etapu 10 też wiatr',
     speedTip: 'Już tu wygrana: dotknij ×1, by grać 1,5× szybciej',
   },
   full: {
@@ -55,6 +55,7 @@ export const pl: Table = {
   tutorial: {
     step: 'Samouczek {n}/{total}',
     skip: 'Pomiń',
+    skipSure: 'Na pewno? Stuknij znowu',
     summon: 'Dotknij „Przyzwij”, by uwarzyć miksturę',
     merge: 'Dwie takie same mikstury! Przeciągnij jedną na drugą, by połączyć je w silniejszą',
     more: 'Nie ma jeszcze pary: dotknij „Przyzwij” po kolejną miksturę',
@@ -196,7 +197,7 @@ export const pl: Table = {
   allDone: 'Premia za komplet',
   allDoneCount: 'Odebrano {n}/{total}',
   lang: { name: 'Polski' },
-  sound: { language: 'Język', settings: 'Ustawienia', music: 'Muzyka', sfx: 'Dźwięk', shake: 'Wstrząsy ekranu', haptics: 'Wibracje', hints: 'Podpowiedzi', on: 'WŁ.', off: 'WYŁ.', privacy: 'Prywatność reklam', policy: 'Polityka prywatności', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Język', settings: 'Ustawienia', music: 'Muzyka', sfx: 'Dźwięk', shake: 'Wstrząsy ekranu', haptics: 'Wibracje', hints: 'Podpowiedzi', hintsEarly: 'Zawsze włączone w pierwszych {n} bitwach', on: 'WŁ.', off: 'WYŁ.', privacy: 'Prywatność reklam', policy: 'Polityka prywatności', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pauza', resume: 'Wznów', giveUp: 'Poddaj się', confirm: 'Dotknij ponownie, by się poddać' },
   rotate: 'Obróć telefon pionowo',
   privacy: {

@@ -30,6 +30,9 @@ describe('lossStreak', () => {
     expect(lossAssist(s, 2)).toEqual({ ...s, startGold: s.startGold + ASSIST_GOLD, freeSummons: 1 });
     expect(lossAssist({ ...s, stage: 4 }, 5).freeSummons).toBeUndefined();
     expect(lossAssist({ ...s, hard: true }, 5).freeSummons).toBeUndefined();
+    // the very first battle helps after one loss already
+    expect(lossAssist({ ...s, stage: 1 }, 1).freeSummons).toBe(1);
+    expect(lossAssist({ ...s, stage: 1 }, 0)).toEqual({ ...s, stage: 1 });
   });
 
   it('reaches the stage setup', () => {

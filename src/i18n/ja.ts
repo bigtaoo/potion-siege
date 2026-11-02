@@ -23,7 +23,7 @@ export const ja: Table = {
   cellTip: 'あと{n}回召喚でマスが1つ増える',
   cellOpen: '新しいマス！',
   guide: {
-    gift: 'スターターギフト：毎日もらえます',
+    gift: 'ウェルカムギフト：遊んだ日ごとに1つ、全7つ',
     upgrade: 'クリスタルでポーションを強化：ダメージアップ',
     toBattle1: '強くなったポーションでステージ {n} に挑戦！',
     toBattle: 'ステージ {n} へ！',
@@ -43,7 +43,7 @@ export const ja: Table = {
     endless: 'エンドレスモード解放：何ウェーブ守れる？',
     hard: 'ハードモード解放：手強いステージ、もっと星を',
     castTip: '司令官を敵の群れへドラッグして自分で狙おう',
-    flyerTip: '飛行敵には風・火・雷がよく効く',
+    flyerTip: '飛行敵には火・雷がよく効く。ステージ10からは風も',
     speedTip: 'クリア済み：×1 をタップで1.5倍速',
   },
   full: {
@@ -55,6 +55,7 @@ export const ja: Table = {
   tutorial: {
     step: 'チュートリアル {n}/{total}',
     skip: 'スキップ',
+    skipSure: '本当に？もう一度タップ',
     summon: '「召喚」をタップしてポーションを作ろう',
     merge: '同じポーションが2つ！片方をもう片方に重ねて、より強いポーションに合成しよう',
     more: 'まだ同じペアがないよ：もう一度「召喚」をタップしよう',
@@ -196,7 +197,7 @@ export const ja: Table = {
   allDone: '全達成ボーナス',
   allDoneCount: '受け取り済み {n}/{total}',
   lang: { name: '日本語' },
-  sound: { language: '言語', settings: '設定', music: '音楽', sfx: '効果音', shake: '画面の揺れ', haptics: '振動', hints: 'ヒント', on: 'オン', off: 'オフ', privacy: '広告のプライバシー設定', policy: 'プライバシーポリシー', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: '言語', settings: '設定', music: '音楽', sfx: '効果音', shake: '画面の揺れ', haptics: '振動', hints: 'ヒント', hintsEarly: '最初の{n}戦は常にオン', on: 'オン', off: 'オフ', privacy: '広告のプライバシー設定', policy: 'プライバシーポリシー', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: '一時停止', resume: '再開', giveUp: 'あきらめる', confirm: 'もう一度タップであきらめる' },
   rotate: 'スマホを縦向きにしてください',
   privacy: {

@@ -23,7 +23,7 @@ export const fr: Table = {
   cellTip: 'Encore {n} {n|one:invocation|other:invocations} pour une case de plus',
   cellOpen: 'Nouvelle case !',
   guide: {
-    gift: 'Un cadeau de bienvenue : un par jour',
+    gift: 'Cadeau de bienvenue : un par jour de jeu, 7 en tout',
     upgrade: 'Dépense des cristaux sur une potion : elle frappe plus fort',
     toBattle1: "Essaie l'étape {n} avec tes potions plus fortes !",
     toBattle: "En route pour l'étape {n} !",
@@ -43,7 +43,7 @@ export const fr: Table = {
     endless: "Le mode infini est ouvert : combien de vagues tiendras-tu ?",
     hard: "Le mode difficile est ouvert : niveaux plus durs, plus d'étoiles",
     castTip: "Glisse le commandant sur la foule pour viser toi-même",
-    flyerTip: "Vent, feu et foudre frappent le plus fort les volants",
+    flyerTip: 'Feu et foudre frappent le plus fort les volants, et le vent dès le niveau 10',
     speedTip: "Déjà gagné ici : touche ×1 pour aller 1,5× plus vite",
   },
   full: {
@@ -55,6 +55,7 @@ export const fr: Table = {
   tutorial: {
     step: 'Tutoriel {n}/{total}',
     skip: 'Passer',
+    skipSure: 'Sûr ? Touche encore',
     summon: 'Touche Invoquer pour préparer une potion',
     merge: 'Deux potions identiques ! Fais glisser l’une sur l’autre pour en faire une plus forte',
     more: 'Pas encore de paire : touche Invoquer pour une autre potion',
@@ -196,7 +197,7 @@ export const fr: Table = {
   allDone: 'Bonus toutes tâches',
   allDoneCount: '{n}/{total} récupérés',
   lang: { name: 'Français' },
-  sound: { language: 'Langue', settings: 'Paramètres', music: 'Musique', sfx: 'Sons', shake: 'Tremblement d’écran', haptics: 'Vibration', hints: 'Astuces', on: 'OUI', off: 'NON', privacy: 'Pubs et vie privée', policy: 'Confidentialité', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Langue', settings: 'Paramètres', music: 'Musique', sfx: 'Sons', shake: 'Tremblement d’écran', haptics: 'Vibration', hints: 'Astuces', hintsEarly: 'Toujours actif pendant les {n} premiers combats', on: 'OUI', off: 'NON', privacy: 'Pubs et vie privée', policy: 'Confidentialité', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pause', resume: 'Reprendre', giveUp: 'Abandonner', confirm: 'Touchez encore pour abandonner' },
   rotate: 'Tenez le téléphone à la verticale',
   privacy: {

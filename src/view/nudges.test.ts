@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { achievementsClaimable, claimTier, TRACK_IDS, trackReady } from '../sim/achievements';
 import { chapterStages } from '../sim/chapters';
+import { GUIDE_CHAPTERS } from '../sim/guide';
 import { claimChest, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
@@ -200,8 +201,17 @@ describe('challenge gate', () => {
 });
 
 describe('first battles', () => {
+  it("goes home first while the guide's chapter for the run has steps left", () => {
+    const m = newMeta();
+    [m.runs, m.cleared] = [2, 2];
+    expect(offersNext(m, 2)).toBe(false);
+    m.guide = [...GUIDE_CHAPTERS[1]];
+    expect(offersNext(m, 2)).toBe(true);
+  });
+
   it('offers the next stage after the first wins, then goes home first', () => {
     const m = newMeta();
+    m.guide = GUIDE_CHAPTERS.flat();
     m.runs = 1;
     m.cleared = 1;
     expect(offersNext(m, 1)).toBe(true);
@@ -219,6 +229,7 @@ describe('first battles', () => {
 
   it('sends the first win home while the upgrade pointer waits', () => {
     const m = newMeta();
+    m.guide = GUIDE_CHAPTERS.flat();
     m.runs = 1;
     m.cleared = 1;
     m.crystals = 10_000;

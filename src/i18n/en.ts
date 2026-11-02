@@ -21,7 +21,7 @@ export const en = {
   cellTip: '{n} more {n|one:summon|other:summons} for a new cell',
   cellOpen: 'New cell!',
   guide: {
-    gift: "A starter gift: there's one every day",
+    gift: 'Welcome gift: one for each day you play, 7 in all',
     upgrade: 'Spend crystals on a potion: it hits harder',
     toBattle1: 'Try stage {n} with your stronger potions!',
     toBattle: 'On to stage {n}!',
@@ -41,7 +41,7 @@ export const en = {
     endless: 'Endless mode is open: how many waves can you hold?',
     hard: 'Hard mode is open: tougher stages, more stars',
     castTip: 'Drag the commander onto the crowd to aim the spell yourself',
-    flyerTip: 'Wind, fire and lightning hit flyers hardest',
+    flyerTip: 'Fire and lightning hit flyers hardest, and wind from stage 10',
     speedTip: 'Won here before: tap ×1 for 1.5× speed',
   },
   full: {
@@ -53,6 +53,7 @@ export const en = {
   tutorial: {
     step: 'Tutorial {n}/{total}',
     skip: 'Skip',
+    skipSure: 'Sure? Tap again',
     summon: 'Tap Summon to brew a potion',
     merge: 'Two matching potions! Drag one onto the other to fuse them into a stronger one',
     more: 'No matching pair yet: tap Summon for one more potion',
@@ -197,7 +198,7 @@ export const en = {
   allDoneCount: '{n}/{total} claimed',
   /** The language's own name, for the picker. */
   lang: { name: 'English' },
-  sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', shake: 'Screen shake', haptics: 'Vibration', hints: 'Hints', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Language', settings: 'Settings', music: 'Music', sfx: 'Sound', shake: 'Screen shake', haptics: 'Vibration', hints: 'Hints', hintsEarly: 'On anyway in the first {n} battles', on: 'ON', off: 'OFF', privacy: 'Ad privacy choices', policy: 'Privacy policy', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Paused', resume: 'Resume', giveUp: 'Give up', confirm: 'Tap again to give up' },
   rotate: 'Turn your phone upright',
   /** The consent panel and the play statistics part of the settings (analytics/privacy.ts). */

@@ -23,7 +23,7 @@ export const de: Table = {
   cellTip: 'Noch {n} {n|one:Beschwörung|other:Beschwörungen} bis zu einem neuen Feld',
   cellOpen: 'Neues Feld!',
   guide: {
-    gift: 'Ein Startgeschenk – jeden Tag gibt es eins',
+    gift: 'Willkommensgeschenk: eins für jeden Spieltag, 7 insgesamt',
     upgrade: 'Werte einen Trank mit Kristallen auf: mehr Schaden',
     toBattle1: 'Probier Level {n} mit deinen stärkeren Tränken!',
     toBattle: 'Weiter zu Level {n}!',
@@ -43,7 +43,7 @@ export const de: Table = {
     endless: 'Der Endlosmodus ist offen: wie viele Wellen hältst du?',
     hard: 'Der schwere Modus ist offen: härtere Level, mehr Sterne',
     castTip: 'Zieh den Kommandanten auf die Menge, um selbst zu zielen',
-    flyerTip: 'Wind, Feuer und Blitz treffen Flieger am stärksten',
+    flyerTip: 'Feuer und Blitz treffen Flieger am stärksten, ab Level 10 auch Wind',
     speedTip: 'Hier schon gewonnen: tippe ×1 für 1,5-fache Geschwindigkeit',
   },
   full: {
@@ -55,6 +55,7 @@ export const de: Table = {
   tutorial: {
     step: 'Einführung {n}/{total}',
     skip: 'Überspringen',
+    skipSure: 'Sicher? Nochmal tippen',
     summon: 'Tippe auf Brauen für einen neuen Trank',
     merge: 'Zwei gleiche Tränke! Zieh einen auf den anderen, dann mischen sie sich zu einem stärkeren',
     more: 'Noch kein gleiches Paar: Tippe noch einmal auf Brauen',
@@ -196,7 +197,7 @@ export const de: Table = {
   allDone: 'Komplettbonus',
   allDoneCount: '{n}/{total} abgeholt',
   lang: { name: 'Deutsch' },
-  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', shake: 'Bildschirmwackeln', haptics: 'Vibration', hints: 'Hinweise', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Sprache', settings: 'Einstellungen', music: 'Musik', sfx: 'Effekte', shake: 'Bildschirmwackeln', haptics: 'Vibration', hints: 'Hinweise', hintsEarly: 'In den ersten {n} Kämpfen immer an', on: 'AN', off: 'AUS', privacy: 'Werbung & Datenschutz', policy: 'Datenschutz', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pause', resume: 'Weiter', giveUp: 'Aufgeben', confirm: 'Nochmal tippen zum Aufgeben' },
   rotate: 'Bitte das Handy hochkant halten',
   privacy: {

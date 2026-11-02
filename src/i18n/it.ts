@@ -23,7 +23,7 @@ export const it: Table = {
   cellTip: 'Ancora {n} {n|one:evocazione|other:evocazioni} per una casella nuova',
   cellOpen: 'Nuova casella!',
   guide: {
-    gift: "Un regalo di benvenuto: ce n'è uno ogni giorno",
+    gift: 'Regalo di benvenuto: uno per ogni giorno di gioco, 7 in tutto',
     upgrade: 'Spendi cristalli su una pozione: colpisce più forte',
     toBattle1: 'Prova il livello {n} con le pozioni più forti!',
     toBattle: 'Avanti al livello {n}!',
@@ -43,7 +43,7 @@ export const it: Table = {
     endless: 'La modalità infinita è aperta: quante ondate reggi?',
     hard: 'La modalità difficile è aperta: livelli più duri, più stelle',
     castTip: 'Trascina il comandante sulla folla per mirare tu stesso',
-    flyerTip: 'Vento, fuoco e fulmine colpiscono di più i volanti',
+    flyerTip: 'Fuoco e fulmine colpiscono di più i volanti, e il vento dal livello 10',
     speedTip: 'Già vinto qui: tocca ×1 per andare a 1,5×',
   },
   full: {
@@ -55,6 +55,7 @@ export const it: Table = {
   tutorial: {
     step: 'Tutorial {n}/{total}',
     skip: 'Salta',
+    skipSure: 'Sicuro? Tocca ancora',
     summon: 'Tocca Evoca per preparare una pozione',
     merge: "Due pozioni uguali! Trascinane una sull'altra per fonderle in una più forte",
     more: 'Ancora nessuna coppia: tocca Evoca per un’altra pozione',
@@ -196,7 +197,7 @@ export const it: Table = {
   allDone: 'Bonus completamento',
   allDoneCount: '{n}/{total} riscossi',
   lang: { name: 'Italiano' },
-  sound: { language: 'Lingua', settings: 'Impostazioni', music: 'Musica', sfx: 'Effetti', shake: 'Scossa schermo', haptics: 'Vibrazione', hints: 'Suggerimenti', on: 'SÌ', off: 'NO', privacy: 'Scelte privacy annunci', policy: 'Informativa privacy', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Lingua', settings: 'Impostazioni', music: 'Musica', sfx: 'Effetti', shake: 'Scossa schermo', haptics: 'Vibrazione', hints: 'Suggerimenti', hintsEarly: 'Sempre attivo nelle prime {n} battaglie', on: 'SÌ', off: 'NO', privacy: 'Scelte privacy annunci', policy: 'Informativa privacy', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Pausa', resume: 'Riprendi', giveUp: 'Arrenditi', confirm: 'Tocca ancora per arrenderti' },
   rotate: 'Tieni il telefono in verticale',
   privacy: {

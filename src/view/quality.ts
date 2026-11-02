@@ -70,9 +70,10 @@ export interface LevelRange {
   max: number;
 }
 
-/** GPU names that mean a software renderer, and known weak phone GPUs. */
+/** GPU names that mean a software renderer, and known weak phone GPUs. Not the Mali-G57: a
+ *  Galaxy A16 (G57 MC2) held 60 fps at 2x through a whole battle (2026-11-02). */
 export const SOFTWARE_GPU = /swiftshader|llvmpipe|software|basic render/i;
-export const WEAK_GPU = /mali-[t4]|mali-g(31|51|52|57)\b|adreno\D*[2-5]\d\d\b|powervr|sgx/i;
+export const WEAK_GPU = /mali-[t4]|mali-g(31|51|52)\b|adreno\D*[2-5]\d\d\b|powervr|sgx/i;
 
 /** WebKit (Safari, the iOS app's web view) reports this for every Apple GPU. It also hides the
  *  memory and gives no more than a few cores, so on an iPhone those say nothing. */

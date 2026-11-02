@@ -23,7 +23,7 @@ export const vi: Table = {
   cellTip: 'Triệu hồi thêm {n} lần để có thêm một ô',
   cellOpen: 'Ô mới!',
   guide: {
-    gift: 'Quà tân thủ: ngày nào cũng có một phần',
+    gift: 'Quà chào mừng: mỗi ngày chơi một phần, tổng cộng 7',
     upgrade: 'Dùng pha lê nâng cấp bình thuốc: đánh mạnh hơn',
     toBattle1: 'Thử màn {n} với bình thuốc mạnh hơn!',
     toBattle: 'Tiến lên màn {n}!',
@@ -43,7 +43,7 @@ export const vi: Table = {
     endless: 'Chế độ vô tận đã mở: bạn trụ được mấy đợt?',
     hard: 'Chế độ khó đã mở: màn khó hơn, thêm sao',
     castTip: 'Kéo chỉ huy vào đám đông để tự nhắm phép',
-    flyerTip: 'Gió, lửa và sét đánh quái bay mạnh nhất',
+    flyerTip: 'Lửa và sét gây sát thương mạnh nhất lên kẻ bay, từ màn 10 có thêm gió',
     speedTip: 'Đã thắng màn này: chạm ×1 để chạy 1,5×',
   },
   full: {
@@ -55,6 +55,7 @@ export const vi: Table = {
   tutorial: {
     step: 'Hướng dẫn {n}/{total}',
     skip: 'Bỏ qua',
+    skipSure: 'Chắc chưa? Chạm lần nữa',
     summon: 'Chạm Triệu hồi để pha một bình thuốc',
     merge: 'Hai bình giống nhau! Kéo bình này vào bình kia để trộn thành một bình mạnh hơn',
     more: 'Chưa có cặp giống nhau: chạm Triệu hồi thêm một bình',
@@ -196,7 +197,7 @@ export const vi: Table = {
   allDone: 'Thưởng xong tất cả',
   allDoneCount: 'Đã nhận {n}/{total}',
   lang: { name: 'Tiếng Việt' },
-  sound: { language: 'Ngôn ngữ', settings: 'Cài đặt', music: 'Nhạc', sfx: 'Âm thanh', shake: 'Rung màn hình', haptics: 'Rung máy', hints: 'Gợi ý', on: 'BẬT', off: 'TẮT', privacy: 'Quyền riêng tư quảng cáo', policy: 'Chính sách bảo mật', policyPage: 'https://p.gamestao.com/privacy' },
+  sound: { language: 'Ngôn ngữ', settings: 'Cài đặt', music: 'Nhạc', sfx: 'Âm thanh', shake: 'Rung màn hình', haptics: 'Rung máy', hints: 'Gợi ý', hintsEarly: 'Luôn bật trong {n} trận đầu', on: 'BẬT', off: 'TẮT', privacy: 'Quyền riêng tư quảng cáo', policy: 'Chính sách bảo mật', policyPage: 'https://p.gamestao.com/privacy' },
   pause: { title: 'Tạm dừng', resume: 'Tiếp tục', giveUp: 'Bỏ cuộc', confirm: 'Chạm lần nữa để bỏ cuộc' },
   rotate: 'Hãy xoay điện thoại dọc',
   privacy: {
