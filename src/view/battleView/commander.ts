@@ -5,7 +5,8 @@
 import type { Graphics } from 'pixi.js';
 import { t as tr } from '../../i18n';
 import type { Battle } from '../../sim/battle';
-import { ticks } from '../../sim/math/fixed';
+import { aimAt } from '../../sim/commander';
+import { FP, ticks } from '../../sim/math/fixed';
 import { BALANCE, type CommanderSkill } from '../../sim/types';
 import { commanderTexture, potionLook, type SpriteLayer } from '../art';
 import { aside, drawUpright, isLand } from '../landView';
@@ -77,6 +78,8 @@ export class CommanderArt {
   nod = -99;
   /** The commander's flasks in the air, as the view throws them. */
   thrown: { x: number; y: number; at: number; flight: number; skill: CommanderSkill }[] = [];
+  /** A spell is being aimed: the player has it in hand, so the hand showing how steps aside. */
+  aiming = false;
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
 
@@ -136,7 +139,15 @@ export class CommanderArt {
     // over its head
     const tap = full && !b.paused;
     this.castTap.visible = tap;
-    this.hints.pointAt(tap ? badgeAt() : null, BADGE.r * k, t);
+    this.hints.pointAt(tap && !this.aiming ? badgeAt() : null, BADGE.r * k, dt, {
+      // where a tap would throw it: on the thickest crowd, pulled down the road out from under the HUD
+      pick: () => {
+        const at = aimAt(b, b.nextCast);
+        return at && { x: at.x / FP, y: at.y / FP };
+      },
+      radius: C[b.nextCast].radius,
+      color: SPELL_COLOR[b.nextCast],
+    });
     if (tap) {
       const words = tr('castTap');
       if (this.castTap.text !== words) this.castTap.text = words;

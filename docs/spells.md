@@ -15,8 +15,10 @@ aiming in `src/view/battleView/castAim.ts`, numbers in `src/sim/balance.json` (`
 - Left full for 15 s it still casts itself at the thickest crowd.
 - The cast command carries an FP point (`{type:'cast', x, y}`); a point off the road is pulled onto
   it. An old command with no point (old replays, the bot) goes to the thickest crowd.
-- Telemetry: a `cast` event with `how` (`drag` / `tap` / `self`) and `hits`. The collector
-  (`scripts/collector.mjs`) needs a redeploy before it keeps these.
+- Telemetry: a `cast` event with `how` (`drag` / `tap` / `self`) and `hits` (collector live since e8299a1).
+- The hint: while full, a hand presses the badge and drags to where a tap would throw (`aimAt`), the
+  spell's ring there; it steps aside while the player aims. In the first battles the HUD's next-move
+  hand (nextMove.ts) waits for the whole full charge, so a player mid-aim is not sent to 召唤.
 
 ## The three spells
 
@@ -74,4 +76,3 @@ chapter 5 40.3%, 45.0%, 39.7%. Anvil and gear keep their edge against the tank (
 ## Not done
 
 The cast daily task is left out on purpose (onboarding-plan.md lines 252–253, item 5 at line 313).
-The tutorial hand hint partly covers the 「拖到敌群施法」 pill.

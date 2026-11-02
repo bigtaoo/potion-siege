@@ -47,12 +47,15 @@ describe('the next move in the first battles', () => {
     expect(m.update(b, true, true, 0.2)).toBe('summon');
   });
 
-  it('leaves the commander its hand for a few seconds once the charge is full', () => {
+  it('leaves the commander its hand for as long as a full charge waits to be cast', () => {
     const { b, m } = fresh(true);
     b.charge = BALANCE.commander.charge;
     b.chargedFor = 0;
     expect(m.update(b, true, true, EARLY.show)).toBeNull();
-    b.chargedFor = EARLY.commander * TICK_RATE;
+    // a player still aiming the spell is not sent off to 召唤 midway
+    b.chargedFor = 14 * TICK_RATE;
+    expect(m.update(b, true, true, 0.1)).toBeNull();
+    b.charge = 0;
     expect(m.update(b, true, true, 0.1)).toBe('summon');
   });
 

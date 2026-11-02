@@ -2,20 +2,19 @@
 // (`early`) it shows whatever can be done as soon as it can, 强化 first (it gives a new skill, the
 // biggest step a battle has, and new players never found it behind the merges), then a pair to
 // fuse, then 召唤; it waits only for the player's last move to settle, and gives way to the
-// commander's own hand for a few seconds once the charge is full. Later it shows only to a player
+// commander's own hand while a full charge waits to be cast (a player still dragging a spell was
+// sent to 召唤 mid-aim; the charge casts itself after 15 s anyway). Later it shows only to a player
 // short of VETERAN_MERGES who has stood still a while, a pair first, then 强化, then 召唤.
 // Measured on 11-02: the first battle had 98 s with something to do and nothing pointing at it.
 import type { Battle } from '../sim/battle';
-import { TICK_RATE } from '../sim/math/fixed';
 import { mergeablePair } from '../sim/tutorial';
 import { BALANCE } from '../sim/types';
 
 export type Move = [number, number] | 'summon' | 'upgrade';
 
-/** Early battles: seconds a move has been there before the hand shows it, seconds after the
- *  player's last move before it shows anything, and seconds the commander's hand has to itself
- *  once the charge is full. */
-export const EARLY = { show: 0.6, rest: 1, commander: 4 };
+/** Early battles: seconds a move has been there before the hand shows it, and seconds after the
+ *  player's last move before it shows anything. */
+export const EARLY = { show: 0.6, rest: 1 };
 
 /** Seconds a player short of VETERAN_MERGES could act and has not before the hand shows the next
  *  move, past the early battles. Players who stopped after the tutorial's guided summons lost
@@ -62,7 +61,7 @@ export class NextMove {
     }
     this.ready = same(move, this.move) ? this.ready + dt : 0;
     this.move = move;
-    const full = b.charge >= BALANCE.commander.charge && b.chargedFor < EARLY.commander * TICK_RATE;
+    const full = b.charge >= BALANCE.commander.charge;
     return on && move !== null && !full && this.ready >= EARLY.show && this.quiet >= EARLY.rest ? move : null;
   }
 }

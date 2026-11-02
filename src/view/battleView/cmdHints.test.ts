@@ -5,14 +5,18 @@ import { Container, Graphics } from 'pixi.js';
 import { afterEach, describe, expect, it } from 'vitest';
 import { t } from '../../i18n';
 import type { Battle } from '../../sim/battle';
+import { FP } from '../../sim/math/fixed';
 import { BALANCE } from '../../sim/types';
 import { SpriteLayer } from '../art';
 import { turnView } from '../landView';
 import { badgeAt, CommanderArt } from './commander';
-import { CommanderHints, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
+import { CommanderHints, DRAG, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
 
-const battle = (charge = 0, left: number | null = 2, paused = false) =>
-  ({ charge, paused, nextCast: 'bomb', chargedFor: 0, summonsToNextCell: () => left }) as unknown as Battle;
+const battle = (charge = 0, left: number | null = 2, paused = false, enemies: object[] = []) =>
+  ({ charge, paused, nextCast: 'bomb', chargedFor: 0, enemies, wallFront: () => 2000 * FP, summonsToNextCell: () => left }) as unknown as Battle;
+
+/** An enemy far enough down the road to be the crowd the hand drags to. */
+const foe = (x: number, y: number) => ({ id: 1, hp: 10, x: x * FP, y: y * FP, radius: 30 * FP, speed: 0, slowTime: 0, freezeTime: 0 });
 
 const draw = (c: CommanderArt, b: Battle, dt = 0.1, over = new Graphics()) => {
   const art = new SpriteLayer();
@@ -93,7 +97,7 @@ describe('a full charge', () => {
     expect(g.getLocalBounds().width).toBeGreaterThan(2 * (34 + 14));
   });
 
-  it('brings a hand pointing up at the badge from below, gone in a pause or when not full', () => {
+  it('with nobody on the road, points up at the badge from below; gone in a pause or when not full', () => {
     const c = new CommanderArt();
     draw(c, battle(BALANCE.commander.charge));
     const hand = c.hints.hand;
@@ -104,6 +108,36 @@ describe('a full charge', () => {
     expect(hand.visible).toBe(false);
     draw(c, battle(0));
     expect(hand.visible).toBe(false);
+  });
+
+  it('drags from the badge onto the crowd and shows the ring there, then starts over', () => {
+    const c = new CommanderArt();
+    const full = battle(BALANCE.commander.charge, 2, false, [foe(500, 900)]);
+    const hand = c.hints.hand;
+    const from = { ...badgeAt() };
+    draw(c, full, 0.01);
+    expect(hand.visible).toBe(true);
+    expect(Math.hypot(hand.x - from.x, hand.y - from.y)).toBeLessThan(5);
+    expect(c.hints.trail.getLocalBounds().width).toBe(0);
+    // resting on the crowd, the bomb's reach drawn round it
+    draw(c, full, DRAG.cycle * (DRAG.slide + 0.05));
+    expect([hand.x, hand.y]).toEqual([500, 900]);
+    const ring = c.hints.trail.getLocalBounds();
+    expect(ring.maxX).toBeCloseTo(500 + BALANCE.commander.bomb.radius + 3, 0);
+    // the next drag starts at the badge again
+    draw(c, full, DRAG.cycle * (1 - DRAG.slide - 0.05) + 0.01);
+    expect(Math.hypot(hand.x - from.x, hand.y - from.y)).toBeLessThan(5);
+  });
+
+  it('steps aside while the player aims the spell', () => {
+    const c = new CommanderArt();
+    c.aiming = true;
+    draw(c, battle(BALANCE.commander.charge, 2, false, [foe(500, 900)]));
+    expect(c.hints.hand.visible).toBe(false);
+    expect(c.castTap.visible).toBe(true);
+    c.aiming = false;
+    draw(c, battle(BALANCE.commander.charge, 2, false, [foe(500, 900)]));
+    expect(c.hints.hand.visible).toBe(true);
   });
 
   it("waits while the board's own hand points at a pair, the glow still there", () => {

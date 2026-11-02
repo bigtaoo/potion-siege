@@ -335,6 +335,7 @@ export class BattleView extends Container {
     const foes = b.enemies.some((e) => e.hp > 0);
     this.heroes.draw(b, g, ho, this.heroArt, this.potions, t, bt, from, hint, foes);
     this.merges.swirls(g, ho, this.heroArt, this.potions, b, this.time);
+    this.cmd.aiming = this.aim.active;
     this.cmd.draw(g, ho, this.heroArt, b, dt, this.time);
     this.heroArt.end();
     this.potions.end();

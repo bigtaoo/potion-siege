@@ -40,7 +40,7 @@ function onRoad(b: Battle, at: { x: number; y: number }): { x: number; y: number
 /** Where a cast with no point goes: on the thickest crowd, where its mark will be once the
  *  flask comes down, and on a mark still coming in at the top a little below it (still well
  *  within reach), so the burst is seen down the road rather than under the HUD. */
-function aimAt(b: Battle, skill: CommanderSkill): { x: number; y: number } | null {
+export function aimAt(b: Battle, skill: CommanderSkill): { x: number; y: number } | null {
   const target = thickest(b);
   if (!target) return null;
   const step = target.freezeTime > 0 ? 0 : target.slowTime > 0 ? times(target.speed, target.slowFactor) : target.speed;

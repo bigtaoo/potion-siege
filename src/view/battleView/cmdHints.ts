@@ -1,7 +1,8 @@
 // The commander's small hints (audit V7): a wall cell by its "x/5" count, so the count says what
 // it builds, with one line spelling it out the first time the count shows in a run of the game;
-// and once the charge is full, the whole ring aglow and a hand pointing at it.
-import { Container, type Graphics } from 'pixi.js';
+// and once the charge is full, the whole ring aglow and a hand showing the cast: pressing the
+// badge and dragging it onto the crowd, the spell's ring where it lets go.
+import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { P } from '../kit/palette';
 import { aside, drawUpright, isLand } from '../landView';
@@ -18,6 +19,19 @@ const LAND_BELOW = 250;
 const LAND_WRAP = 230;
 /** On an upright field the tip wraps to the room left of it, this far in from the screen edge. */
 const EDGE = 12;
+
+/** Seconds of the hand's drag from the badge to the crowd, and the parts of it: pressing the
+ *  badge, sliding over, resting on the crowd with the ring, fading. */
+export const DRAG = { cycle: 2, press: 0.15, slide: 0.65, rest: 0.88 };
+
+type Point = { x: number; y: number };
+
+/** Where the hand drags to, and the ring it shows there: the spell's reach and colour. */
+export interface DragTo {
+  pick: () => Point | null;
+  radius: number;
+  color: number;
+}
 
 /** One hand at a time: while the board's own hand drags along a pair to fuse (the HUD's, set as it
  *  draws), the commander's waits; the glow and the call to tap still ask for the cast. */
@@ -49,6 +63,10 @@ export function drawFullGlow(g: Graphics, x: number, y: number, r: number, time:
 export class CommanderHints extends Container {
   readonly tip = label('', 30, { stroke: { color: P.umber, width: 5 } });
   readonly hand = new Container();
+  /** The drag's line and the ring where it lets go, under the hand. */
+  readonly trail = new Graphics();
+  private dragTime = 0;
+  private to: Point | null = null;
 
   constructor() {
     super();
@@ -56,7 +74,7 @@ export class CommanderHints extends Container {
     this.hand.addChild(pointingHand());
     this.tip.anchor.set(1, 0.5);
     this.tip.visible = this.hand.visible = false;
-    this.addChild(this.tip, this.hand);
+    this.addChild(this.tip, this.trail, this.hand);
   }
 
   /** The tip left of the count at `at` (over it would sit on the wall's numbers; on a turned field,
@@ -80,13 +98,40 @@ export class CommanderHints extends Container {
     this.tip.alpha = Math.min(1, tipLeft / 0.4);
   }
 
-  /** The hand pointing up at a full badge of radius `r` at `at` from below, bobbing; null hides it. */
-  pointAt(at: { x: number; y: number } | null, r: number, time: number): void {
+  /** The hand at a full badge of radius `r` at `at`, `dt` seconds on: pressing it and dragging
+   *  to `to.pick()` (asked once a drag, so it stays on one crowd), the ring there as it rests; with
+   *  nobody on the road, pointing up at the badge from below, bobbing. Null hides it. */
+  pointAt(at: Point | null, r: number, dt: number, to: DragTo | null = null): void {
     this.hand.visible = at !== null && !handOff.board;
-    if (!this.hand.visible || !at) return;
-    const p = aside(at.x, at.y, 14, r + 12 + Math.abs(Math.sin(time * 4)) * 16);
-    this.hand.position.set(p.x, p.y);
+    this.trail.clear();
+    if (!this.hand.visible || !at) {
+      this.dragTime = 0;
+      this.to = null;
+      return;
+    }
+    const was = this.dragTime % DRAG.cycle;
+    this.dragTime += dt;
+    const s = this.dragTime % DRAG.cycle;
+    if (!this.to || s < was) this.to = to?.pick() ?? null;
     this.hand.rotation = -0.35;
-    this.hand.scale.set(0.55);
+    if (!this.to || !to) {
+      const p = aside(at.x, at.y, 14, r + 12 + Math.abs(Math.sin(this.dragTime * 4)) * 16);
+      this.hand.position.set(p.x, p.y);
+      this.hand.scale.set(0.55);
+      this.hand.alpha = 1;
+      return;
+    }
+    const k = s / DRAG.cycle;
+    const go = Math.min(1, Math.max(0, (k - DRAG.press) / (DRAG.slide - DRAG.press)));
+    const e = go * go * (3 - 2 * go);
+    const x = at.x + (this.to.x - at.x) * e;
+    const y = at.y + (this.to.y - at.y) * e;
+    // pressed down on the badge, then dragging: the hand a touch smaller while it holds
+    this.hand.position.set(x, y);
+    this.hand.scale.set(k < DRAG.press ? 0.55 - 0.08 * (k / DRAG.press) : 0.47);
+    this.hand.alpha = k < DRAG.rest ? 1 : 1 - (k - DRAG.rest) / (1 - DRAG.rest);
+    const g = this.trail;
+    if (go > 0) g.moveTo(at.x, at.y).lineTo(x, y).stroke({ width: 8, color: to.color, alpha: 0.45 * this.hand.alpha, cap: 'round' });
+    if (k >= DRAG.slide) g.circle(x, y, to.radius).fill({ color: to.color, alpha: 0.14 * this.hand.alpha }).stroke({ width: 6, color: to.color, alpha: 0.8 * this.hand.alpha });
   }
 }
