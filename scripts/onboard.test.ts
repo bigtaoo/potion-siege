@@ -5,9 +5,9 @@
 // game point at something (the tutorial's lesson, the HUD's hand or pulse, the card nudge, the
 // full charge's glowing badge). The fake player does what is
 // pointed at REACT seconds after it shows. Per battle it prints the seconds with something to do
-// and nothing pointed at, the longest such stretch and how many there were (and how many of them
-// began on the frame after one of the player's own moves: NextMove's EARLY.rest), against the targets
-// (docs/onboarding-plan.md): under 10 s a battle, none longer than 1.5 s. Between battles it follows
+// and nothing pointed at, the longest such stretch and how many there were, against the targets
+// (docs/onboarding-plan.md): under 10 s a battle, none longer than 1.5 s. The REST_AFTER_MOVE after
+// each of the player's moves, when the hands wait on purpose, is counted apart (rested s). Between battles it follows
 // the home guide (onboardHome.ts). Four players: one quick to follow, a slow one (REACT 2 s), one who
 // skips the tutorial at once, and one who sits out battle 2 and loses it. A report only: it fails
 // on nothing.
@@ -19,6 +19,7 @@ import type { Battle } from '../src/sim/battle';
 import { newMeta } from '../src/sim/meta';
 import { mergeablePair } from '../src/sim/tutorial';
 import { pickSkill } from '../src/game/skillOffer';
+import { REST_AFTER_MOVE } from '../src/view/moveRest';
 import { homeVisit, type Visit } from './onboardHome';
 
 const FRAME = 1 / 30;
@@ -95,10 +96,11 @@ interface Row {
   doable: number;
   unhinted: number;
   longest: number;
+  /** Seconds with something to do inside the rest after a move, not counted as unhinted. */
+  rested: number;
   /** When the longest stretch began, battle-clock seconds of real time. */
   longestAt: number;
   stretches: number;
-  afterMove: number;
 }
 
 function battle(w: World, run: number, react: number, idle: boolean, skip: boolean, visit: Visit | null): Row {
@@ -106,9 +108,10 @@ function battle(w: World, run: number, react: number, idle: boolean, skip: boole
   let seconds = 0;
   let can = 0;
   let blank = 0;
+  let rested = 0;
   let stretch = 0;
-  const stretches: { s: number; at: number; afterMove: boolean }[] = [];
-  let start = { at: 0, afterMove: false };
+  const stretches: { s: number; at: number }[] = [];
+  let start = { at: 0 };
   let lastAct = -1;
   let seen: string | null = null;
   let since = 0;
@@ -125,8 +128,11 @@ function battle(w: World, run: number, react: number, idle: boolean, skip: boole
     seen = key;
     const open = doable(g, b);
     if (open) can += FRAME;
-    if (open && move === null) {
-      if (stretch === 0) start = { at: seconds, afterMove: f === lastAct + 1 };
+    // the hands wait out REST_AFTER_MOVE after each of the player's moves on purpose (owner 11-02)
+    const resting = lastAct >= 0 && (f - lastAct) * FRAME < REST_AFTER_MOVE;
+    if (open && move === null && resting) rested += FRAME;
+    if (open && move === null && !resting) {
+      if (stretch === 0) start = { at: seconds };
       blank += FRAME;
       stretch += FRAME;
     } else if (stretch > 0) {
@@ -142,7 +148,7 @@ function battle(w: World, run: number, react: number, idle: boolean, skip: boole
   }
   if (stretch > 0) stretches.push({ s: stretch, ...start });
   const counted = stretches.filter((s) => s.s > FRAME * 1.5);
-  const longest = stretches.reduce((a, s) => (s.s > a.s ? s : a), { s: 0, at: 0, afterMove: false });
+  const longest = stretches.reduce((a, s) => (s.s > a.s ? s : a), { s: 0, at: 0 });
   return {
     run,
     home: visit,
@@ -150,10 +156,10 @@ function battle(w: World, run: number, react: number, idle: boolean, skip: boole
     seconds,
     doable: can,
     unhinted: blank,
+    rested,
     longest: longest.s,
     longestAt: longest.at,
     stretches: counted.length,
-    afterMove: counted.filter((s) => s.afterMove).length,
   };
 }
 
@@ -168,13 +174,13 @@ it('the first three battles of each kind of new player', { timeout: 1_800_000 },
     }
     console.log(`
 ${p.name}: reacts after ${p.react} s${p.skip ? ', skips the tutorial' : ''}${p.idleRun ? `, does nothing in run ${p.idleRun}` : ''}; targets: unhinted < ${TARGET.total} s a battle, longest < ${TARGET.longest} s`);
-    console.log(' run  home taps  steps                     result   battle s  doable s  unhinted s  longest s  (at s)  stretches  after a move  ok');
+    console.log(' run  home taps  steps                     result   battle s  doable s  unhinted s  longest s  (at s)  stretches  rested s  ok');
     for (const r of rows) {
       const ok = p.idleRun === r.run ? 'idle' : r.unhinted < TARGET.total && r.longest < TARGET.longest ? 'yes' : 'NO';
       const h = r.home;
       const taps = h ? `${h.taps}${h.toStart ? '' : ' !start'}${h.lost ? ` lost ${h.lost}` : ''}` : '-';
       const steps = h ? Object.entries(h.steps).map(([k, n]) => `${k} ${n}`).join(', ') || '-' : '-';
-      console.log(`${String(r.run).padStart(4)}  ${taps.padEnd(9)}  ${steps.padEnd(24)}  ${r.result.padEnd(7)}${f(r.seconds)}    ${f(r.doable)}    ${f(r.unhinted)}     ${f(r.longest)}  ${f(r.longestAt)}  ${String(r.stretches).padStart(9)}  ${String(r.afterMove).padStart(12)}  ${ok}`);
+      console.log(`${String(r.run).padStart(4)}  ${taps.padEnd(9)}  ${steps.padEnd(24)}  ${r.result.padEnd(7)}${f(r.seconds)}    ${f(r.doable)}    ${f(r.unhinted)}     ${f(r.longest)}  ${f(r.longestAt)}  ${String(r.stretches).padStart(9)}  ${f(r.rested)}    ${ok}`);
     }
   }
 });
