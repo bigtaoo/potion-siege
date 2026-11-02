@@ -27,10 +27,11 @@ export function beginTutorial(g: Game): void {
   g.hud.nudge = false;
 }
 
-/** The battle's speed before its next tick: below 1 while a tutorial step waits for the player
- *  (see Tutorial.pace), 0 when it stands still. */
+/** The battle's speed before its next tick: 0 while a tutorial step waits for the player (see
+ *  Tutorial.pace), else 1. Not while the next step's hand waits out REST_AFTER_MOVE: with nothing
+ *  pointed at, a standing crowd read as the game hanging (owner 11-02). */
 export function pace(g: Game, b: Battle): number {
-  return g.autoplay || !g.tutorial ? 1 : g.tutorial.pace(b);
+  return g.autoplay || !g.tutorial || rest.resting(b) ? 1 : g.tutorial.pace(b);
 }
 
 /** Done or skipped: never again on this save. */

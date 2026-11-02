@@ -68,9 +68,10 @@ describe('tutorial flow', () => {
   });
 });
 
-/** A new player's first battle, the lessons layer's last lesson kept. */
+/** A new player's first battle at normal speed (the battle runs on through each step's rest),
+ *  the lessons layer's last lesson kept. */
 function first(): { w: World; g: Game; lessons: (Lesson | null)[] } {
-  const w = world(newMeta());
+  const w = world(newMeta(), () => {}, '');
   const g = w.game;
   const lessons: (Lesson | null)[] = [];
   const show = g.lessons.show.bind(g.lessons);
@@ -236,6 +237,29 @@ describe('the lessons over the first battle', () => {
     expect(frames / 60).toBeGreaterThanOrEqual(REST_AFTER_MOVE);
     expect(frames / 60).toBeLessThan(REST_AFTER_MOVE + 0.1);
     expect(g.hud.pulse).toBe(true);
+  });
+
+  it("lets the crowd walk on while the next step's hand waits out REST_AFTER_MOVE, then holds it", () => {
+    const { g, lessons } = first();
+    const b = g.battle!;
+    // the first step holds the crowd half way down
+    while (pace(g, b) > 0) frame(g);
+    const held = b.time;
+    frame(g);
+    expect(b.time).toBe(held);
+    b.summon();
+    pair(b);
+    frame(g);
+    expect(pace(g, b)).toBe(1);
+    // the merge step stops only a cell short of the wall, so stand the crowd there
+    while (g.tutorial!.pace(b) > 0) b.step();
+    const near = b.time;
+    for (let i = 0; i < 30; i++) frame(g);
+    expect(b.time, 'the rest after the summon runs on').toBeGreaterThan(near);
+    until(g, lessons, 'merge');
+    const shown = b.time;
+    frame(g);
+    expect(b.time).toBe(shown);
   });
 
   it('hides while the board itself is hidden', () => {

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { FixedStep } from '../view/fixedStep';
 import { Battle, GIFT_EVERY, WALL_ROW } from './battle';
+import { K } from './field';
 import { FP, TICK_RATE } from './math/fixed';
 import { BASE_SETUP, FIRST_SEED, newMeta } from './meta';
 import { stageSetup } from './stars';
@@ -31,6 +32,9 @@ function run(b: Battle, tut: Tutorial, secs: number): number {
 
 /** How far the nearest enemy stands from the wall, in world units. */
 const gap = (b: Battle) => Math.min(...b.enemies.map((e) => (b.wallFront(e.x) - e.radius - e.y) / FP));
+
+/** How far the nearest enemy's front is short of half way down the field, in world units. */
+const half = (b: Battle) => Math.min(...b.enemies.map((e) => ((K.top + b.wallFront(e.x)) / 2 - e.radius - e.y) / FP));
 
 /** Steps the battle on its own until the crowd is STOP_GAP short of the wall. */
 function toStop(b: Battle): void {
@@ -180,21 +184,29 @@ describe('tutorial', () => {
     expect(tut.pace(b)).toBe(1);
     // no slow motion: it read as the game stuttering (owner 11-02)
     expect(run(b, tut, 3)).toBe(3 * TICK_RATE);
-    // however long the player waits, the crowd stops a cell short and the wall is never touched
-    const wall = b.wall;
+    // the first step holds the crowd half way down the field, however long the player waits
     run(b, tut, 600);
     expect(tut.pace(b)).toBe(0);
-    expect(gap(b)).toBeGreaterThan(STOP_GAP - 10);
-    expect(gap(b)).toBeLessThanOrEqual(STOP_GAP);
+    expect(half(b)).toBeGreaterThan(-10);
+    expect(half(b)).toBeLessThanOrEqual(0);
     const t = b.time;
     expect(run(b, tut, 60)).toBe(0);
     expect(b.time).toBe(t);
-    expect(b.wall).toBe(wall);
-    expect(b.enemies.every((e) => !e.atWall)).toBe(true);
     // and nothing was done for the player
     expect(b.commands).toEqual([]);
     expect(b.summons).toBe(0);
     expect(tut.step).toBe('summon');
+    // the next steps let it walk on, and stop it a cell short: the wall is never touched
+    const wall = b.wall;
+    b.summon();
+    tut.update(b, b.drain());
+    expect(tut.showing(b)).toBe('more');
+    run(b, tut, 600);
+    expect(tut.pace(b)).toBe(0);
+    expect(gap(b)).toBeGreaterThan(STOP_GAP - 10);
+    expect(gap(b)).toBeLessThanOrEqual(STOP_GAP);
+    expect(b.wall).toBe(wall);
+    expect(b.enemies.every((e) => !e.atWall)).toBe(true);
   });
 
   it('pairs the first two summons on FIRST_SEED however long the player waits, and points at the merge at once', () => {
@@ -221,8 +233,7 @@ describe('tutorial', () => {
     b.summon();
     tut.update(b, b.drain());
     expect(tut.step).toBe('merge');
-    toStop(b);
-    expect(tut.pace(b)).toBe(0);
+    expect(tut.pace(b)).toBe(1);
     mergeFirst(b, tut);
     expect(tut.step).toBe('upgrade');
     // 强化 is not affordable yet: 召唤 again while its gold comes in, then 强化, stopped at each

@@ -28,6 +28,12 @@ export class MoveRest {
     return this.since;
   }
 
+  /** Whether the player moved in `b` less than REST_AFTER_MOVE back, a move since the last
+   *  update counting too, without moving the clock on. */
+  resting(b: Battle): boolean {
+    return b === this.battle && (movesOf(b) !== this.moves || this.since < REST_AFTER_MOVE);
+  }
+
   /** Whether the last move is REST_AFTER_MOVE back. */
   rested(b: Battle, dt: number): boolean {
     return this.update(b, dt) >= REST_AFTER_MOVE;

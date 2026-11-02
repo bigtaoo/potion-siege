@@ -1,7 +1,7 @@
 // The first battle's tutorial: summon, merge, then the first 强化 and its skill pick, each shown
 // when its moment comes. Pure rules over the battle. Nothing is ever done for the player: while a
 // step points the battle runs on at full speed, but stands still once the crowd is STOP_GAP short
-// of the wall, until the player does it (the shell runs no ticks then, so the replay only sees the
+// of the wall (the first step, 召唤, already half way down the field), until the player does it (the shell runs no ticks then, so the replay only sees the
 // player's own commands, just later): waiting can never lose the battle. The pick pauses the
 // battle by itself. A slow motion in between read as the game stuttering (owner 11-02). While the
 // merge step has no pair yet it points at 召唤 instead, and so does the 强化 step for
@@ -10,6 +10,7 @@
 // draws the pointer.
 
 import { SLOT_COUNT, type Battle } from './battle';
+import { K } from './field';
 import { FP } from './math/fixed';
 import { BALANCE, type BattleEvent } from './types';
 
@@ -76,15 +77,16 @@ export class Tutorial {
   }
 
   /** How fast the battle runs now: 1, or 0 while a step points and waits for the player once
-   *  the crowd is STOP_GAP short of the wall (the pick pauses the battle by itself). The 强化
+   *  the crowd is STOP_GAP short of the wall (half way down the field for 召唤) (the pick pauses the battle by itself). The 强化
    *  step's pointers at a pair or a paid summon only fill its wait and stop nothing. Checked
    *  before every tick, so a step that comes up mid-frame stops the battle there. */
   pace(b: Battle): number {
     const s = this.showing(b);
     if (s === null || s === 'pick') return 1;
     if (this.step === 'upgrade' && s !== 'upgrade' && !b.giftReady()) return 1;
-    const gap = STOP_GAP * FP;
-    return b.enemies.some((e) => e.y + e.radius + gap >= b.wallFront(e.x)) ? 0 : 1;
+    // the first step stops early: a new player meets the crowd before it is on the wall (owner 11-02)
+    const line = this.step === 'summon' ? (x: number) => (K.top + b.wallFront(x)) / 2 : (x: number) => b.wallFront(x) - STOP_GAP * FP;
+    return b.enemies.some((e) => e.y + e.radius >= line(e.x)) ? 0 : 1;
   }
 
   skip(): void {
