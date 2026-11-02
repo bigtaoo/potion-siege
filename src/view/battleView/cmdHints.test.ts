@@ -10,10 +10,11 @@ import { BALANCE } from '../../sim/types';
 import { SpriteLayer } from '../art';
 import { turnView } from '../landView';
 import { badgeAt, CommanderArt } from './commander';
+import { REST_AFTER_MOVE } from '../moveRest';
 import { CommanderHints, DRAG, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
 
 const battle = (charge = 0, left: number | null = 2, paused = false, enemies: object[] = []) =>
-  ({ charge, paused, nextCast: 'bomb', chargedFor: 0, enemies, wallFront: () => 2000 * FP, summonsToNextCell: () => left }) as unknown as Battle;
+  ({ charge, paused, nextCast: 'bomb', chargedFor: 0, enemies, wallFront: () => 2000 * FP, freeSlots: () => [], summonsToNextCell: () => left }) as unknown as Battle;
 
 /** An enemy far enough down the road to be the crowd the hand drags to. */
 const foe = (x: number, y: number) => ({ id: 1, hp: 10, x: x * FP, y: y * FP, radius: 30 * FP, speed: 0, slowTime: 0, freezeTime: 0 });
@@ -149,6 +150,21 @@ describe('a full charge', () => {
     expect(over.getLocalBounds().width).toBeGreaterThan(0);
     handOff.board = false;
     draw(c, battle(BALANCE.commander.charge));
+    expect(c.hints.hand.visible).toBe(true);
+  });
+
+  it("waits REST_AFTER_MOVE after the player's own move before it shows again", () => {
+    const c = new CommanderArt();
+    const b = battle(BALANCE.commander.charge, 2, false, [foe(500, 900)]) as Battle & { merges: number };
+    b.merges = 0;
+    draw(c, b);
+    expect(c.hints.hand.visible).toBe(true);
+    b.merges = 1;
+    draw(c, b, 0.1);
+    expect(c.hints.hand.visible).toBe(false);
+    draw(c, b, REST_AFTER_MOVE - 0.2);
+    expect(c.hints.hand.visible).toBe(false);
+    draw(c, b, 0.3);
     expect(c.hints.hand.visible).toBe(true);
   });
 });

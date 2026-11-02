@@ -15,6 +15,7 @@ import { drawHero, heroShadow } from '../shapes';
 import { summonCircle } from '../stone';
 import { COLORS, label } from '../ui';
 import { LIGHT, P } from '../kit/palette';
+import { MoveRest } from '../moveRest';
 import { DESIGN_H } from '../viewport';
 import { BAR_H, BAR_Y } from './wall';
 import { CommanderHints, drawCellIcon, drawFullGlow } from './cmdHints';
@@ -80,6 +81,8 @@ export class CommanderArt {
   thrown: { x: number; y: number; at: number; flight: number; skill: CommanderSkill }[] = [];
   /** A spell is being aimed: the player has it in hand, so the hand showing how steps aside. */
   aiming = false;
+  /** The player's last move: the hand waits it out (moveRest.ts). */
+  private readonly rest = new MoveRest();
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
 
@@ -139,7 +142,8 @@ export class CommanderArt {
     // over its head
     const tap = full && !b.paused;
     this.castTap.visible = tap;
-    this.hints.pointAt(tap && !this.aiming ? badgeAt() : null, BADGE.r * k, dt, {
+    const rested = this.rest.rested(b, dt);
+    this.hints.pointAt(tap && !this.aiming && rested ? badgeAt() : null, BADGE.r * k, dt, {
       // where a tap would throw it: on the thickest crowd, pulled down the road out from under the HUD
       pick: () => {
         const at = aimAt(b, b.nextCast);

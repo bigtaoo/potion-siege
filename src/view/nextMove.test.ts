@@ -38,13 +38,22 @@ describe('the next move in the first battles', () => {
     expect(m.update(b, true, true, EARLY.show)).toBe('upgrade');
   });
 
-  it('waits for a second after the player moves before pointing again', () => {
+  it('waits two seconds after the player moves before pointing again', () => {
     const { b, m } = fresh(true, (b) => (b.gold = b.summonCost() * 10));
     m.update(b, true, true, EARLY.show);
     b.summon();
     expect(m.update(b, true, true, 0.1)).toBeNull();
     expect(m.update(b, true, true, EARLY.rest - 0.2)).toBeNull();
     expect(m.update(b, true, true, 0.2)).toBe('summon');
+  });
+
+  it('waits the same after a cast', () => {
+    const { b, m } = fresh(true, (b) => (b.gold = b.summonCost() * 10));
+    expect(m.update(b, true, true, EARLY.show)).toBe('upgrade');
+    b.casts++;
+    expect(m.update(b, true, true, 0.1)).toBeNull();
+    expect(m.update(b, true, true, EARLY.rest - 0.2)).toBeNull();
+    expect(m.update(b, true, true, 0.2)).toBe('upgrade');
   });
 
   it('leaves the commander its hand for as long as a full charge waits to be cast', () => {

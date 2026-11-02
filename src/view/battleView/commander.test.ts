@@ -11,7 +11,7 @@ import { turnView } from '../landView';
 import { badgeAt, commanderMid, CommanderArt, onCommander } from './commander';
 
 const battle = (charge = 0) =>
-  ({ charge, paused: false, nextCast: 'bomb', chargedFor: 0, enemies: [], summonsToNextCell: () => 2 }) as unknown as Battle;
+  ({ charge, paused: false, nextCast: 'bomb', chargedFor: 0, enemies: [], freeSlots: () => [], summonsToNextCell: () => 2 }) as unknown as Battle;
 
 afterEach(() => turnView(new Container(), false));
 

@@ -7,6 +7,7 @@ import { TICK_RATE } from '../sim/math/fixed';
 import { newMeta } from '../sim/meta';
 import { HOLD_AFTER_SECONDS, mergeablePair, SLOW_PACE, Tutorial } from '../sim/tutorial';
 import { BALANCE } from '../sim/types';
+import { REST_AFTER_MOVE } from '../view/moveRest';
 import type { Lesson, Rect } from '../view/Tutorial';
 import { beginTutorial, endTutorial, logStep, pace } from './tutorialFlow';
 import { englishPage, tap, world, type World } from './testWorld';
@@ -217,6 +218,22 @@ describe('the lessons over the first battle', () => {
     expect(w.events('tutorial_step').map((e) => e.step)).toEqual(['summon', 'merge', 'upgrade', 'pick']);
     expect(w.events('tutorial_end')).toEqual([{ step: 'done', skipped: false }]);
     expect(w.save().tutorial).toBe(true);
+  });
+
+  it("shows the next step REST_AFTER_MOVE after the player's move, the pulse too", () => {
+    const { g, lessons } = first();
+    until(g, lessons, 'summon');
+    const b = g.battle!;
+    b.summon();
+    b.slots.fill(null);
+    let frames = 0;
+    for (; last(lessons)?.step !== 'more' && frames < 600; frames++) {
+      frame(g);
+      if (last(lessons)?.step !== 'more') expect(g.hud.pulse).toBe(false);
+    }
+    expect(frames / 60).toBeGreaterThanOrEqual(REST_AFTER_MOVE);
+    expect(frames / 60).toBeLessThan(REST_AFTER_MOVE + 0.1);
+    expect(g.hud.pulse).toBe(true);
   });
 
   it('hides while the board itself is hidden', () => {

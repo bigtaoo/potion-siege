@@ -1,6 +1,6 @@
 // The first battle's tutorial as the game runs it: begun and ended, moved on each frame, the
 // battle slowed while a step waits for the player, its steps logged, and the page rect each step
-// points at.
+// points at, each no sooner than REST_AFTER_MOVE after the player's last move.
 
 import type { Game } from '../app';
 import { slotCenter, type Battle } from '../sim/battle';
@@ -9,10 +9,14 @@ import { BALANCE, type BattleEvent } from '../sim/types';
 import { SKILL_BOX } from '../view/Overlay';
 import type { Lesson, Rect } from '../view/Tutorial';
 import { isLand } from '../view/landView';
+import { MoveRest } from '../view/moveRest';
 import { DESIGN_H, DESIGN_W, type MenuFit } from '../view/viewport';
 import { LAND } from '../view/wideLayout';
 import { battleTips } from './battleTips';
 import { idlePulse } from './idlePulse';
+
+/** The player's last move, which the next step waits out. */
+const rest = new MoveRest();
 
 /** The tutorial starts with the first battle of stage 1 on a save that has not seen it. */
 export function beginTutorial(g: Game): void {
@@ -50,7 +54,8 @@ export function lesson(g: Game, b: Battle | null, events: BattleEvent[], m: Menu
     if (tut.done) endTutorial(g, false);
   }
   battleTips(g, b, events);
-  const step = g.tutorial && b && g.root.visible ? g.tutorial.showing(b) : null;
+  const rested = b !== null && rest.rested(b, dt);
+  const step = g.tutorial && b && rested && g.root.visible ? g.tutorial.showing(b) : null;
   // the pick shows over the skill cards, every other step over the battle itself
   const up = step === 'pick' ? g.overlay.visible : !g.overlay.visible;
   g.hud.pulse = up && (step === 'summon' || step === 'more' || step === 'again');
