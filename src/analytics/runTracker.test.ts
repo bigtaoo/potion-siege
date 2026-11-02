@@ -53,6 +53,21 @@ describe('RunTracker onEvents', () => {
     expect(named(sink, 'run_end')[0]).toMatchObject({ merges: 4, maxStar: 3 });
   });
 
+  it('reports each spell as it lands: which, how it was cast and how many it caught', () => {
+    const { sink, b, tracker } = setup();
+    b.wave = 4;
+    const hit = { x: 0, y: 0, damage: 0, killed: false };
+    tracker.onEvents([
+      { type: 'cast', skill: 'bomb', how: 'drag', x: 0, y: 0, flight: 1 },
+      { type: 'flask', skill: 'bomb', how: 'drag', x: 0, y: 0, radius: 190, hits: [hit, hit] },
+      { type: 'flask', skill: 'frost', how: 'auto', x: 0, y: 0, radius: 240, hits: [] },
+    ]);
+    expect(named(sink, 'cast')).toEqual([
+      { run: 1, wave: 4, skill: 'bomb', how: 'drag', hits: 2 },
+      { run: 1, wave: 4, skill: 'frost', how: 'auto', hits: 0 },
+    ]);
+  });
+
   it('reports skill picks with the offer and the summary keeps them in order', () => {
     const { sink, b, tracker } = setup();
     const [x, y, z] = SKILL_IDS;

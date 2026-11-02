@@ -11,7 +11,7 @@ import { stunStars } from '../effects';
 import { aside, drawUpright, isLand } from '../landView';
 import { INK, type PotionLayer } from '../potion';
 import { COLORS } from '../ui';
-import { BREW_COLOR, commanderMid } from './commander';
+import { commanderMid } from './commander';
 import { STILL, drawCell, type FigureAnim } from './figures';
 import type { MergeAnims } from './merges';
 
@@ -77,8 +77,8 @@ export function arc(x0: number, y0: number, x1: number, y1: number, k: number): 
 
 /** What marks cell `s` (centred on `c`, its hero at level `star`) besides its heroes: a gold
  *  glow when the held hero can merge into it, a gold ring round a top-level hero, its level on a
- *  badge in the corner (over the heroes), the purple of the commander's brew bubbling while it lasts. */
-function cellMarks(g: Graphics, ho: Graphics, b: Battle, s: number, c: { x: number; y: number }, match: boolean, star: number, t: number): void {
+ *  badge in the corner (over the heroes). */
+function cellMarks(g: Graphics, ho: Graphics, c: { x: number; y: number }, match: boolean, star: number, t: number): void {
   const x = c.x - G.cellW / 2 + 8;
   const y = c.y - G.cellH / 2 + 8;
   const w = G.cellW - 16;
@@ -88,13 +88,6 @@ function cellMarks(g: Graphics, ho: Graphics, b: Battle, s: number, c: { x: numb
   if (star >= BALANCE.maxStar) g.roundRect(x, y, w, ht, 12).stroke({ width: 6, color: COLORS.gold });
   if (match) g.roundRect(x, y, w, ht, 20).stroke({ width: 6, color: COLORS.gold });
   if (star) starBadge(ho, c.x, c.y, star);
-  if (!star || b.brewTime <= 0) return;
-  const fade = Math.min(1, b.brewTime / TICK_RATE / 0.5);
-  g.ellipse(c.x, c.y + 38, 58 + 6 * Math.sin(t * 8 + s), 22).fill({ color: BREW_COLOR, alpha: 0.45 * fade });
-  for (let i = 0; i < 3; i++) {
-    const k = (t * 0.9 + i / 3 + s * 0.37) % 1;
-    ho.circle(c.x + Math.sin(s * 3 + i * 2.1) * 40, c.y + 40 - k * 110, 7 * (1 - k) + 3).fill({ color: BREW_COLOR, alpha: (1 - k) * 0.8 * fade });
-  }
 }
 
 export class HeroCells {
@@ -166,7 +159,7 @@ export class HeroCells {
       if (!b.isOpen(s)) continue;
       const c = slotCenter(s);
       const match = from !== null && b.canMerge(from, s);
-      cellMarks(g, ho, b, s, c, match, h ? h.star : 0, now);
+      cellMarks(g, ho, c, match, h ? h.star : 0, now);
       if (!h) {
         this.anims[s] = null;
         continue;

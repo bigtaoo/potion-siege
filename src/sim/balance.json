@@ -24,8 +24,10 @@
     "charge": 50,
     "bossCharge": 20,
     "autoCast": 15,
-    "bomb": { "seconds": 0.6, "min": 40, "radius": 190, "flight": 0.45, "slow": 0.35, "slowTime": 2 },
-    "brew": { "speed": 0.3, "time": 2 },
+    "flight": 0.45,
+    "bomb": { "radius": 190, "seconds": 1.5, "min": 40, "push": 70 },
+    "frost": { "radius": 240, "time": 4, "bossSlow": 0.5 },
+    "acid": { "radius": 160, "time": 5, "share": 0.25, "slow": 0.3 },
     "x": 540,
     "y": 1890
   },

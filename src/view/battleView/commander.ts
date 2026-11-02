@@ -17,6 +17,7 @@ import { LIGHT, P } from '../kit/palette';
 import { DESIGN_H } from '../viewport';
 import { BAR_H, BAR_Y } from './wall';
 import { CommanderHints, drawCellIcon, drawFullGlow } from './cmdHints';
+import { SPELL_COLOR, spellSign } from './spellLook';
 
 const C = BALANCE.commander;
 /** Where the commander stands: feet on this point, below the wall between the two buttons. On a
@@ -51,8 +52,8 @@ export const landNumbersAt = () => byCommander(0, -CMD_HEIGHT - 112);
 const CAST_TIME = 0.5;
 /** How high the thrown flask arcs above its straight path. */
 const FLASK_ARC = 320;
-export const BREW_COLOR = 0xb36bff;
-export const BOMB_COLOR = 0xff8a3d;
+/** The potion each spell's flask is drawn as. */
+const FLASK_LOOK = { bomb: 'fire', frost: 'ice', acid: 'poison' } as const;
 
 /** Whether a tap at (x, y) is on the commander or its charge badge. */
 export function onCommander(x: number, y: number): boolean {
@@ -75,7 +76,7 @@ export class CommanderArt {
   cast: { at: number; skill: CommanderSkill } = { at: -99, skill: 'bomb' };
   nod = -99;
   /** The commander's flasks in the air, as the view throws them. */
-  thrown: { x: number; y: number; at: number; flight: number }[] = [];
+  thrown: { x: number; y: number; at: number; flight: number; skill: CommanderSkill }[] = [];
   /** The small words' growth on a small board (see textBoost). */
   private boost = 1;
 
@@ -107,14 +108,13 @@ export class CommanderArt {
       const glow = byCommander(0, -CMD_HEIGHT * 0.45);
       drawUpright(under, glow.x, glow.y, (ox, oy) => under.ellipse(ox, oy, 95 + p * 14, 125 + p * 14).fill({ color: COLORS.gold, alpha: 0.18 + p * 0.17 }));
     }
-    // the bomb: it leans back, then flings forward; the brew: it rises on its toes; a summon or
-    // a new cell: a quick nod up
+    // a cast: it leans back, then flings the flask forward; a summon or a new cell: a quick nod up
     const c = (t - this.cast.at) / CAST_TIME;
     const n = (t - this.nod) / 0.3;
     let lean = 0;
     let lift = this.pulse * 0.6;
     if (c >= 0 && c < 1) {
-      if (this.cast.skill === 'bomb') lean = c < 0.35 ? (-0.18 * c) / 0.35 : 0.22 * Math.sin(((c - 0.35) / 0.65) * Math.PI);
+      lean = c < 0.35 ? (-0.18 * c) / 0.35 : 0.22 * Math.sin(((c - 0.35) / 0.65) * Math.PI);
       lift = Math.sin(c * Math.PI);
     } else if (n >= 0 && n < 1) lift = Math.max(lift, Math.sin(n * Math.PI) * 0.35);
     const tex = commanderTexture();
@@ -147,7 +147,7 @@ export class CommanderArt {
       const h = 58 * k;
       const at = byCommander(0, TAP.dy);
       this.castTap.position.set(at.x, at.y);
-      const color = b.nextCast === 'bomb' ? BOMB_COLOR : BREW_COLOR;
+      const color = SPELL_COLOR[b.nextCast];
       drawUpright(over, at.x, at.y, (ox, oy) => over.roundRect(ox - w / 2, oy - h / 2, w, h, h / 2).fill({ color, alpha: 0.95 }).stroke({ width: 4, color: P.umber }));
     }
     const next = b.summonsToNextCell();
@@ -161,12 +161,11 @@ export class CommanderArt {
     this.count.text = tr('commanderNext', { n: per - next, total: per });
   }
 
-  /** The charge badge by the commander's flask: a ring filling with kills around the next skill's
+  /** The charge badge by the commander's flask: a ring filling with kills around the next spell's
    *  sign; once full, the call to tap, the ring running down to the self-cast. */
   private drawCharge(g: Graphics, b: Battle, full: boolean, t: number): void {
     const { x, y } = badgeAt();
-    const bomb = b.nextCast === 'bomb';
-    const color = bomb ? BOMB_COLOR : BREW_COLOR;
+    const color = SPELL_COLOR[b.nextCast];
     const r = BADGE.r * this.boost * (full ? 1 + Math.abs(Math.sin(t * 6)) * 0.12 : 1);
     if (full) drawFullGlow(g, x, y, r, t);
     g.circle(x, y, r + 9).fill({ color: P.umber, alpha: 0.9 });
@@ -176,23 +175,12 @@ export class CommanderArt {
       const a0 = -Math.PI / 2;
       g.moveTo(x, y - r - 5).arc(x, y, r + 5, a0, a0 + Math.PI * 2 * Math.min(1, frac)).stroke({ width: 7, color: full ? 0xfff3c0 : color, cap: 'round' });
     }
-    // the sign: a round flask with a fuse for the bomb, a tall one with bubbles for the brew
-    const k = r / 34;
-    const ink = full ? 0xfff8e8 : color;
-    if (bomb) {
-      g.circle(x, y + 5 * k, 13 * k).fill(ink);
-      g.rect(x - 4 * k, y - 15 * k, 8 * k, 10 * k).fill(ink);
-      g.moveTo(x, y - 15 * k).quadraticCurveTo(x + 8 * k, y - 24 * k, x + 13 * k, y - 18 * k).stroke({ width: 3 * k, color: 0xffe08a });
-    } else {
-      g.roundRect(x - 8 * k, y - 14 * k, 16 * k, 30 * k, 6 * k).fill(ink);
-      g.circle(x - 11 * k, y - 18 * k, 4 * k).fill(ink);
-      g.circle(x + 10 * k, y - 22 * k, 3 * k).fill(ink);
-    }
+    // the next spell's sign, so the player knows what is coming and can plan where it goes
+    spellSign(g, b.nextCast, x, y, r / 34, full ? 0xfff8e8 : color);
   }
 
   /** The commander's flasks in the air, arcing from its hand onto their mark, spinning. */
   drawThrown(g: Graphics, t: number, shotArt: SpriteLayer): void {
-    const look = potionLook('fire');
     const hand = byCommander(40, -CMD_HEIGHT);
     for (const f of this.thrown) {
       const k = Math.min(1, (t - f.at) / f.flight);
@@ -200,13 +188,14 @@ export class CommanderArt {
       const { x, y } = aside(hand.x + (f.x - hand.x) * k, hand.y + (f.y - hand.y) * k, 0, -FLASK_ARC * 4 * k * (1 - k));
       for (let i = 3; i >= 1; i--) {
         const trail = aside(x, y, 0, i * 18);
-        g.circle(trail.x, trail.y, 18 - i * 3).fill({ color: BOMB_COLOR, alpha: 0.25 * (4 - i) });
+        g.circle(trail.x, trail.y, 18 - i * 3).fill({ color: SPELL_COLOR[f.skill], alpha: 0.25 * (4 - i) });
       }
+      const look = potionLook(FLASK_LOOK[f.skill]);
       if (look) {
         const s = shotArt.put(look.body, x, y, 76);
         s.anchor.set(0.5);
         s.rotation = t * 12;
-      } else g.circle(x, y, 22).fill(BOMB_COLOR).stroke({ width: 4, color: INK });
+      } else g.circle(x, y, 22).fill(SPELL_COLOR[f.skill]).stroke({ width: 4, color: INK });
     }
   }
 }

@@ -204,8 +204,29 @@ describe('the drags between cells', () => {
     const cast = vi.spyOn(b, 'cast');
     v.emit('pointerdown', at(badge.x, badge.y));
     expect(cast).not.toHaveBeenCalled();
+    v.emit('pointerup', at(badge.x, badge.y));
+    expect(cast).not.toHaveBeenCalled();
     vi.spyOn(b, 'canCast').mockReturnValue(true);
     v.emit('pointerdown', at(badge.x, badge.y));
+    v.emit('pointerup', at(badge.x, badge.y));
     expect(cast).toHaveBeenCalledTimes(1);
+    expect(cast).toHaveBeenCalledWith();
+  });
+
+  it('casts where the badge is dragged onto the road, taking every touch while it aims', () => {
+    const { v, b } = stage();
+    const badge = badgeAt();
+    const cast = vi.spyOn(b, 'cast').mockReturnValue(true);
+    vi.spyOn(b, 'canCast').mockReturnValue(true);
+    vi.spyOn(b, 'paused', 'get').mockReturnValue(false);
+    const road = { x: 500, y: 700 };
+    expect(v.hitArea!.contains(road.x, road.y)).toBe(false);
+    v.emit('pointerdown', at(badge.x, badge.y));
+    expect(v.hitArea!.contains(road.x, road.y)).toBe(true);
+    v.emit('globalpointermove', at(road.x, road.y));
+    v.shakes = () => false;
+    v.update(0.016);
+    v.emit('pointerupoutside', at(road.x, road.y));
+    expect(cast).toHaveBeenCalledWith({ x: road.x * FP, y: road.y * FP });
   });
 });

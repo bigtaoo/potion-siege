@@ -2,7 +2,7 @@
 // stand, and the distances, speeds and timings the battle steps with, in its own units (FP,
 // ticks, permille).
 
-import { perTick, pm, TICK_RATE, toFp } from './math/fixed';
+import { perTick, TICK_RATE, toFp } from './math/fixed';
 import { BRAD_FULL } from './math/trig';
 import { BALANCE, type EnemyKind, type HeroKind } from './types';
 
@@ -39,8 +39,10 @@ export const K = {
   /** How far down the road a crowd has to be for the flask to burst on it in plain view (below
    *  the HUD and the lesson's banner), and how far down it lands at most to show itself. */
   bombFloor: toFp(B.field.top + C.bomb.radius * 0.75),
-  /** The brew's quickening in permille of the potions' own speed. */
-  brew: 1000 + pm(C.brew.speed),
+  /** How far a flask bomb knocks back what it hits. */
+  bombPush: toFp(C.bomb.push),
+  /** Each commander spell's reach. */
+  spellRadius: { bomb: toFp(C.bomb.radius), frost: toFp(C.frost.radius), acid: toFp(C.acid.radius) },
   /** Each hero kind's shot interval at each level. */
   interval: Object.fromEntries(Object.entries(B.heroes).map(([k, h]) => [k, B.starSpeed.map((s) => Math.round((h.interval * TICK_RATE * 1000) / s))])) as Record<HeroKind, number[]>,
   wallDps: Object.fromEntries(Object.entries(B.enemies).map(([k, e]) => [k, perTick(e.wallDps)])) as Record<EnemyKind, number>,

@@ -42,6 +42,11 @@ export class RunTracker {
           // one per wave per run: the "where do runs die" curve
           this.a.track('wave_start', { run: this.run, wave: ev.wave, boss: ev.boss, wall: this.wallPct() });
           break;
+        case 'flask':
+          // each spell as it lands: dragged, tapped or cast by itself, and how many it caught,
+          // so the numbers show whether players aim at all
+          this.a.track('cast', { run: this.run, wave: this.battle.wave, skill: ev.skill, how: ev.how, hits: ev.hits.length });
+          break;
         case 'offer':
           // the boss offer is no first-time choice of the player's, and the collector has no first_boss
           if (ev.reason !== 'boss') this.a.first(`first_${ev.reason}`, { t: this.a.sessionSeconds, wave: this.battle.wave });

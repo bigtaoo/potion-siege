@@ -1,4 +1,4 @@
-// The potions firing: each one's cooldown (stunned, brewed), its target, the sky strike and gust
+// The potions firing: each one's cooldown (stunned), its target, the sky strike and gust
 // counts, the crit roll, and the shots flying on to land.
 
 import type { Battle } from './battle';
@@ -19,7 +19,7 @@ export function stepHeroes(b: Battle): void {
       continue;
     }
     const speed = h.kind === 'wind' ? b.fixed.windSpeed : b.fixed.speed;
-    h.cooldown -= b.brewTime > 0 ? times(speed, K.brew) : speed;
+    h.cooldown -= speed;
     if (h.cooldown > 0) continue;
     pick ??= new TargetPick(b);
     const targets = pick.front;
