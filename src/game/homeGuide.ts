@@ -3,7 +3,8 @@
 // link, and which taps do the step, are on its way, or go round it. Soft: nothing else is locked,
 // and a tap off its path just counts it as gone round (the next one waits for any open panel).
 // A step whose button would do nothing (no crystals for it, nothing to claim) is passed over.
-// After a claim in a panel the next step is elsewhere, so the hand goes to the panel's close.
+// After a claim in a panel the next step is elsewhere, so the hand goes to the panel's close, or to
+// its own claim while that is still there to take (a tap on it then goes round no step).
 
 import type { Container } from 'pixi.js';
 import type { Game } from '../app';
@@ -35,6 +36,13 @@ export interface GuideAim {
 
 /** Panels a step claims in, left open after it: the hand then goes to their close button. */
 const CLAIM_PANELS = new Set<HomePanel>(['welcome', 'login', 'tasks', 'chapters']);
+
+/** The claim of a top-bar panel, when there is one to take: the hand goes there before the close. */
+const PANEL_CLAIMS: Partial<Record<NonNullable<HomePanel>, { label: string; acts: string[]; can: (m: MetaSave, today: string) => boolean }>> = {
+  welcome: { label: 'claim_welcome', acts: ['claimWelcome'], can: (m, today) => welcomeOn(m) && canClaimWelcome(m, today) },
+  login: { label: 'claim_login', acts: ['claimLogin'], can: (m, today) => canClaimLogin(m, today) },
+  tasks: { label: 'claim_task', acts: ['claimTask', 'claimBonus'], can: (m) => tasksClaimable(m) },
+};
 
 /** The first potion a level is affordable for, in the lineup's order. */
 export function guideHero(m: MetaSave): HeroKind | null {
@@ -165,7 +173,11 @@ function aimAt(g: Game, step: GuideStep | GuideLater, chapter: 1 | 2 | 3 | null,
   if (step === 'codex' && target === 'claim_feat') setCodexPage('feats');
   const was = shown.get(g);
   if (target && was?.step !== step) shown.set(g, { step, at: performance.now() });
-  if (!target && panel && CLAIM_PANELS.has(panel)) return { step, chapter, target: 'panel_close', text: null, hint: null, inPanel: false };
+  if (!target && panel && CLAIM_PANELS.has(panel)) {
+    const own = PANEL_CLAIMS[panel];
+    const claim = own?.can(g.save, today) ? own.label : null;
+    return { step, chapter, target: claim ?? 'panel_close', text: null, hint: null, inPanel: !!claim };
+  }
   // the start step's line only by the start button, not over another tab's cards
   const text = step.startsWith('toBattle') && target !== 'start' ? null : guideText(step, g.save.stage);
   return { step, chapter, target, text, hint: rule === upgrade ? guideHero(g.save) : null, inPanel: panel !== null };
@@ -199,6 +211,8 @@ export function guideActs(g: Game, act: HomeActions, aim: GuideAim | null): Home
 export function guideTap(g: Game, aim: GuideAim, name: string, arg: unknown): void {
   if (name === 'panel' && arg === null) return;
   const tap = ALL_RULES[aim.step].tap(name, arg);
+  // the open panel's own claim, pointed at while the step waits elsewhere
+  if (tap === undefined && Object.values(PANEL_CLAIMS).some((c) => c.label === aim.target && c.acts.includes(name))) return;
   if (tap === 'done') guideMarked(g, aim.step, 'done');
   else if (tap === undefined) guideMarked(g, aim.step, 'other');
 }
