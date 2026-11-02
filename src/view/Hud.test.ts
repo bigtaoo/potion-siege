@@ -10,8 +10,10 @@ import { BALANCE, HERO_KINDS, type BattleEvent } from '../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../sim/waves';
 import { COIN_TARGET } from './battleView/killFx';
 import { Hud } from './Hud';
+import { bandSpots, BAND_RIGHT } from './hudLand';
 import type { Button } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
+import { BAND_BUTTON } from './wideLayout';
 
 const wave = (n: number, boss = false): BattleEvent => ({ type: 'wave', wave: n, boss }) as BattleEvent;
 
@@ -297,42 +299,49 @@ describe('the speed and pause buttons', () => {
 });
 
 describe('the layout', () => {
-  it('puts the buttons in the band under a field on its side, and back at the bottom upright', () => {
+  it('puts the buttons side by side on the band under a field on its side, the pause last, and back at the bottom upright', () => {
     const { h, summon, upgrade } = hud();
     h.place(700);
+    const spots = bandSpots(700, 1, 320 * BAND_BUTTON);
     expect([summon.y, upgrade.y]).toEqual([700, 700]);
-    expect(h.buttonRect('summon')).toEqual({ x: DESIGN_W - 190 - 160, y: 700 - 75, w: 320, h: 150 });
+    expect(h.buttonRect('summon')).toEqual({ x: spots.summon - 160, y: 700 - 75, w: 320, h: 150 });
+    expect(upgrade.x + 160 * BAND_BUTTON).toBeLessThan(spots.summon - 160 * BAND_BUTTON);
+    const pause = h['pauseButton'] as Container;
+    const speed = h['speedButton'] as Container;
+    expect([pause.y, speed.y]).toEqual([700, 700]);
+    expect(spots.summon + 160 * BAND_BUTTON).toBeLessThan(speed.x - 44);
+    expect(pause.x + 44).toBeLessThanOrEqual(BAND_RIGHT);
     h.place(null);
     expect(summon.y).toBe(DESIGN_H - 120);
     expect(h.buttonRect('upgrade').x).toBe(190 - 160);
+    expect(pause.position).toMatchObject({ x: DESIGN_W - 62, y: 62 });
   });
 
-  it('narrows a long gold sum in the band so it stops short of the upgrade button, never upright', () => {
+  it('runs the gold, the wave and the stage along the band, short of the upgrade button', () => {
     const { h, b, upgrade } = hud();
-    const gold = h['goldText'] as Text;
+    const [gold, wave, stage] = (['goldText', 'waveText', 'stageText'] as const).map((k) => h[k] as Text);
     h.place(700);
     h.legible(1, true);
     b.gold = 99999;
     h.update(0);
-    expect(gold.scale.x).toBeLessThan(1);
-    expect(gold.x + gold.width).toBeLessThanOrEqual(upgrade.x - 160 * 0.76 - 12 + 0.01);
-    b.gold = 40;
-    h.update(0);
-    expect(gold.scale.x).toBe(1);
-    b.gold = 99999;
+    const right = (t: Text) => t.x + t.width;
+    expect(right(gold)).toBeLessThan(wave.x);
+    expect(right(wave)).toBeLessThan(stage.x);
+    expect(right(stage)).toBeLessThanOrEqual(upgrade.x - 160 * BAND_BUTTON);
+    expect([gold.y, wave.y, stage.y]).toEqual([700, 700, 700]);
     h.place(null);
     h.update(0);
-    expect(gold.scale.x).toBe(1);
+    expect([wave.x, wave.anchor.x, stage.anchor.x]).toEqual([DESIGN_W / 2, 0.5, 1]);
   });
 
-  it('sends the kills\' coins to the counter, wherever it sits', () => {
+  it("sends the kills' coins to the counter, wherever it sits", () => {
     const { h } = hud();
     h.place(null);
     h.legible(1, true);
     expect({ ...COIN_TARGET }).toEqual({ x: 90, y: 60 });
     h.place(700);
     // in the view's turned units on a field on its side
-    expect({ ...COIN_TARGET }).toEqual({ x: 700, y: DESIGN_H + 150 });
+    expect({ ...COIN_TARGET }).toEqual({ x: 700, y: DESIGN_H - (bandSpots(700, 1, 0).coin.x + h.x) });
   });
 
   it('grows the small words for a small board, the top line no more than 1.25 times', () => {

@@ -251,7 +251,7 @@ export function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
     c.addChild(g, b, pct);
     if (i === 0) {
       // the MVP's word on its own full bar, at the start, clear of the end it measures
-      const tag = label(t('mvp'), 26, { fill: P.cream, stroke: { color: P.line, width: 6 } });
+      const tag = label(t('mvp'), 34, { fill: P.cream, stroke: { color: P.line, width: 7 } });
       tag.anchor.set(0, 0.5);
       tag.position.set(bx + 18, y - 1);
       c.addChild(tag);

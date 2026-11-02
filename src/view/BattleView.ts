@@ -39,6 +39,8 @@ const F = BALANCE.field;
 const G = BALANCE.grid;
 /** Seconds without touching the grid before a mergeable pair starts hopping. */
 const HINT_AFTER = 5;
+/** The room between a turned field's wall bar and its numbers beside it. */
+const LAND_NUMBERS_GAP = 18;
 
 export class BattleView extends Container {
   private readonly field = new FieldArt();
@@ -116,6 +118,11 @@ export class BattleView extends Container {
     this.merges.clear();
     this.floaters.hideAll();
     this.kills.clear();
+  }
+
+  /** Lets the field and the floor reach past the board's ends into the screen's spare room. */
+  reach(top: number, bottom: number): void {
+    this.field.reach(top, bottom);
   }
 
   /** Grows the wall's numbers and the commander's count for a small board. */
@@ -314,8 +321,9 @@ export class BattleView extends Container {
       this.wallShown[1] = max;
       this.wallText.text = `${hp} / ${max}`;
     }
-    // on a turned field the bar stands upright on the screen, too thin for the numbers across it
-    const numbers = isLand() ? landNumbersAt() : { x: DESIGN_W / 2, y: barY + BAR_H / 2 };
+    // on a turned field the bar stands upright on the screen, too thin for the numbers across it:
+    // they sit right beside it, level with the commander's head (the view's y runs leftward there)
+    const numbers = isLand() ? { x: landNumbersAt().x, y: barY + BAR_H + LAND_NUMBERS_GAP + this.wallText.width / 2 } : { x: DESIGN_W / 2, y: barY + BAR_H / 2 };
     this.wallText.position.set(numbers.x, numbers.y);
 
     this.fx.update(dt);

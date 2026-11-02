@@ -3,8 +3,10 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../i18n';
+import type { ModifierId } from '../sim/challenge';
 import type { MetaSave } from '../sim/meta';
-import { fit as fitText, ink, lightPanel, lightTile, medal, P, PillButton, plate, tappable, toggle } from './kit';
+import type { HeroKind } from '../sim/types';
+import { fit as fitText, ink, LIGHT, lightPanel, lightTile, medal, modifierIcon, P, PillButton, plate, tappable, toggle } from './kit';
 import { earlyNote, soundSwitches, switchIcon, switchOn, type SoundSwitch } from './soundSwitches';
 import { label } from './ui';
 import type { MenuFit } from './viewport';
@@ -17,15 +19,27 @@ export interface PauseActions {
 }
 
 const ROW = 170;
+/** The line naming what is being played, and each line of the challenge's modifiers under it. */
+const ABOUT = 64;
+const MOD_ROW = 66;
 
-/** Paused: Resume on top, the switches (vibration where the device can), and Give up, red with
+/** What the battle is: its stage (or the challenge or endless mode), and the challenge's modifiers. */
+export interface PauseAbout {
+  title: string;
+  mods: readonly ModifierId[];
+  trial: HeroKind | null;
+}
+
+/** Paused: what is being played, Resume, the switches (vibration where the device can), and Give up, red with
  *  "tap again" while it waits for the second tap; none in a new player's first battle. */
-export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate: boolean, canGiveUp: boolean, confirming: boolean): Container {
+export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate: boolean, canGiveUp: boolean, confirming: boolean, about: PauseAbout | null = null): Container {
   const p = new Container();
   const shade = new Graphics().rect(0, 0, fit.w, fit.h).fill({ color: 0x1a120a, alpha: 0.6 });
   shade.eventMode = 'static'; // the battle under it takes no taps
   const switches = soundSwitches(vibrate);
-  const h = 330 + switches.length * ROW + (canGiveUp ? 150 : 0);
+  const [info, infoH] = about ? aboutRows(about) : [null, 0];
+  const extra = info ? infoH + 20 : 0;
+  const h = 330 + extra + switches.length * ROW + (canGiveUp ? 150 : 0);
   const box = new Container();
   box.position.set(fit.w / 2, fit.h / 2);
   box.scale.set(Math.min(1, (fit.h - 80) / (h + 60), (fit.w - 40) / 960));
@@ -34,7 +48,11 @@ export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate
   const head = plate(t('pause.title'), 54, 420, 'brass', 760);
   head.y = -h / 2 + 6;
   box.addChild(bg, head);
-  const top = -h / 2 + 100;
+  if (info) {
+    info.y = -h / 2 + 100;
+    box.addChild(info);
+  }
+  const top = -h / 2 + 100 + extra;
   const resume = new PillButton(t('pause.resume'), 600, 130, 'green', act.resume, 60);
   resume.label = 'resume';
   resume.y = top + 65;
@@ -45,14 +63,15 @@ export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate
     r.label = `switch-${which}`;
     r.y = top + 160 + ROW / 2 + i * ROW;
     const icon = new Container();
-    icon.position.set(-330, 0);
+    icon.position.set(-345, 0);
     icon.addChild(medal(52, on ? P.greenOn : P.wood), switchIcon(which, on));
     const name = ink(t(`sound.${which}`), 46);
     name.anchor.set(0, 0.5);
-    name.position.set(-250, -4);
-    fitText(name, 310);
+    // the long names (Bildschirmwackeln) keep their size: the switch sits at the tile's end
+    name.position.set(-268, -4);
+    fitText(name, 440);
     const sw = toggle(on);
-    sw.position.set(255, -4);
+    sw.position.set(300, -4);
     r.addChild(lightTile(860, ROW - 20), icon, name, sw);
     const note = earlyNote(m, which, name, sw, 440);
     if (note) r.addChild(note);
@@ -66,6 +85,48 @@ export function pausePanel(m: MetaSave, act: PauseActions, fit: MenuFit, vibrate
   }
   p.addChild(shade, box);
   return p;
+}
+
+/** The battle's title line, and the challenge's modifiers in chips under it, from y 0 down; and
+ *  how tall they are. */
+function aboutRows(a: PauseAbout): [Container, number] {
+  const c = new Container();
+  const title = ink(a.title, 44, { fill: P.umber });
+  fitText(title, 820);
+  title.y = ABOUT / 2;
+  c.addChild(title);
+  const chips = a.mods.map((id) => {
+    const chip = new Container();
+    const name = fitText(ink(t(`challenge.mod.${id}.name`), 32, { fontWeight: '900' }), 340);
+    name.anchor.set(0, 0.5);
+    const w = name.width + 90;
+    const icon = modifierIcon(id, a.trial);
+    icon.scale.set(0.36);
+    icon.x = -w / 2 + 34;
+    name.x = -w / 2 + 66;
+    chip.addChild(new Graphics().roundRect(-w / 2, -26, w, 52, 26).fill(LIGHT.tile).stroke({ width: 3, color: LIGHT.edge }), icon, name);
+    return chip;
+  });
+  // the chips centred, as many to a line as fit in the panel
+  let line: Container[] = [];
+  let y = ABOUT + MOD_ROW / 2;
+  const flush = () => {
+    const w = line.reduce((s, ch) => s + ch.width + 16, -16);
+    let x = -w / 2;
+    for (const ch of line) {
+      ch.position.set(x + ch.width / 2, y);
+      x += ch.width + 16;
+    }
+    line = [];
+    y += MOD_ROW;
+  };
+  for (const chip of chips) {
+    if (line.length > 0 && line.reduce((s, ch) => s + ch.width + 16, chip.width) > 840) flush();
+    line.push(chip);
+  }
+  if (line.length > 0) flush();
+  if (chips.length > 0) c.addChild(...chips);
+  return [c, y - MOD_ROW / 2];
 }
 
 /** The whole screen dark with a phone turning upright and the words under it; takes every tap. */

@@ -5,7 +5,8 @@
 import { Container } from 'pixi.js';
 import type { Game } from '../app';
 import { isPhone, wantsUpright } from '../view/media';
-import { pausePanel, uprightCover } from '../view/pausePanel';
+import { t } from '../i18n';
+import { pausePanel, uprightCover, type PauseAbout } from '../view/pausePanel';
 import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu, type MenuFit } from '../view/viewport';
 import { home } from './homeScreen';
@@ -116,7 +117,16 @@ function draw(g: Game): void {
     },
     giveUp: () => giveUp(g),
   };
-  p.panel.addChild(pausePanel(g.save, actions, m, !!g.platform.vibrate, canGiveUp, p.confirm > 0));
+  p.panel.addChild(pausePanel(g.save, actions, m, !!g.platform.vibrate, canGiveUp, p.confirm > 0, pauseAbout(g)));
+}
+
+/** What the battle under the panel is: its stage, endless mode or today's challenge with its modifiers. */
+function pauseAbout(g: Game): PauseAbout | null {
+  const b = g.battle;
+  if (!b) return null;
+  const ch = g.challenge?.ch;
+  if (ch) return { title: t('challenge.banner', { n: ch.stage }), mods: ch.mods, trial: ch.trial };
+  return { title: b.setup.endless ? t('endless.title') : t('stage', { n: b.setup.stage }), mods: [], trial: null };
 }
 
 function clear(c: Container): void {

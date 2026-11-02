@@ -28,6 +28,7 @@ import type { EndExtras } from './overlay/endTypes';
 import { CardNudge, topTag } from './overlay/cardNudge';
 import { starNotes } from './overlay/endStars';
 import { skillCard } from './overlay/skillCard';
+import { cardLook } from './overlay/cardFit';
 
 /** The skill pick's box, centred on the page (shrunk to fit), which the tutorial keeps clear of. */
 export const SKILL_BOX = { w: 1060, h: 1080 };
@@ -103,8 +104,10 @@ export class Overlay extends Container {
     head.y = -450;
     box.addChild(head);
     const gap = 340;
+    // one size for every name and one for every description across the row
+    const look = cardLook(choices);
     choices.forEach((id, i) => {
-      const card = skillCard(id, levels[id]);
+      const card = skillCard(id, levels[id], look);
       card.x = (i - (choices.length - 1) / 2) * gap;
       tappable(card, () => onPick(id));
       if (i === top) {
@@ -166,8 +169,10 @@ export class Overlay extends Container {
     const heights = cols.map((col) => col.reduce((a, c) => a + c.h, 0));
     const H = Math.max(...heights) + 80;
     const BW = W * cols.length;
-    const box = this.box(BW + 60, H + 220);
-    box.y += 40; // room for the crest over the board
+    // room for the crest over the board: its top star stands about 130 over the board's top edge,
+    // so a tall board (a challenge's track and ribbons) no longer pushes it off the screen
+    const box = this.box(BW + 60, H + 280);
+    box.y += 10;
     box.addChild(lightPanel(BW, H));
     if (wide) box.addChild(new Graphics().rect(-3, -H / 2 + 40, 6, H - 80).fill(LIGHT.seam));
     cols.forEach((col, i) => {

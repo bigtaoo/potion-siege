@@ -10,8 +10,9 @@ export type WideMode = 'off' | 'land';
 
 /** The turned board: the field on its side (DESIGN_H wide, DESIGN_W high) and the band under it. */
 export const LAND = { w: DESIGN_H, field: DESIGN_W, band: 150 } as const;
-/** The buttons' size in the band, which is lower than they are (audit V6: 220 took a sixth of the screen). */
-export const BAND_BUTTON = 0.76;
+/** The buttons' size in the band, which is lower than they are (audit V6: 220 took a sixth of the
+ *  screen); side by side on the right (hudLand.ts) they have room for this much. */
+export const BAND_BUTTON = 0.88;
 
 /** A screen wider than this (width over height) counts as wide, as for the menus. */
 const WIDE = 1.1;

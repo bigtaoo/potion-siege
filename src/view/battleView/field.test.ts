@@ -46,10 +46,22 @@ describe('the ground under a battle', () => {
 
     it('lays the field art under the ground, with the next one waiting hidden', () => {
       const { f, view, art, next } = field();
-      expect(view.children.length).toBe(3);
+      // the floor past the board's end sits right over the ground
+      expect(view.children.length).toBe(4);
       expect(view.children[2]).toBe(f.ground);
       expect(art.texture).toBe(fieldTexture());
       expect(next.visible).toBe(false);
+    });
+
+    it("reaches past the board's ends where the screen shows more", () => {
+      const { f, view, art } = field();
+      const h = art.height;
+      f.reach(120, 200);
+      expect([art.y, art.height]).toEqual([-120, h + 120]);
+      expect(view.children[3].getBounds().height).toBeGreaterThan(190);
+      f.reach(0, 0);
+      expect([art.y, art.height]).toEqual([0, h]);
+      expect(view.children[3].getBounds().height).toBe(0);
     });
 
     it('swaps in a chapter\'s field at once, or fades it in over the one there', () => {
