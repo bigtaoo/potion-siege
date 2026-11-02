@@ -1,11 +1,13 @@
 // The home guide (homeGuide.ts) on a real home screen: each chapter's hand and line, a tap that
 // does the step, one that goes round it, the skip link, and steps with nothing to do passed over.
 import '../view/layout/measure';
-import { Container } from 'pixi.js';
+import { Container, Text } from 'pixi.js';
 import { beforeAll, describe, expect, it } from 'vitest';
 import { t } from '../i18n';
 import { gameDay } from '../sim/daily';
 import { newMeta, type MetaSave } from '../sim/meta';
+import { boxIn, overlap } from '../view/home/hintPlace';
+import { liveWorld } from './flowHelpers';
 import { home } from './homeScreen';
 import { englishPage, tap, texts, world, type World } from './testWorld';
 
@@ -90,5 +92,35 @@ describe('the home guide', () => {
     expect(mark(fresh(4))).toBeNull();
     const w = fresh(2, (m) => (m.guide = ['login', 'tasks', 'workshop', 'toBattle2']));
     expect(mark(w)).toBeNull();
+  });
+
+  it("keeps the codex line off the other claims on a wide page, its lines set left", () => {
+    const m = newMeta();
+    Object.assign(m, { runs: 3, tutorial: true, cleared: 3, stage: 4, crystals: 0 });
+    m.daily.lastClaim = gameDay(m, new Date());
+    m.welcome.gifts = 99;
+    m.achievements.stats.merges = 100;
+    for (const size of [{ width: 1920, height: 1080 }, { width: 1080, height: 1920 }]) {
+      const w = liveWorld(m, '', size);
+      w.frame();
+      w.game['tab'] = 'codex';
+      home(w.game);
+      const root = page(w);
+      const card = root.getChildByLabel('guideCard', true)!;
+      expect(line(w)).toBe(t('guide.codex'));
+      const body = card.children.find((c): c is Text => c instanceof Text && c.text.includes('\n'));
+      expect(body?.style.align).toBe('left');
+      const box = boxIn(root, card);
+      const covered: string[] = [];
+      const walk = (c: Container) => {
+        if (!c.visible || c.label === 'guideMark') return;
+        const b = boxIn(root, c);
+        // the page's own scroll area takes taps too, and lies under any line
+        if (c.eventMode === 'static' && b.w * b.h < 120_000 && overlap(box, b) > 0) covered.push(c.label);
+        c.children.forEach((k) => walk(k as Container));
+      };
+      walk(root);
+      expect(covered, `${size.width}x${size.height}`).toEqual([]);
+    }
   });
 });

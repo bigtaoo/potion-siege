@@ -31,7 +31,7 @@ describe('the guide line', () => {
     expect(cheapest(['a', 'b'], () => 0)).toBe('a');
   });
 
-  it('counts the kept-clear buttons over the rest, and the hands over both', () => {
+  it('counts the kept-clear buttons over the rest, a touched button twice whole, and the hands over all', () => {
     const root = new Container();
     const target = button(root, 'go', box(0, 0, 50, 50));
     button(root, 'other', box(100, 0, 100, 100));
@@ -39,8 +39,11 @@ describe('the guide line', () => {
     const obs = obstacles(root, target, FIT);
     expect(obs.map((o) => o.weight)).toEqual([1, 10]);
     const b = box(100, 0, 300, 100);
-    expect(cost(b, obs, [])).toBe(10000 + 100000);
-    expect(cost(b, obs, [box(100, 0, 10, 10)])).toBe(110000 + 100000);
+    expect(cost(b, obs, [])).toBe(20000 + 200000);
+    expect(cost(b, obs, [box(100, 0, 10, 10)])).toBe(220000 + 100000);
+    // a corner of a button counts all of it; a big card only what is covered
+    expect(cost(box(190, 90, 20, 20), obs, [])).toBe(20000);
+    expect(cost(box(0, 0, 100, 100), [{ box: box(0, 0, 400, 400), weight: 1 }], [])).toBe(10000);
   });
 
   it("leaves out what a panel's shade covers, and the button that holds the target", () => {

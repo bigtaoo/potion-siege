@@ -16,7 +16,7 @@ import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
 import { COLORS, label } from './ui';
 import { P } from './kit/palette';
 import { DESIGN_W } from './viewport';
-import { CommanderArt, badgeAt, commanderMid, landNumbersAt, onCommander } from './battleView/commander';
+import { CommanderArt, badgeAt, commanderMid, onCommander } from './battleView/commander';
 import { CastAim } from './battleView/castAim';
 import { SPELL_COLOR, SPELL_WORD } from './battleView/spellLook';
 import { EnemyLayer } from './battleView/enemies';
@@ -322,8 +322,11 @@ export class BattleView extends Container {
       this.wallText.text = `${hp} / ${max}`;
     }
     // on a turned field the bar stands upright on the screen, too thin for the numbers across it:
-    // they sit right beside it, level with the commander's head (the view's y runs leftward there)
-    const numbers = isLand() ? { x: landNumbersAt().x, y: barY + BAR_H + LAND_NUMBERS_GAP + this.wallText.width / 2 } : { x: DESIGN_W / 2, y: barY + BAR_H / 2 };
+    // they read up along its top end, just beside it (the view's y runs leftward there), well clear
+    // of the commander, so they read as the bar's and not its count (keepUpright keeps this turn)
+    const land = isLand();
+    this.wallText.rotation = land ? -Math.PI / 2 : 0;
+    const numbers = land ? { x: F.left + LAND_NUMBERS_GAP + this.wallText.width / 2, y: barY + BAR_H + LAND_NUMBERS_GAP + this.wallText.height / 2 } : { x: DESIGN_W / 2, y: barY + BAR_H / 2 };
     this.wallText.position.set(numbers.x, numbers.y);
 
     this.fx.update(dt);

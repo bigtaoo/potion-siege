@@ -48,8 +48,6 @@ export function byCommander(dx: number, dy: number): { x: number; y: number } {
 export const commanderMid = () => byCommander(0, -CMD_HEIGHT / 2);
 /** The middle of its charge badge. */
 export const badgeAt = () => byCommander(isLand() ? BADGE.landDx : BADGE.dx, BADGE.dy);
-/** Where the wall's numbers go on a turned field: over the commander's head and its count. */
-export const landNumbersAt = () => byCommander(0, -CMD_HEIGHT - 112);
 /** Seconds the commander's raise-and-throw takes. */
 const CAST_TIME = 0.5;
 /** How high the thrown flask arcs above its straight path. */

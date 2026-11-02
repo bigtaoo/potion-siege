@@ -7,20 +7,24 @@
 // pointed at REACT seconds after it shows. Per battle it prints the seconds with something to do
 // and nothing pointed at, the longest such stretch and how many there were (and how many of them
 // began on the frame after one of the player's own moves: NextMove's EARLY.rest), against the targets
-// (docs/onboarding-plan.md): under 10 s a battle, none longer than 1.5 s. A report only: it fails
+// (docs/onboarding-plan.md): under 10 s a battle, none longer than 1.5 s. Between battles it follows
+// the home guide (onboardHome.ts). Four players: one quick to follow, a slow one (REACT 2 s), one who
+// skips the tutorial at once, and one who sits out battle 2 and loses it. A report only: it fails
 // on nothing.
 import '../src/view/layout/measure';
 import { beforeAll, it, vi } from 'vitest';
 import type { Game } from '../src/app';
-import { englishPage, play, world, type World } from '../src/game/testWorld';
+import { englishPage, world, type World } from '../src/game/testWorld';
 import type { Battle } from '../src/sim/battle';
-import { newMeta, type MetaSave } from '../src/sim/meta';
+import { newMeta } from '../src/sim/meta';
 import { mergeablePair } from '../src/sim/tutorial';
 import { pickSkill } from '../src/game/skillOffer';
+import { homeVisit, type Visit } from './onboardHome';
 
 const FRAME = 1 / 30;
-/** Seconds from a pointer showing to the fake player doing it. */
+/** Seconds from a pointer showing to the quick player doing it; the slow one takes SLOW. */
 const REACT = 0.5;
+const SLOW = 2;
 const TARGET = { total: 10, longest: 1.5 };
 
 type Move = 'summon' | 'upgrade' | 'pick' | 'cast' | [number, number];
@@ -67,8 +71,25 @@ function act(g: Game, b: Battle, m: Move): void {
   else b.move(m[0], m[1]);
 }
 
+/** A fake player: how fast it follows, whether it skips the tutorial, and the run it sits out. */
+interface Player {
+  name: string;
+  react: number;
+  skip?: boolean;
+  idleRun?: number;
+}
+
+const PLAYERS: Player[] = [
+  { name: 'quick', react: REACT },
+  { name: 'slow', react: SLOW },
+  { name: 'skips tutorial', react: REACT, skip: true },
+  { name: 'loses run 2', react: REACT, idleRun: 2 },
+];
+
 interface Row {
   run: number;
+  /** The home screen before this battle (none before the first). */
+  home: Visit | null;
   result: string;
   seconds: number;
   doable: number;
@@ -80,7 +101,7 @@ interface Row {
   afterMove: number;
 }
 
-function battle(w: World, run: number): Row {
+function battle(w: World, run: number, react: number, idle: boolean, skip: boolean, visit: Visit | null): Row {
   const g = w.game;
   let seconds = 0;
   let can = 0;
@@ -93,6 +114,8 @@ function battle(w: World, run: number): Row {
   let since = 0;
   for (let f = 0; f < 30 * 60 * 15 && !g['ended']; f++) {
     g['tick'](FRAME);
+    // the tutorial card's skip, tapped twice on the first frame
+    if (skip && f === 0) (g.lessons as unknown as { onSkip: () => void }).onSkip();
     const b = g['battle'];
     if (!b || g['ended']) break;
     seconds += FRAME;
@@ -110,7 +133,7 @@ function battle(w: World, run: number): Row {
       stretches.push({ s: stretch, ...start });
       stretch = 0;
     }
-    if (move !== null && since >= REACT) {
+    if (!idle && move !== null && since >= react) {
       act(g, b, move);
       lastAct = f;
       since = 0;
@@ -122,6 +145,7 @@ function battle(w: World, run: number): Row {
   const longest = stretches.reduce((a, s) => (s.s > a.s ? s : a), { s: 0, at: 0, afterMove: false });
   return {
     run,
+    home: visit,
     result: String(g['battle']?.result ?? (g['ended'] ? 'ended' : 'timeout')),
     seconds,
     doable: can,
@@ -133,20 +157,24 @@ function battle(w: World, run: number): Row {
   };
 }
 
-it('the first three battles of a hint-following new player', { timeout: 600_000 }, () => {
-  const rows: Row[] = [];
-  let save: MetaSave = newMeta();
-  for (let run = 1; run <= 3; run++) {
-    const w = world(save, () => {}, '');
-    if (run > 1) play(w);
-    rows.push(battle(w, run));
-    save = w.save();
-  }
+it('the first three battles of each kind of new player', { timeout: 1_800_000 }, () => {
   const f = (s: number) => s.toFixed(1).padStart(6);
-  console.log(`\nfake player reacts after ${REACT} s; targets: unhinted < ${TARGET.total} s a battle, longest < ${TARGET.longest} s`);
-  console.log(' run  result   battle s  doable s  unhinted s  longest s  (at s)  stretches  after a move  ok');
-  for (const r of rows) {
-    const ok = r.unhinted < TARGET.total && r.longest < TARGET.longest ? 'yes' : 'NO';
-    console.log(`${String(r.run).padStart(4)}  ${r.result.padEnd(7)}${f(r.seconds)}    ${f(r.doable)}    ${f(r.unhinted)}     ${f(r.longest)}  ${f(r.longestAt)}  ${String(r.stretches).padStart(9)}  ${String(r.afterMove).padStart(12)}  ${ok}`);
+  for (const p of PLAYERS) {
+    const rows: Row[] = [];
+    const w = world(newMeta(), () => {}, '');
+    for (let run = 1; run <= 3; run++) {
+      const visit = run > 1 ? homeVisit(w) : null;
+      rows.push(battle(w, run, p.react, p.idleRun === run, !!p.skip && run === 1, visit));
+    }
+    console.log(`
+${p.name}: reacts after ${p.react} s${p.skip ? ', skips the tutorial' : ''}${p.idleRun ? `, does nothing in run ${p.idleRun}` : ''}; targets: unhinted < ${TARGET.total} s a battle, longest < ${TARGET.longest} s`);
+    console.log(' run  home taps  steps                     result   battle s  doable s  unhinted s  longest s  (at s)  stretches  after a move  ok');
+    for (const r of rows) {
+      const ok = p.idleRun === r.run ? 'idle' : r.unhinted < TARGET.total && r.longest < TARGET.longest ? 'yes' : 'NO';
+      const h = r.home;
+      const taps = h ? `${h.taps}${h.toStart ? '' : ' !start'}${h.lost ? ` lost ${h.lost}` : ''}` : '-';
+      const steps = h ? Object.entries(h.steps).map(([k, n]) => `${k} ${n}`).join(', ') || '-' : '-';
+      console.log(`${String(r.run).padStart(4)}  ${taps.padEnd(9)}  ${steps.padEnd(24)}  ${r.result.padEnd(7)}${f(r.seconds)}    ${f(r.doable)}    ${f(r.unhinted)}     ${f(r.longest)}  ${f(r.longestAt)}  ${String(r.stretches).padStart(9)}  ${String(r.afterMove).padStart(12)}  ${ok}`);
+    }
   }
 });

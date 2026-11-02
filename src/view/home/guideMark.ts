@@ -90,30 +90,45 @@ function handPick(r: Box, fit: MenuFit, inPanel: boolean, obs: Obstacle[]): Side
   });
 }
 
+/** The line on its card: wide with the skip link beside it, or, where every wide spot covers some
+ *  button (the wide codex's two rows of claims), narrow with the link under it, whichever covers
+ *  least. */
 function card(r: Box, side: Side, text: string, fit: MenuFit, onSkip: (() => void) | null, obs: Obstacle[], hands: Box[]): Container {
-  const cw = Math.min(fit.wide ? 760 : 820, fit.w - 80);
-  const body: Text = balanced(text, 44, cw - (onSkip ? 300 : 80), { fill: LIGHT.edge, lineHeight: 58 });
-  const ch = Math.max(130, body.height + 60);
+  const wide = Math.min(fit.wide ? 760 : 820, fit.w - 80);
+  const ways = [lay(wide, false), ...(wide > NARROW ? [lay(NARROW, true)] : [])].map((l) => ({ ...l, at: placeCard(r, cardAt(r, side, l.cw, l.ch, fit), l.cw, l.ch, fit, obs, hands) }));
+  const { cw, ch, body, stacked, at } = cheapest(ways, (w) => w.at.cost);
+  for (const w of ways) if (w.body !== body) w.body.destroy();
   const c = new Container();
   c.label = 'guideCard';
   c.eventMode = 'passive';
-  const at = placeCard(r, cardAt(r, side, cw, ch, fit), cw, ch, fit, obs, hands);
   c.position.set(at.x, at.y);
   const panel = lightPanel(cw, ch);
   panel.eventMode = 'none';
   body.anchor.set(0, 0.5);
-  body.position.set(-cw / 2 + 40, 0);
+  body.position.set(-cw / 2 + 40, stacked && onSkip ? -SKIP_ROW / 2 : 0);
   c.addChild(panel, body);
   if (onSkip) {
     const skip = new Container();
     const word = fitText(ink(`${t('guide.skip')} ›`, 32, { fill: P.inkSoft }), 170);
     skip.addChild(lightTile(190, 64), word);
     skip.label = 'guideSkip';
-    skip.position.set(cw / 2 - 30 - 95, 0);
+    if (stacked) skip.position.set(cw / 2 - 30 - 95, ch / 2 - 30 - 32);
+    else skip.position.set(cw / 2 - 30 - 95, 0);
     c.addChild(tappable(skip, onSkip));
   }
   return c;
+
+  function lay(cw: number, stacked: boolean) {
+    // left aligned like where it stands: label() centres lines, which set a short second line in
+    const body: Text = balanced(text, 44, cw - (onSkip && !stacked ? 300 : 80), { fill: LIGHT.edge, lineHeight: 58, align: 'left' });
+    const ch = Math.max(130, body.height + 60 + (stacked && onSkip ? SKIP_ROW : 0));
+    return { cw, ch, body, stacked };
+  }
 }
+
+/** The narrow card's width, and the row its skip link takes under the line. */
+const NARROW = 520;
+const SKIP_ROW = 80;
 
 /** A thin glow round the pointed button, so the hand reads as "this one". */
 export function glow(r: Box): Graphics {
