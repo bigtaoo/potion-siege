@@ -6,6 +6,8 @@
 // that came with it (ref/design/targeting-prefs.md), then for the lighter tripod and anvil.
 // Chapter 1 (stage 9 alone) re-pinned 70 -> 90 for its busier crowd (waves.firstCrowd): these 20
 // seeds swing, on 100 seeds stage 9 wins 86% before and 87% after.
+// Re-pinned for the player-aimed spells (docs/spells.md): chapters 1-3 are left easier, chapters
+// 4-5 put back on their old curve by stageHpScale 31-50 (60 seeds: 51.0% -> 51.0%, 40.3% -> 39.7%).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { chapterOf } from '../../src/sim/chapters';
@@ -23,6 +25,6 @@ describe('chapters', () => {
     }
     const won: Record<string, number> = {};
     for (const [ch, wins] of byChapter) won[`chapter ${ch}`] = 100 * mean(wins);
-    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 90, 'chapter 2': 47, 'chapter 3': 60, 'chapter 4': 41, 'chapter 5': 46 }, 10);
+    expectNear('mean win % on the odd stages (20 seeds)', won, { 'chapter 1': 100, 'chapter 2': 46, 'chapter 3': 58, 'chapter 4': 45, 'chapter 5': 47 }, 10);
   }, 300_000);
 });

@@ -65,6 +65,12 @@ The bot's story win rate is up about 7 points. The endless guard's stage-10 clea
 (its 15 seeds); the lazy/idle pins hold. The maxed endless run on seed 1 now lasts past 30 min, so
 modeRewards.test.ts caps at 40 min.
 
+Chapters 1-3 are left easier on purpose. Chapters 4-5 are put back on their old curve by
+`meta.stageHpScale` 31-50 (×1.04-1.05 in chapter 4, ×1.01-1.03 in chapter 5, stage 50 ×1.05):
+`npm run chapters` on 60 seeds, chapter 4 51.0% before, 64.7% with the spells, 51.0% after;
+chapter 5 40.3%, 45.0%, 39.7%. Anvil and gear keep their edge against the tank (`npm run bosses`,
+40 seeds). The slow balance guards (early, chapters, bosses) are re-pinned to these numbers.
+
 ## Not done
 
 The cast daily task is left out on purpose (onboarding-plan.md lines 252–253, item 5 at line 313).
