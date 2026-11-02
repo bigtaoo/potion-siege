@@ -1,3 +1,5 @@
+// the commander's first-time tip measures its words to fit its bubble
+import './layout/measure';
 import { Graphics, Text } from 'pixi.js';
 import { beforeAll, describe, expect, it, vi } from 'vitest';
 import { Battle, slotCenter } from '../sim/battle';

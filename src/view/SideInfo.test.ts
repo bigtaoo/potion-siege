@@ -4,9 +4,10 @@ import { describe, expect, it } from 'vitest';
 import { Battle } from '../sim/battle';
 import { BASE_SETUP, type BattleModifiers, type BattleSetup } from '../sim/meta';
 import { BALANCE, type HeroKind } from '../sim/types';
-import { P } from './kit';
+import { LOCALES, loadLocale, setLocale } from '../i18n';
 import { REST_ALPHA, SIDE } from './sideLook';
 import { SideInfo } from './SideInfo';
+import { NAME_FLOOR } from './sideSkills';
 import type { MenuFit } from './viewport';
 
 const FIT: MenuFit = { scale: 0.5, w: 1920, h: 1080, wide: true };
@@ -37,6 +38,10 @@ function rows(s: SideInfo): Container[] {
     .slice(1);
 }
 
+function chip(row: Container, name: string): Container | undefined {
+  return row.children.find((k) => k.label === name) as Container | undefined;
+}
+
 function texts(c: Container): Text[] {
   const out: Text[] = [];
   const walk = (n: Container) => {
@@ -64,9 +69,9 @@ function shares(s: SideInfo, b: Battle): string[] {
     .map((x) => x.text);
 }
 
-/** The skills' names: the only left-anchored words on the board. */
+/** The skills' names: the left-anchored words on the board, but for the repair's ×n. */
 function names(s: SideInfo): Text[] {
-  return texts(board(sides(s).left)).filter((x) => x.anchor.x === 0);
+  return texts(board(sides(s).left)).filter((x) => x.anchor.x === 0 && !x.text.startsWith('×'));
 }
 
 function shown(b: Battle, s = new SideInfo(), boardX = BOARD_X, m = FIT): SideInfo {
@@ -136,7 +141,7 @@ describe('the skills board', () => {
     const b = battle();
     const s = shown(b);
     const { left } = sides(s);
-    expect(left.alpha).toBeCloseTo(0.35);
+    expect(left.alpha).toBeCloseTo(0.6);
     const all = words(left);
     expect(all).toContain('Skills this run');
     expect(all).toContain('Skills you pick on upgrades show up here');
@@ -261,6 +266,21 @@ describe('the skills board', () => {
     expect(ys).toHaveLength(many.length);
     expect(Math.max(...ys)).toBeLessThan(find(sides(s).left, 'Damage dealt').y);
     expect(ys[1] - ys[0]).toBeLessThan(78);
+    // never shrunk past the floor: a name too long for its line wraps instead
+    for (const n of names(s)) expect(n.style.fontSize * n.scale.y).toBeGreaterThanOrEqual(NAME_FLOOR);
+  });
+
+  it('puts each name on a line of its own, the pips under it', () => {
+    const b = battle();
+    b.skills.allDamage = 2;
+    const s = shown(b);
+    const name = names(s)[0];
+    const pips = board(sides(s).left).children.find((k): k is Graphics => k instanceof Graphics && Math.round(k.getLocalBounds().width) === 4 * 24 + 18 + 3)!;
+    const nb = name.getBounds();
+    const pb = pips.getBounds();
+    expect(pb.y).toBeGreaterThanOrEqual(nb.y + nb.height - 4);
+    expect(pb.x).toBeCloseTo(nb.x, -1);
+    expect(name.scale.x).toBe(1);
   });
 });
 
@@ -285,10 +305,57 @@ describe('the waves board', () => {
     expect(words(sides(s).right)).toContain(`Boss in ${first - 1} waves`);
     b.wave = first - 1;
     s.update(b, BOARD_X, FIT, true, 0);
-    expect(find(sides(s).right, 'Boss next wave').style.fill).toBe(SIDE.accent);
+    // the boss wave's own row carries it as a red tag
+    const tagged = rows(s).find((r) => words(r).includes('Boss next wave'))!;
+    expect(words(tagged)).toContain(`Wave ${first}`);
+    expect(chip(tagged, 'chip-boss')).toBeTruthy();
     b.wave = first;
     s.update(b, BOARD_X, FIT, true, 0);
-    expect(find(sides(s).right, 'Boss this wave').style.fill).toBe(P.red);
+    expect(words(rows(s)[0])).toContain('Boss this wave');
+    expect(words(rows(s)[0])).toContain('Now');
+  });
+
+  it('a boss further off than the rows: a line right under them, not pinned to the bottom', () => {
+    const b = battle({ modifiers: mods([12]) });
+    const s = shown(b);
+    const line = find(sides(s).right, 'Boss in 11 waves');
+    expect(line.style.fill).toBe(SIDE.accent);
+    const last = rows(s)[rows(s).length - 1];
+    const lb = last.getBounds();
+    const tb = line.getBounds();
+    expect(tb.y).toBeGreaterThan(lb.y + lb.height);
+    expect(tb.y - (lb.y + lb.height)).toBeLessThan(40);
+  });
+
+  it("never lets a row's words run into each other, in any language", async () => {
+    for (const lang of LOCALES) {
+      await loadLocale(lang);
+      setLocale(lang);
+      for (const wave of [1, 4, BALANCE.waves.count - 1, BALANCE.waves.count]) {
+        const b = battle();
+        b.wave = wave;
+        const s = shown(b, new SideInfo(), 500);
+        for (const r of rows(s)) {
+          const boxes = r.children.filter((k) => k instanceof Text || (k.label ?? '').startsWith('chip')).map((k) => k.getBounds());
+          for (let i = 0; i < boxes.length; i++)
+            for (let j = i + 1; j < boxes.length; j++) {
+              const [p, q] = [boxes[i], boxes[j]];
+              const apart = p.x + p.width <= q.x + 1 || q.x + q.width <= p.x + 1 || p.y + p.height <= q.y + 1 || q.y + q.height <= p.y + 1;
+              expect(apart, `${lang} wave ${wave}`).toBe(true);
+            }
+        }
+      }
+    }
+    setLocale('en');
+  });
+
+  it('draws the kinds at least 48 across, on light discs', () => {
+    const b = battle();
+    b.wave = BALANCE.waves.count - 1;
+    const s = shown(b, new SideInfo(), 500);
+    const discs = rows(s)[0].children.filter((k): k is Container => k.constructor === Container && !(k.label ?? '').startsWith('chip'));
+    expect(discs.length).toBeGreaterThan(0);
+    for (const d of discs) expect((d.children[0] as Graphics).getLocalBounds().width).toBeGreaterThanOrEqual(48);
   });
 
   it('marks the final wave and shows no rows past it', () => {
@@ -346,7 +413,15 @@ describe('the waves board', () => {
     for (let w = 2; w <= BALANCE.waves.count; w++) {
       b.wave = w;
       s.update(b, BOARD_X, FIT, true, 0);
-      fresh += words(rows(s)[0]).filter((x) => x === 'NEW').length;
+      const news = words(rows(s)[0]).filter((x) => x === 'NEW').length;
+      // one NEW tag at the row's end, however many kinds are new
+      expect(news).toBeLessThanOrEqual(1);
+      if (news) {
+        const row = rows(s)[0];
+        const tag = chip(row, 'chip-new')!;
+        expect(row.children.indexOf(tag)).toBe(row.children.length - 1);
+      }
+      fresh += news;
     }
     expect(fresh).toBeGreaterThan(0);
     b.wave = 1;

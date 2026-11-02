@@ -1,7 +1,9 @@
 // The ground under a battle: the chapter's field art (fading into the next one as endless mode
 // moves on a chapter; while it is still on its way, nothing, then after a while the chapter's
 // main colour, never another chapter's field), the wall's inner face with the health bar's tube
-// and the workshop floor, or plain shapes while there is no art.
+// and the workshop floor, or plain shapes while there is no art. Where the screen has room past
+// the board's ends (a tall phone, a turned field on a screen wider than it), the field reaches up
+// into it and the floor down, instead of black bars.
 
 import { Graphics, Sprite, Texture, type Container } from 'pixi.js';
 import type { Battle } from '../../sim/battle';
@@ -35,12 +37,19 @@ export const FIELD_COLORS: Record<string, number> = {
   bg_clock: 0x848c8a,
 };
 
-/** Lays `t` on `s` across the field: the art, or with `color` a plain fill of that colour. */
-function paint(s: Sprite, t: Texture, color = 0xffffff): void {
+/** Lays `t` on `s` across the field, `top` more of it above the board: the art, or with `color`
+ *  a plain fill of that colour. */
+function paint(s: Sprite, t: Texture, color = 0xffffff, top = 0): void {
   s.texture = t;
   s.tint = color;
+  stretch(s, top);
+}
+
+/** The field art from `top` above the board down to the wall. */
+function stretch(s: Sprite, top: number): void {
   s.width = DESIGN_W;
-  s.height = FIELD_H;
+  s.height = FIELD_H + top;
+  s.y = top > 0 ? -top : 0;
 }
 
 /** The field `b` is on in `wave` (its current one by default): its stage's chapter, or in endless
@@ -59,6 +68,10 @@ export class FieldArt {
   key = '';
   private readonly next = new Sprite();
   private fade = 0;
+  /** The floor past the board's bottom end, and how far the field and it reach past the ends. */
+  private readonly below = new Graphics();
+  private top = 0;
+  private bottom = 0;
 
   /** Draws the ground, and lays the field art under it in `view`, which already holds `ground`. */
   build(view: Container): void {
@@ -67,8 +80,7 @@ export class FieldArt {
     const bg = fieldTexture();
     if (bg) {
       const s = (this.field = new Sprite(bg));
-      s.width = DESIGN_W;
-      s.height = FIELD_H;
+      stretch(s, this.top);
       view.addChildAt(s, view.getChildIndex(g));
       this.next.visible = false;
       view.addChildAt(this.next, view.getChildIndex(g));
@@ -81,6 +93,7 @@ export class FieldArt {
     if (bg) {
       innerFace(g, DESIGN_W, WALL_BOTTOM, FLOOR_Y, { x: F.left, y: BAR_Y, w: F.right - F.left, h: BAR_H });
       workshopFloor(g, DESIGN_W, FLOOR_Y, DESIGN_H + 40);
+      view.addChildAt(this.below, view.getChildIndex(g) + 1);
       return;
     }
     // without the art: a stone band with towers at both ends, the bottom row of cells set into it
@@ -90,6 +103,24 @@ export class FieldArt {
     for (const tx of [x0 - 10, x1 - 40]) {
       g.rect(tx, WALL_TOP - 50, 50, WALL_BOTTOM - WALL_TOP + 50).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
       g.rect(tx, WALL_TOP - 70, 20, 24).rect(tx + 30, WALL_TOP - 70, 20, 24).fill(COLORS.wallTop).stroke({ width: 4, color: 0x5c5040 });
+    }
+  }
+
+  /** Lets the field reach `top` above the board and the floor `bottom` below it (design units),
+   *  where the screen shows past the board's ends. */
+  reach(top: number, bottom: number): void {
+    top = Math.max(0, Math.round(top));
+    bottom = Math.max(0, Math.round(bottom));
+    if (top === this.top && bottom === this.bottom) return;
+    this.top = top;
+    if (this.field) {
+      stretch(this.field, top);
+      stretch(this.next, top);
+    }
+    if (bottom !== this.bottom) {
+      this.bottom = bottom;
+      this.below.clear();
+      if (bottom > 0) workshopFloor(this.below, DESIGN_W, DESIGN_H + 40, DESIGN_H + 40 + bottom);
     }
   }
 
@@ -112,7 +143,7 @@ export class FieldArt {
     const have = loadedField(key) ?? (key === 'bg_field' ? fieldTexture() : undefined);
     if (have) return this.set(have, fade);
     if (!fade && this.field) {
-      paint(this.field, Texture.WHITE, FIELD_COLORS[key] ?? COLORS.field);
+      paint(this.field, Texture.WHITE, FIELD_COLORS[key] ?? COLORS.field, this.top);
       this.field.alpha = 0;
       this.fade = 0;
       this.next.visible = false;
@@ -136,16 +167,16 @@ export class FieldArt {
   private set(t: Texture, fade: boolean): void {
     if (!this.field) return;
     if (fade && this.field.texture !== t) {
-      if (this.fade > 0) paint(this.field, this.next.texture);
+      if (this.fade > 0) paint(this.field, this.next.texture, 0xffffff, this.top);
       this.field.alpha = 1;
       const n = this.next;
-      paint(n, t);
+      paint(n, t, 0xffffff, this.top);
       n.alpha = 0;
       n.visible = true;
       this.fade = FIELD_FADE;
       return;
     }
-    paint(this.field, t);
+    paint(this.field, t, 0xffffff, this.top);
     this.field.alpha = 1;
   }
 
@@ -159,7 +190,7 @@ export class FieldArt {
       this.fade = Math.max(0, this.fade - dt);
       this.next.alpha = 1 - this.fade / FIELD_FADE;
       if (this.fade === 0 && this.field) {
-        paint(this.field, this.next.texture);
+        paint(this.field, this.next.texture, 0xffffff, this.top);
         this.next.visible = false;
       }
     }

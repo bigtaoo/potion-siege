@@ -1,6 +1,7 @@
 // The shelf under a field turned on its side, where the gold and the two buttons sit: walnut
 // planks under a brass rail along the field's edge, the field casting a shadow onto it. Drawn in
-// the turned board's own units, LAND.w wide and LAND.band high, its top left at the origin.
+// the turned board's own units, LAND.w wide and LAND.band high, its top left at the origin, and
+// `extra` further out at both ends where the screen shows past the board.
 
 import { Graphics } from 'pixi.js';
 import { P } from './kit';
@@ -8,10 +9,15 @@ import { LAND } from './wideLayout';
 
 const RAIL = 16;
 const PLANK = 68;
+/** The line the HUD sits on in the band (hudLand.ts): the middle of the planks under the rail. */
+export const BAND_MID = LAND.field + (LAND.band + RAIL) / 2;
 
-export function landBand(): Graphics {
-  const { w, band: h } = LAND;
-  const g = new Graphics().rect(0, 0, w, h).fill(P.wood);
+export function landBand(extra = 0, g = new Graphics()): Graphics {
+  const { band: h } = LAND;
+  const w = LAND.w + 2 * extra;
+  g.clear();
+  g.x = -extra;
+  g.rect(0, 0, w, h).fill(P.wood);
   // planks along the shelf, their joins staggered from row to row
   for (let y = RAIL, row = 0; y < h; y += PLANK, row++) {
     g.rect(0, y, w, 4).fill({ color: P.woodDark, alpha: 0.7 });

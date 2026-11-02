@@ -11,7 +11,8 @@ import { SpriteLayer } from '../art';
 import { turnView } from '../landView';
 import { badgeAt, CommanderArt } from './commander';
 import { REST_AFTER_MOVE } from '../moveRest';
-import { CommanderHints, DRAG, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
+import { BAR_Y } from './wall';
+import { BUBBLE, CommanderHints, DRAG, drawCellIcon, drawFullGlow, handOff, resetCellTip, TIP_SECONDS } from './cmdHints';
 
 const battle = (charge = 0, left: number | null = 2, paused = false, enemies: object[] = []) =>
   ({ charge, paused, nextCast: 'bomb', chargedFor: 0, enemies, wallFront: () => 2000 * FP, freeSlots: () => [], summonsToNextCell: () => left }) as unknown as Battle;
@@ -52,11 +53,13 @@ describe('the first-time line', () => {
     h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
     expect(h.tip.visible).toBe(true);
     expect(h.tip.text).toBe(t('cellTip', { n: 3 }));
-    // beside the count, not over it on the wall's numbers
-    expect(h.tip.y).toBe(1700);
-    expect(h.tip.x).toBeLessThan(500 - 80);
-    // wrapped to the room left of it, so a phone's edge cuts no word
-    expect([h.tip.style.wordWrap, h.tip.style.wordWrapWidth]).toEqual([true, h.tip.x - 12]);
+    // a bubble over the wall's health bar, clear of the bar and the count under it
+    const box = h.bubble.getLocalBounds();
+    expect(h.bubble.visible).toBe(true);
+    expect(box.maxY).toBeLessThanOrEqual(BAR_Y);
+    expect(h.tip.y + h.tip.height / 2).toBeLessThan(BAR_Y - BUBBLE.gap);
+    expect(h.tip.x).toBe(500);
+    expect([h.tip.style.wordWrap, h.tip.style.wordWrapWidth, h.tip.style.fontSize]).toEqual([true, BUBBLE.wrap, BUBBLE.size]);
     h.showTip(3, { x: 500, y: 1700 }, 1, TIP_SECONDS);
     h.showTip(3, { x: 500, y: 1700 }, 1, 0.1);
     expect(h.tip.visible).toBe(false);

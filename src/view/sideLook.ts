@@ -21,7 +21,7 @@ export const SIDE = {
 } as const;
 
 /** How far a wave that is still to come fades back next to the current one. */
-export const REST_ALPHA = 0.72;
+export const REST_ALPHA = 0.88;
 
 /** The wall beside the board, the board taking `x0` to `w - x0`. */
 export function sideBackdrop(w: number, h: number, x0: number): Container {

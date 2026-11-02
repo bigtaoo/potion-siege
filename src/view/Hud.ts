@@ -13,10 +13,12 @@ import { isHordeWave } from '../sim/horde';
 import { handTexture } from './art';
 import { handOff } from './battleView/cmdHints';
 import { COIN_TARGET } from './battleView/killFx';
-import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
+import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { BossPreview } from './bossPreview';
 import { buttonFill, drawFill } from './buttonFill';
+import { BAND_GAP, BAND_RIGHT, bandSpots, flowWords, type BandSpots } from './hudLand';
+import { MOD_CHIP, ModChips } from './hudMods';
 import { HudPlates } from './hudPlates';
 import { NextMove } from './nextMove';
 import { SpeedButton } from './speedButton';
@@ -57,7 +59,7 @@ export class Hud extends Container {
   /** Under the wave banner, on the wave a kind first comes in: its name and what it fears. */
   private readonly newcomer = label('', 44, { wordWrap: true, wordWrapWidth: 960, breakWords: true, align: 'center' });
   /** In a daily challenge, its modifiers as chips under the stage. */
-  private readonly mods = new Container();
+  private readonly mods = new ModChips();
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
   /** Under each, the bar of what a grey button waits for (buttonFill.ts). */
@@ -106,6 +108,9 @@ export class Hud extends Container {
   private shake = 0;
   /** The design y of the band under a field turned on its side, where the gold and buttons go. */
   private band: number | null = null;
+  /** The band's spots while the field is on its side, and where the summon button rests. */
+  private spots: BandSpots | null = null;
+  private summonX = DESIGN_W - 190;
   /** The battle view, to find the cells on a field turned on its side. */
   field: Container | null = null;
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
@@ -160,14 +165,19 @@ export class Hud extends Container {
     this.band = band;
     const y = band ?? BUTTON.y;
     this.upgradeButton.position.set(190, y);
-    this.summonButton.position.set(DESIGN_W - 190, y);
+    this.summonButton.position.set((this.summonX = DESIGN_W - 190), y);
     this.upgradeButton.scale.set(band === null ? 1 : BAND_BUTTON);
+    // the challenge's chips: under the stage upright, else in the board's free top right corner
+    this.mods.place((band === null ? DESIGN_W : BAND_RIGHT) - MOD_CHIP.right, band === null ? MOD_CHIP.top : MOD_CHIP.landTop);
+    // on the band the words run on from the left; upright the wave is centred, the stage right
+    this.waveText.anchor.set(band === null ? 0.5 : 0, 0.5);
+    this.stageText.anchor.set(band === null ? 1 : 0, 0.5);
     this.legible(this.boost, true);
   }
 
   /** Where the coin's centre is: top left of the board, or left of the buttons in the band. */
   private coinAt(): { x: number; y: number } {
-    return this.band === null ? { x: 90, y: 60 * Math.min(this.boost, 1.25) } : { x: -150, y: this.band };
+    return this.spots?.coin ?? { x: 90, y: 60 * Math.min(this.boost, 1.25) };
   }
 
   /** The gold at the top line's size; in the band a long sum narrows to stop short of the upgrade button. */
@@ -175,7 +185,7 @@ export class Hud extends Container {
     const top = Math.min(this.boost, 1.25);
     this.goldText.scale.set(top);
     if (this.band === null) return;
-    const room = this.upgradeButton.x - (BUTTON.w * BAND_BUTTON) / 2 - 12 - this.goldText.x;
+    const room = 300 * top;
     if (this.goldText.width > room) this.goldText.scale.set((top * room) / this.goldText.width);
   }
 
@@ -199,7 +209,7 @@ export class Hud extends Container {
     this.bossCard.removeChildren().forEach((c) => c.destroy({ children: true }));
     this.preview.reset();
     this.stageText.text = battle.setup.endless ? t('endless.title') : t('stage', { n: battle.setup.stage });
-    this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
+    this.mods.show([], null);
     this.fullTime = 0;
     this.asked = false;
     this.shake = 0;
@@ -213,10 +223,20 @@ export class Hud extends Container {
     this.waveText.scale.set(top);
     this.stageText.scale.set(top);
     this.pauseButton.scale.set(top);
-    this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
     this.speedButton.scale.set(top);
-    this.speedButton.position.set(DESIGN_W - 62 * top, 172 * top);
-    this.stageText.x = DESIGN_W - 125 * top;
+    const s = (this.spots = this.band === null ? null : bandSpots(this.band, top, BUTTON.w * BAND_BUTTON));
+    if (s) {
+      this.pauseButton.position.set(s.pause, s.coin.y);
+      this.speedButton.position.set(s.speed, s.coin.y);
+      this.upgradeButton.x = s.upgrade;
+      this.summonX = s.summon;
+      this.waveText.y = this.stageText.y = s.coin.y;
+    } else {
+      this.pauseButton.position.set(DESIGN_W - 62 * top, 62 * top);
+      this.speedButton.position.set(DESIGN_W - 62 * top, 172 * top);
+      this.waveText.position.set(DESIGN_W / 2, 60);
+      this.stageText.position.set(DESIGN_W - 125 * top, 60);
+    }
     const coin = this.coinAt();
     this.goldText.position.set(coin.x + 40 + (top - 1) * 30, coin.y);
     this.fitGold();
@@ -231,26 +251,10 @@ export class Hud extends Container {
     this.newcomer.style.wordWrapWidth = 960 / Math.min(k, 1.3);
   }
 
-  /** The challenge's modifiers, a chip each down the right under the stage; the hint line
-   *  makes way for them. */
+  /** The challenge's modifiers, a chip each down the right under the stage (hudMods.ts); the
+   *  hint line makes way for them. */
   showMods(ids: readonly ModifierId[], trial: HeroKind | null): void {
-    this.mods.removeChildren().forEach((c) => c.destroy({ children: true }));
-    ids.forEach((id, i) => {
-      const chip = new Container();
-      const name = fit(ink(t(`challenge.mod.${id}.name`), 30, { fontWeight: '900' }), 300);
-      name.anchor.set(1, 0.5);
-      const w = name.width + 92;
-      const icon = modifierIcon(id, trial);
-      icon.scale.set(0.42);
-      icon.position.set(-w + 38, -2);
-      name.position.set(-18, -1);
-      const tile = lightTile(w, 56, 28);
-      tile.x = -w / 2;
-      const rim = new Graphics().roundRect(-w, -28, w, 56, 28).stroke({ width: 3, color: LIGHT.edge });
-      chip.addChild(tile, rim, icon, name);
-      chip.position.set(DESIGN_W - 36, 128 + i * 70);
-      this.mods.addChild(chip);
-    });
+    this.mods.show(ids, trial);
   }
 
   /** "Wave n/10", or just "Wave n" in endless mode, which has no last wave. */
@@ -359,9 +363,11 @@ export class Hud extends Container {
     const pair = full ? mergeablePair(b) : null;
     this.summonButton.text.text = full ? t(pair ? 'full.merge' : 'full.upgrade') : `${t('summon')}${summonPrice(b)}`;
     this.summonButton.setEnabled(b.canSummon());
+    if (this.spots) flowWords(this.goldText, this.waveText, this.stageText, this.spots.upgrade - (BUTTON.w * BAND_BUTTON) / 2 - BAND_GAP, Math.min(this.boost, 1.25));
+    this.mods.update(b, (p) => (this.band === null || !this.field ? p : this.toLocal(this.field.toGlobal(p))), dt);
     this.plates.fit([{ text: this.waveText }, { text: this.stageText }, { text: this.goldText, coin: { ...this.coinAt(), r: 26 * Math.min(this.boost, 1.25) } }]);
     this.shake = Math.max(0, this.shake - dt);
-    this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
+    this.summonButton.x = this.summonX + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
     // the next move: at once in the first battles, else for a player who has stopped
     const shown = this.next.update(b, this.early, this.nudge && (this.early || this.hints), dt);
     this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
@@ -473,7 +479,7 @@ export class Hud extends Container {
     const b = which === 'summon' ? this.summonButton : this.upgradeButton;
     const w = BUTTON.w * b.scale.x;
     const h = BUTTON.h * b.scale.y;
-    const x = which === 'summon' ? DESIGN_W - 190 : b.x;
+    const x = which === 'summon' ? this.summonX : b.x;
     return { x: this.x + x - w / 2, y: b.y - h / 2, w, h };
   }
 

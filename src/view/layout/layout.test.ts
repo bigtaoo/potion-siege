@@ -205,6 +205,8 @@ function pauseScreens(): Screen[] {
       out.push({ name: `pause/${fitName}${confirming ? ' confirm' : ''}`, w: fit.w, h: fit.h, build: () => pausePanel(rich(), act, fit, true, true, confirming) });
     }
   }
+  // a challenge's pause names it and its modifiers
+  out.push({ name: 'pause/challenge', w: FITS.portrait.w, h: FITS.portrait.h, build: () => pausePanel(rich(), act, FITS.portrait, true, true, false, { title: t('challenge.banner', { n: 38 }), mods: ['swift', 'goldRain', 'twinBoss'], trial: null }) });
   out.push({ name: 'upright', w: FITS.wide.w, h: FITS.wide.h, build: () => uprightCover(FITS.wide) });
   return out;
 }

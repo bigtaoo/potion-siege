@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { Battle } from '../sim/battle';
 import { battleSetup, newMeta } from '../sim/meta';
 import { Hud } from './Hud';
-import { landBand } from './landBand';
+import { BAND_MID, landBand } from './landBand';
 import { LAND } from './wideLayout';
 
 describe('the shelf under a field on its side', () => {
@@ -18,7 +18,7 @@ describe('the shelf under a field on its side', () => {
     expect(LAND.band).toBeLessThanOrEqual(160);
     const h = new Hud(() => {}, () => {}, () => {});
     h.attach(new Battle(1, battleSetup(newMeta(), 1)));
-    h.place(LAND.field + LAND.band / 2);
+    h.place(BAND_MID);
     h.update(0);
     for (const which of ['summon', 'upgrade'] as const) {
       const r = h.buttonRect(which);
