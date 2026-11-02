@@ -328,7 +328,6 @@ export const id: Table = {
     panel: 'Bab',
     chest: 'Peti bab',
     chestOpen: 'Buka',
-    chestDone: 'Dibuka',
     chestHint: 'Tamatkan 10 tahap',
     locked: 'Tamatkan tahap {n} untuk membuka',
     cleared: 'Bab tamat! Peti bab +{c}',

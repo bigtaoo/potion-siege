@@ -328,7 +328,6 @@ export const pl: Table = {
     panel: 'Rozdziały',
     chest: 'Skrzynia rozdziału',
     chestOpen: 'Otwórz',
-    chestDone: 'Otwarta',
     chestHint: 'Ukończ wszystkie 10 etapów',
     locked: 'Ukończ etap {n}, by otworzyć',
     cleared: 'Rozdział ukończony! Skrzynia rozdziału +{c}',

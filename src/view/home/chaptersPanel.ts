@@ -4,12 +4,12 @@
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import {
-  CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists,
+  CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterOpen, chapterStages, chestWaiting, isFinale, stageTwists,
 } from '../../sim/chapters';
 import type { MetaSave } from '../../sim/meta';
 import { starChestsWaiting } from '../../sim/starChest';
 import { chapterStars, hardOpen, STARS, stageOpen, stageStars } from '../../sim/stars';
-import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, redDot, starRow, tappable } from '../kit';
+import { chestIcon, ink, LIGHT, lightTile, lock, P, PillButton, redDot, starRow, tappable, tickMark } from '../kit';
 import { gem, label } from '../ui';
 import { scrollList } from '../scroll';
 import type { MenuFit } from '../viewport';
@@ -20,7 +20,7 @@ import type { HomeActions } from './types';
 
 const ROW_H = 300;
 /** A chapter not open yet: its name and what opens it. */
-const LOCKED_H = 170;
+const LOCKED_H = 124;
 const GAP = 18;
 /** The list's window: as wide as a row and the scroll thumb, from under the title plate to the
  *  board's foot. */
@@ -59,12 +59,15 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
   list.view.position.set(-VIEW_W / 2, -h / 2 + HEAD);
   box.addChild(list.view);
   const hard = m.stars.hardMode;
+  // one size for every chapter's name, the one the longest needs, so no row's reads smaller
+  const nameK = Math.min(1, ...chapters.map((ch) => (chapterOpen(m, ch) ? 570 - starsText(m, ch, hard).width - 24 : 800) / ink(chapterTitle(ch), 38, { fontWeight: '900' }).width));
   for (let ch = 1; ch <= CHAPTER_COUNT; ch++) {
     const open = chapterOpen(m, ch);
     const rh = rowH(ch);
-    // the name line, the stage tiles (or what opens them) and the star chests, down the row
-    const ny = -rh / 2 + 48;
-    const ty = open ? ny + 100 : ny + 72;
+    // the name line, the stage tiles (or what opens them) and the star chests, down the row; a
+    // chapter not open yet is only its name and what opens it
+    const ny = open ? -rh / 2 + 48 : -rh / 2 + 36;
+    const ty = open ? ny + 100 : ny + 52;
     const sy = rh / 2 - 50;
     const r = new Container();
     r.position.set(VIEW_W / 2, rowY(ch) + rh / 2);
@@ -74,42 +77,15 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     const name = ink(chapterTitle(ch), 38, { fontWeight: '900' });
     name.anchor.set(0, 0.5);
     name.position.set(-400, ny);
-    // the chapter's stars, in the mode the switch is on, before the chest
-    const stars = ink(`★${chapterStars(m, ch, hard)}/${3 * CHAPTER_SIZE}`, 30, { fill: hard ? P.redInk : P.brassDark, fontWeight: '900' });
-    stars.anchor.set(1, 0.5);
-    stars.position.set(95, ny);
-    fitText(name, 475 - stars.width - 20);
+    name.scale.set(nameK);
     r.addChild(name);
-    if (open) r.addChild(stars);
-    const waiting = chestWaiting(m, ch);
-    const opened = m.chapterChests.includes(ch);
-    const icon = chestIcon();
-    icon.scale.set(0.5);
-    icon.position.set(130, ny + 4);
-    if (!waiting && !opened) icon.alpha = 0.55;
-    r.addChild(icon);
-    if (waiting) {
-      const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
-      // a chest on it, where the star chests' button has a star
-      leadIcon(b, chestIcon(), 210, 72, 0.4);
-      b.label = 'chapter_chest';
-      b.position.set(290, ny);
-      r.addChild(b);
-      redDot(r, 392, ny - 32);
-    } else if (opened) {
-      const done = ink(t('chapter.chestDone'), 32, { fill: P.inkSoft, fontWeight: '900' });
-      done.anchor.set(0, 0.5);
-      done.position.set(180, ny);
-      r.addChild(done);
-    } else {
-      const g = gem(new Graphics(), 196, ny, 22);
-      const n = ink(String(chapterChest(ch)), 32, { fill: LIGHT.crystal, fontWeight: '900' });
-      n.anchor.set(0, 0.5);
-      n.position.set(224, ny);
-      const c = ink(`${chapterProgress(m, ch)}/${CHAPTER_SIZE}`, 32, { fill: P.inkSoft, fontWeight: '900' });
-      c.anchor.set(1, 0.5);
-      c.position.set(400, ny);
-      r.addChild(g, n, c);
+    if (open) {
+      // the chapter's stars, in the mode the switch is on, then its chest: what it pays, its
+      // button once every stage is cleared, or a tick once taken (the tiles show how far it is)
+      const stars = starsText(m, ch, hard);
+      stars.anchor.set(1, 0.5);
+      stars.position.set(170, ny);
+      r.addChild(stars, chapterChestEnd(m, act, ch, ny));
     }
     if (open) {
       const bar = starChestBar(m, act, ch);
@@ -149,4 +125,39 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
   list.fill(full);
   scrolled = list.offset;
   return panel;
+}
+
+/** A chapter's stars in the mode the switch is on. */
+const starsText = (m: MetaSave, ch: number, hard: boolean) => ink(`★${chapterStars(m, ch, hard)}/${3 * CHAPTER_SIZE}`, 30, { fill: hard ? P.redInk : P.brassDark, fontWeight: '900' });
+
+/** The name line's end on an open chapter: its chest's button, its chest with a tick once taken,
+ *  or its chest and what it pays. */
+function chapterChestEnd(m: MetaSave, act: HomeActions, ch: number, y: number): Container {
+  const c = new Container();
+  const icon = chestIcon();
+  icon.scale.set(0.5);
+  icon.position.set(230, y + 4);
+  if (chestWaiting(m, ch)) {
+    const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
+    // a chest on it, where the star chests' button has a star
+    leadIcon(b, chestIcon(), 210, 72, 0.4);
+    b.label = 'chapter_chest';
+    b.position.set(290, y);
+    c.addChild(b);
+    redDot(c, 392, y - 32);
+  } else if (m.chapterChests.includes(ch)) {
+    icon.alpha = 0.55;
+    const tick = tickMark();
+    tick.label = 'chapter_chest_done';
+    tick.position.set(256, y + 10);
+    c.addChild(icon, tick);
+  } else {
+    icon.alpha = 0.55;
+    const g = gem(new Graphics(), 296, y, 22);
+    const n = ink(String(chapterChest(ch)), 32, { fill: LIGHT.crystal, fontWeight: '900' });
+    n.anchor.set(0, 0.5);
+    n.position.set(324, y);
+    c.addChild(icon, g, n);
+  }
+  return c;
 }

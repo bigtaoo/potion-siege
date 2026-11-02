@@ -328,7 +328,6 @@ export const vi: Table = {
     panel: 'Chương',
     chest: 'Rương chương',
     chestOpen: 'Mở',
-    chestDone: 'Đã mở',
     chestHint: 'Qua cả 10 màn',
     locked: 'Qua màn {n} để mở',
     cleared: 'Qua chương! Rương chương +{c}',

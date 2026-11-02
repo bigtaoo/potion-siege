@@ -37,10 +37,12 @@ describe("a chapter's star chests", () => {
     expect(calls.filter(([k]) => k === 'claimStarChest').map(([, a]) => a[0])).toEqual([1]);
   });
 
-  it('says so once all three are open', () => {
+  it('ticks the bar once all three are open, and shows no pay', () => {
     const m = chapterOne(3);
     m.starChests[0] = STAR_CHESTS.length;
     const { act } = loggedActions();
-    expect(texts(starChestBar(m, act, 1))).toContain(t('chapter.chestDone'));
+    const bar = starChestBar(m, act, 1);
+    expect(bar.getChildByLabel('star_chests_done')).not.toBeNull();
+    expect(texts(bar)).not.toContain(String(STAR_CHESTS[2].reward));
   });
 });

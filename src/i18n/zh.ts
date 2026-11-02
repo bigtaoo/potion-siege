@@ -328,7 +328,6 @@ export const zh: Table = {
     panel: '章节',
     chest: '章节宝箱',
     chestOpen: '领取',
-    chestDone: '已领取',
     chestHint: '通关全部 10 关',
     locked: '通关第 {n} 关开启',
     cleared: '本章通关！章节宝箱 +{c}',

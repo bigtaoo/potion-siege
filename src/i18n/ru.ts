@@ -328,7 +328,6 @@ export const ru: Table = {
     panel: 'Главы',
     chest: 'Сундук главы',
     chestOpen: 'Открыть',
-    chestDone: 'Открыт',
     chestHint: 'Пройди все 10 этапов',
     locked: 'Пройди этап {n}, чтобы открыть',
     cleared: 'Глава пройдена! Сундук главы +{c}',

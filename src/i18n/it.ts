@@ -328,7 +328,6 @@ export const it: Table = {
     panel: 'Capitoli',
     chest: 'Forziere capitolo',
     chestOpen: 'Apri',
-    chestDone: 'Aperto',
     chestHint: 'Supera tutti i 10 livelli',
     locked: 'Supera il livello {n} per aprire',
     cleared: 'Capitolo completato! Forziere capitolo +{c}',

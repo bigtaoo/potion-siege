@@ -69,6 +69,12 @@ export function lock(color: number = P.inkSoft, bg: number = P.paper): Graphics 
     .fill(bg);
 }
 
+/** A green tick in a dark outline, about 40 across, centred: something taken already. */
+export function tickMark(): Graphics {
+  const path = [-16, 0, -5, 11, 16, -12];
+  return new Graphics().poly(path, false).stroke({ width: 14, color: P.line, cap: 'round', join: 'round' }).poly(path, false).stroke({ width: 7, color: P.green, cap: 'round', join: 'round' });
+}
+
 // ---- icons, about 100 units across, centred ----
 
 export function gearIcon(r = 46, color: number = P.brass): Graphics {

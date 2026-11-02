@@ -328,7 +328,6 @@ export const ko: Table = {
     panel: '챕터',
     chest: '챕터 상자',
     chestOpen: '열기',
-    chestDone: '열림',
     chestHint: '스테이지 10개 모두 클리어',
     locked: '스테이지 {n} 클리어 시 열림',
     cleared: '챕터 클리어! 챕터 상자 +{c}',

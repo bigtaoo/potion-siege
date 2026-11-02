@@ -330,7 +330,6 @@ export const en = {
     panel: 'Chapters',
     chest: 'Chapter chest',
     chestOpen: 'Open',
-    chestDone: 'Opened',
     chestHint: 'Clear all 10 stages',
     locked: 'Clear stage {n} to open',
     cleared: 'Chapter cleared! Chapter chest +{c}',

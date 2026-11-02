@@ -328,7 +328,6 @@ export const tr: Table = {
     panel: 'Bölümler',
     chest: 'Bölüm sandığı',
     chestOpen: 'Aç',
-    chestDone: 'Açıldı',
     chestHint: '10 aşamanın hepsini geç',
     locked: 'Açmak için {n}. aşamayı geç',
     cleared: 'Bölüm bitti! Bölüm sandığı +{c}',

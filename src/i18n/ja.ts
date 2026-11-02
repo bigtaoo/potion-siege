@@ -328,7 +328,6 @@ export const ja: Table = {
     panel: '章一覧',
     chest: '章の宝箱',
     chestOpen: '開ける',
-    chestDone: '開封済み',
     chestHint: '全10ステージをクリア',
     locked: 'ステージ{n}クリアで解放',
     cleared: '章クリア！章の宝箱 +{c}',

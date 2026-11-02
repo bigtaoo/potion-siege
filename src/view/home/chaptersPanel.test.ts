@@ -28,7 +28,11 @@ describe('the chapters panel', () => {
   });
 
   it('keeps full size on a short page and scrolls the rows instead of shrinking them', () => {
-    const panel = chaptersPanel(newMeta(), loggedActions().act, SHORT);
+    // four chapters open: too tall for the page
+    const m = newMeta();
+    m.cleared = 30;
+    m.stage = 1;
+    const panel = chaptersPanel(m, loggedActions().act, SHORT);
     expect((panel.children[1] as Container).scale.x).toBe(1);
     const { view, content } = list(panel);
     const start = content.y;

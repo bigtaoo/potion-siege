@@ -328,7 +328,6 @@ export const fr: Table = {
     panel: 'Chapitres',
     chest: 'Coffre de chapitre',
     chestOpen: 'Ouvrir',
-    chestDone: 'Ouvert',
     chestHint: 'Termine les 10 étapes',
     locked: 'Termine l’étape {n} pour ouvrir',
     cleared: 'Chapitre terminé ! Coffre de chapitre +{c}',

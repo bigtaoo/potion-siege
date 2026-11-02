@@ -328,7 +328,6 @@ export const th: Table = {
     panel: 'บท',
     chest: 'หีบประจำบท',
     chestOpen: 'เปิด',
-    chestDone: 'เปิดแล้ว',
     chestHint: 'ผ่านครบทั้ง 10 ด่าน',
     locked: 'ผ่านด่าน {n} เพื่อเปิด',
     cleared: 'ผ่านบทแล้ว! หีบประจำบท +{c}',

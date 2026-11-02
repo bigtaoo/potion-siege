@@ -328,7 +328,6 @@ export const de: Table = {
     panel: 'Kapitel',
     chest: 'Kapiteltruhe',
     chestOpen: 'Öffnen',
-    chestDone: 'Geöffnet',
     chestHint: 'Schaffe alle 10 Level',
     locked: 'Schaffe Level {n} zum Öffnen',
     cleared: 'Kapitel geschafft! Kapiteltruhe +{c}',

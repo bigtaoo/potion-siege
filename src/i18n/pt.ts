@@ -328,7 +328,6 @@ export const pt: Table = {
     panel: 'Capítulos',
     chest: 'Baú do capítulo',
     chestOpen: 'Abrir',
-    chestDone: 'Aberto',
     chestHint: 'Vença as 10 fases',
     locked: 'Vença a fase {n} para abrir',
     cleared: 'Capítulo vencido! Baú do capítulo +{c}',
