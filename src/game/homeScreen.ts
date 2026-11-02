@@ -5,7 +5,7 @@
 import type { Game } from '../app';
 import { CONSENT_AFTER_RUNS } from '../analytics/privacy';
 import { t } from '../i18n';
-import { claimTier } from '../sim/achievements';
+import { claimAllTiers, claimTier } from '../sim/achievements';
 import { openChapterChest } from '../sim/chapters';
 import { canClaimLogin, claimBonus, claimLogin, claimTask, gameDay, rollDay } from '../sim/daily';
 import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
@@ -114,8 +114,8 @@ export function home(g: Game, panel: HomePanel = null): void {
       if (n > 0) claimed(g, 'task_all', n, panel, at);
     },
     claimTier: (id, at) => {
-      const n = claimTier(g.save, id);
-      if (n > 0) claimed(g, `ach_${id}`, n, panel, at);
+      const n = id === null ? claimAllTiers(g.save) : claimTier(g.save, id);
+      if (n > 0) claimed(g, `ach_${id ?? 'all'}`, n, panel, at);
     },
     stage: (d) => {
       const to = stepStage(g.save, g.save.stage, d);

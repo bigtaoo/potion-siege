@@ -23,8 +23,8 @@ export interface HomeActions {
   claimTask(index: number, at: Container): void;
   /** The bonus for claiming all of today's tasks. */
   claimBonus(at: Container): void;
-  /** The next tier of an achievement track. */
-  claimTier(id: TrackId, at: Container): void;
+  /** The next tier of an achievement track; null claims every tier reached. */
+  claimTier(id: TrackId | null, at: Container): void;
   stage(delta: number): void;
   /** A stage tile on the chapters panel was tapped. */
   pickStage(stage: number): void;
