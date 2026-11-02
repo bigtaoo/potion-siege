@@ -7,6 +7,7 @@ import {
   CHAPTER_COUNT, chapterChest, CHAPTER_SIZE, chapterOpen, chapterProgress, chapterStages, chestWaiting, isFinale, stageTwists,
 } from '../../sim/chapters';
 import type { MetaSave } from '../../sim/meta';
+import { starChestsWaiting } from '../../sim/starChest';
 import { chapterStars, hardOpen, STARS, stageOpen, stageStars } from '../../sim/stars';
 import { chestIcon, fit as fitText, ink, LIGHT, lightTile, lock, P, PillButton, redDot, starRow, tappable } from '../kit';
 import { gem, label } from '../ui';
@@ -26,10 +27,10 @@ const HEAD = 90;
 const FOOT = 30;
 
 /** How far down the list is scrolled, kept over a rebuild (a chest claimed); null opens it at the
- *  chosen stage's chapter. */
+ *  first chapter with a chest waiting, else at the chosen stage's chapter. */
 let scrolled: number | null = null;
 
-/** The next chapters panel opens at the chosen stage's chapter. */
+/** The next chapters panel opens where a fresh one does. */
 export function scrollChapters(): void {
   scrolled = null;
 }
@@ -51,7 +52,8 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
   const h = Math.min(full + HEAD + FOOT, Math.max(700, fit.h - 140));
   const { panel, box } = frame(act, t('chapter.panel'), h, fit);
   const rowY = (ch: number) => 8 + (ch - 1) * (rowH + GAP);
-  const at = Math.min(CHAPTER_COUNT, Math.ceil(m.stage / CHAPTER_SIZE));
+  const chest = Array.from({ length: CHAPTER_COUNT }, (_, i) => i + 1).find((ch) => chestWaiting(m, ch) || starChestsWaiting(m, ch) > 0);
+  const at = chest ?? Math.min(CHAPTER_COUNT, Math.ceil(m.stage / CHAPTER_SIZE));
   const list = scrollList(VIEW_W, h - HEAD - FOOT, scrolled ?? rowY(at) - 8, (y) => (scrolled = y));
   list.view.position.set(-VIEW_W / 2, -h / 2 + HEAD);
   box.addChild(list.view);
@@ -82,6 +84,7 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     r.addChild(icon);
     if (waiting) {
       const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
+      b.label = 'chapter_chest';
       b.position.set(290, ny);
       r.addChild(b);
       redDot(r, 392, ny - 32);

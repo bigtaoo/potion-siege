@@ -261,7 +261,7 @@ export function damageChart(dealt: EndExtras['dealt'], cw: number): Section {
 }
 
 /** After a loss: where to get stronger, a parchment row each that opens that home tab. */
-export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: number, tabs: TipTab[] = ['potions', 'workshop', 'battle'], ready: TipTab | null = null): Section {
+export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw: number, tabs: TipTab[] = ['potions', 'workshop', 'battle'], ready: TipTab | null = null): Section & { lit?: Container } {
   const c = new Container();
   const title = plate(t('tips'), 40, 300, 'brass');
   title.y = 40;
@@ -276,11 +276,13 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
   const rh = 108;
   const gap = 14;
   const top = 96;
+  let shown: Container | undefined;
   items.forEach(([tab, key, icon], i) => {
     const row = new Container();
     row.y = top + i * (rh + gap) + rh / 2;
     row.addChild(lightTile(cw, rh, 22));
     const lit = tab === ready;
+    if (lit) shown = row;
     if (lit) row.addChild(new Graphics().roundRect(-cw / 2, -rh / 2, cw, rh, 22).stroke({ width: 7, color: 0x4cc35a }));
     const pic = icon();
     pic.x = -cw / 2 + 64;
@@ -307,7 +309,7 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
     tappable(row, () => onTip(tab));
     c.addChild(row);
   });
-  return { c, h: top + items.length * (rh + gap) + 20 };
+  return { c, h: top + items.length * (rh + gap) + 20, lit: shown };
 }
 
 /** The revive (with the ad sign) on top when there is one, Continue under it; or Next Stage

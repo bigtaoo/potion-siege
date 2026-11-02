@@ -68,7 +68,7 @@ export function showEnd(g: Game, b: Battle): void {
     adBlocked: missed,
     stars: g.stars ?? undefined,
     starsTip: starsTip(g),
-    pointOn: won && !g.autoplay && !g.endless && !b.setup.hard && pointOn(g.save),
+    pointOn: !g.autoplay && !g.endless && !b.setup.hard && pointOn(g.save),
   });
 }
 

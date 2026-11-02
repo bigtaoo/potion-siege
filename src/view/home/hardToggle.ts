@@ -23,6 +23,7 @@ export function toggleShown(m: MetaSave): boolean {
 export function plateStars(root: Container, m: MetaSave, x: number, y: number): void {
   const hard = m.stars.hardMode;
   const c = new Container();
+  c.label = 'hardToggle';
   c.position.set(x, y);
   c.addChild(new Graphics().roundRect(-62, -19, 124, 38, 19).fill({ color: P.line, alpha: 0.75 }), starRow(stageStars(m, m.stage, hard), 15, hard));
   root.addChild(c);

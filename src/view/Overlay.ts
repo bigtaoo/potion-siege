@@ -158,7 +158,8 @@ export class Overlay extends Container {
     left.push(...starNotes(more.stars, W - 200, !!more.starsTip));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
-    if (more.onTip) right.push(tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null));
+    const tipRows = more.onTip ? tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null) : null;
+    if (tipRows) right.push(tipRows);
     const buttons = endButtons(onContinue, onRevive, more.onNext ?? null, more.adBlocked);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];
@@ -179,7 +180,12 @@ export class Overlay extends Container {
         y += sec.h;
       }
     });
-    if (more.pointOn) {
+    const lit = tipRows?.lit;
+    if (more.pointOn && lit) {
+      // a lost battle's tip to do first: the hand on its arrow
+      this.nudge = new CardNudge(tipRows.c.x + cw / 2 - 46, tipRows.c.y + lit.y + 10);
+      box.addChild(this.nudge);
+    } else if (more.pointOn) {
       // the hand's fingertip a little below the button's middle, over its words
       this.nudge = new CardNudge(buttons.c.x + buttons.main.x, buttons.c.y + buttons.main.y + 10);
       box.addChild(this.nudge);

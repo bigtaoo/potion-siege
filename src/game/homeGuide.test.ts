@@ -58,6 +58,10 @@ describe('the home guide', () => {
     expect(steps(w)).toEqual(['gift:none', 'upgrade:done', 'upgradeMore:done', 'upgradeLast:done']);
     expect(w.save().heroes.fire).toBe(4);
     expect(w.save().upgradeHint).toBe(true);
+    // the start step's line waits for the battle tab, clear of the potion cards
+    expect(line(w)).toBeNull();
+    expect(mark(w)).not.toBeNull();
+    press(w, 'tab_battle');
     expect(line(w)).toBe(t('guide.toBattle1', { n: 2 }));
   });
 
@@ -71,9 +75,14 @@ describe('the home guide', () => {
     press(w, 'tab_shop');
     // no task done yet: nothing to claim, on to the workshop
     expect(steps(w)).toEqual(['login:other', 'tasks:none']);
+    // chapter 2 points at a potion's level again before the workshop
+    expect(line(w)).toBe(t('guide.upgrade'));
+    press(w, 'tab_workshop');
+    expect(steps(w)).toContain('heroes2:other');
     expect(line(w)).toBe(t('guide.workshop'));
     press(w, 'guideSkip');
     expect(steps(w)).toContain('workshop:skipped');
+    press(w, 'tab_battle');
     expect(line(w)).toBe(t('guide.toBattle', { n: 3 }));
   });
 

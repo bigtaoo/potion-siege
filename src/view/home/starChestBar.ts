@@ -43,6 +43,7 @@ export function starChestBar(m: MetaSave, act: HomeActions, ch: number): Contain
   const waiting = starChestsWaiting(m, ch);
   if (waiting > 0) {
     const b: PillButton = new PillButton(t('chapter.chestOpen'), 190, 64, 'green', () => act.claimStarChest(ch, b), 32);
+    b.label = 'star_chest';
     b.position.set(end + 10, 0);
     c.addChild(b);
     redDot(c, end + 100, -30);

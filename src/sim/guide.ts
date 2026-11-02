@@ -1,26 +1,35 @@
-// The guided tour of the first three home screens and the one-time words in battles 2 and 3
-// (docs/onboarding-plan.md, sections 3-5), as plain rules over the save: the steps of each
-// chapter, which chapter a save is on, and the steps a save marks done or skipped. Where each
-// step points, and when it can, is the home screen's (game/homeGuide.ts).
+// The guided tour of the first three home screens, the one-time pointers on home screens after
+// them and the one-time words in battles (docs/onboarding-plan.md, sections 3-5), as plain rules
+// over the save: the steps of each chapter, which chapter a save is on, and the steps a save
+// marks done or skipped. Where each step points, and when it can, is the home screen's
+// (game/homeGuide.ts, game/homeGuideLate.ts).
 import type { MetaSave } from './meta';
 
 /** The home screen's steps after battles 1, 2 and 3, in order; each chapter ends at the start
- *  button. The upgrade points up to three times while the crystals last. */
+ *  button. The upgrade points up to three times while the crystals last, and once more in the
+ *  next two chapters (heroes2, heroes3). */
 export const GUIDE_CHAPTERS = [
   ['gift', 'upgrade', 'upgradeMore', 'upgradeLast', 'toBattle1'],
-  ['login', 'tasks', 'workshop', 'toBattle2'],
-  ['codex', 'shop', 'challenge', 'toBattle3'],
+  ['login', 'tasks', 'heroes2', 'workshop', 'toBattle2'],
+  ['codex', 'shop', 'heroes3', 'challenge', 'toBattle3'],
 ] as const;
 
-/** One-time words in battles 2 and 3: the first 强化, the stars on the first won result, the
- *  推荐 tag on the first skill pick of battle 3; and stage 1's boss card in the first battle. */
-export const GUIDE_ONCE = ['upgrade2', 'stars', 'pickTip', 'bossCard'] as const;
+/** One-time pointers on any home screen, the first time each has something to do: a chapter's
+ *  chest, a star chest, a new potion to field, endless mode, hard mode. A chapter's start step
+ *  waits for them. */
+export const GUIDE_LATER = ['chapterChest', 'starChest', 'lineup', 'endless', 'hard'] as const;
+
+/** One-time words in battles: the first 强化, the stars on the first won result, the 推荐 tag on
+ *  the first skill pick of battle 3, stage 1's boss card in the first battle; the commander's drag
+ *  after an auto cast, the potions flyers fear, and the speed button on a replay. */
+export const GUIDE_ONCE = ['upgrade2', 'stars', 'pickTip', 'bossCard', 'castTip', 'flyerTip', 'speedTip'] as const;
 
 export type GuideStep = (typeof GUIDE_CHAPTERS)[number][number];
+export type GuideLater = (typeof GUIDE_LATER)[number];
 export type GuideOnce = (typeof GUIDE_ONCE)[number];
-export type GuideId = GuideStep | GuideOnce;
+export type GuideId = GuideStep | GuideLater | GuideOnce;
 
-const ALL: readonly string[] = [...GUIDE_CHAPTERS.flat(), ...GUIDE_ONCE];
+const ALL: readonly string[] = [...GUIDE_CHAPTERS.flat(), ...GUIDE_LATER, ...GUIDE_ONCE];
 
 /** The chapter (1-3) of the home screen a save comes home to: the one after its battles so far,
  *  none before the first battle or after the third. */
@@ -39,6 +48,11 @@ export function markGuide(m: MetaSave, id: GuideId): boolean {
   if (m.guide.includes(id)) return false;
   m.guide.push(id);
   return true;
+}
+
+/** The one-time pointers a save has not done or skipped, in order. */
+export function laterLeft(m: MetaSave): GuideLater[] {
+  return GUIDE_LATER.filter((id) => !m.guide.includes(id));
 }
 
 /** The chapter's start step: what the skip on a bubble leaves. */

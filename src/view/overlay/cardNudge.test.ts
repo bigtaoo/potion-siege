@@ -153,4 +153,30 @@ describe("the result's way on", () => {
     }
     expect(result(false, false).nudge).toBeUndefined();
   });
+
+  it("taps the tip a lost battle singles out, and Continue when none is", () => {
+    for (const ready of ['workshop', null] as const) {
+      const o = new Overlay();
+      o.layout(1080, 1920);
+      o.showEnd(false, 'stats', { crystals: 10, firstClear: false, unlocked: [] }, () => {}, null, {
+        onDouble: null,
+        doubled: false,
+        dealt: [],
+        onTip: () => {},
+        tipTabs: ['workshop', 'potions'],
+        ready,
+        onNext: null,
+        pointOn: true,
+      });
+      const box = o.children[1] as Container;
+      const nudge = box.children.find((c) => c instanceof CardNudge) as CardNudge;
+      expect(nudge).toBeDefined();
+      const all = (c: Container): Container[] => [c, ...c.children.flatMap((k) => all(k as Container))];
+      const word = (s: string) => all(box).find((c) => c instanceof Text && c.text === s)!;
+      const row = ready ? word(t('tip.workshop.name')).parent! : word(t('continue')).parent!;
+      const at = row.parent!.position;
+      if (ready) expect(nudge.y).toBeCloseTo(at.y + row.y + 10);
+      else expect(nudge.y).toBeGreaterThan(word(t('tip.potions.name')).parent!.parent!.y);
+    }
+  });
 });

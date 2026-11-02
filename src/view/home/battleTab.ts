@@ -70,6 +70,7 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
   // on hard mode the chapter line follows the hard stages won
   const done = (stage: number) => (hard ? stageStars(m, stage, true) > 0 : stage <= m.cleared);
   const card = tappable(new Container(), () => act.panel('chapters'));
+  card.label = 'stageCard';
   card.position.set(x, y);
   const cw = 2 * ax + 40;
   const ly = 100;
@@ -214,5 +215,5 @@ function challengeButton(root: Container, m: MetaSave, act: HomeActions, today: 
 function endlessButton(root: Container, act: HomeActions, x: number, y: number): void {
   const loop = infinityIcon();
   loop.scale.set(0.95);
-  sideButton(root, loop, t('endless.title'), x, y, act.endless);
+  sideButton(root, loop, t('endless.title'), x, y, act.endless).label = 'endless';
 }

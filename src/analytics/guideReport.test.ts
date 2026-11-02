@@ -1,12 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { GUIDE_ORDER, guideRows, printGuide } from '../../scripts/guideReport.mjs';
-import { GUIDE_CHAPTERS, GUIDE_ONCE } from '../sim/guide';
+import { GUIDE_CHAPTERS, GUIDE_LATER, GUIDE_ONCE } from '../sim/guide';
 
 const step = (uid: string, id: string, result: string, waitS = 0) => ({ name: 'guide_step', ts: 0, uid, props: { id, result, waitS } });
 
 describe('the guide funnel in the report', () => {
   it('lists every guide id once', () => {
-    expect([...GUIDE_ORDER].sort()).toEqual([...GUIDE_CHAPTERS.flat(), ...GUIDE_ONCE].sort());
+    expect([...GUIDE_ORDER].sort()).toEqual([...GUIDE_CHAPTERS.flat(), ...GUIDE_LATER, ...GUIDE_ONCE].sort());
   });
 
   it("counts each player's first report of a step by result, in the order players meet them", () => {

@@ -198,7 +198,7 @@ export function home(g: Game, panel: HomePanel = null): void {
     },
   }, aim), g.tab, panel, today, fit, g.picked, !g.autoplay && g.platform.rewardedAvailable(), hint, { ...extras(g), guiding: !!aim?.target }));
   drawGuide(g, root, aim, () => {
-    guideSkip(g);
+    guideSkip(g, aim?.step);
     home(g, g.panel);
   });
   g.hintHand = g.menu.getChildByLabel('hintHand', true);

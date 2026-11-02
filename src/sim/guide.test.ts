@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
-import { GUIDE_CHAPTERS, GUIDE_ONCE, guideChapter, guideLeft, markGuide, parseGuide, toBattle } from './guide';
+import { GUIDE_CHAPTERS, GUIDE_LATER, GUIDE_ONCE, guideChapter, guideLeft, laterLeft, markGuide, parseGuide, toBattle } from './guide';
 import { newMeta, parseMeta } from './meta';
 
-const ALL = [...GUIDE_CHAPTERS.flat(), ...GUIDE_ONCE];
+const ALL = [...GUIDE_CHAPTERS.flat(), ...GUIDE_LATER, ...GUIDE_ONCE];
 
 describe('the home guide in the save', () => {
   it('is on the chapter after each of the first three battles, none before or after', () => {
@@ -13,10 +13,12 @@ describe('the home guide in the save', () => {
   it("leaves the chapter's steps not done or skipped, in order, ending at the start button", () => {
     const m = newMeta();
     m.runs = 2;
-    expect(guideLeft(m)).toEqual(['login', 'tasks', 'workshop', 'toBattle2']);
+    expect(guideLeft(m)).toEqual(['login', 'tasks', 'heroes2', 'workshop', 'toBattle2']);
     expect(markGuide(m, 'tasks')).toBe(true);
     expect(markGuide(m, 'tasks')).toBe(false);
-    expect(guideLeft(m)).toEqual(['login', 'workshop', 'toBattle2']);
+    expect(guideLeft(m)).toEqual(['login', 'heroes2', 'workshop', 'toBattle2']);
+    expect(markGuide(m, 'starChest')).toBe(true);
+    expect(laterLeft(m)).toEqual(['chapterChest', 'lineup', 'endless', 'hard']);
     expect([1, 2, 3].map((ch) => toBattle(ch as 1 | 2 | 3))).toEqual(['toBattle1', 'toBattle2', 'toBattle3']);
     m.runs = 0;
     expect(guideLeft(m)).toEqual([]);

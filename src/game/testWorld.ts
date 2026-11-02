@@ -9,6 +9,7 @@ import { MemorySink } from '../analytics/sinks';
 import { PrivacyChoice } from '../analytics/privacy';
 import { loadLocale, setLocale, t } from '../i18n';
 import { SafeStore, type Platform, type Store } from '../platform/types';
+import { GUIDE_LATER } from '../sim/guide';
 import { newMeta, type MetaSave } from '../sim/meta';
 import { WELCOME_GIFTS } from '../sim/welcome';
 import { home } from './homeScreen';
@@ -103,6 +104,8 @@ export function veteran(): MetaSave {
   m.achievements.stats.merges = 5;
   // as a save from before the welcome week reads (sim/welcome.ts parseWelcome)
   m.welcome.gifts = WELCOME_GIFTS.length;
+  // and has had the home guide's one-time pointers
+  m.guide = [...GUIDE_LATER];
   return m;
 }
 

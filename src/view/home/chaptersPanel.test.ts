@@ -40,6 +40,7 @@ describe('the chapters panel', () => {
     const m = newMeta();
     m.cleared = 30;
     m.stage = 31;
+    m.chapterChests = [1, 2, 3];
     const { act } = loggedActions();
     const first = list(chaptersPanel(m, act, SHORT));
     const opened = -first.content.y;
@@ -48,5 +49,14 @@ describe('the chapters panel', () => {
     expect(-list(chaptersPanel(m, act, SHORT)).content.y).toBe(opened - 100);
     scrollChapters();
     expect(-list(chaptersPanel(m, act, SHORT)).content.y).toBe(opened);
+  });
+
+  it("opens at the first chapter with a chest waiting, ahead of the chosen stage's", () => {
+    const m = newMeta();
+    m.cleared = 30;
+    m.stage = 31;
+    m.chapterChests = [1];
+    // chapter 2's row: one row and its gap down
+    expect(-list(chaptersPanel(m, loggedActions().act, SHORT)).content.y).toBe(300 + 18);
   });
 });

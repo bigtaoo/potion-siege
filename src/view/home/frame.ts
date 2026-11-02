@@ -21,6 +21,7 @@ export function frame(act: HomeActions, title: string, h: number, fit: MenuFit):
   const head = plate(title, 54, 420, 'brass', 760);
   head.y = -h / 2 + 6;
   const close = tappable(new Container(), () => act.panel(null));
+  close.label = 'panel_close';
   close.position.set(440, -h / 2 + 10);
   close.addChild(medal(46, P.red), label('✕', 40, { stroke: { color: P.line, width: 6 } }));
   box.addChild(bg, head, close);

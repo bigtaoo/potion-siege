@@ -1,16 +1,22 @@
 // The one-time words in the first battles (docs/onboarding-plan.md, sections 4-5): stage 1's boss
 // gets the new-enemy card, battle 2's first affordable 强化 says what it brings, battle 3's first
 // skill pick says what the 推荐 tag means, and the first won result says what stars are for.
-// Each shows once a save, marked in MetaSave.guide with the home guide's steps.
+// Later ones: the commander's drag after its first cast on its own in battles 2-3, which potions
+// hit flyers once the first is on the field, and the speed button on the first replay.
+// Each shows once a save, marked in MetaSave.guide with the home guide's steps; the later ones
+// wait for any other line to go first.
 
 import type { Game } from '../app';
 import { t } from '../i18n';
 import type { Battle } from '../sim/battle';
 import type { BattleEvent } from '../sim/types';
+import { canHurry } from './battleSpeed';
 import { guideMarked } from './homeGuide';
 
 /** Seconds the 强化 line stays up, unless the player taps 强化 first. */
 export const TIP_SECONDS = 3;
+/** Seconds the later lines stay up. */
+export const LATER_SECONDS = 4;
 
 /** Not in autoplay, nor in the endless run or a challenge (their own rules on screen). */
 function story(g: Game, b: Battle | null): b is Battle {
@@ -32,6 +38,26 @@ export function battleTips(g: Game, b: Battle | null, events: BattleEvent[]): vo
   if (b?.choices && g.hud.noted === words) g.hud.note('', 0);
   const pick = on && g.save.runs === 2 && !seen('pickTip');
   if (pick !== !!g.overlay.pickTip) g.overlay.pickTip = pick ? () => pickTip(g) : null;
+  if (on) laterTips(g, b, events, seen);
+}
+
+/** Battles where the commander has cast on its own, its line held while another is up. */
+const castAlone = new WeakSet<Battle>();
+
+function laterTips(g: Game, b: Battle, events: BattleEvent[], seen: (id: string) => boolean): void {
+  const casts = events.filter((e) => e.type === 'cast');
+  if (casts.some((e) => e.how === 'auto')) castAlone.add(b);
+  const early = g.save.runs >= 1 && g.save.runs <= 2;
+  // a player who aims a cast by hand first needs no line on it
+  if (early && !seen('castTip') && casts.some((e) => e.how !== 'auto')) guideMarked(g, 'castTip', 'none');
+  if (g.hud.noted || b.choices || b.paused || b.result) return;
+  const say = (id: 'castTip' | 'flyerTip' | 'speedTip') => {
+    g.hud.note(t(`guide.${id}`), LATER_SECONDS);
+    guideMarked(g, id, 'done');
+  };
+  if (early && !seen('castTip') && castAlone.has(b)) say('castTip');
+  else if (!seen('flyerTip') && b.enemies.some((e) => e.kind === 'flyer' && e.hp > 0)) say('flyerTip');
+  else if (!seen('speedTip') && g.run && canHurry(g.save, b.setup)) say('speedTip');
 }
 
 function pickTip(g: Game): string {

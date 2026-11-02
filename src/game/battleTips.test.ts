@@ -5,6 +5,7 @@ import '../view/layout/measure';
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { t } from '../i18n';
 import { botAct } from '../sim/bot';
+import { GUIDE_LATER } from '../sim/guide';
 import { newMeta, type MetaSave } from '../sim/meta';
 import { englishPage, play, texts, veteran, world, type World } from './testWorld';
 
@@ -20,7 +21,7 @@ function after(runs: number): MetaSave {
   m.tutorial = true;
   m.cleared = runs;
   m.stage = runs + 1;
-  m.guide = ['gift', 'upgrade', 'upgradeMore', 'upgradeLast', 'toBattle1', 'login', 'tasks', 'workshop', 'toBattle2'];
+  m.guide = ['gift', 'upgrade', 'upgradeMore', 'upgradeLast', 'toBattle1', 'login', 'tasks', 'heroes2', 'workshop', 'toBattle2'];
   return m;
 }
 
@@ -91,7 +92,7 @@ describe('the one-time words in battle', () => {
     expect(texts(w.game['overlay'])).toContain(t('guide.stars'));
     const again = veteran();
     again.stage = 1;
-    again.guide = ['bossCard', 'stars'];
+    again.guide = ['bossCard', 'stars', ...GUIDE_LATER, 'speedTip'];
     const w2 = world(again);
     play(w2);
     botToEnd(w2, true);

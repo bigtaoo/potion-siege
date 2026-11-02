@@ -36,6 +36,7 @@ export function lineupStrip(root: Container, m: MetaSave, act: HomeActions, pick
   kinds.forEach((kind, i) => {
     const fielded = m.lineup.includes(kind);
     const b = tappable(new Container(), () => act.lineup(kind));
+    if (!fielded) b.label = 'bench';
     b.position.set((i - (kinds.length - 1) / 2) * step, -22);
     b.addChild(lightTile(tw, th, 18));
     if (fielded) b.addChild(new Graphics().roundRect(-tw / 2 + 5, -th / 2 + 5, tw - 10, th - 10, 14).fill({ color: HERO_COLORS[kind], alpha: 0.25 }));
