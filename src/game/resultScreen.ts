@@ -11,6 +11,7 @@ import { HERO_KINDS } from '../sim/types';
 import { FEEDBACK_RUN, FeedbackAsk } from '../view/feedback';
 import type { HomeTab } from '../view/Home';
 import { lossStep, lossTips, offersNext } from '../view/nudges';
+import { starsTip } from './battleTips';
 import { home } from './homeScreen';
 
 export function showEnd(g: Game, b: Battle): void {
@@ -66,6 +67,7 @@ export function showEnd(g: Game, b: Battle): void {
     endless: g.endless?.result ? { result: g.endless.result, best: g.save.endless.best, next: nextMilestone(g.save) } : undefined,
     adBlocked: missed,
     stars: g.stars ?? undefined,
+    starsTip: starsTip(g),
   });
 }
 

@@ -16,7 +16,9 @@ import { COIN_TARGET } from './battleView/killFx';
 import { bossTag, enemySprite, fit, ink, LIGHT, lightTile, medal, modifierIcon, P, tappable } from './kit';
 import { drawArc, pointingHand, quad } from './Tutorial';
 import { BossPreview } from './bossPreview';
+import { buttonFill, drawFill } from './buttonFill';
 import { HudPlates } from './hudPlates';
+import { NextMove } from './nextMove';
 import { SpeedButton } from './speedButton';
 import { summonPrice } from './summonPrice';
 import { Button, COLORS, label } from './ui';
@@ -39,10 +41,6 @@ const VETERAN_NUDGE_AFTER = 5;
 /** Merges after which a player knows how: the board points later (VETERAN_NUDGE_AFTER), with no
  *  plate explaining, and no hand at the next move when idle. */
 export const VETERAN_MERGES = 20;
-/** Seconds a player short of VETERAN_MERGES could act and has not before the hand shows the next
- *  move, as the tutorial does: a pair to fuse, else 强化, else 召唤 (pulsing too). Players who
- *  stopped after the tutorial's guided summons lost stage 1 with 1–2. */
-const IDLE_SUMMON_AFTER = 4;
 
 export class Hud extends Container {
   private readonly plates = new HudPlates();
@@ -62,6 +60,9 @@ export class Hud extends Container {
   private readonly mods = new Container();
   private readonly summonButton: Button;
   private readonly upgradeButton: Button;
+  /** Under each, the bar of what a grey button waits for (buttonFill.ts). */
+  private readonly summonFill = new Graphics();
+  private readonly upgradeFill = new Graphics();
   /** Top right, the stage line to its left: opens the pause panel. */
   private readonly pauseButton: Container;
   /** Under the pause button, on a stage won before: the battle at 1.5x (game/battleSpeed.ts). */
@@ -87,6 +88,8 @@ export class Hud extends Container {
   nudge = true;
   /** Past VETERAN_MERGES: the pointer later and no plate. */
   veteran = false;
+  /** Stage 1's boss gets the new-enemy card too, once (game/battleTips.ts). */
+  firstBoss = false;
   /** Around the two cells that could fuse while the grid is full: pulsing rings, the dragging
    *  arc and the tutorial's hand. Takes no taps, so the drag reaches the board under it. */
   private readonly nudgeRings = new Graphics();
@@ -106,10 +109,10 @@ export class Hud extends Container {
   /** The tutorial points at 召唤: the button swells and settles, so the eye finds it. */
   pulse = false;
   private pulseTime = 0;
-  /** Seconds the player could have acted and has not (IDLE_SUMMON_AFTER); a summon, merge or
-   *  强化 resets it, seen as a change in `acted`. */
-  private idleSummon = 0;
-  private acted = '';
+  /** The hand at the next move when the grid is not full (nextMove.ts). */
+  private readonly next = new NextMove();
+  /** One of the player's first battles: the hand shows each move as soon as it can be made. */
+  private early = false;
 
   constructor(onSummon: () => void, onUpgrade: () => void, onPause: () => void) {
     super();
@@ -123,6 +126,8 @@ export class Hud extends Container {
     this.upgradeButton.position.set(190, BUTTON.y);
     this.summonButton = new Button('', BUTTON.w, BUTTON.h, COLORS.button, onSummon, 46, () => this.blocked());
     this.summonButton.position.set(DESIGN_W - 190, BUTTON.y);
+    this.summonButton.addChild(this.summonFill);
+    this.upgradeButton.addChild(this.upgradeFill);
     this.waveText.position.set(DESIGN_W / 2, 60);
     this.stageText.anchor.set(1, 0.5);
     this.stageText.position.set(DESIGN_W - 125, 60);
@@ -171,8 +176,10 @@ export class Hud extends Container {
     if (this.goldText.width > room) this.goldText.scale.set((top * room) / this.goldText.width);
   }
 
-  /** A new battle: at 1x, with the speed button if `hurry` (game/battleSpeed.ts canHurry). */
-  offerSpeed(hurry: boolean): void {
+  /** A new battle: at 1x, with the speed button if `hurry` (game/battleSpeed.ts canHurry);
+   *  `early`, one of the player's first (nudges.ts topPick). */
+  offerSpeed(hurry: boolean, early = false): void {
+    this.early = early;
     this.hurry = hurry;
     this.fast = false;
     // the merge hint's plate would run under the button; a stage won before has taught merging anyway
@@ -181,8 +188,7 @@ export class Hud extends Container {
 
   attach(battle: Battle): void {
     this.battle = battle;
-    this.idleSummon = 0;
-    this.acted = actedOn(battle);
+    this.next.reset(battle);
     this.bannerTime = 0;
     this.banner.alpha = 0;
     this.newcomerTime = 0;
@@ -263,7 +269,7 @@ export class Hud extends Container {
       const kind =
         visitor && visitor !== bossForStage(BALANCE.endless.stage)
           ? firstLap ? visitor : undefined
-          : ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave);
+          : (ENEMY_KINDS.find((k) => FIRST_STAGE[k] > 1 && FIRST_STAGE[k] === stage && FIRST_WAVE[k] === ev.wave) ?? (this.firstBoss && ev.boss && stage ? bossForStage(stage) : undefined));
       if (kind) {
         const weak = resists(kind).filter((r) => r.value > 1).map((r) => t(`hero.${r.element}`));
         if (isBoss(kind)) {
@@ -277,6 +283,16 @@ export class Hud extends Container {
         this.newcomerTime = 5;
       }
     }
+  }
+
+  /** A line where the new enemy's goes, for `seconds`; '' takes it away. */
+  note(text: string, seconds: number): void {
+    this.newcomer.text = text;
+    this.newcomerTime = text ? seconds : 0;
+  }
+
+  get noted(): string {
+    return this.newcomerTime > 0 ? this.newcomer.text : '';
   }
 
   private showBoss(kind: BossKind, weak: string): void {
@@ -343,14 +359,8 @@ export class Hud extends Container {
     this.plates.fit([{ text: this.waveText }, { text: this.stageText }, { text: this.goldText, coin: { ...this.coinAt(), r: 26 * Math.min(this.boost, 1.25) } }]);
     this.shake = Math.max(0, this.shake - dt);
     this.summonButton.x = DESIGN_W - 190 + Math.sin(this.shake * 60) * 14 * (this.shake / 0.35);
-    // the next move for a player who has stopped: a pair to fuse, else 强化, else 召唤
-    const anyPair = b.paused || b.result ? null : (pair ?? mergeablePair(b));
-    const next = anyPair ?? (b.canUpgrade() ? 'upgrade' : b.canSummon() ? 'summon' : null);
-    const acted = actedOn(b);
-    const idle = this.nudge && !this.veteran && !b.result && next !== null && acted === this.acted;
-    this.idleSummon = idle ? this.idleSummon + dt : 0;
-    this.acted = acted;
-    const shown = this.idleSummon >= IDLE_SUMMON_AFTER ? next : null;
+    // the next move: at once in the first battles, else for a player who has stopped
+    const shown = this.next.update(b, this.early, this.nudge && (this.early || !this.veteran), dt);
     this.pulseTime = this.pulse || shown === 'summon' ? this.pulseTime + dt : 0;
     this.summonButton.scale.set(this.upgradeButton.scale.x * (1 + 0.08 * Math.sin(this.pulseTime * Math.PI * 1.5) ** 2));
     if (!full) this.asked = false;
@@ -359,6 +369,8 @@ export class Hud extends Container {
     this.pointAt(nudgePair ?? shown, dt);
     this.upgradeButton.text.text = `${t('upgrade')}\n● ${b.upgradeCost()}`;
     this.upgradeButton.setEnabled(b.canUpgrade());
+    drawFill(this.summonFill, buttonFill(b, 'summon', this.early), BUTTON.w, BUTTON.h);
+    drawFill(this.upgradeFill, buttonFill(b, 'upgrade', this.early), BUTTON.w, BUTTON.h);
     for (const btn of [this.summonButton, this.upgradeButton]) {
       // as big as the boost asks while the caption still fits on the button
       const raw = btn.text.scale.x;
@@ -474,9 +486,4 @@ export class Hud extends Container {
     this.bannerFit = Math.min(1, (DESIGN_W - 40) / (this.banner.width * 1.18));
     this.bannerTime = 2;
   }
-}
-
-/** Changes with each summon, merge and 强化 (and an opened cell): the idle hand's clock starts over. */
-function actedOn(b: Battle): string {
-  return `${b.summons} ${b.freeSlots().length} ${b.upgradeCost()}`;
 }

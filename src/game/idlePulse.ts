@@ -1,6 +1,6 @@
 // 召唤 swells on stages 1-3 when the player has stood still for a few seconds with gold for a
 // summon (audit G1): a lost new player is shown the one button that always helps. Every player
-// gets it there, veterans too, unlike the HUD's idle hand (Hud.ts IDLE_SUMMON_AFTER).
+// gets it there, veterans too, unlike the HUD's idle hand (nextMove.ts IDLE_AFTER).
 import type { Battle } from '../sim/battle';
 import { ASSIST_UNTIL } from '../sim/lossStreak';
 

@@ -136,6 +136,7 @@ function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: strin
   const ready = chestReady(m, today);
   const chest = offerCard(cw, ch, chestIcon(), t('store.chest.name'), t('store.chest.desc'), CHEST_CRYSTALS, !ready, (bw) => {
     const open: PillButton = new PillButton(ready ? t('store.open') : t('tomorrow'), bw, 100, 'green', () => act.claimChest(open), ready ? 46 : 34);
+    if (ready) open.label = 'chest';
     return open.setEnabled(ready);
   });
   chest.position.set(n === 2 ? -(cw + 30) / 2 : 0, 30);

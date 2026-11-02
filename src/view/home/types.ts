@@ -86,6 +86,8 @@ export interface HomeExtras {
   vibrate?: boolean;
   /** Play statistics: the settings switch and the player ID. */
   data?: PlayData;
+  /** The home guide points at something (game/homeGuide.ts): the red dots wait. */
+  guiding?: boolean;
   /** The reminders' switch, where the host has notifications. */
   remind?: RemindState;
   /** The leaderboards, where the host has them (board/types.ts). */

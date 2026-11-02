@@ -27,6 +27,7 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
   root.addChild(bar);
   HOME_TABS.forEach((id, i) => {
     const slot = tappable(new Container(), () => act.tab(id));
+    slot.label = `tab_${id}`;
     const span = wide ? h / HOME_TABS.length : w / HOME_TABS.length;
     if (wide) slot.position.set(RAIL / 2 - 6, span * (i + 0.5));
     else slot.position.set(span * (i + 0.5), h - NAV / 2 + 8);

@@ -38,6 +38,7 @@ export function loginPanel(m: MetaSave, act: HomeActions, today: string, fit: Me
   }
   const claim: PillButton = new PillButton(can ? t('claim') : t('tomorrow'), 520, 140, 'green', () => act.claimLogin(claim), 52).setEnabled(can);
   claim.position.set(0, h / 2 - 110);
+  claim.label = 'claim_login';
   box.addChild(claim);
   return panel;
 }

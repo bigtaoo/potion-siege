@@ -103,8 +103,9 @@ describe('tutorial', () => {
       b.summon();
       tut.update(b, b.drain());
     }
+    // the free ones given, the wait for 强化's gold points at a pair to fuse, if there is one
     at(b, b.seconds + GIFT_EVERY);
-    expect(tut.showing(b)).toBeNull();
+    expect(tut.showing(b)).toBe(mergeablePair(b) ? 'merge' : null);
     b.gold = b.upgradeCost();
     expect(tut.showing(b)).toBe('upgrade');
   });
@@ -123,7 +124,9 @@ describe('tutorial', () => {
       // 召唤 stays shut, at no price, until the free one's time
       at(b, b.seconds + GIFT_EVERY - 0.1);
       expect([b.canSummon(), b.summonCost(), b.summon()]).toEqual([false, 0, false]);
+      expect(b.giftLeft()).toBeGreaterThan(0);
       at(b, b.seconds + 0.1);
+      expect(b.giftLeft()).toBe(0);
       expect(tut.showing(b)).toBe('again');
       expect(b.summon()).toBe(true);
       tut.update(b, b.drain());
@@ -134,7 +137,35 @@ describe('tutorial', () => {
     expect([b.summons, b.summons - b.gifted]).toEqual([paid + EXTRA_SUMMONS, paid]);
     expect(b.summonCost()).toBeGreaterThan(0);
     expect(b.summon()).toBe(false);
-    expect(tut.showing(b)).toBeNull();
+    expect(tut.showing(b)).toBe(mergeablePair(b) ? 'merge' : null);
+  });
+
+  it('fills the rest of the wait for 强化 with a pair to fuse or a paid summon, at full speed', () => {
+    const b = new Battle(FIRST_SEED, stageSetup(newMeta()));
+    const tut = new Tutorial();
+    b.gold = 1e5;
+    b.summon();
+    tut.update(b, b.drain());
+    mergeFirst(b, tut);
+    for (let i = 0; i < EXTRA_SUMMONS; i++) {
+      at(b, b.seconds + GIFT_EVERY);
+      b.summon();
+      tut.update(b, b.drain());
+    }
+    at(b, b.seconds + HOLD_AFTER_SECONDS);
+    b.gold = b.upgradeCost() - 1;
+    expect(b.canSummon()).toBe(true);
+    const pair = mergeablePair(b);
+    expect(tut.showing(b)).toBe(pair ? 'merge' : 'again');
+    expect(tut.pace(b)).toBe(1);
+    if (pair) {
+      b.move(pair[0], pair[1]);
+      tut.update(b, b.drain());
+      expect(tut.step).toBe('upgrade');
+    }
+    b.gold = b.upgradeCost();
+    expect(tut.showing(b)).toBe('upgrade');
+    expect(tut.pace(b)).toBeLessThan(1);
   });
 
   it('lets the crowd walk in for HOLD_AFTER_SECONDS, then creeps on in slow motion and stops short of the wall', () => {

@@ -106,9 +106,11 @@ export function challengeShown(m: MetaSave): boolean {
  *  is the next stage, so battle 1 leads straight to battles 2 and 3. */
 export const NEXT_UNTIL = 3;
 
-/** The result of winning `stage` offers the next stage straight away. */
+/** The result of winning `stage` offers the next stage straight away; not while the one-time
+ *  upgrade pointer waits, so the first win goes home to spend its crystals (Playgama players
+ *  gave up stage 2 within seconds to get there). */
 export function offersNext(m: MetaSave, stage: number): boolean {
-  return (m.runs < NEXT_UNTIL || m.cleared < NEXT_UNTIL) && stage < maxStage(m);
+  return (m.runs < NEXT_UNTIL || m.cleared < NEXT_UNTIL) && stage < maxStage(m) && upgradeHintKind(m) === null;
 }
 
 /** Runs before the daily login opens by itself on the home screen; its button and dot are

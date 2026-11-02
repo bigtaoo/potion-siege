@@ -6,7 +6,9 @@
 // never a still picture, but stops STOP_GAP short of the wall: waiting can never lose the battle.
 // The slow motion starts after HOLD_AFTER_SECONDS so the crowd is seen walking in. While the merge
 // step has no pair yet it points at 召唤 instead, and so does the 强化 step for EXTRA_SUMMONS more
-// summons while its gold comes in. The view draws the pointer.
+// summons while its gold comes in, and once those are given, at whatever else can be done (a pair
+// to fuse, a paid summon) at full speed: the wait for 100 gold is never a blank. The view draws
+// the pointer.
 
 import { SLOT_COUNT, type Battle } from './battle';
 import { FP, TICK_RATE } from './math/fixed';
@@ -62,7 +64,9 @@ export class Tutorial {
         return mergeablePair(b) ? 'merge' : b.canSummon() ? 'more' : null;
       case 'upgrade':
         if (b.canUpgrade()) return 'upgrade';
-        return b.giftReady() && b.canSummon() ? 'again' : null;
+        if (b.giftReady()) return b.canSummon() ? 'again' : null;
+        if (b.paused) return null;
+        return mergeablePair(b) ? 'merge' : b.canSummon() ? 'again' : null;
       case 'pick':
         return b.choices ? 'pick' : null;
       default:
@@ -82,10 +86,12 @@ export class Tutorial {
 
   /** How fast the battle runs now: 1, or SLOW_PACE while a step points and waits for the player
    *  (the pick pauses the battle by itself), or 0 once the crowd is STOP_GAP short of the wall.
+   *  The 强化 step's pointers at a pair or a paid summon only fill its wait and slow nothing.
    *  Checked before every tick, so a step that comes up mid-frame slows the battle there. */
   pace(b: Battle): number {
     const s = this.showing(b);
     if (s === null || s === 'pick' || b.time < HOLD_AFTER_SECONDS * TICK_RATE) return 1;
+    if (this.step === 'upgrade' && s !== 'upgrade' && !b.giftReady()) return 1;
     const gap = STOP_GAP * FP;
     return b.enemies.some((e) => e.y + e.radius + gap >= b.wallFront(e.x)) ? 0 : SLOW_PACE;
   }

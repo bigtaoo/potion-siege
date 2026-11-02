@@ -209,3 +209,17 @@ describe('the idle hand picks the next move', () => {
     expect(hand(h).visible).toBe(false);
   });
 });
+
+describe('the hand in the first battles', () => {
+  it('points at 召唤 well before the idle hand would, and draws the bar toward 强化', () => {
+    const h = hud(new Battle(1, battleSetup(newMeta(), 1)));
+    h.offerSpeed(false, true);
+    h.update(0);
+    h.update(0.7);
+    expect((h['nudgeHand'] as Container).visible).toBe(true);
+    expect((h['upgradeFill'] as Graphics).context.instructions.length).toBeGreaterThan(0);
+    h.offerSpeed(false);
+    h.update(0.1);
+    expect((h['upgradeFill'] as Graphics).context.instructions).toHaveLength(0);
+  });
+});

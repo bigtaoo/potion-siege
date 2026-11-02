@@ -77,6 +77,7 @@ export function heroCard(m: MetaSave, act: HomeActions, kind: HeroKind, cw: numb
   } else {
     const b = priced(new PillButton(String(cost), cw - 90, 84, 'purple', () => act.hero(kind), 42, true), m.crystals >= cost);
     b.y = ch / 2 - 54;
+    b.label = `price_${kind}`;
     c.addChild(b);
   }
   if (pick) c.addChild(pickBadge(cw / 2 - 14, top + 14));

@@ -68,6 +68,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
       fitText(next, room);
       const b = priced(new PillButton(String(cost), 250, 100, 'purple', () => act.workshop(id), 44, true), m.crystals >= cost);
       b.position.set(bx, -4);
+      b.label = `buy_${id}`;
       r.addChild(next, b);
     }
     root.addChild(r);

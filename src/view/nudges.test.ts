@@ -215,6 +215,20 @@ describe('first battles', () => {
     expect(offersNext(m, 2)).toBe(true);
   });
 
+  it('sends the first win home while the upgrade pointer waits', () => {
+    const m = newMeta();
+    m.runs = 1;
+    m.cleared = 1;
+    m.crystals = 10_000;
+    expect(offersNext(m, 1)).toBe(false);
+    m.upgradeHint = true;
+    expect(offersNext(m, 1)).toBe(true);
+    // short of a potion level, there is nothing to point at
+    m.upgradeHint = false;
+    m.crystals = 0;
+    expect(offersNext(m, 1)).toBe(true);
+  });
+
   it('never offers a stage past the last one', () => {
     const m = newMeta();
     m.runs = 1;

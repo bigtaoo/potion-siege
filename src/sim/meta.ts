@@ -14,6 +14,7 @@ import { carry, int } from './parse';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
 import type { SkillId } from './skills';
 import type { WaveMods } from './waves';
+import { parseGuide } from './guide';
 import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
 
 const M = BALANCE.meta;
@@ -49,6 +50,8 @@ export interface MetaSave {
   tutorial: boolean;
   /** The home screen's one-time pointer at the first affordable potion upgrade was seen. */
   upgradeHint: boolean;
+  /** The home screens' guided steps and one-time battle words done or skipped (guide.ts). */
+  guide: string[];
   challenge: ChallengeSave;
   /** The welcome week's gifts (welcome.ts). */
   welcome: WelcomeSave;
@@ -142,6 +145,7 @@ export function newMeta(): MetaSave {
     shop: { chestDay: '', adDay: '', ads: 0 },
     tutorial: false,
     upgradeHint: false,
+    guide: [],
     challenge: newChallenge(),
     welcome: newWelcome(),
     endless: newEndless(),
@@ -193,6 +197,7 @@ export function parseMeta(raw: string | null): MetaSave {
   // a save from before the tutorial that has played already knows the game
   out.tutorial = data.tutorial === undefined ? out.runs > 0 : data.tutorial === true;
   out.upgradeHint = data.upgradeHint === undefined ? out.runs > 0 : data.upgradeHint === true;
+  out.guide = parseGuide(data.guide, out.runs);
   out.challenge = parseChallenge(data.challenge);
   out.welcome = parseWelcome(data.welcome, out.runs);
   out.endless = parseEndless(data.endless);

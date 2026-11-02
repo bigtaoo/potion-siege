@@ -7,7 +7,7 @@ import { ENDLESS_MILESTONES } from '../sim/endless';
 import type { Reward } from '../sim/meta';
 import type { SkillId, SkillLevels } from '../sim/skills';
 import { LIGHT, lightPanel, plate, tappable } from './kit';
-import { COLORS } from './ui';
+import { COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 import { adButton } from './overlay/adButton';
 import {
@@ -41,6 +41,8 @@ export class Overlay extends Container {
   private redo: (() => void) | null = null;
   /** The hand over the suggested skill card, while the pick is up. */
   private nudge: CardNudge | null = null;
+  /** The line under the cards on battle 3's first pick, once (game/battleTips.ts). */
+  pickTip: (() => string) | null = null;
 
   constructor() {
     super();
@@ -115,6 +117,12 @@ export class Overlay extends Container {
     if (top !== null && top < choices.length) {
       this.nudge = new CardNudge((top - (choices.length - 1) / 2) * gap, 215); // on the pips, clear of the text
       box.addChild(this.nudge);
+      if (this.pickTip) {
+        const tip = label(this.pickTip(), 36, { wordWrap: true, wordWrapWidth: SKILL_BOX.w - 120, align: 'center' });
+        tip.anchor.set(0.5);
+        tip.y = 365; // between the cards and the refresh
+        box.addChild(tip);
+      }
     }
     if (onReroll) {
       const b = adButton(t('reroll'), 440, 130, 'purple', onReroll, 50);
@@ -147,7 +155,7 @@ export class Overlay extends Container {
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
     if (reward.chest) left.push(section(ribbon(t('chapter.cleared', { c: reward.chest }), W - 200), 110));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
-    left.push(...starNotes(more.stars, W - 200));
+    left.push(...starNotes(more.stars, W - 200, !!more.starsTip));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     if (more.onTip) right.push(tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null));

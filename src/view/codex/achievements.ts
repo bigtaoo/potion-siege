@@ -135,6 +135,7 @@ function featRow(m: MetaSave, id: TrackId, rw: number, rh: number, claim: (at: C
   } else {
     const b: PillButton = new PillButton(String(tiers[next].reward), bw, bh, 'green', () => claim(b), rh * 0.2, true).setEnabled(ready);
     b.position.set(bx, 0);
+    if (ready) b.label = 'claim_feat';
     r.addChild(b);
   }
   return r;

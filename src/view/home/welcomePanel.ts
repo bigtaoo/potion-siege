@@ -51,6 +51,7 @@ export function welcomePanel(m: MetaSave, act: HomeActions, today: string, fit: 
   }
   const claim: PillButton = new PillButton(can ? t('claim') : t('tomorrow'), 520, 140, 'green', () => act.claimWelcome(claim), 52).setEnabled(can);
   claim.position.set(0, h / 2 - 110);
+  claim.label = 'claim_welcome';
   box.addChild(claim);
   return panel;
 }

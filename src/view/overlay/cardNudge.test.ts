@@ -9,9 +9,12 @@ const art = vi.hoisted(() => ({ hand: undefined as Texture | undefined }));
 vi.mock('../art', async (orig) => ({ ...(await orig<typeof import('../art')>()), handTexture: () => art.hand }));
 
 describe('skill card nudge', () => {
-  it('shows the hand only after the cards were left alone', () => {
-    expect(nudgeOn(CARD_NUDGE.after - 0.1)).toBe(false);
-    expect(nudgeOn(CARD_NUDGE.after)).toBe(true);
+  it('shows the hand once the cards are open and while they are let alone', () => {
+    expect(nudgeOn(CARD_NUDGE.after - 0.1, Infinity)).toBe(false);
+    expect(nudgeOn(CARD_NUDGE.after, Infinity)).toBe(true);
+    expect(CARD_NUDGE.after).toBeLessThan(1);
+    expect(nudgeOn(5, CARD_NUDGE.rest - 0.1)).toBe(false);
+    expect(nudgeOn(5, CARD_NUDGE.rest)).toBe(true);
   });
 
   it('taps down onto the card, rests, lifts, and repeats every beat', () => {
@@ -36,12 +39,12 @@ describe('CardNudge', () => {
   const ring = (n: CardNudge) => n.children[0] as Graphics;
   const hand = (n: CardNudge) => n.children[1] as Container;
 
-  it('stays hidden until the cards were left alone, then taps them', () => {
+  it('stays hidden while the cards fan out, then taps them', () => {
     const n = new CardNudge(120, 340);
     expect([n.x, n.y, n.visible, n.eventMode]).toEqual([120, 340, false, 'none']);
-    n.update(CARD_NUDGE.after - 0.5);
+    n.update(CARD_NUDGE.after - 0.2);
     expect(n.visible).toBe(false);
-    n.update(0.5);
+    n.update(0.2);
     expect(n.visible).toBe(true);
     expect(hand(n).y).toBe(80);
     expect(ring(n).context.instructions).toHaveLength(0);
@@ -51,30 +54,42 @@ describe('CardNudge', () => {
     n.destroy();
   });
 
-  it('goes at a touch, drag or key and comes back once the cards are left alone again', () => {
+  it('goes at a touch, drag or key and comes back a second after it', () => {
     const drag = Object.assign(new Event('pointermove'), { buttons: 1 });
-    for (const ev of [new Event('pointerdown'), drag, new Event('keydown')]) {
+    for (const ev of [new Event('pointerup'), drag, new Event('keydown')]) {
       const n = new CardNudge(0, 0);
       n.update(CARD_NUDGE.after + 1);
       win.dispatchEvent(ev);
-      n.update(CARD_NUDGE.after - 0.5);
+      n.update(CARD_NUDGE.rest - 0.2);
       expect(n.visible).toBe(false);
-      n.update(0.5);
+      n.update(0.2);
       expect(n.visible).toBe(true);
       n.destroy();
     }
   });
 
+  it('stays away for as long as a press lasts', () => {
+    const n = new CardNudge(0, 0);
+    n.update(CARD_NUDGE.after);
+    win.dispatchEvent(new Event('pointerdown'));
+    n.update(5);
+    expect(n.visible).toBe(false);
+    win.dispatchEvent(new Event('pointercancel'));
+    n.update(CARD_NUDGE.rest);
+    expect(n.visible).toBe(true);
+    n.destroy();
+  });
+
   it('pays no heed to a mouse only passing over the cards, and stops listening once destroyed', () => {
     const n = new CardNudge(0, 0);
-    n.update(CARD_NUDGE.after - 0.5);
+    n.update(CARD_NUDGE.after - 0.2);
     win.dispatchEvent(Object.assign(new Event('pointermove'), { buttons: 0 }));
-    n.update(0.5);
+    n.update(0.2);
     expect(n.visible).toBe(true);
     n.destroy();
     const spy = vi.spyOn(win, 'removeEventListener');
     new CardNudge(0, 0).destroy();
-    expect(spy).toHaveBeenCalledTimes(3);
+    expect(spy).toHaveBeenCalledTimes(5);
   });
 
   it('swaps the drawn glove for the painted one once its art is in', () => {

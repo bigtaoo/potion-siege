@@ -175,6 +175,7 @@ function commander(root: Container, m: MetaSave, act: HomeActions, x: number, to
 function startButton(root: Container, act: HomeActions, x: number, y: number, w: number): void {
   const b = new PillButton(t('start'), w, START_H, 'green', act.play, 86);
   b.position.set(x, y);
+  b.label = 'start';
   root.addChild(b);
 }
 
@@ -197,6 +198,7 @@ function challengeButton(root: Container, m: MetaSave, act: HomeActions, today: 
   const cal = calendarIcon();
   cal.scale.set(0.8);
   const c = sideButton(root, cal, t('challenge.title'), x, y, () => act.panel('challenge'));
+  c.label = 'challenge';
   if (!canPlayFree(m, today)) return;
   const n = label(String(CHALLENGE_TIERS[CHALLENGE_TIERS.length - 1].reward), 30, { stroke: { color: P.line, width: 5 } });
   const bw = n.width + 50;

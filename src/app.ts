@@ -332,7 +332,7 @@ export class Game {
     this.hud.hint = this.save.achievements.stats.merges === 0;
     this.hud.nudge = true;
     this.hud.veteran = this.save.achievements.stats.merges >= VETERAN_MERGES;
-    this.hud.offerSpeed(!!this.run && !ch && canHurry(this.save, this.battle.setup));
+    this.hud.offerSpeed(!!this.run && !ch && canHurry(this.save, this.battle.setup), !this.autoplay && topPick(this.save));
     this.loop = new FixedStep();
     this.view.attach(this.battle);
     this.view.starMark = () => !ch && cause !== 'endless' && !this.revived;

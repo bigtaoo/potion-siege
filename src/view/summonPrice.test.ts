@@ -24,4 +24,12 @@ describe('summonPrice', () => {
     expect(summonPrice(b)).toBe('');
     expect(summonPrice(b)).not.toContain('0');
   });
+
+  it('reads Free while the first battle counts down to its next gift', () => {
+    const b = new Battle(1, BASE_SETUP);
+    b.giftLeft = () => 2;
+    b.canSummon = () => false;
+    b.summonCost = () => 0;
+    expect(summonPrice(b)).toBe(`\n${t('free')}`);
+  });
 });

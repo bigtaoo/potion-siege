@@ -5,7 +5,7 @@
 
 import { Container, Graphics, Sprite, type Text } from 'pixi.js';
 import { t } from '../i18n';
-import { TUTORIAL_STEPS, type TutorialCue } from '../sim/tutorial';
+import { TUTORIAL_STEPS, type TutorialCue, type TutorialStep } from '../sim/tutorial';
 import { handTexture } from './art';
 import { sharp } from './shrink';
 import { balanced, fit, LIGHT, lightPanel, lightTile, P, ink, tappable } from './kit';
@@ -22,6 +22,9 @@ export interface Rect {
  *  cards during the pick). */
 export interface Lesson {
   step: TutorialCue;
+  /** The tutorial step it belongs to, for the "n/m" line: the 强化 step's wait points at a pair
+   *  or 召唤 too. The cue's own step when left out. */
+  of?: TutorialStep;
   holes: Rect[];
   from: { x: number; y: number };
   to?: { x: number; y: number };
@@ -76,7 +79,7 @@ export class TutorialLayer extends Container {
     this.hand.visible = !pick;
     this.useHandArt();
 
-    const key = `${lesson.step}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${lesson.keep?.length ?? 0}`;
+    const key = `${lesson.step}|${lesson.of ?? ''}|${Math.round(w)}x${Math.round(h)}|${this.holes.map((r) => `${Math.round(r.x)},${Math.round(r.y)}`).join(';')}|${lesson.keep?.length ?? 0}`;
     if (key !== this.key) {
       this.key = key;
       this.drawDim(w, h);
@@ -121,7 +124,7 @@ export class TutorialLayer extends Container {
       side = target.y + target.h / 2 > h * 0.45 ? 'above' : 'below';
     }
 
-    const n = TUTORIAL_STEPS.indexOf(lesson.step === 'more' ? 'merge' : lesson.step === 'again' ? 'upgrade' : lesson.step) + 1;
+    const n = TUTORIAL_STEPS.indexOf(lesson.of ?? (lesson.step === 'more' ? 'merge' : lesson.step === 'again' ? 'upgrade' : lesson.step)) + 1;
     const head = ink(t('tutorial.step', { n, total: TUTORIAL_STEPS.length }), 32, { fill: P.inkSoft });
     const body = balanced(t(`tutorial.${lesson.step === 'again' ? 'summon' : lesson.step}`), cw < 500 ? 40 : 46, cw - 130, { fill: LIGHT.edge, lineHeight: cw < 500 ? 54 : 62 });
     const skip = skipButton(() => this.onSkip());

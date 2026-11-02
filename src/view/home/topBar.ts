@@ -15,8 +15,9 @@ import type { HomeActions } from './types';
  *  the leaderboards' medal. */
 export function topBar(root: Container, m: MetaSave, act: HomeActions, left: number, w: number, wide: boolean, dots: { welcome: boolean; login: boolean; tasks: boolean }, board = false): void {
   const y = wide ? 70 : 80;
-  const button = (x: number, icon: Container, text: string, dot: boolean, onTap: () => void) => {
+  const button = (id: string, x: number, icon: Container, text: string, dot: boolean, onTap: () => void) => {
     const c = tappable(new Container(), onTap);
+    c.label = `top_${id}`;
     c.position.set(x, y);
     icon.scale.set(0.72);
     // the caption sits on its own cream plate below the medal, clear of the brass rim
@@ -30,13 +31,13 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, left: num
     if (dot) redDot(c, 42, -42);
     root.addChild(c);
   };
-  button(left + 90, calendarIcon(), t('login'), dots.login, () => act.panel('login'));
-  button(left + 240, scrollIcon(), t('tasks'), dots.tasks, () => act.panel('tasks'));
-  button(left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
+  button('login', left + 90, calendarIcon(), t('login'), dots.login, () => act.panel('login'));
+  button('tasks', left + 240, scrollIcon(), t('tasks'), dots.tasks, () => act.panel('tasks'));
+  button('settings', left + 390, gearIcon(40), t('sound.settings'), false, () => act.panel('settings'));
   // the welcome week's gifts, while there are any left
   const welcome = welcomeOn(m);
-  if (welcome) button(left + 540, chestIcon(), t('welcome.button'), dots.welcome, () => act.panel('welcome'));
-  if (board) button(left + (welcome ? 690 : 540), trophyIcon(), t('board.button'), false, () => act.panel('board'));
+  if (welcome) button('welcome', left + 540, chestIcon(), t('welcome.button'), dots.welcome, () => act.panel('welcome'));
+  if (board) button('board', left + (welcome ? 690 : 540), trophyIcon(), t('board.button'), false, () => act.panel('board'));
 
   // the crystals in a dark inset, top right
   const count = ink(formatAmount(m.crystals), 50, { fill: LIGHT.crystal });

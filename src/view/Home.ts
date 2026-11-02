@@ -59,7 +59,7 @@ export function buildHome(
   const top = wide ? TOP - 20 : TOP;
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
   // the red-dot rules are in nudges.ts and homeDots.ts; never on the tab already open
-  const dots = homeDots(m, today, tab, hint !== null);
+  const dots = homeDots(m, today, tab, hint !== null || !!extras.guiding);
   if (tab === 'battle') battleTab(root, m, act, area, today, dots.battle);
   else if (tab === 'potions') potionsTab(root, m, act, area, picked, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);

@@ -40,6 +40,7 @@ export function tasksPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Contain
     } else {
       const b: PillButton = new PillButton(String(taskReward(task.id)), 250, 100, 'green', () => act.claimTask(i, b), 44, true).setEnabled(taskDone(task));
       b.position.set(270, -4);
+      if (taskDone(task)) b.label = 'claim_task';
       r.addChild(b);
     }
     box.addChild(r);

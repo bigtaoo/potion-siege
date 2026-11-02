@@ -16,6 +16,7 @@ import { feedbackLines, playtestRows, printPlaytest } from './playtestMetrics.mj
 import { printSessions, sessionStats } from './sessionReport.mjs';
 import { compareBuilds, printCompare } from './buildCompare.mjs';
 import { countryRows, printCountries } from './countryReport.mjs';
+import { guideRows, printGuide } from './guideReport.mjs';
 
 const args = process.argv.slice(2);
 const sources = [];
@@ -148,6 +149,7 @@ for (const e of firstAct.values()) byAct.set(e.props.action, [...(byAct.get(e.pr
 for (const [action, secs] of byAct) funnelRow(`  result: ${action}`, new Set([...firstAct].filter(([, e]) => e.props.action === action).map(([uid]) => uid)), `  median ${median(secs)}s`);
 funnelRow('run 2 start', reached((e) => e.name === 'run_start' && e.props.run === 2));
 funnelRow('run 3 start', reached((e) => e.name === 'run_start' && e.props.run === 3));
+printGuide(guideRows(events));
 
 // --- session length ---
 printSessions(sessionStats(events));

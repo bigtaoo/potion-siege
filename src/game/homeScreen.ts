@@ -16,6 +16,7 @@ import { flipSwitch } from '../view/soundSwitches';
 import { fitMenu } from '../view/viewport';
 import { boardView, fetchBoard, submitScores } from './boardFlow';
 import { buy, buyAdFree, claimed, hintDone, language, lineup, restoreAdFree, shopAd } from './homeActions';
+import { drawGuide, guideActs, guideAim, guideSkip } from './homeGuide';
 import { challengeAd, playChallenge, playEndless } from './modes';
 import { reminderBook } from './reminderBook';
 import { claimWelcomeGift, enterHome, remindAnswer, welcomePops, welcomeVisit } from './returnHooks';
@@ -64,11 +65,13 @@ export function home(g: Game, panel: HomePanel = null): void {
   g.menu.removeChildren().forEach((c) => c.destroy({ children: true }));
   // what the open tab offers puts its red dot out (view/nudges.ts)
   if (g.tab !== 'battle' && markSeen(g.save, g.tab, today)) g.store();
-  // the one-time pointer at a potion upgrade, until the player has seen its button
-  const hint = g.autoplay || panel ? null : upgradeHintKind(g.save);
+  // the guide of the first three home screens (homeGuide.ts), else the one-time pointer at a
+  // potion upgrade until the player has seen its button
+  const aim = guideAim(g, panel, g.tab, today);
+  const hint = g.autoplay || panel ? null : aim ? aim.hint : upgradeHintKind(g.save);
   if (hint) g.analytics.first(g.tab === 'potions' ? 'hint_upgrade_button' : 'hint_upgrade_tab', { run: g.save.runs });
   g.hintOnButton = !!hint && g.tab === 'potions';
-  g.menu.addChild(buildHome(g.save, {
+  const root = g.menu.addChild(buildHome(g.save, guideActs(g, {
     tab: (tab) => {
       if (g.hintOnButton && tab !== 'potions') hintDone(g, false);
       g.tab = tab;
@@ -193,8 +196,12 @@ export function home(g: Game, panel: HomePanel = null): void {
       g.root.visible = true;
       g.platform.gameplayStart();
     },
-  }, g.tab, panel, today, fit, g.picked, !g.autoplay && g.platform.rewardedAvailable(), hint, extras(g)));
-  g.hintHand = hint ? g.menu.getChildByLabel('hintHand', true) : null;
+  }, aim), g.tab, panel, today, fit, g.picked, !g.autoplay && g.platform.rewardedAvailable(), hint, { ...extras(g), guiding: !!aim?.target }));
+  drawGuide(g, root, aim, () => {
+    guideSkip(g);
+    home(g, g.panel);
+  });
+  g.hintHand = g.menu.getChildByLabel('hintHand', true);
 }
 
 /** The ad-free card and the ad privacy options, where the host has them (iOS), the link to

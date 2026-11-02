@@ -9,6 +9,12 @@ describe('BridgeEvents', () => {
     expect(m.map('tutorial_end', { step: 'done', skipped: false })).toEqual(['tutorial_completed', { step_id: 'done', step_index: 5, seconds: 0, skipped: false, at_step: 'done' }]);
   });
 
+  it('passes the guide steps on, missing fields as empty', () => {
+    const m = new BridgeEvents();
+    expect(m.map('guide_step', { id: 'login', chapter: 2, result: 'done', waitS: 3.4, run: 2 })).toEqual(['guide_step', { step_id: 'login', chapter: 2, result: 'done', wait_sec: 3.4, run: 2 }]);
+    expect(m.map('guide_step', {})).toEqual(['guide_step', { step_id: '', chapter: 0, result: '', wait_sec: 0, run: 0 }]);
+  });
+
   it('makes runs a progression funnel by stage, carrying the stage to the run end', () => {
     const m = new BridgeEvents();
     expect(m.map('run_start', { run: 3, cause: 'next', stage: 4 })).toEqual(['progression_started', { step_id: 'stage_4', step_index: 4, mode: 'story', run: 3, cause: 'next' }]);

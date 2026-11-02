@@ -37,8 +37,8 @@ import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, typ
 import type { Spawn } from './waves';
 
 /** Battle seconds from the first merge to the first of the setup's free summons, and between
- *  them (giftSummons): about one per third of the wait for 强化's gold. */
-export const GIFT_EVERY = 7;
+ *  them (giftSummons): soon enough that the player is never left with nothing to do. */
+export const GIFT_EVERY = 3;
 
 export { SLOT_COUNT, slotCenter, WALL_ROW } from './field';
 
@@ -238,6 +238,11 @@ export class Battle {
    *  spread over the wait for 强化's gold instead of going at once and leaving it empty. */
   giftReady(): boolean {
     return this.giftOwed() && this.time - this.giftFrom >= GIFT_EVERY * TICK_RATE;
+  }
+
+  /** Battle seconds until the free summon owed can be taken; 0 when none is owed or it can be now. */
+  giftLeft(): number {
+    return this.giftOwed() ? Math.max(0, GIFT_EVERY - (this.time - this.giftFrom) / TICK_RATE) : 0;
   }
 
   upgradeCost(): number {

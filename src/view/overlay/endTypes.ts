@@ -30,6 +30,8 @@ export interface EndExtras {
   adBlocked?: boolean;
   /** A stage win's stars: how many, the best before, and a hard mode it opened. */
   stars?: StarsResult;
+  /** The first won result: what the stars take and give, in place of the rule. */
+  starsTip?: boolean;
 }
 
 export interface EndlessEnd {
