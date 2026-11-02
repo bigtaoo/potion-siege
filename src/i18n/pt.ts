@@ -153,7 +153,7 @@ export const pt: Table = {
     crystals: { name: 'Peneira Mágica', desc: 'Cristais +{p}%' },
     now: 'Agora: {text}',
     next: 'Próximo: {text}',
-    none: 'sem melhoria',
+    none: 'sem bônus ainda',
   },
   store: {
     daily: 'Brindes diários',
@@ -176,6 +176,7 @@ export const pt: Table = {
     },
   },
   login: 'Prêmio diário',
+  top: { login: 'Prêmio', tasks: 'Tarefas', settings: 'Ajustes' },
   welcome: { title: 'Presentes de boas-vindas', button: 'Presentes', note: 'Um presente para cada dia que você jogar esta semana' },
   remind: {
     setting: 'Lembretes',
@@ -193,6 +194,7 @@ export const pt: Table = {
   claimed: 'Resgatado',
   tomorrow: 'Volte amanhã',
   tasks: 'Tarefas diárias',
+  tasksNext: 'Novas tarefas em {time}',
   allDone: 'Bônus completo',
   allDoneCount: '{n}/{total} resgatadas',
   lang: { name: 'Português' },
@@ -274,7 +276,7 @@ export const pt: Table = {
   },
   codex: {
     page: { potions: 'Poções', enemies: 'Inimigos', feats: 'Conquistas' },
-    heroes: 'Poções',
+    heroes: 'Formas por estrela',
     monsters: 'Exército Mecânico',
     locked: 'Bloqueado',
     hp: 'PV {n}',
@@ -294,10 +296,13 @@ export const pt: Table = {
     speed: 'Velocidade {n}',
     wallDps: 'Cerco {n}/s',
     resist: 'Dano recebido',
+    more: 'Causa mais dano',
+    less: 'Causa menos dano',
   },
   ach: {
     title: 'Conquistas',
     count: '{n}/{total} resgatadas',
+    claimAll: 'Resgatar tudo',
     done: 'Concluída',
     stages: { name: 'Quebra-Cerco', desc: 'Vença a fase {n}' },
     level: { name: 'Mestre das Poções', desc: 'Leve uma poção ao Nv. {n}' },

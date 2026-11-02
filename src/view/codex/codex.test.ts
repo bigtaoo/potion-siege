@@ -71,4 +71,14 @@ describe('the potions page', () => {
     const forms = (BALANCE.maxStar * (BALANCE.maxStar - 1)) / 2;
     expect(standing()).toEqual(LINEUP.map(() => forms));
   });
+
+  it("keeps the wide page's tabs in the top bar's row while they fit there, else gives them a row", () => {
+    const wide = { x: 230, y: 170, w: 1690, h: 910, wide: true };
+    const roomy = buildCodex(newMeta(), { ...wide, bar: 780 }, () => {}, () => {});
+    expect(tabs(roomy).children[0].y).toBe(70);
+    // a top bar of five medals leaves too little room
+    const full = buildCodex(newMeta(), { ...wide, bar: 1140 }, () => {}, () => {});
+    expect(tabs(full).children[0].y).toBe(wide.y + 58);
+    expect(page(full).getBounds().y).toBeGreaterThan(page(roomy).getBounds().y);
+  });
 });

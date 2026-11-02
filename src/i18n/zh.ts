@@ -152,7 +152,7 @@ export const zh: Table = {
     crystals: { name: '晶石筛', desc: '晶石收益 +{p}%' },
     now: '当前：{text}',
     next: '下一级：{text}',
-    none: '未强化',
+    none: '暂无加成',
   },
   store: {
     daily: '每日福利',
@@ -175,6 +175,7 @@ export const zh: Table = {
     },
   },
   login: '每日签到',
+  top: { login: '签到', tasks: '任务', settings: '设置' },
   welcome: { title: '新手礼包', button: '礼包', note: '本周每玩一天，就送一份礼物' },
   remind: {
     setting: '提醒',
@@ -192,6 +193,7 @@ export const zh: Table = {
   claimed: '已领取',
   tomorrow: '明天再来',
   tasks: '每日任务',
+  tasksNext: '{time} 后刷新任务',
   allDone: '全部完成奖励',
   allDoneCount: '已领取 {n}/{total}',
   /** The language's own name, for the picker. */
@@ -274,7 +276,7 @@ export const zh: Table = {
   },
   codex: {
     page: { potions: '药剂', enemies: '敌人', feats: '成就' },
-    heroes: '药剂',
+    heroes: '星级形态',
     monsters: '发条军团',
     locked: '未解锁',
     hp: '生命 {n}',
@@ -294,10 +296,13 @@ export const zh: Table = {
     speed: '速度 {n}',
     wallDps: '攻城 {n}/秒',
     resist: '受到伤害',
+    more: '效果更好',
+    less: '效果较差',
   },
   ach: {
     title: '成就',
     count: '已领取 {n}/{total}',
+    claimAll: '全部领取',
     done: '已完成',
     stages: { name: '破城者', desc: '通关第 {n} 关' },
     level: { name: '酿造大师', desc: '任一药剂升到 {n} 级' },

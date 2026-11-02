@@ -153,7 +153,7 @@ export const id: Table = {
     crystals: { name: 'Ayakan Kristal', desc: 'Kristal +{p}%' },
     now: 'Kini: {text}',
     next: 'Berikut: {text}',
-    none: 'belum ditingkatkan',
+    none: 'belum ada bonus',
   },
   store: {
     daily: 'Bonus Harian',
@@ -176,6 +176,7 @@ export const id: Table = {
     },
   },
   login: 'Hadiah Harian',
+  top: { login: 'Hadiah', tasks: 'Tugas', settings: 'Setelan' },
   welcome: { title: 'Hadiah sambutan', button: 'Hadiah', note: 'Satu hadiah untuk setiap hari kamu bermain minggu ini' },
   remind: {
     setting: 'Pengingat',
@@ -193,6 +194,7 @@ export const id: Table = {
   claimed: 'Diklaim',
   tomorrow: 'Kembali besok',
   tasks: 'Tugas Harian',
+  tasksNext: 'Tugas baru dalam {time}',
   allDone: 'Bonus Semua Tugas',
   allDoneCount: '{n}/{total} diklaim',
   lang: { name: 'Bahasa Indonesia' },
@@ -274,7 +276,7 @@ export const id: Table = {
   },
   codex: {
     page: { potions: 'Ramuan', enemies: 'Musuh', feats: 'Pencapaian' },
-    heroes: 'Ramuan',
+    heroes: 'Wujud bintang',
     monsters: 'Pasukan Mesin Jam',
     locked: 'Terkunci',
     hp: 'HP {n}',
@@ -294,10 +296,13 @@ export const id: Table = {
     speed: 'Kecepatan {n}',
     wallDps: 'Gempur {n}/d',
     resist: 'Kerusakan diterima',
+    more: 'Lebih mempan',
+    less: 'Kurang mempan',
   },
   ach: {
     title: 'Pencapaian',
     count: '{n}/{total} diklaim',
+    claimAll: 'Klaim semua',
     done: 'Selesai',
     stages: { name: 'Pendobrak Benteng', desc: 'Tamatkan tahap {n}' },
     level: { name: 'Peracik Ulung', desc: 'Naikkan ramuan ke Lv {n}' },

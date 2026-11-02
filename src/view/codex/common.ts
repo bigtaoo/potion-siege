@@ -10,6 +10,9 @@ export interface CodexArea {
   w: number;
   h: number;
   wide: boolean;
+  /** Where the top bar's medals end, on a wide page: the page tabs go between them and the
+   *  crystals when they fit there. */
+  bar?: number;
 }
 
 /** Room a board's title plate takes at its top, and its bottom margin; the gap between rows. */

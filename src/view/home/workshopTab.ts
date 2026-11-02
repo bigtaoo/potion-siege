@@ -13,13 +13,14 @@ import type { HomeActions } from './types';
  *  the button that buys it. The cards share the page's height, centred in it. */
 export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: Area): void {
   const head = plate(t('workshop'), 52);
-  head.position.set(a.x + a.w / 2, a.y + 60);
+  // clear of the top bar's captions
+  head.position.set(a.x + a.w / 2, a.y + 76);
   root.addChild(head);
   // big cards, the three together centred in the room under the heading
   const rw = Math.min(a.wide ? 1200 : 1000, a.w - 60);
   const gap = 36;
-  const rh = Math.max(230, Math.min(a.wide ? 280 : 360, (a.h - 170 - gap * 2) / 3));
-  const y0 = a.y + 140 + rh / 2 + Math.max(0, (a.h - 170 - 3 * rh - 2 * gap) / 2);
+  const rh = Math.max(230, Math.min(a.wide ? 280 : 360, (a.h - 186 - gap * 2) / 3));
+  const y0 = a.y + 156 + rh / 2 + Math.max(0, (a.h - 186 - 3 * rh - 2 * gap) / 2);
   WORKSHOP_IDS.forEach((id, i) => {
     const lv = m.workshop[id];
     const max = BALANCE.meta.workshop[id].max;

@@ -23,9 +23,9 @@ export function toggleShown(m: MetaSave): boolean {
 export function plateStars(root: Container, m: MetaSave, x: number, y: number): void {
   const hard = m.stars.hardMode;
   const c = new Container();
-  c.label = 'hardToggle';
+  c.label = 'plateStars';
   c.position.set(x, y);
-  c.addChild(new Graphics().roundRect(-62, -19, 124, 38, 19).fill({ color: P.line, alpha: 0.75 }), starRow(stageStars(m, m.stage, hard), 15, hard));
+  c.addChild(new Graphics().roundRect(-80, -23, 160, 46, 23).fill({ color: P.line, alpha: 0.75 }), starRow(stageStars(m, m.stage, hard), 20, hard));
   root.addChild(c);
 }
 
@@ -34,6 +34,7 @@ export function plateStars(root: Container, m: MetaSave, x: number, y: number): 
 export function hardToggle(root: Container, m: MetaSave, act: HomeActions, x: number, y: number): void {
   const w = 420;
   const c = new Container();
+  c.label = 'hardToggle';
   c.position.set(x, y);
   c.addChild(new Graphics().roundRect(-w / 2, -TOGGLE_H / 2, w, TOGGLE_H, TOGGLE_H / 2).fill(LIGHT.face).stroke({ width: 4, color: LIGHT.edge }));
   const half = (hard: boolean) => {

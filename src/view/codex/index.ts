@@ -32,35 +32,49 @@ export function setCodexPage(p: CodexPage): void {
   codexPage = p;
 }
 
-/** `claim`: the next tier of an achievement track, from the button tapped; `open`: an enemy's
- *  panel, from its card. */
-export function buildCodex(m: MetaSave, a: CodexArea, claim: (id: TrackId, at: Container) => void, open: (kind: EnemyKind) => void): Container {
+/** `claim`: the next tier of an achievement track (null: every tier reached), from the button
+ *  tapped; `open`: an enemy's panel, from its card. */
+export function buildCodex(m: MetaSave, a: CodexArea, claim: (id: TrackId | null, at: Container) => void, open: (kind: EnemyKind) => void): Container {
   const root = new Container();
   const page = new Container();
   const bar = new Container();
   root.addChild(page, bar);
-  // portrait: the board moves down to make room for the tabs; landscape: they sit in the top
-  // bar's row, between its buttons and the crystals
-  const top = a.wide ? a.y + 50 : a.y + 136;
+  // portrait, and a wide page whose top bar leaves too little room: the board moves down to
+  // make room for the tabs; else they sit in the top bar's row, between its medals and the
+  // crystals
+  const inBar = barTabWidth(a) >= MIN_BAR_TAB;
+  const top = inBar ? a.y + 50 : a.y + 136;
   const show = (): void => {
     for (const c of [...page.removeChildren(), ...bar.removeChildren()]) c.destroy({ children: true });
     if (codexPage === 'potions') potionsPage(page, m, a, top);
     else if (codexPage === 'enemies') enemiesPage(page, m, a, top, open);
     else featsBoard(page, m, a, top, claim);
     // rebuilt after the tap, which is still running on the tab about to go
-    bar.addChild(pageTabs(m, a, () => queueMicrotask(show)));
+    bar.addChild(pageTabs(m, a, inBar, () => queueMicrotask(show)));
   };
   show();
   return root;
 }
 
-/** The three page tabs, the one shown lit; a dot on the achievements while a tier waits. */
-function pageTabs(m: MetaSave, a: CodexArea, turned: () => void): Container {
+/** The narrowest a page tab gets in the top bar's row before the tabs take a row of their own. */
+const MIN_BAR_TAB = 200;
+/** The crystals' room at the top bar's right end, for a seven-digit count. */
+const PURSE = 400;
+
+/** How wide each page tab can be in the top bar's row (0 on a portrait page). */
+function barTabWidth(a: CodexArea): number {
+  if (!a.wide) return 0;
+  return Math.min(250, (a.x + a.w - PURSE - (a.bar ?? a.x + 450) - 16 - 40) / 3);
+}
+
+/** The three page tabs, the one shown lit; a dot on the achievements while a tier waits.
+ *  `inBar`: in the wide top bar's row. */
+function pageTabs(m: MetaSave, a: CodexArea, inBar: boolean, turned: () => void): Container {
   const c = new Container();
-  // landscape: midway between the top bar's buttons (to a.x + 450) and the crystals (from 360
-  // short of the right edge, room for a seven-digit count)
-  c.position.set(a.wide ? a.x + (450 + a.w - 360) / 2 : a.x + a.w / 2, a.wide ? 70 : a.y + 58);
-  const tw = a.wide ? 250 : Math.min(320, (a.w - 76) / 3);
+  // in the bar: midway between its medals and the crystals
+  const from = a.bar ?? a.x + 450;
+  c.position.set(inBar ? (from + a.x + a.w - PURSE) / 2 : a.x + a.w / 2, inBar ? 70 : a.y + 58);
+  const tw = inBar ? barTabWidth(a) : Math.min(320, (a.w - 76) / 3);
   const th = 64;
   CODEX_PAGES.forEach((id, i) => {
     const on = codexPage === id;

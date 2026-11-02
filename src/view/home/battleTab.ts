@@ -17,27 +17,31 @@ import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, infinityIco
 import { challengeShown } from '../nudges';
 import { gem, label } from '../ui';
 import { hardToggle, plateStars, TOGGLE_ROOM, toggleShown } from './hardToggle';
-import { chapterTitle, type Area } from './shared';
+import { caption, chapterTitle, type Area } from './shared';
 
 /** The main line, top to bottom: the stage between its arrows and what it sends, the commander
  *  with the four fielded potions in front, and the big button into battle low down where a
  *  thumb reaches it, today's challenge and endless mode as round buttons beside it once they
- *  are open. A wide page keeps the same column in the middle. */
+ *  are open. A wide page stands the commander on the left of the stage and the buttons. */
 export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, chestDot: boolean): void {
-  const cx = a.x + a.w / 2;
-  const sy = a.y + (a.wide ? 70 : 80);
+  // a wide page puts the commander on the left and the stage and the buttons on the right
+  const cx = a.wide ? a.x + a.w * 0.69 : a.x + a.w / 2;
+  const sy = a.y + (a.wide ? 110 : 80);
   stageCard(root, m, act, cx, sy, chestDot);
-  // clear of the battle medallion that rises out of the tab bar
-  const by = a.wide ? a.y + a.h - 110 : a.y + a.h - 50 - START_H / 2;
+  // clear of the battle medallion that rises out of the tab bar, and of the wide page's foot
+  const by = a.wide ? a.y + a.h - START_H / 2 - 70 : a.y + a.h - 50 - START_H / 2;
   const challenge = challengeShown(m);
   const endless = endlessOpen(m);
-  startButton(root, act, cx, by, challenge || endless ? SIDE_START_W : START_W);
-  const off = SIDE_START_W / 2 + 40 + SIDE_R;
+  // a wide page's narrower button keeps the round ones clear of the potions and the edge
+  const sw = a.wide ? SIDE_START_W - 60 : SIDE_START_W;
+  startButton(root, act, cx, by, challenge || endless ? sw : START_W);
+  const off = sw / 2 + 40 + SIDE_R;
   if (challenge) challengeButton(root, m, act, today, cx - off, by);
   if (endless) endlessButton(root, act, cx + off, by);
   const toggle = toggleShown(m);
   if (toggle) hardToggle(root, m, act, cx, sy + CARD_BOTTOM + TOGGLE_ROOM / 2 + 4);
-  commander(root, m, act, cx, sy + CARD_BOTTOM + 20 + (toggle ? TOGGLE_ROOM : 0), by - START_H / 2 - 30);
+  if (a.wide) commander(root, m, act, a.x + a.w * 0.25, a.y + 20, a.y + a.h - 40, 130);
+  else commander(root, m, act, cx, sy + CARD_BOTTOM + 20 + (toggle ? TOGGLE_ROOM : 0), by - START_H / 2 - 30);
 }
 
 const START_H = 180;
@@ -122,8 +126,9 @@ function stageCard(root: Container, m: MetaSave, act: HomeActions, x: number, y:
   }
   const p = plate(t('stage', { n: m.stage }), 64, 420, hard ? 'red' : 'brass');
   p.position.set(x, y);
+  p.label = 'stagePlate';
   root.addChild(card, p);
-  plateStars(root, m, x, y + 52);
+  plateStars(root, m, x, y + 50);
   arrow(-ax, '◀', stepStage(m, m.stage, -1) !== null, -1);
   arrow(ax, '▶', stepStage(m, m.stage, 1) !== null, 1);
 }
@@ -140,13 +145,13 @@ function twistTag(text: string, color: number, max: number): Container {
 }
 
 /** The commander on its shadow, as tall as the room from `top` to `bottom` allows and in the
- *  middle of it, the four fielded potions standing in front in a shallow arc. Tapping them goes
- *  to the potions tab, where the lineup is changed. */
-function commander(root: Container, m: MetaSave, act: HomeActions, x: number, top: number, bottom: number): void {
+ *  middle of it, the four fielded potions (at most `most` tall) standing in front in a shallow
+ *  arc. Tapping them goes to the potions tab, where the lineup is changed. */
+function commander(root: Container, m: MetaSave, act: HomeActions, x: number, top: number, bottom: number, most = 150): void {
   const room = bottom - top;
   const h = Math.min(760, room * 0.84);
   // the bottles reach this far below the commander's feet
-  const size = Math.max(84, Math.min(150, h * 0.22));
+  const size = Math.max(84, Math.min(most, h * 0.22));
   const below = size * 0.45;
   const feet = top + (room - below + h) / 2;
   const tex = commanderTexture();
@@ -184,10 +189,11 @@ function startButton(root: Container, act: HomeActions, x: number, y: number, w:
 function sideButton(root: Container, icon: Container, name: string, x: number, y: number, onTap: () => void): Container {
   const c = tappable(new Container(), onTap);
   c.position.set(x, y - 14);
-  const cap = fitText(ink(name, 28), 2 * SIDE_R + 40);
+  const cap = caption(name, 2 * SIDE_R + 40, 28);
   const pw = cap.width + 24;
-  const capPlate = new Graphics().roundRect(-pw / 2, -17, pw, 34, 17).fill(LIGHT.face).stroke({ width: 3, color: LIGHT.edge });
-  capPlate.y = cap.y = SIDE_R + 14;
+  const ph = cap.height + 8;
+  const capPlate = new Graphics().roundRect(-pw / 2, -ph / 2, pw, ph, 17).fill(LIGHT.face).stroke({ width: 3, color: LIGHT.edge });
+  capPlate.y = cap.y = SIDE_R + 14 + Math.max(0, ph - 42) / 2;
   c.addChild(medal(SIDE_R), icon, capPlate, cap);
   root.addChild(c);
   return c;

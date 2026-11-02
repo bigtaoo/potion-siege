@@ -153,7 +153,7 @@ export const tr: Table = {
     crystals: { name: 'Kristal Eleği', desc: 'Kristal +%{p}' },
     now: 'Şu an: {text}',
     next: 'Sonraki: {text}',
-    none: 'geliştirilmedi',
+    none: 'henüz bonus yok',
   },
   store: {
     daily: 'Günlük Hediyeler',
@@ -176,6 +176,7 @@ export const tr: Table = {
     },
   },
   login: 'Günlük Ödül',
+  top: { login: 'Ödül', tasks: 'Görevler', settings: 'Ayarlar' },
   welcome: { title: 'Hoş geldin hediyeleri', button: 'Hediyeler', note: 'Bu hafta oynadığın her gün için bir hediye' },
   remind: {
     setting: 'Hatırlatıcılar',
@@ -193,6 +194,7 @@ export const tr: Table = {
   claimed: 'Alındı',
   tomorrow: 'Yarın gel',
   tasks: 'Günlük Görevler',
+  tasksNext: 'Yeni görevler: {time}',
   allDone: 'Tüm Görevler Bonusu',
   allDoneCount: '{n}/{total} alındı',
   lang: { name: 'Türkçe' },
@@ -274,7 +276,7 @@ export const tr: Table = {
   },
   codex: {
     page: { potions: 'İksirler', enemies: 'Düşmanlar', feats: 'Başarımlar' },
-    heroes: 'İksirler',
+    heroes: 'Yıldız biçimleri',
     monsters: 'Kurmalı Ordu',
     locked: 'Kilitli',
     hp: 'Can {n}',
@@ -294,10 +296,13 @@ export const tr: Table = {
     speed: 'Hız {n}',
     wallDps: 'Kuşatma {n}/sn',
     resist: 'Alınan hasar',
+    more: 'Daha etkili',
+    less: 'Daha az etkili',
   },
   ach: {
     title: 'Başarımlar',
     count: '{n}/{total} alındı',
+    claimAll: 'Hepsini al',
     done: 'Tamamlandı',
     stages: { name: 'Kuşatma Kıran', desc: '{n}. aşamayı geç' },
     level: { name: 'Usta İksirci', desc: 'Bir iksiri Sv. {n} yap' },

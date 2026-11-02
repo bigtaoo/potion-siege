@@ -14,11 +14,13 @@ import { gem, label } from '../ui';
 import { scrollList } from '../scroll';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
-import { starChestBar } from './starChestBar';
+import { leadIcon, starChestBar } from './starChestBar';
 import { chapterTitle } from './shared';
 import type { HomeActions } from './types';
 
 const ROW_H = 300;
+/** A chapter not open yet: its name and what opens it. */
+const LOCKED_H = 170;
 const GAP = 18;
 /** The list's window: as wide as a row and the scroll thumb, from under the title plate to the
  *  board's foot. */
@@ -42,28 +44,32 @@ export function scrollChapters(): void {
  *  chapter whose hard mode is not open yet says what opens it. Under the stages of an open
  *  chapter, its star chests (starChestBar.ts). */
 export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Container {
-  const rowH = ROW_H;
-  // the name line, the stage tiles and the star chests, down the row
-  const ny = -rowH / 2 + 48;
-  const ty = ny + 100;
-  const sy = rowH / 2 - 50;
-  const full = 16 + CHAPTER_COUNT * rowH + (CHAPTER_COUNT - 1) * GAP;
+  const chapters = Array.from({ length: CHAPTER_COUNT }, (_, i) => i + 1);
+  const rowH = (ch: number) => (chapterOpen(m, ch) ? ROW_H : LOCKED_H);
+  // each row's top, the rows above it and their gaps down
+  const tops = chapters.map((ch) => 8 + chapters.slice(0, ch - 1).reduce((y, c) => y + rowH(c) + GAP, 0));
+  const rowY = (ch: number) => tops[ch - 1];
+  const full = 16 + chapters.reduce((y, ch) => y + rowH(ch), 0) + (CHAPTER_COUNT - 1) * GAP;
   // as tall as the rows need, or as the page has room for at full size; the rows scroll in it
   const h = Math.min(full + HEAD + FOOT, Math.max(700, fit.h - 140));
   const { panel, box } = frame(act, t('chapter.panel'), h, fit);
-  const rowY = (ch: number) => 8 + (ch - 1) * (rowH + GAP);
-  const chest = Array.from({ length: CHAPTER_COUNT }, (_, i) => i + 1).find((ch) => chestWaiting(m, ch) || starChestsWaiting(m, ch) > 0);
+  const chest = chapters.find((ch) => chestWaiting(m, ch) || starChestsWaiting(m, ch) > 0);
   const at = chest ?? Math.min(CHAPTER_COUNT, Math.ceil(m.stage / CHAPTER_SIZE));
   const list = scrollList(VIEW_W, h - HEAD - FOOT, scrolled ?? rowY(at) - 8, (y) => (scrolled = y));
   list.view.position.set(-VIEW_W / 2, -h / 2 + HEAD);
   box.addChild(list.view);
   const hard = m.stars.hardMode;
   for (let ch = 1; ch <= CHAPTER_COUNT; ch++) {
-    const r = new Container();
-    r.position.set(VIEW_W / 2, rowY(ch) + rowH / 2);
-    list.content.addChild(r);
-    r.addChild(lightTile(860, rowH, 26));
     const open = chapterOpen(m, ch);
+    const rh = rowH(ch);
+    // the name line, the stage tiles (or what opens them) and the star chests, down the row
+    const ny = -rh / 2 + 48;
+    const ty = open ? ny + 100 : ny + 72;
+    const sy = rh / 2 - 50;
+    const r = new Container();
+    r.position.set(VIEW_W / 2, rowY(ch) + rh / 2);
+    list.content.addChild(r);
+    r.addChild(lightTile(860, rh, 26));
     const [first] = chapterStages(ch);
     const name = ink(chapterTitle(ch), 38, { fontWeight: '900' });
     name.anchor.set(0, 0.5);
@@ -74,7 +80,7 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     stars.position.set(95, ny);
     fitText(name, 475 - stars.width - 20);
     r.addChild(name);
-    if (chapterOpen(m, ch)) r.addChild(stars);
+    if (open) r.addChild(stars);
     const waiting = chestWaiting(m, ch);
     const opened = m.chapterChests.includes(ch);
     const icon = chestIcon();
@@ -84,6 +90,8 @@ export function chaptersPanel(m: MetaSave, act: HomeActions, fit: MenuFit): Cont
     r.addChild(icon);
     if (waiting) {
       const b: PillButton = new PillButton(t('chapter.chestOpen'), 210, 72, 'green', () => act.claimChapter(ch, b), 36);
+      // a chest on it, where the star chests' button has a star
+      leadIcon(b, chestIcon(), 210, 72, 0.4);
       b.label = 'chapter_chest';
       b.position.set(290, ny);
       r.addChild(b);
