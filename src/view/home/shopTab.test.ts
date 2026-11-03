@@ -5,7 +5,7 @@ import { beforeAll, beforeEach, describe, expect, it, vi } from 'vitest';
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { buttons, englishPage, texts } from '../../game/testWorld';
-import { ADS_PER_DAY, newMeta, unlockPrice, type MetaSave } from '../../sim/meta';
+import { AD_CRYSTALS, ADS_PER_DAY, newMeta, unlockPrice, type MetaSave } from '../../sim/meta';
 import { HERO_KINDS } from '../../sim/types';
 import { PillButton } from '../kit';
 import { loggedActions } from './homeTestBits';
@@ -72,7 +72,7 @@ describe('the freebies alone, every potion open', () => {
     expect(words).toContain(t('store.daily'));
     expect(words).not.toContain(t('store.unlocks'));
     expect(words).toContain(t('store.ad.desc', { n: ADS_PER_DAY, total: ADS_PER_DAY }));
-    press(pill(root, t('store.watch')));
+    press(pill(root, t('reward', { n: AD_CRYSTALS })));
     press(pill(root, t('store.open')));
     expect(calls.map((c) => c[0])).toEqual(['watchAd', 'claimChest']);
   });

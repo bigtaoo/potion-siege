@@ -43,7 +43,7 @@ const aimed = (w: World) => guideAim(w.game, w.game.panel, w.game.tab, gameDay(w
 
 describe('the one-time home pointers', () => {
   it("leads to a finished chapter's chest and its star chest, then to the panel's close, then to endless", () => {
-    const w = back(10, 10, (m) => m.guide.push('lineup'));
+    const w = back(10, 10, (m) => m.guide.push('lineup', 'sieve'));
     expect(line(w)).toBe(t('guide.chapterChest'));
     expect(aimed(w)).toBe('stageCard');
     press(w, 'stageCard');
@@ -97,8 +97,24 @@ describe('the one-time home pointers', () => {
     expect(line(w)).toBe(t('guide.toBattle1', { n: 2 }));
   });
 
+  it('points at the crystal sieve once its first level pays, after the chapters only', () => {
+    const early = back(3, 3, (m) => (m.crystals = 10_000));
+    expect(aimed(early)).not.toBe('tab_workshop');
+    const w = back(5, 5, (m) => {
+      m.crystals = 10_000;
+      m.guide.push('chapterChest', 'starChest', 'lineup');
+    });
+    expect(line(w)).toBe(t('guide.sieve'));
+    expect(aimed(w)).toBe('tab_workshop');
+    press(w, 'tab_workshop');
+    expect(aimed(w)).toBe('buy_crystals');
+    press(w, 'buy_crystals');
+    expect(steps(w)).toEqual(['sieve:done']);
+    expect(w.game.save.workshop.crystals).toBe(1);
+  });
+
   it('is gone once each pointer is done or skipped', () => {
-    const w = back(10, 10, (m) => m.guide.push('chapterChest', 'starChest', 'lineup', 'endless', 'hard'));
+    const w = back(10, 10, (m) => m.guide.push('chapterChest', 'starChest', 'lineup', 'sieve', 'endless', 'hard'));
     expect(mark(w)).toBeNull();
   });
 });

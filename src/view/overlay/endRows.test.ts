@@ -116,14 +116,14 @@ describe('the purse', () => {
     let doubled = 0;
     const s = purse(reward, extras({ onDouble: () => doubled++ }), 1000);
     expect(texts(s.c)).not.toContain(t('doublesLeft', { n: 0, total: DOUBLES_PER_DAY }));
-    tap(s.c, t('double'));
+    tap(s.c, t('reward', { n: 40 }));
     expect(doubled).toBe(1);
   });
 
   it('shows the ×2 greyed out, doing nothing, once today\'s are used up', () => {
     const s = purse(reward, extras({ onDouble: null, doublesLeft: 0 }), 1000);
     expect(texts(s.c)).toContain(t('doublesLeft', { n: 0, total: DOUBLES_PER_DAY }));
-    const [b] = buttons(s.c, t('double')) as PillButton[];
+    const [b] = buttons(s.c, t('reward', { n: 40 })) as PillButton[];
     expect(b['enabled']).toBe(false);
     // even switched on, the stand-in tap does nothing
     b.setEnabled(true).emit('pointertap', { stopPropagation() {} } as never);
@@ -139,7 +139,7 @@ describe('the purse', () => {
   it('shows the count on the right and the brass seal once doubled', () => {
     const s = purse(reward, extras({ doubled: true }), 1000);
     expect(texts(s.c)).toContain(t('doubled'));
-    expect(buttons(s.c, t('double'))).toEqual([]);
+    expect(buttons(s.c, t('reward', { n: 40 }))).toEqual([]);
   });
 
   it('shows the count alone with neither ×2 nor seal', () => {

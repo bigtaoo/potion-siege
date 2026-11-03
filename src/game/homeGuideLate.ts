@@ -1,12 +1,13 @@
 // The home guide's one-time pointers after its three chapters (docs/onboarding-plan.md, "之后"):
 // the first time a chapter's chest or a star chest waits, a new potion sits on the bench, or
-// endless or hard mode opens, the hand points the way there once. A pointer with nothing to do
+// endless or hard mode opens, or the crystal sieve's first level pays once the chapters are
+// over, the hand points the way there once. A pointer with nothing to do
 // yet just waits; one tap off its path counts it as gone round.
 
 import { CHAPTER_COUNT, chestWaiting } from '../sim/chapters';
-import type { GuideLater } from '../sim/guide';
+import { GUIDE_CHAPTERS, type GuideLater } from '../sim/guide';
 import { endlessOpen } from '../sim/endless';
-import { benched, type MetaSave } from '../sim/meta';
+import { benched, workshopCost, type MetaSave } from '../sim/meta';
 import { anyStarChestWaiting } from '../sim/starChest';
 import { hardOpen } from '../sim/stars';
 import { onTab, type Rule, type Where } from './guideRules';
@@ -33,6 +34,11 @@ export const LATER_RULES: Record<GuideLater, Rule> = {
     can: (m) => benched(m).length > 0,
     aim: (_m, w) => onTab('potions', 'bench')(w),
     tap: (act, arg) => (act === 'lineup' ? 'done' : act === 'tab' && arg === 'potions' ? 'path' : undefined),
+  },
+  sieve: {
+    can: (m) => m.runs > GUIDE_CHAPTERS.length && m.workshop.crystals === 0 && (workshopCost('crystals', 0) ?? Infinity) <= m.crystals,
+    aim: (_m, w) => onTab('workshop', 'buy_crystals')(w),
+    tap: (act, arg) => (act === 'workshop' && arg === 'crystals' ? 'done' : act === 'tab' && arg === 'workshop' ? 'path' : undefined),
   },
   endless: {
     can: (m) => endlessOpen(m),

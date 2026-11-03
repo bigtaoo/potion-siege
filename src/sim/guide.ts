@@ -17,7 +17,7 @@ export const GUIDE_CHAPTERS = [
 /** One-time pointers on any home screen, the first time each has something to do: a chapter's
  *  chest, a star chest, a new potion to field, endless mode, hard mode. A chapter's start step
  *  waits for them. */
-export const GUIDE_LATER = ['chapterChest', 'starChest', 'lineup', 'endless', 'hard'] as const;
+export const GUIDE_LATER = ['chapterChest', 'starChest', 'lineup', 'sieve', 'endless', 'hard'] as const;
 
 /** One-time words in battles: the first 强化, the stars on the first won result, the 推荐 tag on
  *  the first skill pick of battle 3, stage 1's boss card in the first battle; the commander's drag
@@ -63,6 +63,8 @@ export function toBattle(ch: 1 | 2 | 3): GuideStep {
 /** A stored list read back: known ids only, once each. A save from before the guide that has
  *  played already knows the game, so it has done all of it. */
 export function parseGuide(raw: unknown, runs: number): string[] {
-  if (!Array.isArray(raw)) return runs > 0 ? [...ALL] : [];
+  // a save from before the guide played on without it; the sieve still points the way once, as
+  // such a player is the one who has battled long enough for it to pay
+  if (!Array.isArray(raw)) return runs > 0 ? ALL.filter((id) => id !== 'sieve') : [];
   return raw.filter((id, i, a): id is string => typeof id === 'string' && ALL.includes(id) && a.indexOf(id) === i);
 }

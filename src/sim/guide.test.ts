@@ -18,7 +18,7 @@ describe('the home guide in the save', () => {
     expect(markGuide(m, 'tasks')).toBe(false);
     expect(guideLeft(m)).toEqual(['login', 'heroes2', 'workshop', 'toBattle2']);
     expect(markGuide(m, 'starChest')).toBe(true);
-    expect(laterLeft(m)).toEqual(['chapterChest', 'lineup', 'endless', 'hard']);
+    expect(laterLeft(m)).toEqual(['chapterChest', 'lineup', 'sieve', 'endless', 'hard']);
     expect([1, 2, 3].map((ch) => toBattle(ch as 1 | 2 | 3))).toEqual(['toBattle1', 'toBattle2', 'toBattle3']);
     m.runs = 0;
     expect(guideLeft(m)).toEqual([]);
@@ -27,7 +27,7 @@ describe('the home guide in the save', () => {
   it('reads back known ids once each, and counts a played save from before it as done', () => {
     expect(parseGuide(['gift', 'gift', 'nope', 3, 'stars'], 2)).toEqual(['gift', 'stars']);
     expect(parseGuide(undefined, 0)).toEqual([]);
-    expect(parseGuide(undefined, 5)).toEqual(ALL);
+    expect(parseGuide(undefined, 5)).toEqual(ALL.filter((id) => id !== 'sieve'));
   });
 
   it('survives a save round trip, and a save without it is filled in by its runs', () => {
@@ -37,7 +37,7 @@ describe('the home guide in the save', () => {
     expect(parseMeta(JSON.stringify(m)).guide).toEqual(['gift', 'upgrade']);
     const old = JSON.parse(JSON.stringify(m)) as Record<string, unknown>;
     delete old.guide;
-    expect(parseMeta(JSON.stringify(old)).guide).toEqual(ALL);
+    expect(parseMeta(JSON.stringify(old)).guide).toEqual(ALL.filter((id) => id !== 'sieve'));
     expect(parseMeta(JSON.stringify({ ...old, runs: 0 })).guide).toEqual([]);
     expect(newMeta().guide).toEqual([]);
   });

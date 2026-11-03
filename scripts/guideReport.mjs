@@ -8,7 +8,7 @@ export const GUIDE_ORDER = [
   'gift', 'upgrade', 'upgradeMore', 'upgradeLast', 'bossCard', 'toBattle1',
   'upgrade2', 'castTip', 'stars', 'login', 'tasks', 'heroes2', 'workshop', 'toBattle2',
   'pickTip', 'flyerTip', 'codex', 'shop', 'heroes3', 'challenge', 'toBattle3',
-  'speedTip', 'lineup', 'starChest', 'chapterChest', 'hard', 'endless',
+  'speedTip', 'lineup', 'sieve', 'starChest', 'chapterChest', 'hard', 'endless',
 ];
 const RESULTS = ['done', 'skipped', 'other', 'none'];
 

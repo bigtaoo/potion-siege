@@ -25,7 +25,7 @@ describe('the shop ad', () => {
     const w = world();
     open(w);
     w.host.answers = ['watched'];
-    tap(w.stage, t('store.watch'));
+    tap(w.stage, t('reward', { n: AD_CRYSTALS }));
     expect(w.game['menu'].interactiveChildren, 'no second tap while it plays').toBe(false);
     await flush();
     expect(w.save().crystals).toBe(100 + AD_CRYSTALS);
@@ -38,7 +38,7 @@ describe('the shop ad', () => {
     const w = world();
     open(w);
     w.host.answers = [answer];
-    tap(w.stage, t('store.watch'));
+    tap(w.stage, t('reward', { n: AD_CRYSTALS }));
     await flush();
     expect(w.save().crystals).toBe(100);
     expect(adsLeft(w.save(), today)).toBe(ADS_PER_DAY);
@@ -52,11 +52,11 @@ describe('the shop ad', () => {
     open(w);
     for (let i = 0; i < ADS_PER_DAY; i++) {
       w.host.answers = ['watched'];
-      tap(w.stage, t('store.watch'));
+      tap(w.stage, t('reward', { n: AD_CRYSTALS }));
       await flush();
     }
     expect(w.save().crystals).toBe(100 + ADS_PER_DAY * AD_CRYSTALS);
-    expect(buttons(w.stage, t('store.watch'))).toHaveLength(0);
+    expect(buttons(w.stage, t('reward', { n: AD_CRYSTALS }))).toHaveLength(0);
     expect(buttons(w.stage, t('tomorrow')).length).toBeGreaterThan(0);
     // the action itself guards the cap too, whatever calls it
     await shopAd(w.game);
@@ -80,7 +80,7 @@ describe('the shop ad', () => {
     expect(w.events('daily_claim')).toHaveLength(1);
     // the second one still draws the shop again, its button now off
     expect(w.game['menu'].visible).toBe(true);
-    expect(buttons(w.stage, t('store.watch'))).toHaveLength(0);
+    expect(buttons(w.stage, t('reward', { n: AD_CRYSTALS }))).toHaveLength(0);
   });
 
   it('draws no home screen over a battle that began while an unpaid ad played', async () => {
@@ -98,7 +98,7 @@ describe('the shop ad', () => {
   it('drops the ad card where the host has none, the free chest left on its own', () => {
     const w = world(veteran(), (h) => (h.available = false));
     open(w);
-    expect(buttons(w.stage, t('store.watch'))).toHaveLength(0);
+    expect(buttons(w.stage, t('reward', { n: AD_CRYSTALS }))).toHaveLength(0);
     expect(texts(w.stage)).not.toContain(t('store.ad.name'));
     expect(texts(w.stage)).toContain(t('store.chest.name'));
   });

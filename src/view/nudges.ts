@@ -18,12 +18,18 @@ import { FIRST_STAGE } from '../sim/waves';
 // While the one-time upgrade pointer is up (the first home screens, where every tab has
 // something), the potions tab it points at is the only one lit; the others light once it is done.
 
-/** One of the four fielded potions can level up with the crystals at hand. */
-export function canUpgradeLineup(m: MetaSave): boolean {
-  return m.lineup.some((k) => {
+/** The first of the four fielded potions, in the lineup's order, that can level up with the
+ *  crystals at hand; a benched one never, as its levels do not fight. */
+export function lineupUpgrade(m: MetaSave): HeroKind | null {
+  return m.lineup.find((k) => {
     const cost = heroCost(m.heroes[k]);
     return cost !== null && cost <= m.crystals;
-  });
+  }) ?? null;
+}
+
+/** One of the four fielded potions can level up with the crystals at hand. */
+export function canUpgradeLineup(m: MetaSave): boolean {
+  return lineupUpgrade(m) !== null;
 }
 
 /** What a tab's dot can be about, a key each: the things there to claim or buy now, or with
@@ -124,13 +130,10 @@ export function loginPops(m: MetaSave): boolean {
 }
 
 /** The home screen's one-time pointer at a potion upgrade: after the first battle, won or
- *  lost, with crystals for one; the kind it points at is the first such potion. */
+ *  lost, with crystals for one; the kind it points at is the first such fielded potion. */
 export function upgradeHintKind(m: MetaSave): HeroKind | null {
   if (m.upgradeHint || m.runs < 1) return null;
-  return HERO_KINDS.find((k) => {
-    const cost = heroCost(m.heroes[k]);
-    return heroUnlocked(m, k) && cost !== null && cost <= m.crystals;
-  }) ?? null;
+  return lineupUpgrade(m);
 }
 
 /** The stage the codex quotes a kind's numbers for: the picked one, or the first it comes on

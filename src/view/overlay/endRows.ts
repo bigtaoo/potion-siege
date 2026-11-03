@@ -206,7 +206,7 @@ export function purse(reward: Reward, more: EndExtras, iw: number): Section {
   c.addChild(count, gem(new Graphics(), count.x - count.width - 44, -2, 40));
   if (button) {
     const left = more.doublesLeft;
-    const b = adButton(t('double'), 250, left === undefined ? 104 : 80, 'purple', more.onDouble ?? (() => {}), 38);
+    const b = adButton(t('reward', { n: reward.crystals }), 250, left === undefined ? 104 : 80, 'purple', more.onDouble ?? (() => {}), 38, true);
     b.x = iw / 2 - 140;
     c.addChild(b);
     if (left !== undefined) {

@@ -2,12 +2,13 @@ import { describe, expect, it } from 'vitest';
 import { achievementsClaimable, claimTier, TRACK_IDS, trackReady } from '../sim/achievements';
 import { chapterStages } from '../sim/chapters';
 import { GUIDE_CHAPTERS } from '../sim/guide';
-import { claimChest, heroCost, heroUnlocked, maxStage, newMeta, parseMeta, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
+import { claimChest, heroCost, maxStage, newMeta, parseMeta, swapLineup, unlockHero, unlockPrice, WORKSHOP_IDS, workshopCost } from '../sim/meta';
 import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
 import {
   anyChestWaiting, canUpgradeLineup, CHALLENGE_AFTER, CHALLENGE_TASK_AFTER, challengeOpen, challengeShown, codexStage, dotKeys, LOGIN_AFTER_RUNS, loginPops, markSeen, navDots, newOnTab, NEXT_UNTIL, offersNext,
   upgradeHintKind,
+  lineupUpgrade,
   pointWait,
   IDLE_HINT,
   topPick,
@@ -262,12 +263,26 @@ describe('first battles', () => {
     m.crystals = 10_000;
     expect(upgradeHintKind(m)).toBe(null);
     m.runs = 1;
-    expect(upgradeHintKind(m)).toBe(HERO_KINDS.find((k) => heroUnlocked(m, k)));
+    expect(upgradeHintKind(m)).toBe(m.lineup[0]);
     m.crystals = 0;
     expect(upgradeHintKind(m)).toBe(null);
     m.crystals = 10_000;
     m.upgradeHint = true;
     expect(upgradeHintKind(m)).toBe(null);
+  });
+
+  it('points upgrades at the fielded potions in lineup order, never a benched one', () => {
+    const m = newMeta();
+    unlockHero(m, 'poison');
+    unlockHero(m, 'wind');
+    swapLineup(m, LINEUP[0], 'poison');
+    m.runs = 1;
+    m.crystals = 10_000;
+    expect(lineupUpgrade(m)).toBe('poison');
+    for (const k of m.lineup) m.heroes[k] = BALANCE.meta.heroMax;
+    expect(lineupUpgrade(m)).toBe(null);
+    expect(upgradeHintKind(m)).toBe(null);
+    expect(canUpgradeLineup(m)).toBe(false);
   });
 
   it('tags the suggested skill card in the first battles only', () => {

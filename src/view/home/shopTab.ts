@@ -9,6 +9,7 @@ import { HERO_KINDS, type HeroKind } from '../../sim/types';
 import type { HomeActions, HomeExtras } from './types';
 import { bottle, chestIcon, fit as fitText, ink, inkWrapped, LIGHT, lightPanel, lightTile, lock, P, PillButton, plate, tappable } from '../kit';
 import { gem, HERO_COLORS } from '../ui';
+import { adButton } from '../overlay/adButton';
 import { adIcon, priced, tick, type Area } from './shared';
 
 /** `ads`: a rewarded ad can be played now; `hosted`: the host has rewarded ads at all, so while
@@ -149,7 +150,7 @@ function dailyPanel(root: Container, m: MetaSave, act: HomeActions, today: strin
   const left = adsLeft(m, today);
   const ad = offerCard(cw, ch, adIcon(), t('store.ad.name'), t('store.ad.desc', { n: left, total: ADS_PER_DAY }), AD_CRYSTALS, left === 0, (bw) => {
     if (left === 0) return new PillButton(t('tomorrow'), bw, 100, 'green', act.watchAd, 34).setEnabled(false);
-    if (ads) return new PillButton(t('store.watch'), bw, 100, 'green', act.watchAd, 46);
+    if (ads) return adButton(t('reward', { n: AD_CRYSTALS }), bw, 100, 'green', act.watchAd, 46, true);
     // the host has ads but none is loaded yet: the button waits on a spinner until one is
     const wait = new PillButton('', bw, 100, 'green', act.watchAd).setEnabled(false);
     const s = spinner(26);

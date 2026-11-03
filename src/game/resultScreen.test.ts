@@ -14,6 +14,8 @@ beforeAll(englishPage);
 
 /** A full gap of battle play (platform/adPacing.ts): the test battles run in a blink. */
 const PACED = INTERSTITIAL_MINUTES * 60_000;
+/** The ×2's caption: the battle's crystals once more. */
+const dbl = (w: World) => t('reward', { n: w.game['purse'].paid });
 
 describe('the result screen', () => {
   it('revives the battle when the ad was watched', async () => {
@@ -64,11 +66,11 @@ describe('the result screen', () => {
     const paid = w.game['purse'].paid;
     const left = doublesLeft(w.save());
     w.host.answers = ['watched'];
-    tap(w.stage, t('double'));
+    tap(w.stage, dbl(w));
     await flush();
     expect(w.save().crystals).toBe(before + paid);
     expect(doublesLeft(w.save())).toBe(left - 1);
-    expect(buttons(w.stage, t('double'))).toHaveLength(0);
+    expect(buttons(w.stage, dbl(w))).toHaveLength(0);
     // no midgame ad chained after a rewarded one in the same break
     tap(w.stage, t('continue'));
     await flush();
@@ -79,7 +81,7 @@ describe('the result screen', () => {
     const w = await doubleOffered();
     const before = w.save().crystals;
     w.host.answers = [answer];
-    tap(w.stage, t('double'));
+    tap(w.stage, dbl(w));
     await flush();
     expect(w.save().crystals).toBe(before);
     expect(w.game['overlay'].interactiveChildren).toBe(true);
@@ -183,7 +185,7 @@ describe('the result screen', () => {
     await flush();
     const crystals = w.save().crystals;
     // the button stays, greyed out, over its "none left today" note
-    tap(w.stage, t('double'));
+    tap(w.stage, dbl(w));
     await flush();
     expect(w.host.rewardedCalls).toBe(1);
     expect(w.save().crystals).toBe(crystals);

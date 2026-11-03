@@ -12,12 +12,12 @@ import { t } from '../i18n';
 import { achievementsClaimable } from '../sim/achievements';
 import { canClaimLogin, tasksClaimable } from '../sim/daily';
 import { guideChapter, guideLeft, laterLeft, markGuide, type GuideId, type GuideLater, type GuideStep } from '../sim/guide';
-import { chestReady, heroCost, heroUnlocked, WORKSHOP_IDS, workshopCost, type MetaSave, type WorkshopId } from '../sim/meta';
-import { HERO_KINDS, type HeroKind } from '../sim/types';
+import { chestReady, WORKSHOP_IDS, workshopCost, type MetaSave, type WorkshopId } from '../sim/meta';
+import type { HeroKind } from '../sim/types';
 import { canClaimWelcome, welcomeOn } from '../sim/welcome';
 import { setCodexPage } from '../view/codex';
 import type { HomeActions, HomePanel, HomeTab } from '../view/Home';
-import { challengeShown } from '../view/nudges';
+import { challengeShown, lineupUpgrade } from '../view/nudges';
 import { guideMark } from '../view/home/guideMark';
 import { inPanel, onTab, type Rule } from './guideRules';
 import { LATER_RULES } from './homeGuideLate';
@@ -44,12 +44,9 @@ const PANEL_CLAIMS: Partial<Record<NonNullable<HomePanel>, { label: string; acts
   tasks: { label: 'claim_task', acts: ['claimTask', 'claimBonus'], can: (m) => tasksClaimable(m) },
 };
 
-/** The first potion a level is affordable for, in the lineup's order. */
+/** The first fielded potion a level is affordable for, in the lineup's order. */
 export function guideHero(m: MetaSave): HeroKind | null {
-  return HERO_KINDS.find((k) => {
-    const cost = heroCost(m.heroes[k]);
-    return heroUnlocked(m, k) && cost !== null && cost <= m.crystals;
-  }) ?? null;
+  return lineupUpgrade(m);
 }
 
 /** The wall's level when the crystals pay for it (what a lost battle needs most), else the
