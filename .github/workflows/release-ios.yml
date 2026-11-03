@@ -221,6 +221,7 @@ jobs:
         with:
           name: App.ipa
           path: ${{ runner.temp }}/ipa/*.ipa
+          retention-days: 3
 
       - name: Upload to App Store Connect
         if: github.event_name != 'workflow_dispatch' || inputs.destination != 'none'
