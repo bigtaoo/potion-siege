@@ -18,10 +18,11 @@ export function consentPanel(act: HomeActions, fit: MenuFit, policy: boolean): C
   text.y = -h / 2 + 110;
   box.addChild(text);
   const row = text.y + text.height + 60 + 60;
+  // yes on the right, where most games put the button that goes on
   const allow = new PillButton(t('privacy.allow'), 380, 120, 'green', () => act.shareData(true), 48);
-  allow.position.set(-205, row);
+  allow.position.set(205, row);
   const decline = new PillButton(t('privacy.decline'), 380, 120, 'brass', () => act.shareData(false), 44);
-  decline.position.set(205, row);
+  decline.position.set(-205, row);
   box.addChild(allow, decline);
   if (policy) {
     const link = tappable(new Container(), act.privacyPolicy);
