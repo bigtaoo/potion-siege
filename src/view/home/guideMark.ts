@@ -80,15 +80,20 @@ function handPick(r: Box, fit: MenuFit, inPanel: boolean, obs: Obstacle[]): Side
   const sides: Side[] = [first, ...(['below', 'above', 'right'] as const).filter((s) => s !== first)];
   if (r.w >= 400) sides.push('side');
   if (r.h >= 300 && r.w >= 200) sides.push('inside');
-  // a hand a few units past the edge is still whole on the screen
+  // a hand a few units past the edge is still whole on the screen; one further off is not seen at
+  // all, which is worse than any button it could cover
   const page: Box = { x: -30, y: -30, w: fit.w + 60, h: fit.h + 60 };
   return cheapest(sides, (s) => {
     const at = handAt(r, s);
     const pb = pointer(at.x, at.y, at.rotation, 0.8).getBounds();
     const b: Box = { x: pb.x, y: pb.y, w: pb.width, h: pb.height };
-    return cost(b, obs, []) + (b.w * b.h - overlap(b, page)) * 30;
+    return cost(b, obs, []) + (b.w * b.h - overlap(b, page)) * OFF_PAGE;
   });
 }
+
+/** What each unit of hand off the page counts: more than a button it would cover whole (hintPlace
+ *  counts those twice their area times their weight, at most 10). */
+const OFF_PAGE = 100_000;
 
 /** The line on its card: wide with the skip link beside it, or, where every wide spot covers some
  *  button (the wide codex's two rows of claims), narrow with the link under it, whichever covers
