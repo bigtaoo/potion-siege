@@ -70,10 +70,10 @@ describe('save copies on the collector', () => {
     expect(saveOf(handler)).toBe(saveWith(2));
   });
 
-  it('answers 404 for an account it has nothing of and 400 for a bad one', async () => {
+  it('answers 204 for an account it has nothing of and 400 for a bad one', async () => {
     const handler = await load();
     post(handler, body({ acct: undefined }));
-    expect(get(handler).status).toBe(404);
+    expect(get(handler).status).toBe(204);
     expect(get(handler, 'NOPE').status).toBe(400);
     expect(request(handler, 'GET', '/s?x=1').res.status).toBe(400);
   });
@@ -104,6 +104,6 @@ describe('save copies on the collector', () => {
     request(handler, 'GET', '/health');
     post(handler, body({ id: 'f'.repeat(24), acct: undefined }));
     expect([...state.files.keys()].filter((f) => f.startsWith(SAVES))).toEqual([`${SAVES}/${'f'.repeat(24)}.json`]);
-    expect(get(handler).status).toBe(404);
+    expect(get(handler).status).toBe(204);
   });
 });

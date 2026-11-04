@@ -281,7 +281,8 @@ function savedCopy(url, res) {
   const acct = acctOfQuery(url);
   if (!acct) return res.writeHead(400, cors).end();
   const doc = vault.get(acct);
-  if (!doc) return res.writeHead(404, cors).end();
+  // 204, not 404: a new account has no copy yet, and portal QA tools flag a 404 as a missing resource
+  if (!doc) return res.writeHead(204, cors).end();
   res.writeHead(200, { ...cors, 'Content-Type': 'application/json', 'Cache-Control': 'no-store' }).end(JSON.stringify(doc));
 }
 

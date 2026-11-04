@@ -36,7 +36,7 @@ export type Post = (url: string, body: string) => void;
 
 const fetchGet: Get = async (url, signal) => {
   const res = await fetch(url, { signal });
-  return res.ok ? res.json() : null;
+  return res.status === 200 ? res.json() : null;
 };
 
 const fetchPost: Post = (url, body) => {
