@@ -123,14 +123,38 @@ Requirements: 15–20 s (cut at 20), at most 50 MB, both **landscape 1080p 16:9*
 | 13.0–17.0 s | **BOSS WAVE!**: the steam tank arrives, the wall HP drops, an ultimate potion is brewed and the tank goes down | The climax |
 | 17.0–19.5 s | The victory screen with the crystals, then a quick cut to the home screen lineup | The ending |
 
-How to record:
-- Use the web build with `?lang=en` in a 1920x1080 window, which shows the landscape side boards, and a 720x1080 window scaled to 1080x1620 for the portrait cut.
-- Play by hand, because `?autoplay` drags too fast to read.
-- Pin the seed and stage so takes repeat.
-- Hide the cursor while capturing, then cut in a video editor.
-- Export H.264 MP4 without an audio track.
+The submitted videos (2026-11-04) are `ref/store/crazygames/preview_landscape_1920x1080.mp4` and
+`preview_portrait_1080x1620.mp4`. Each is 19.5 s at 30 fps, H.264 with no audio, about 8 MB:
+- 0–1.5 s: the cover, held.
+- 1.5–6 s: wave 1 of stage 10.
+- 6–12 s: an upgrade with the three skill cards and one picked.
+- 12–19.5 s: the wave 10 steam tank with the whole army.
+
+They skip the hand-made merge shot from the storyboard.
+
+How they were recorded (frame by frame from the dev server, not a screen recording, so there is no cursor and no dropped frames):
+- Open `?lang=en` on the dev server and load a save (in `mb.save`) with stage 10 open and every hero at level 10.
+  - Set `g.store = g.leave = () => {}` first, or the page writes its own save over it on reload.
+  - `g.privacy.asking = () => false` keeps the consent panel away.
+- Stop the Pixi ticker and drive it by hand: `app.ticker.update(t)` with `t += 1000/30` per frame.
+  - Size the renderer with `app.renderer.resize(1920, 1080)` (it lays the field on its side) or `resize(1080, 1620)`, at resolution 1.
+  - `g.hud.hint = false` hides the opening hint banner.
+- Play with `botAct(b)` from `src/sim/bot.ts` every 10–12 frames.
+  - Skill cards stay up about 40 frames, then `pickSkill(g, b.choices[0])` from `src/game/skillOffer.ts` picks one.
+  - `b.upgrade()` opens an offer on cue.
+- After each update:
+  - `app.render()`, then `canvas.toBlob('image/jpeg', 0.93)`.
+  - POST the blob to a small local sink that writes numbered JPEGs.
+  - Fast-forward between segments without capturing.
+- Put them together with ffmpeg:
+  - `concat` the cover (`-loop 1 -t 1.5`, scaled to the frame size) with the segments.
+  - Encode two-pass x264 at 3.5 Mbit/s, `-an -movflags +faststart`.
+  - The bitrate keeps each file under 10 MB, the browser extension's upload limit; the portal itself takes up to 50 MB.
 
 ## Before uploading
+
+Submitted to Basic Launch on 2026-11-04 (game `f79f883c-10b0-451d-905f-c715a2751dc9`, build 15e58005 through the QA tool,
+status "Awaiting review"). The list stays for the next upload.
 
 - [ ] `npm run check` green; zip the contents of `dist-crazygames/` (index.html at the zip root)
 - [ ] The three covers chosen (and the Chinese set, if used)
