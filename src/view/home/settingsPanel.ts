@@ -7,6 +7,7 @@ import type { MetaSave } from '../../sim/meta';
 import { fit as fitText, ink, inkWrapped, lightTile, medal, P, PillButton, tappable, toggle } from '../kit';
 import { earlyNote, soundSwitches, switchIcon, switchOn } from '../soundSwitches';
 import type { MenuFit } from '../viewport';
+import { policyAddress } from './consentPanel';
 import { frame } from './frame';
 import { remindRow } from './remindPanel';
 import type { HomeActions, PlayData, RemindState } from './types';
@@ -18,22 +19,29 @@ const ID_H = 190;
  *  switches, the language and the play data switch with
  *  the player ID, then a button each for Google's consent form again where it applies (iOS in
  *  the EEA/UK) and our privacy policy where the host allows a link out (App Review 5.1.1 wants
- *  it inside the app). */
+ *  it inside the app), or its address as text where the host allows none (CrazyGames). */
 export function settingsPanel(m: MetaSave, act: HomeActions, fit: MenuFit, privacy: boolean, policy: boolean, data: PlayData | null, vibrate: boolean, remind: RemindState | null = null): Container {
   const switches = soundSwitches(vibrate);
   const buttons: [string, () => void][] = [];
   if (privacy) buttons.push([t('sound.privacy'), act.adPrivacy]);
   if (policy) buttons.push([t('sound.policy'), act.privacyPolicy]);
-  const extra = buttons.length ? 30 + buttons.length * 130 : 0;
+  // where the host allows no link out, the policy's address as text at the bottom instead
+  const note = policy ? 0 : 80;
+  const extra = (buttons.length ? 30 + buttons.length * 130 : 0) + note;
   const rows = (data ? 190 + ID_H + 20 : 0) + (remind ? 190 : 0);
   const h = 750 + (switches.length - 2) * 190 + extra + rows;
   const { panel, box } = frame(act, t('sound.settings'), h, fit);
   const top = -h / 2 + 200 - (extra ? 10 : 0);
   buttons.forEach(([text, tap], i) => {
     const b = new PillButton(text, 600, 100, 'brass', tap, 40);
-    b.y = h / 2 - 100 - (buttons.length - 1 - i) * 130;
+    b.y = h / 2 - 100 - note - (buttons.length - 1 - i) * 130;
     box.addChild(b);
   });
+  if (!policy) {
+    const address = policyAddress(760);
+    address.y = h / 2 - 90;
+    box.addChild(address);
+  }
   switches.forEach((which, i) => {
     const on = switchOn(m, which);
     const r = tappable(new Container(), () => act.sound(which));

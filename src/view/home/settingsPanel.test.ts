@@ -125,6 +125,8 @@ describe('the settings panel', () => {
     const plain = texts(settings().stage);
     expect(plain).not.toContain(t('sound.privacy'));
     expect(plain).not.toContain(t('sound.policy'));
+    // no link out (CrazyGames): the address as text instead
+    expect(plain).toContain(`${t('sound.policy')}: p.gamestao.com/privacy`);
     const open = vi.fn();
     const openUrl = vi.fn();
     const w = settings({ adPrivacy: { offered: () => true, open }, openUrl });
@@ -132,6 +134,7 @@ describe('the settings panel', () => {
     expect(open).toHaveBeenCalledOnce();
     tap(w.stage, t('sound.policy'));
     expect(openUrl).toHaveBeenCalledWith(t('sound.policyPage'));
+    expect(texts(w.stage)).not.toContain(`${t('sound.policy')}: p.gamestao.com/privacy`);
   });
 
   it('leaves the ad privacy form out where the host says it does not apply', () => {
