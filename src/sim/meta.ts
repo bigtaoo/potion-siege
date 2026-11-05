@@ -8,7 +8,7 @@ import { newEndless, parseEndless, type EndlessSave } from './endless';
 import { newDaily, parseDaily, type DailySave } from './daily';
 import { newStars, parseStars, type StarSave } from './stars';
 import { newStarChests, parseStarChests } from './starChest';
-import { liftUnlocked } from './heroUnlock';
+import { liftUnlocked, unlockLevel } from './heroUnlock';
 import { newWelcome, parseWelcome, type WelcomeSave } from './welcome';
 import { carry, int } from './parse';
 import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapters';
@@ -201,9 +201,13 @@ export function parseMeta(raw: string | null): MetaSave {
   out.bestWave = int(data.bestWave, 0, 999, 0);
   out.runs = int(data.runs, 0, Number.MAX_SAFE_INTEGER, 0);
   out.daily = parseDaily(data.daily);
-  // a save from before a potion could be unlocked gets what its cleared stages have earned
+  // a save from before a potion could be unlocked gets what its cleared stages have earned, at
+  // the level a first clear would have given it (from the potions it had open, not each other)
   const unlocked = Array.isArray(data.unlocked) ? data.unlocked : [];
-  for (const k of HERO_KINDS) if (!LINEUP.includes(k) && (unlocked.includes(k) || stageUnlocks(out.cleared).includes(k))) out.unlocked.push(k);
+  for (const k of HERO_KINDS) if (!LINEUP.includes(k) && unlocked.includes(k)) out.unlocked.push(k);
+  const earned = stageUnlocks(out.cleared).filter((k) => !out.unlocked.includes(k));
+  for (const k of earned) out.heroes[k] = unlockLevel(out, k);
+  out.unlocked = HERO_KINDS.filter((k) => out.unlocked.includes(k) || earned.includes(k));
   // a broken lineup falls back to the starting four
   const lineup = (Array.isArray(data.lineup) ? data.lineup : []).filter((k, i, a): k is HeroKind => HERO_KINDS.includes(k) && heroUnlocked(out, k) && a.indexOf(k) === i);
   if (lineup.length === LINEUP.length) out.lineup = lineup;

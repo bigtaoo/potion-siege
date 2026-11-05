@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { buyUnlock, newMeta, unlockHero } from './meta';
+import { buyUnlock, newMeta, parseMeta, unlockHero, unlockStage } from './meta';
 import { liftUnlocked, unlockLevel } from './heroUnlock';
 import { BALANCE, LINEUP } from './types';
 
@@ -34,5 +34,22 @@ describe('a potion unlocked late', () => {
     m.crystals = 1e9;
     const kind = (['arcane', 'fire', 'ice', 'lightning', 'poison', 'wind'] as const).find((k) => !LINEUP.includes(k))!;
     if (buyUnlock(m, kind)) expect(m.heroes[kind]).toBe(8);
+  });
+
+  it('lifts the ones an older save earns on load, from the potions it had open', () => {
+    // a save from before the light and the quicksilver, past both their stages
+    const old = { ...newMeta(), cleared: 35, unlocked: ['poison', 'wind'] } as Record<string, unknown>;
+    old.heroes = { arcane: 23, fire: 26, ice: 23, lightning: 24, poison: 24, wind: 24 };
+    const m = parseMeta(JSON.stringify(old));
+    expect(unlockStage('light')).toBeLessThanOrEqual(35);
+    expect(unlockStage('metal')).toBeLessThanOrEqual(35);
+    expect(m.unlocked).toEqual(['poison', 'wind', 'light', 'metal']);
+    // (23 + 26 + 23 + 24 + 24 + 24) / 6 = 24, halved; the other new one not counted
+    expect(m.heroes.light).toBe(12);
+    expect(m.heroes.metal).toBe(12);
+    expect(m.heroes.vine).toBe(1);
+    // and a reload keeps the levels as they are
+    m.heroes.light = 3;
+    expect(parseMeta(JSON.stringify(m)).heroes.light).toBe(3);
   });
 });
