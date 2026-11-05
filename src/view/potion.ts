@@ -18,7 +18,7 @@ export interface PotionLook {
   lid: number;
   limb: number;
   /** What rises from its neck: the element mark. */
-  mark: 'flame' | 'frost' | 'spark' | 'star' | 'acid' | 'wind';
+  mark: 'flame' | 'frost' | 'spark' | 'star' | 'acid' | 'wind' | 'ray' | 'drop' | 'sprout';
   /** Outer, middle and core colour of the mark (and of its thrown vials). */
   glow: [number, number, number];
   neck: [number, number];

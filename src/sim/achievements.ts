@@ -56,8 +56,9 @@ export const TRACKS: Record<TrackId, readonly Tier[]> = {
   // stars over every stage, normal and hard (300 in all), and hard stages won
   stars: [T(30, 100), T(75, 200), T(150, 400), T(250, 800)],
   hard: [T(1, 100), T(10, 200), T(30, 400), T(50, 800)],
-  // kinds of reaction set off: the starting four potions reach four of the eight
-  reactions: [T(1, 50), T(4, 100), T(REACTION_IDS.length, 300)],
+  // kinds of reaction set off: the starting four potions reach four of the first eight, the six
+  // first potions all eight, and the three later ones the rest
+  reactions: [T(1, 50), T(4, 100), T(8, 300), T(REACTION_IDS.length, 500)],
 };
 
 export { REACTION_MASTERY } from './reactionPower';

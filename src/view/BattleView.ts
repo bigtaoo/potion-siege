@@ -9,7 +9,7 @@ import { mergeablePair } from '../sim/tutorial';
 import { FP, TICK_RATE } from '../sim/math/fixed';
 import { BALANCE, type BattleEvent, type EnemyKind } from '../sim/types';
 import { SpriteLayer, loadField, potionLook } from './art';
-import { HIT_TIME, chainBolt, gearBurst, glassShards, gustWave, hitEffect, pushLines, rewindWave, vortexSwirl } from './effects';
+import { HIT_TIME, beamLine, chainBolt, gearBurst, glassShards, gustWave, hitEffect, pushLines, rewindWave, vortexSwirl } from './effects';
 import { PotionLayer, throwingHand } from './potion';
 import { healthTube } from './stone';
 import { DUST_TIME, RUSH_SHAKE, RushWatch, hordeDust } from './hordeFx';
@@ -151,6 +151,13 @@ export class BattleView extends Container {
           // the fire blast is wide, so it goes on the ground and the enemies in it stay visible
           this.fx.effect(HIT_TIME[ev.kind], (g, life) => hitEffect(g, ev.kind, ev.x, ev.y, ev.radius, 1 - life), ev.kind === 'fire');
           break;
+        case 'beam': {
+          const { x1, y1, x2, y2 } = ev;
+          this.enemies.tracks.strike(x1, y1, 24);
+          this.fx.effect(0.25, (g, life) => beamLine(g, x1, y1, x2, y2, life));
+          this.fx.effect(HIT_TIME.light, (g, life) => hitEffect(g, 'light', x1, y1, 30, 1 - life));
+          break;
+        }
         case 'chain': {
           const pts = ev.points;
           for (const p of pts) this.enemies.tracks.strike(p.x, p.y, 20);

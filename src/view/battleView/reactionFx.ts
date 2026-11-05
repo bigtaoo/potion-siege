@@ -21,6 +21,12 @@ export const REACTION_COLORS: Record<ReactionId, readonly [number, number]> = {
   firestorm: [0xff7a2a, 0xffd36b],
   blizzard: [0xdff4ff, 0x8fe3c8],
   resonance: [0xc58cff, 0xffffff],
+  prism: [0xe8fbff, 0xfff27a],
+  flare: [0xffb340, 0xfff6c0],
+  magnetize: [0xb8c4cc, 0xfff07a],
+  molten: [0xff5a1f, 0xd8dde2],
+  spores: [0xc8e05a, 0xd7a8ff],
+  bramble: [0xbfeaff, 0x4caf50],
 };
 
 /** Seconds a reaction's ring takes to run out and fade. */

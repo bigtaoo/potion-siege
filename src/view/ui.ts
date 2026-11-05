@@ -25,6 +25,9 @@ export const HERO_COLORS = {
   lightning: 0xffe14d,
   poison: 0x7ed957,
   wind: 0x8fe3c8,
+  light: 0xfff27a,
+  metal: 0xb8c4cc,
+  vine: 0x4caf50,
 } as const;
 
 /** The system fonts: Chinese, Japanese and Korean each want their own CJK font first (the

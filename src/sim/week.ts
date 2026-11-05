@@ -98,10 +98,15 @@ export function daysLeft(day: string): number {
   return 7 - weekday(daysOf(day));
 }
 
+/** The reactions a week's rule may name: those of the six first potions, which every tower
+ *  climber has. The later potions' come after them in REACTION_IDS and stay out, so adding them
+ *  changed no week's rule. */
+const WEEK_REACTIONS = REACTION_IDS.slice(0, 8);
+
 /** The week's rule: the same for every player in that week. */
 export function weekRule(week: string): WeekRule {
   const rng = new Rng(hash(`week:${week}`));
-  return { id: rng.pick(WEEK_RULES), reaction: rng.pick(REACTION_IDS) };
+  return { id: rng.pick(WEEK_RULES), reaction: rng.pick(WEEK_REACTIONS) };
 }
 
 /** The furthest floor of `day`'s week: the save's best while its week is that one, else none

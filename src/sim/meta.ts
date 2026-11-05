@@ -149,7 +149,7 @@ export function newMeta(): MetaSave {
   return {
     v: SAVE_VERSION,
     crystals: 0,
-    heroes: { arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 1, wind: 1 },
+    heroes: Object.fromEntries(HERO_KINDS.map((k) => [k, 1])) as Record<HeroKind, number>,
     workshop: { wall: 0, startGold: 0, crystals: 0, lab: 0 },
     cleared: 0,
     stage: 1,

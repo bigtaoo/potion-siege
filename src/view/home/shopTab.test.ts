@@ -6,7 +6,7 @@ import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { buttons, englishPage, texts } from '../../game/testWorld';
 import { AD_CRYSTALS, ADS_PER_DAY, newMeta, unlockPrice, type MetaSave } from '../../sim/meta';
-import { HERO_KINDS } from '../../sim/types';
+import { HERO_KINDS, type HeroKind } from '../../sim/types';
 import { PillButton } from '../kit';
 import { loggedActions } from './homeTestBits';
 import type { HomeExtras } from './types';
@@ -29,11 +29,11 @@ const TODAY = '2026-10-28';
 const PHONE: Area = { x: 0, y: 0, w: 1080, h: 1700, wide: false };
 const WIDE: Area = { x: 0, y: 0, w: 2400, h: 1000, wide: true };
 
-/** A save with every potion open (`open`) or only the starting four. */
-function save(open = false, crystals = 0): MetaSave {
+/** A save with every potion open (`open`), only the starting four, or those and `extra`. */
+function save(open = false, crystals = 0, extra: HeroKind[] = []): MetaSave {
   const m = newMeta();
   m.crystals = crystals;
-  if (open) m.unlocked = ['poison', 'wind'];
+  m.unlocked = open ? ['poison', 'wind', 'light', 'metal', 'vine'] : extra;
   return m;
 }
 
@@ -126,7 +126,8 @@ describe('the potions for sale', () => {
     ['a wide page without', WIDE, false],
   ])('sell the two locked ones on %s, priced against the crystals', (_, a, ads) => {
     const poison = unlockPrice('poison')!;
-    const { root, words, calls } = draw(save(false, poison), a, ads, ads);
+    // the late three bought, so only poison and wind are left
+    const { root, words, calls } = draw(save(false, poison, ['light', 'metal', 'vine']), a, ads, ads);
     expect(words).toContain(t('store.unlocks'));
     expect(words).toContain(t('hero.poison'));
     expect(words).toContain(t('hero.wind'));
@@ -143,14 +144,28 @@ describe('the potions for sale', () => {
   it.each([
     ['a phone', PHONE, true],
     ['a wide page', WIDE, true],
+  ])('sell only the next three of the five locked on %s, in the order they open', (_, a, ads) => {
+    const { root, words } = draw(save(false, 99999), a, ads, ads);
+    for (const k of ['poison', 'wind', 'light'] as const) {
+      expect(words).toContain(t(`hero.${k}`));
+      expect(on(pill(root, String(unlockPrice(k))))).toBe(true);
+    }
+    expect(words).not.toContain(t('hero.metal'));
+    expect(words).not.toContain(t('hero.vine'));
+  });
+
+  it.each([
+    ['a phone', PHONE, true],
+    ['a wide page', WIDE, true],
     ['a wide page without ads', WIDE, false],
   ])('go three to a row on %s, the starting ones without a price or a stage', (_, a, ads) => {
     lockAll.on = true;
     const { root, words } = draw(save(), a, ads, ads);
-    for (const k of HERO_KINDS) expect(words).toContain(t(`hero.${k}`));
-    // only poison and wind are sold; the other four say they are locked, with no stage to open them
-    expect(all(root, (c) => c instanceof PillButton && buttons(c, String(unlockPrice('poison'))).length > 0)).toHaveLength(1);
-    expect(words.filter((w) => w === t('codex.locked'))).toHaveLength(4);
+    // everything locked: the first three, the starting ones, shown as locked with no stage or price
+    for (const k of HERO_KINDS.slice(0, 3)) expect(words).toContain(t(`hero.${k}`));
+    expect(words).not.toContain(t('hero.poison'));
+    expect(all(root, (c) => c instanceof PillButton && buttons(c, String(unlockPrice('poison'))).length > 0)).toHaveLength(0);
+    expect(words.filter((w) => w === t('codex.locked'))).toHaveLength(3);
   });
 });
 

@@ -49,8 +49,8 @@ describe('enemy resistances', () => {
 
   it('picks the one element each kind fears most and the one it shrugs off most, first in hero order on a tie', () => {
     expect(extremes('grunt')).toEqual({ weak: 'lightning', strong: null });
-    expect(extremes('runner')).toEqual({ weak: 'ice', strong: null });
-    expect(extremes('brute')).toEqual({ weak: 'ice', strong: 'fire' });
+    expect(extremes('runner')).toEqual({ weak: 'ice', strong: 'metal' });
+    expect(extremes('brute')).toEqual({ weak: 'metal', strong: 'fire' });
     expect(extremes('winder')).toEqual({ weak: 'poison', strong: 'ice' });
     expect(extremes('gear')).toEqual({ weak: 'poison', strong: 'fire' });
     for (const kind of ENEMY_KINDS) {

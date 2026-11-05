@@ -10,31 +10,33 @@ import { FIRST_STAGE, FIRST_WAVE, waveHp } from './waves';
  *  shrugs it off. */
 export const RESIST: Record<EnemyKind, Partial<Record<HeroKind, number>>> = {
   // tin conducts: lightning arcs right through it
+  // (the late potions: the beam blinds the glass-eyed, quicksilver slugs crack the heavy iron and
+  // miss the quick, roots trip what runs and only hold on to the heavy)
   grunt: { lightning: 1.25 },
   // a frozen spring stops the little gears, and the light mouse is blown about
-  runner: { ice: 1.25, wind: 1.25 },
+  runner: { ice: 1.25, wind: 1.25, metal: 0.75, vine: 1.25 },
   // a boiler is made to take heat and acid, but cold cracks the hot iron; it is heavy to blow
-  brute: { fire: 0.5, ice: 1.25, poison: 0.5, wind: 0.75 },
+  brute: { fire: 0.5, ice: 1.25, poison: 0.5, wind: 0.75, metal: 1.5 },
   // heavy brass plates ground the sparks, hold the heat and stand in the wind; magic goes between them
-  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25, wind: 0.75 },
+  boss: { fire: 0.75, lightning: 0.75, arcane: 1.25, wind: 0.75, metal: 1.25, vine: 0.75 },
   // canvas wings catch fire and the brass ball draws the sparks; frost just slides off the wings,
   // and a gale tears at them
-  flyer: { fire: 1.25, lightning: 1.25, ice: 0.75, wind: 1.5 },
+  flyer: { fire: 1.25, lightning: 1.25, ice: 0.75, wind: 1.5, light: 1.25, metal: 0.75, vine: 0.5 },
   // acid gums the mainspring and magic unwinds it; its own gears turn back the cold; wind
   // catches the big key and spins it the wrong way
   winder: { poison: 1.5, arcane: 1.25, ice: 0.5, wind: 1.5 },
   // the long case is dry wood and burns, the brass works inside carry the sparks; wood does not
   // rust, and a lone bolt barely scratches it
-  clock: { fire: 1.25, lightning: 1.25, arcane: 0.75, poison: 0.75 },
+  clock: { fire: 1.25, lightning: 1.25, arcane: 0.75, poison: 0.75, light: 1.25 },
   // under its bell jar (which only frost cracks) the bare works rust and chill fast; the brass
   // base takes the heat
-  tripod: { poison: 1.5, ice: 1.25, fire: 0.75 },
+  tripod: { poison: 1.5, ice: 1.25, fire: 0.75, light: 1.25 },
   // the cold makes the hot iron brittle and the wind rocks it on its spring; the spring grounds
   // the sparks, and a bolt glances off the iron
-  anvil: { ice: 1.25, wind: 1.25, lightning: 0.5, arcane: 0.75 },
+  anvil: { ice: 1.25, wind: 1.25, lightning: 0.5, arcane: 0.75, metal: 1.25 },
   // the iron rim holds the heat and grounds the sparks, but acid eats into it (once the rim is
   // gone, GEAR_CORE)
-  gear: { fire: 0.5, lightning: 0.5, arcane: 0.75, poison: 1.5 },
+  gear: { fire: 0.5, lightning: 0.5, arcane: 0.75, poison: 1.5, metal: 1.25 },
 };
 
 /** The gear king's crowned core once the rim is gone: bare brass that magic and sparks go

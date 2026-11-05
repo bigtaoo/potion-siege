@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/zh';
+import { potions } from './potions/zh';
 
 export const zh: Table = {
   title: '药水围城',
@@ -107,9 +108,10 @@ export const zh: Table = {
     lightningStaticPlus: '「静电」伤害 +50%',
     poisonRustPlus: '每层锈蚀效果 +50%',
     windPushPlus: '击退 +50%，锅炉魔像也能被吹得和锡兵一样远',
+    ...potions.perk,
   },
   perkLate: { sharp: '伤害 +{p}%', deep: 'Lv 10 特技再强 {p}%', keen: '伤害再 +{p}%', aura: '所有药水伤害 +{p}%' },
-  role: { arcane: '单体', fire: '范围', ice: '减速', lightning: '连锁', poison: '持续伤害', wind: '击退' },
+  role: { arcane: '单体', fire: '范围', ice: '减速', lightning: '连锁', poison: '持续伤害', wind: '击退', ...potions.role },
   nextUnlock: 'Lv {n}：{what}',
   maxed: '已满',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const zh: Table = {
     lightning: '雷电药剂',
     poison: '腐蚀药剂',
     wind: '疾风药剂',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: '药剂', enemies: '敌人', feats: '成就', reactions: '反应' },
-    rx: { steam: '蒸汽', superconduct: '超导', overload: '超载', electrolysis: '电解', combustion: '燃爆', firestorm: '火焰风暴', blizzard: '暴风雪', resonance: '共鸣' },
+    rx: { steam: '蒸汽', superconduct: '超导', overload: '超载', electrolysis: '电解', combustion: '燃爆', firestorm: '火焰风暴', blizzard: '暴风雪', resonance: '共鸣', ...potions.rx },
     rxDo: {
       steam: '烫伤并减速周围敌人',
       superconduct: '击碎冰霜：周围受到伤害',
@@ -290,6 +293,7 @@ export const zh: Table = {
       firestorm: '把火焰扇向周围所有敌人',
       blizzard: '把冰霜吹散：周围减速',
       resonance: '奥术弹与元素共鸣：额外伤害',
+      ...potions.rxDo,
     },
     rxShout: '{name}！',
     rxCount: '触发 {n} 次',
@@ -435,6 +439,7 @@ export const zh: Table = {
     windGust: { name: '风墙', desc: '疾风每第 4 发化作横扫全场的风墙' },
     windVortex: { name: '旋风', desc: '疾风击杀处留下旋风，2 秒内把周围敌人吸过去' },
     windFire: { name: '煽风点火', desc: '疾风命中燃烧的敌人，把火吹到周围敌人身上' },
+    ...potions.skill,
   },
   board: {
     button: '排行榜',

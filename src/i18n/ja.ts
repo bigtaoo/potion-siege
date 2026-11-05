@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/ja';
+import { potions } from './potions/ja';
 
 // Japanese.
 export const ja: Table = {
@@ -108,9 +109,10 @@ export const ja: Table = {
     lightningStaticPlus: '「静電気」ダメージ +50%',
     poisonRustPlus: 'サビ1スタックごとの効果 +50%',
     windPushPlus: 'ノックバック +50%、ボイラーゴーレムもブリキ兵と同じだけ吹き飛ぶ',
+    ...potions.perk,
   },
   perkLate: { sharp: 'ダメージ +{p}%', deep: 'Lv 10 の特典 +{p}% 強化', keen: 'さらにダメージ +{p}%', aura: '全ポーションのダメージ +{p}%' },
-  role: { arcane: '単体', fire: '範囲', ice: '減速', lightning: '連鎖', poison: '継続ダメージ', wind: 'ノックバック' },
+  role: { arcane: '単体', fire: '範囲', ice: '減速', lightning: '連鎖', poison: '継続ダメージ', wind: 'ノックバック', ...potions.role },
   nextUnlock: 'Lv {n}：{what}',
   maxed: '最大',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const ja: Table = {
     lightning: '雷撃ポーション',
     poison: '腐食ポーション',
     wind: '疾風ポーション',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'ポーション', enemies: '敵', feats: '実績', reactions: '反応' },
-    rx: { steam: '蒸気', superconduct: '超電導', overload: '過負荷', electrolysis: '電気分解', combustion: '燃焼', firestorm: '火炎嵐', blizzard: '吹雪', resonance: '共鳴' },
+    rx: { steam: '蒸気', superconduct: '超電導', overload: '過負荷', electrolysis: '電気分解', combustion: '燃焼', firestorm: '火炎嵐', blizzard: '吹雪', resonance: '共鳴', ...potions.rx },
     rxDo: {
       steam: '周囲をやけどさせて鈍らせる',
       superconduct: '霜を砕く：周囲にダメージ',
@@ -290,6 +293,7 @@ export const ja: Table = {
       firestorm: '炎を周りすべてにあおる',
       blizzard: '霜を吹き散らす：周囲を鈍らせる',
       resonance: '魔弾が元素と共鳴：追加ダメージ',
+      ...potions.rxDo,
     },
     rxShout: '{name}！',
     rxCount: '{n}回発動',
@@ -435,6 +439,7 @@ export const ja: Table = {
     windGust: { name: '風の壁', desc: '疾風4発ごとに風の壁がフィールドを一掃' },
     windVortex: { name: 'つむじ風', desc: '疾風で倒した場所につむじ風、2秒間敵を引き寄せる' },
     windFire: { name: '火に油', desc: '燃えている敵に疾風が当たると、周りの敵に火が燃え移る' },
+    ...potions.skill,
   },
   board: {
     button: 'ランキング',

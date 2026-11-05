@@ -24,6 +24,12 @@ export const REACTION_PAIRS: Record<ReactionId, readonly [HeroKind, HeroKind | n
   firestorm: ['wind', 'fire'],
   blizzard: ['wind', 'ice'],
   resonance: ['arcane', null],
+  prism: ['light', 'ice'],
+  flare: ['light', 'fire'],
+  magnetize: ['metal', 'lightning'],
+  molten: ['metal', 'fire'],
+  spores: ['vine', 'poison'],
+  bramble: ['vine', 'ice'],
 };
 
 export { masteryStars };

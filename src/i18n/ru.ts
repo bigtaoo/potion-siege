@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/ru';
+import { potions } from './potions/ru';
 
 // Russian.
 export const ru: Table = {
@@ -108,9 +109,10 @@ export const ru: Table = {
     lightningStaticPlus: 'Статика: урон +50%',
     poisonRustPlus: 'Каждый слой ржавчины: эффект +50%',
     windPushPlus: 'Отбрасывание +50%: котельный голем летит так же далеко, как оловянный солдат',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Урон +{p}%', deep: 'Бонус Ур. 10 сильнее на {p}%', keen: 'Ещё +{p}% урона', aura: 'Все зелья +{p}% урона' },
-  role: { arcane: 'Одна цель', fire: 'По площади', ice: 'Замедление', lightning: 'Цепь', poison: 'Урон со временем', wind: 'Отбрасывание' },
+  role: { arcane: 'Одна цель', fire: 'По площади', ice: 'Замедление', lightning: 'Цепь', poison: 'Урон со временем', wind: 'Отбрасывание', ...potions.role },
   nextUnlock: 'Ур. {n}: {what}',
   maxed: 'МАКС',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const ru: Table = {
     lightning: 'Зелье бури',
     poison: 'Зелье кислоты',
     wind: 'Зелье ветра',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Зелья', enemies: 'Враги', feats: 'Достижения', reactions: 'Реакции' },
-    rx: { steam: 'Пар', superconduct: 'Сверхпроводимость', overload: 'Перегрузка', electrolysis: 'Электролиз', combustion: 'Возгорание', firestorm: 'Огненная буря', blizzard: 'Метель', resonance: 'Резонанс' },
+    rx: { steam: 'Пар', superconduct: 'Сверхпроводимость', overload: 'Перегрузка', electrolysis: 'Электролиз', combustion: 'Возгорание', firestorm: 'Огненная буря', blizzard: 'Метель', resonance: 'Резонанс', ...potions.rx },
     rxDo: {
       steam: 'Ошпаривает и замедляет всех вокруг',
       superconduct: 'Раскалывает иней: урон вокруг',
@@ -290,6 +293,7 @@ export const ru: Table = {
       firestorm: 'Раздувает пламя на всех рядом',
       blizzard: 'Разносит иней: замедляет всех вокруг',
       resonance: 'Снаряд резонирует со стихией: доп. урон',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: '{n} {n|one:раз|few:раза|many:раз|other:раза}',
@@ -435,6 +439,7 @@ export const ru: Table = {
     windGust: { name: 'Стена ветра', desc: 'Каждый 4-й выстрел ветра пускает через всё поле стену ветра' },
     windVortex: { name: 'Смерч', desc: 'Убийства ветром оставляют смерч, который 2 с затягивает врагов' },
     windFire: { name: 'Раздуть пламя', desc: 'Удары ветра по горящим врагам перекидывают огонь на соседей' },
+    ...potions.skill,
   },
   board: {
     button: 'Рейтинг',

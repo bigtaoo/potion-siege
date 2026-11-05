@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/tr';
+import { potions } from './potions/tr';
 
 // Turkish.
 export const tr: Table = {
@@ -108,9 +109,10 @@ export const tr: Table = {
     lightningStaticPlus: 'Statik +%50 hasar',
     poisonRustPlus: 'Her pas katmanı +%50 etki',
     windPushPlus: 'Geri itme +%50, kazan golemi de teneke asker kadar uzağa uçar',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Hasar +%{p}', deep: 'Sv. 10 bonusu %{p} daha güçlü', keen: 'Hasar %{p} daha', aura: 'Her iksire +%{p} hasar' },
-  role: { arcane: 'Tek hedef', fire: 'Alan', ice: 'Yavaşlatır', lightning: 'Zincir', poison: 'Zamanla hasar', wind: 'Geri itme' },
+  role: { arcane: 'Tek hedef', fire: 'Alan', ice: 'Yavaşlatır', lightning: 'Zincir', poison: 'Zamanla hasar', wind: 'Geri itme', ...potions.role },
   nextUnlock: 'Sv. {n}: {what}',
   maxed: 'MAKS',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const tr: Table = {
     lightning: 'Fırtına İksiri',
     poison: 'Asit İksiri',
     wind: 'Rüzgâr İksiri',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'İksirler', enemies: 'Düşmanlar', feats: 'Başarımlar', reactions: 'Tepkimeler' },
-    rx: { steam: 'Buhar', superconduct: 'Süperiletken', overload: 'Aşırı Yük', electrolysis: 'Elektroliz', combustion: 'Yanma', firestorm: 'Ateş Fırtınası', blizzard: 'Tipi', resonance: 'Rezonans' },
+    rx: { steam: 'Buhar', superconduct: 'Süperiletken', overload: 'Aşırı Yük', electrolysis: 'Elektroliz', combustion: 'Yanma', firestorm: 'Ateş Fırtınası', blizzard: 'Tipi', resonance: 'Rezonans', ...potions.rx },
     rxDo: {
       steam: 'Etrafı haşlar ve yavaşlatır',
       superconduct: 'Buzu parçalar: etrafa hasar',
@@ -290,6 +293,7 @@ export const tr: Table = {
       firestorm: 'Alevleri yakındaki herkese savurur',
       blizzard: 'Buzu savurur: etrafı yavaşlatır',
       resonance: 'Mermi elementle titreşir: ek hasar',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: '{n} kez tetiklendi',
@@ -435,6 +439,7 @@ export const tr: Table = {
     windGust: { name: 'Rüzgâr Duvarı', desc: 'Her 4. rüzgâr atışı alanı boydan boya bir rüzgâr duvarıyla süpürür' },
     windVortex: { name: 'Hortum', desc: 'Rüzgârla ölen düşmanlar, 2 sn boyunca düşmanları içine çeken bir hortum bırakır' },
     windFire: { name: 'Yangına Körük', desc: 'Yanan düşmanlara rüzgâr vuruşu ateşi çevredekilere taşır' },
+    ...potions.skill,
   },
   board: {
     button: 'Sıralama',

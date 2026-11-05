@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/de';
+import { potions } from './potions/de';
 
 // German.
 export const de: Table = {
@@ -108,9 +109,10 @@ export const de: Table = {
     lightningStaticPlus: 'Ladung +50% Schaden',
     poisonRustPlus: 'Jede Rostschicht +50% Wirkung',
     windPushPlus: 'Rückstoß +50%, der Kesselgolem fliegt so weit wie ein Zinnsoldat',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Schaden +{p} %', deep: 'Stufe-10-Bonus +{p} % stärker', keen: 'Noch mal +{p} % Schaden', aura: 'Jeder Trank +{p} % Schaden' },
-  role: { arcane: 'Einzelziel', fire: 'Fläche', ice: 'Verlangsamt', lightning: 'Kette', poison: 'Schaden über Zeit', wind: 'Rückstoß' },
+  role: { arcane: 'Einzelziel', fire: 'Fläche', ice: 'Verlangsamt', lightning: 'Kette', poison: 'Schaden über Zeit', wind: 'Rückstoß', ...potions.role },
   nextUnlock: 'Lv {n}: {what}',
   maxed: 'MAX',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const de: Table = {
     lightning: 'Sturmtrank',
     poison: 'Ätztrank',
     wind: 'Windtrank',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Tränke', enemies: 'Gegner', feats: 'Erfolge', reactions: 'Reaktionen' },
-    rx: { steam: 'Dampf', superconduct: 'Supraleitung', overload: 'Überladung', electrolysis: 'Elektrolyse', combustion: 'Verbrennung', firestorm: 'Feuersturm', blizzard: 'Schneesturm', resonance: 'Resonanz' },
+    rx: { steam: 'Dampf', superconduct: 'Supraleitung', overload: 'Überladung', electrolysis: 'Elektrolyse', combustion: 'Verbrennung', firestorm: 'Feuersturm', blizzard: 'Schneesturm', resonance: 'Resonanz', ...potions.rx },
     rxDo: {
       steam: 'Verbrüht und bremst alles ringsum',
       superconduct: 'Zerschlägt den Frost: Schaden ringsum',
@@ -290,6 +293,7 @@ export const de: Table = {
       firestorm: 'Facht die Flammen auf alles ringsum an',
       blizzard: 'Wirbelt den Frost umher: bremst alles ringsum',
       resonance: 'Der Blitz schwingt mit dem Element: Extraschaden',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: '{n}-mal ausgelöst',
@@ -435,6 +439,7 @@ export const de: Table = {
     windGust: { name: 'Windwand', desc: 'Jeder 4. Windschuss fegt eine Windwand übers Feld' },
     windVortex: { name: 'Wirbelwind', desc: 'Wind-Abschüsse hinterlassen einen Wirbel, der Feinde 2 s lang anzieht' },
     windFire: { name: 'Feuer schüren', desc: 'Windtreffer auf brennende Feinde wehen das Feuer auf Feinde ringsum' },
+    ...potions.skill,
   },
   board: {
     button: 'Rangliste',

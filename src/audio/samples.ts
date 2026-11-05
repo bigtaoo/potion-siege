@@ -28,6 +28,12 @@ export const SAMPLES: Record<SampleId, SampleSpec> = {
   rx_firestorm: RX,
   rx_blizzard: RX,
   rx_resonance: { ...RX, gain: 0.45, limit: 2, gap: 0.15 },
+  rx_prism: { ...RX, gain: 0.45 },
+  rx_flare: RX,
+  rx_magnetize: RX,
+  rx_molten: { ...RX, gain: 0.5 },
+  rx_spores: RX,
+  rx_bramble: RX,
 };
 
 export const isSample = (id: string): id is SampleId => id in SAMPLES;

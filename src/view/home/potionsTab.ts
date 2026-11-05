@@ -24,25 +24,29 @@ export function potionsTab(root: Container, m: MetaSave, act: HomeActions, a: Ar
     head.position.set(cx, a.y + 60);
     root.addChild(head);
   }
-  // one row of five on a wide page; three over two on a portrait one
+  // one row on a wide page, three to a row on a portrait one; the cards are drawn at their full
+  // size and scaled down together until the grid fits the page
   const n = HERO_KINDS.length;
   const cols = a.wide ? n : 3;
-  const cw = Math.min(380, (a.w - 60) / cols - 30);
+  const rows = Math.ceil(n / cols);
+  const cw = a.wide ? 300 : Math.min(380, (a.w - 60) / cols - 30);
   const ch = a.wide ? 640 : swap ? 625 : 640;
   const y0 = a.y + (swap ? (a.wide ? 270 : 252) : 150);
+  const s = Math.min(1, (a.w - 60) / (cols * (cw + 30)), (a.y + a.h - 20 - y0) / (rows * ch + (rows - 1) * 40));
   const pick = recommendedHero(m);
   const cards = HERO_KINDS.map((kind, i) => {
     const col = i % cols;
     const row = Math.floor(i / cols);
     const inRow = Math.min(cols, n - row * cols);
     const card = heroCard(m, act, kind, cw, ch, kind === pick);
-    card.position.set(cx + (col - (inRow - 1) / 2) * (cw + 30), y0 + ch / 2 + row * (ch + 40));
+    card.scale.set(s);
+    card.position.set(cx + (col - (inRow - 1) / 2) * (cw + 30) * s, y0 + (ch / 2 + row * (ch + 40)) * s);
     root.addChild(card);
     return card;
   });
   // over all the cards: up at the hinted potion's price button from below it, or down at it from
   // above when a card lies below (the hand would hang over that card's name)
   const i = hint ? HERO_KINDS.indexOf(hint) : -1;
-  if (i >= 0 && i + cols < n) root.addChild(pointer(cards[i].x + cw * 0.18, cards[i].y + ch / 2 - 92, Math.PI + 0.15, 0.8));
-  else if (i >= 0) root.addChild(pointer(cards[i].x + cw * 0.22, cards[i].y + ch / 2 - 34, 0, 0.8));
+  if (i >= 0 && i + cols < n) root.addChild(pointer(cards[i].x + cw * 0.18 * s, cards[i].y + (ch / 2 - 92) * s, Math.PI + 0.15, 0.8));
+  else if (i >= 0) root.addChild(pointer(cards[i].x + cw * 0.22 * s, cards[i].y + (ch / 2 - 34) * s, 0, 0.8));
 }

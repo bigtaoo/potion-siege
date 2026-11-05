@@ -1,4 +1,4 @@
-// The skill cards and recipes under a player who picks at random: every four-of-six lineup on a
+// The skill cards and recipes under a player who picks at random: a spread of four-of-nine lineups on a
 // maxed save, the bot playing but buying an upgrade (each one opens an offer) whenever it can
 // once the grid is half full, and taking a random card at each offer: an offer always has cards,
 // the commander casts, and nothing in the battle turns NaN or negative on the way. And every card
@@ -14,7 +14,7 @@ import { HERO_KINDS, type HeroKind } from './types';
 
 const CAP = 1200 * 30;
 
-/** Every way to field four of the six potions. */
+/** Every way to field four of the nine potions. */
 function lineups(): HeroKind[][] {
   const out: HeroKind[][] = [];
   const pick = (from: number, got: HeroKind[]) => {
@@ -29,8 +29,10 @@ describe('random card picks', () => {
   it('keep every battle sane', () => {
     const m = SAVES.maxed();
         const bad: string[] = [];
-    const all = lineups();
-    expect(all).toHaveLength(15);
+    // every eighth of the 126 lineups, which still fields each potion
+    const all = lineups().filter((_, i) => i % 8 === 0);
+    expect(all).toHaveLength(16);
+    expect(HERO_KINDS.filter((k) => !all.some((l) => l.includes(k)))).toEqual([]);
     for (const lineup of all) {
       for (const seed of [1, 2]) {
         const at = `[${lineup}] seed ${seed}`;

@@ -6,6 +6,7 @@ import type { Battle } from './battle';
 import { corrode, discharge, freeze, harm, scorch, shock, slow, splash } from './damage';
 import { K } from './field';
 import { dist, FP, muldiv, pm, ticks, times, toFp } from './math/fixed';
+import { lateHit } from './lateHits';
 import { react } from './reactions';
 import { nearest, within } from './targets';
 import { BALANCE, isBoss, type Enemy, type Projectile, type Vortex } from './types';
@@ -82,6 +83,10 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
   }
   if (!target) {
     b.wasted[by] += p.damage;
+    return;
+  }
+  if (by === 'light' || by === 'metal' || by === 'vine') {
+    lateHit(b, p, target);
     return;
   }
   harm(b, target, p.damage, by);

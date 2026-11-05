@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/vi';
+import { potions } from './potions/vi';
 
 // Vietnamese.
 export const vi: Table = {
@@ -108,9 +109,10 @@ export const vi: Table = {
     lightningStaticPlus: 'Tĩnh Điện +50% sát thương',
     poisonRustPlus: 'Mỗi tầng gỉ +50% hiệu quả',
     windPushPlus: 'Đẩy lùi +50%, Golem Nồi Hơi cũng bay xa như Lính Thiếc',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Sát thương +{p}%', deep: 'Thưởng Lv 10 mạnh hơn {p}%', keen: 'Thêm {p}% sát thương', aura: 'Mọi bình thuốc +{p}% sát thương' },
-  role: { arcane: 'Một mục tiêu', fire: 'Diện rộng', ice: 'Làm chậm', lightning: 'Dây chuyền', poison: 'Sát thương theo thời gian', wind: 'Đẩy lùi' },
+  role: { arcane: 'Một mục tiêu', fire: 'Diện rộng', ice: 'Làm chậm', lightning: 'Dây chuyền', poison: 'Sát thương theo thời gian', wind: 'Đẩy lùi', ...potions.role },
   nextUnlock: 'Lv {n}: {what}',
   maxed: 'TỐI ĐA',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const vi: Table = {
     lightning: 'Bình Sấm',
     poison: 'Bình Ăn Mòn',
     wind: 'Bình Gió',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Bình thuốc', enemies: 'Kẻ địch', feats: 'Thành tựu', reactions: 'Phản ứng' },
-    rx: { steam: 'Hơi nước', superconduct: 'Siêu dẫn', overload: 'Quá tải', electrolysis: 'Điện phân', combustion: 'Bùng cháy', firestorm: 'Bão lửa', blizzard: 'Bão tuyết', resonance: 'Cộng hưởng' },
+    rx: { steam: 'Hơi nước', superconduct: 'Siêu dẫn', overload: 'Quá tải', electrolysis: 'Điện phân', combustion: 'Bùng cháy', firestorm: 'Bão lửa', blizzard: 'Bão tuyết', resonance: 'Cộng hưởng', ...potions.rx },
     rxDo: {
       steam: 'Làm bỏng và làm chậm xung quanh',
       superconduct: 'Phá vỡ băng giá: sát thương xung quanh',
@@ -290,6 +293,7 @@ export const vi: Table = {
       firestorm: 'Thổi lửa lan sang mọi thứ gần đó',
       blizzard: 'Thổi tung băng giá: làm chậm xung quanh',
       resonance: 'Viên đạn cộng hưởng với nguyên tố: thêm sát thương',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Kích hoạt {n} lần',
@@ -435,6 +439,7 @@ export const vi: Table = {
     windGust: { name: 'Tường Gió', desc: 'Cứ phát gió thứ 4 quét một bức tường gió qua chiến trường' },
     windVortex: { name: 'Lốc Xoáy', desc: 'Hạ địch bằng gió để lại lốc xoáy hút địch vào trong 2s' },
     windFire: { name: 'Quạt Lửa', desc: 'Đòn gió trúng địch đang cháy thổi lửa sang địch xung quanh' },
+    ...potions.skill,
   },
   board: {
     button: 'Xếp hạng',

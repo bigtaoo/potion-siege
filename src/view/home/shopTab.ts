@@ -14,7 +14,7 @@ import { adIcon, priced, tick, type Area } from './shared';
 
 /** `ads`: a rewarded ad can be played now; `hosted`: the host has rewarded ads at all, so while
  *  none is loaded the ad card waits on a spinner, and without them it is left out. The unlock
- *  panel holds only the potions still locked, big two to a row while there are one or two, three
+ *  panel holds the next three potions still locked, big two to a row while there are one or two, three
  *  to a row from three; with none left the freebies stand alone. Stacked on a portrait page,
  *  side by side on a landscape one. */
 export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, ads: boolean, hosted: boolean, adFree: HomeExtras['adFree'] | null): void {
@@ -27,7 +27,8 @@ export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area,
   }
   const room = bottom - top;
   const showAd = ads || hosted;
-  const locked = HERO_KINDS.filter((k) => !heroUnlocked(m, k));
+  // the next few locked potions only, the later ones turning up as these are bought or won
+  const locked = HERO_KINDS.filter((k) => !heroUnlocked(m, k)).slice(0, SHOP_MOST);
   if (locked.length === 0) {
     // only the freebies: one calm panel a little above the middle
     const w = Math.min(a.wide ? 1200 : 1000, a.w - 60);
@@ -62,6 +63,8 @@ export function shopTab(root: Container, m: MetaSave, act: HomeActions, a: Area,
 }
 
 const STRIP_H = 200;
+/** The most locked potions on sale at once. */
+const SHOP_MOST = 3;
 /** The daily panel with the free chest on its own, as one low card across. */
 const CHEST_ALONE_H = 400;
 /** Over the unlock cards the title plate and the hint under it, and a margin below them. */

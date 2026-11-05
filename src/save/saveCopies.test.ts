@@ -8,8 +8,8 @@ const copy = (owner: string, save: string, at = 1, from?: string): SaveCopy => (
 
 describe('progress', () => {
   it('counts battles first, then levels, then stages won', () => {
-    expect(progressOf(null)).toEqual([0, 6, 0]);
-    expect(progressOf(saveWith(3, 2, 1))).toEqual([3, 8, 1]);
+    expect(progressOf(null)).toEqual([0, 9, 0]);
+    expect(progressOf(saveWith(3, 2, 1))).toEqual([3, 11, 1]);
     expect(compareProgress(saveWith(2, 9, 9), saveWith(3))).toBeLessThan(0);
     expect(compareProgress(saveWith(3, 1), saveWith(3, 0, 9))).toBeGreaterThan(0);
     expect(compareProgress(saveWith(3, 0, 2), saveWith(3, 0, 1))).toBeGreaterThan(0);

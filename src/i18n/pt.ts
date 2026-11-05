@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/pt';
+import { potions } from './potions/pt';
 
 // Portuguese (Brazilian).
 export const pt: Table = {
@@ -108,9 +109,10 @@ export const pt: Table = {
     lightningStaticPlus: 'Estática +50% de dano',
     poisonRustPlus: 'Cada acúmulo de ferrugem +50% de efeito',
     windPushPlus: 'Repulsão +50%, o golem de caldeira voa tão longe quanto um soldado de lata',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Dano +{p}%', deep: 'Bônus do Nv. 10 +{p}% mais forte', keen: 'Dano +{p}% a mais', aura: 'Todas as poções +{p}% de dano' },
-  role: { arcane: 'Alvo único', fire: 'Área', ice: 'Desacelera', lightning: 'Corrente', poison: 'Dano contínuo', wind: 'Empurrão' },
+  role: { arcane: 'Alvo único', fire: 'Área', ice: 'Desacelera', lightning: 'Corrente', poison: 'Dano contínuo', wind: 'Empurrão', ...potions.role },
   nextUnlock: 'Nv. {n}: {what}',
   maxed: 'MÁX',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const pt: Table = {
     lightning: 'Tônico Elétrico',
     poison: 'Tônico Corrosivo',
     wind: 'Tônico de Vento',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Poções', enemies: 'Inimigos', feats: 'Conquistas', reactions: 'Reações' },
-    rx: { steam: 'Vapor', superconduct: 'Supercondução', overload: 'Sobrecarga', electrolysis: 'Eletrólise', combustion: 'Combustão', firestorm: 'Tempestade de fogo', blizzard: 'Nevasca', resonance: 'Ressonância' },
+    rx: { steam: 'Vapor', superconduct: 'Supercondução', overload: 'Sobrecarga', electrolysis: 'Eletrólise', combustion: 'Combustão', firestorm: 'Tempestade de fogo', blizzard: 'Nevasca', resonance: 'Ressonância', ...potions.rx },
     rxDo: {
       steam: 'Escalda e desacelera ao redor',
       superconduct: 'Quebra a geada: dano ao redor',
@@ -290,6 +293,7 @@ export const pt: Table = {
       firestorm: 'Aviva as chamas sobre tudo por perto',
       blizzard: 'Espalha a geada: desacelera ao redor',
       resonance: 'O disparo ressoa com o elemento: dano extra',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Ativada {n} {n|one:vez|other:vezes}',
@@ -435,6 +439,7 @@ export const pt: Table = {
     windGust: { name: 'Muro de Vento', desc: 'A cada 4 tiros de vento, um muro de vento varre o campo' },
     windVortex: { name: 'Redemoinho', desc: 'Abates de vento deixam um redemoinho que puxa inimigos por 2s' },
     windFire: { name: 'Atiçar as Chamas', desc: 'Golpes de vento em inimigos em chamas espalham o fogo ao redor' },
+    ...potions.skill,
   },
   board: {
     button: 'Ranking',

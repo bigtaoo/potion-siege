@@ -24,6 +24,12 @@ export const REACTION_LEGENDS: Record<ReactionId, readonly SkillId[]> = {
   firestorm: ['windFire'],
   blizzard: [],
   resonance: ['arcaneIce', 'fireArcane'],
+  prism: [],
+  flare: ['lightFire'],
+  magnetize: [],
+  molten: ['metalFire'],
+  spores: ['vinePoison'],
+  bramble: [],
 };
 
 /** The reaction a legend recipe boosts; null for every other skill. */

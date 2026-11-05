@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/fr';
+import { potions } from './potions/fr';
 
 // French.
 export const fr: Table = {
@@ -108,9 +109,10 @@ export const fr: Table = {
     lightningStaticPlus: 'Statique +50% de dégâts',
     poisonRustPlus: 'Chaque couche de rouille +50% d’effet',
     windPushPlus: 'Recul +50% : le golem-chaudière vole aussi loin qu’un soldat de plomb',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Dégâts +{p} %', deep: 'Bonus du Niv. 10 +{p} % plus fort', keen: 'Encore +{p} % de dégâts', aura: 'Chaque potion +{p} % de dégâts' },
-  role: { arcane: 'Cible unique', fire: 'Zone', ice: 'Ralentit', lightning: 'Chaîne', poison: 'Dégâts sur la durée', wind: 'Recul' },
+  role: { arcane: 'Cible unique', fire: 'Zone', ice: 'Ralentit', lightning: 'Chaîne', poison: 'Dégâts sur la durée', wind: 'Recul', ...potions.role },
   nextUnlock: 'Niv. {n} : {what}',
   maxed: 'MAX',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const fr: Table = {
     lightning: 'Élixir d’orage',
     poison: 'Élixir corrosif',
     wind: 'Élixir de vent',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Potions', enemies: 'Ennemis', feats: 'Succès', reactions: 'Réactions' },
-    rx: { steam: 'Vapeur', superconduct: 'Supraconduction', overload: 'Surcharge', electrolysis: 'Électrolyse', combustion: 'Combustion', firestorm: 'Tempête de feu', blizzard: 'Blizzard', resonance: 'Résonance' },
+    rx: { steam: 'Vapeur', superconduct: 'Supraconduction', overload: 'Surcharge', electrolysis: 'Électrolyse', combustion: 'Combustion', firestorm: 'Tempête de feu', blizzard: 'Blizzard', resonance: 'Résonance', ...potions.rx },
     rxDo: {
       steam: 'Ébouillante et ralentit tout autour',
       superconduct: 'Brise le givre : dégâts tout autour',
@@ -290,6 +293,7 @@ export const fr: Table = {
       firestorm: 'Attise les flammes sur tout ce qui est proche',
       blizzard: 'Souffle le givre : ralentit tout autour',
       resonance: 'Le trait résonne avec l’élément : dégâts en plus',
+      ...potions.rxDo,
     },
     rxShout: '{name} !',
     rxCount: 'Déclenchée {n} fois',
@@ -435,6 +439,7 @@ export const fr: Table = {
     windGust: { name: 'Mur de vent', desc: 'Chaque 4e tir de vent balaie le terrain d’un mur de vent' },
     windVortex: { name: 'Tourbillon', desc: 'Une élimination au vent laisse un tourbillon qui aspire les ennemis 2s' },
     windFire: { name: 'Attiser les flammes', desc: 'Le vent qui frappe un ennemi en feu propage les flammes à ses voisins' },
+    ...potions.skill,
   },
   board: {
     button: 'Classement',

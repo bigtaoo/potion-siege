@@ -15,7 +15,7 @@ const WIND: [number, number] = [0x8fe3c8, 0xeafff8];
 const LEAF = 0x7cc35a;
 
 /** How long each kind's hit effect lasts, in seconds. */
-export const HIT_TIME: Record<HeroKind | 'poison', number> = { fire: 0.4, ice: 0.35, lightning: 0.3, arcane: 0.35, poison: 0.3, wind: 0.3 };
+export const HIT_TIME: Record<HeroKind | 'poison', number> = { fire: 0.4, ice: 0.35, lightning: 0.3, arcane: 0.35, poison: 0.3, wind: 0.3, light: 0.3, metal: 0.35, vine: 0.4 };
 
 const easeOut = (p: number): number => 1 - (1 - p) * (1 - p);
 /** Full strength for most of the life, then fading out. */
@@ -100,6 +100,46 @@ export function hitEffect(g: Graphics, kind: HeroKind | 'poison', x: number, y: 
       leaf(g, x + 46 * e, y - 30 * e, 10, seed + p * 6, a);
       break;
     }
+    case 'light': {
+      // a flash with four long rays and four short
+      for (let i = 0; i < 8; i++) {
+        const ang = seed + (i * Math.PI) / 4;
+        const len = (i % 2 ? 22 : 44) * (0.6 + 0.6 * e);
+        const c = Math.cos(ang);
+        const s = Math.sin(ang);
+        g.poly([x + c * 8, y + s * 8, x + c * len, y + s * len], false).stroke({ width: 9, color: INK, alpha: a, cap: 'round' });
+        g.poly([x + c * 8, y + s * 8, x + c * len, y + s * len], false).stroke({ width: 4, color: 0xfff27a, alpha: a, cap: 'round' });
+      }
+      g.circle(x, y, 16 * (1 - p * 0.7)).fill({ color: 0xfffbe0, alpha: a }).stroke({ width: 3, color: INK, alpha: a });
+      break;
+    }
+    case 'metal': {
+      // a dent ring and grey chips knocked off
+      const r = radius * (0.4 + 0.5 * e);
+      g.circle(x, y, r).stroke({ width: 7, color: INK, alpha: a }).stroke({ width: 3.5, color: 0xd8dde2, alpha: a });
+      for (let i = 0; i < 5; i++) {
+        const ang = seed + (i * 2 * Math.PI) / 5;
+        const d = r * 0.6 + 30 * e;
+        const bx = x + Math.cos(ang) * d;
+        const by = y + Math.sin(ang) * d + 20 * p * p;
+        g.poly(burstPoly(bx, by, 7, 0.5, 3, ang)).fill({ color: 0xb8c4cc, alpha: a }).stroke({ width: 2.5, color: INK, alpha: a });
+      }
+      break;
+    }
+    case 'vine': {
+      // green tendrils curling up around the spot
+      for (let i = 0; i < 4; i++) {
+        const ang = seed + (i * Math.PI) / 2;
+        const d = 12 + 26 * e;
+        const tx = x + Math.cos(ang) * d;
+        const ty = y + Math.sin(ang) * d;
+        const pts = [x + Math.cos(ang) * 6, y + Math.sin(ang) * 6, (x + tx) / 2 - Math.sin(ang) * 10, (y + ty) / 2 + Math.cos(ang) * 10, tx, ty];
+        g.poly(pts, false).stroke({ width: 9, color: INK, alpha: a, cap: 'round', join: 'round' });
+        g.poly(pts, false).stroke({ width: 4.5, color: 0x4caf50, alpha: a, cap: 'round', join: 'round' });
+        leaf(g, tx, ty, 6, ang, a);
+      }
+      break;
+    }
     case 'poison': {
       for (let i = 0; i < 4; i++) {
         const ang = seed + (i * Math.PI) / 2;
@@ -109,6 +149,16 @@ export function hitEffect(g: Graphics, kind: HeroKind | 'poison', x: number, y: 
       break;
     }
   }
+}
+
+/** A light beam from (x1, y1) on to (x2, y2): ink, then gold, then a white core, thinning as
+ *  `life` runs out. */
+export function beamLine(g: Graphics, x1: number, y1: number, x2: number, y2: number, life: number): void {
+  const w = 6 + 10 * life;
+  const pts = [x1, y1, x2, y2];
+  g.poly(pts, false).stroke({ width: w + 7, color: INK, alpha: life, cap: 'round' });
+  g.poly(pts, false).stroke({ width: w, color: 0xfff27a, alpha: life, cap: 'round' });
+  g.poly(pts, false).stroke({ width: w * 0.35, color: 0xffffff, alpha: life, cap: 'round' });
 }
 
 /** A forked bolt through the chain's points: ink, then yellow, then a white core. Jitters every frame. */

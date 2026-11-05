@@ -81,6 +81,27 @@
       "bossSlow": 0.3,
       "bossSlowTime": 0.5,
       "unlockStage": 10
+    },
+    "light": {
+      "damage": 10,
+      "interval": 1.0,
+      "pierce": 0.6,
+      "beamWidth": 36,
+      "beamReach": 500,
+      "unlockStage": 20
+    },
+    "metal": {
+      "damage": 24,
+      "interval": 1.6,
+      "unlockStage": 30
+    },
+    "vine": {
+      "damage": 7,
+      "interval": 0.9,
+      "rootTime": 0.7,
+      "bossSlow": 0.5,
+      "tangleTime": 2.5,
+      "unlockStage": 40
     }
   },
   "enemies": {
@@ -237,6 +258,14 @@
     "firestorm": { "burn": 0.3, "radius": 90 },
     "blizzard": { "slow": 0.4, "slowTime": 2, "radius": 100 },
     "resonance": { "damage": 0.3 },
+    "glareTime": 2.5,
+    "magnetTime": 2.5,
+    "prism": { "damage": 0.5, "bolts": 3, "range": 220 },
+    "flare": { "damage": 0.6, "radius": 90, "slow": 0.5, "slowTime": 1 },
+    "magnetize": { "damage": 0.4, "radius": 150, "pull": 60 },
+    "molten": { "burn": 0.6, "time": 3 },
+    "spores": { "radius": 100 },
+    "bramble": { "damage": 0.3, "radius": 90, "root": 1.2 },
     "masteryStep": 0.05,
     "legendPower": 1.5,
     "legendReach": 1.3,
@@ -304,7 +333,22 @@
     "vortexRadius": 160,
     "vortexPull": 90,
     "windFire": 0.3,
-    "windFireRadius": 110
+    "windFireRadius": 110,
+    "lightWide": 0.4,
+    "lightGlareSlow": 0.2,
+    "lightGlareTime": 1,
+    "lightGlarePlus": 0.5,
+    "metalShrapnel": 0.3,
+    "metalShrapnelRadius": 70,
+    "metalCrush": 0.15,
+    "metalCrushTime": 0.6,
+    "metalCrushPlus": 0.5,
+    "metalBreakTime": 1.5,
+    "metalFire": 0.6,
+    "vineRoot": 0.3,
+    "vineThorns": 0.4,
+    "vineThornsPlus": 0.5,
+    "vineSpreadRange": 220
   },
   "meta": {
     "stageHpGrowth": 1.12,
@@ -439,6 +483,6 @@
     "ad": 60,
     "adsPerDay": 3,
     "doublesPerDay": 3,
-    "unlock": { "poison": 800, "wind": 1200 }
+    "unlock": { "poison": 800, "wind": 1200, "light": 1600, "metal": 2000, "vine": 2400 }
   }
 }

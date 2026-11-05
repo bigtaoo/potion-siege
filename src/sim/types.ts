@@ -4,11 +4,16 @@ export type Balance = typeof balanceJson;
 export const BALANCE: Balance = balanceJson;
 
 /** What two potions' elements do when they meet on one enemy (reactions.ts). */
-export const REACTION_IDS = ['steam', 'superconduct', 'overload', 'electrolysis', 'combustion', 'firestorm', 'blizzard', 'resonance'] as const;
+export const REACTION_IDS = ['steam', 'superconduct', 'overload', 'electrolysis', 'combustion', 'firestorm', 'blizzard', 'resonance', 'prism', 'flare', 'magnetize', 'molten', 'spores', 'bramble'] as const;
 export type ReactionId = (typeof REACTION_IDS)[number];
 
-export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison', 'wind'] as const;
+export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison', 'wind', 'light', 'metal', 'vine'] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
+
+/** A count per potion kind, all at zero. */
+export function zeroByKind(): Record<HeroKind, number> {
+  return Object.fromEntries(HERO_KINDS.map((k) => [k, 0])) as Record<HeroKind, number>;
+}
 
 /** The four heroes a new save brings into battle; the player can swap one for another unlocked
  *  potion (MetaSave.lineup), and every summon and merge rolls one of the four. */
@@ -101,6 +106,11 @@ export interface Enemy {
    *  poisonTime. Absent reads as none. */
   frostTime?: number;
   shockTime?: number;
+  /** The light's glare, the quicksilver's magnet and the vine's tangle, as frostTime: the new
+   *  potions' elements. A tangle also keeps the vine from rooting it again while it lasts. */
+  glareTime?: number;
+  magnetTime?: number;
+  tangleTime?: number;
   /** Ticks before it can react again. */
   reactTime?: number;
   /** True once it reached the wall and is hitting it. */
@@ -231,6 +241,8 @@ export type BattleEvent =
   | { type: 'crack'; x: number; y: number }
   /** A wind gust swept the field `depth` deep either side of y. */
   | { type: 'gust'; x: number; y: number; depth: number }
+  /** A light beam ran from (x1, y1) on to (x2, y2). */
+  | { type: 'beam'; x1: number; y1: number; x2: number; y2: number }
   /** Two potions' elements met on an enemy at (x, y): a reaction reaching `radius` (0: only it). */
   | { type: 'reaction'; id: ReactionId; x: number; y: number; radius: number }
   /** A wind hit knocked an enemy back from (x, y). */

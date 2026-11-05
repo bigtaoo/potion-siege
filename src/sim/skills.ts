@@ -44,6 +44,21 @@ export const SKILL_IDS = [
   'windGust',
   'windVortex',
   'windFire',
+  'lightDamage',
+  'lightWide',
+  'lightGlare',
+  'lightFocus',
+  'lightFire',
+  'metalDamage',
+  'metalShrapnel',
+  'metalCrush',
+  'metalBreak',
+  'metalFire',
+  'vineDamage',
+  'vineRoot',
+  'vineThorns',
+  'vineSpread',
+  'vinePoison',
 ] as const;
 export type SkillId = (typeof SKILL_IDS)[number];
 
@@ -99,6 +114,21 @@ const DEFS: Record<SkillId, SkillDef> = {
   windGust: { max: 1, hero: 'wind', rarity: 'rare' },
   windVortex: { max: 1, hero: 'wind', rarity: 'epic' },
   windFire: { max: 1, hero: 'wind', with: 'fire', rarity: 'legend' },
+  lightDamage: { max: 3, hero: 'light', rarity: 'common' },
+  lightWide: { max: 3, hero: 'light', rarity: 'common' },
+  lightGlare: { max: 2, hero: 'light', rarity: 'rare' },
+  lightFocus: { max: 1, hero: 'light', rarity: 'epic' },
+  lightFire: { max: 1, hero: 'light', with: 'fire', rarity: 'legend' },
+  metalDamage: { max: 3, hero: 'metal', rarity: 'common' },
+  metalShrapnel: { max: 3, hero: 'metal', rarity: 'common' },
+  metalCrush: { max: 2, hero: 'metal', rarity: 'rare' },
+  metalBreak: { max: 1, hero: 'metal', rarity: 'epic' },
+  metalFire: { max: 1, hero: 'metal', with: 'fire', rarity: 'legend' },
+  vineDamage: { max: 3, hero: 'vine', rarity: 'common' },
+  vineRoot: { max: 3, hero: 'vine', rarity: 'common' },
+  vineThorns: { max: 2, hero: 'vine', rarity: 'rare' },
+  vineSpread: { max: 1, hero: 'vine', rarity: 'epic' },
+  vinePoison: { max: 1, hero: 'vine', with: 'poison', rarity: 'legend' },
 };
 
 /** The hero a skill belongs to and, for a recipe, the second one it needs. */
@@ -118,7 +148,7 @@ export function skillMax(id: SkillId): number {
 
 /** Passive boosts a milestone gives to a skill the hero already has, and past Lv 20 the late
  *  perks (latePerks.ts). */
-export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus', 'windPushPlus'] as const;
+export const PERK_IDS = ['fireBurnPlus', 'arcaneMarkPlus', 'iceFreezePlus', 'lightningStaticPlus', 'poisonRustPlus', 'windPushPlus', 'lightGlarePlus', 'metalCrushPlus', 'vineThornsPlus'] as const;
 export type PerkId = (typeof PERK_IDS)[number] | LatePerkId;
 
 /** What levelling a hero opens up: a new card in the pool, or a perk. */
@@ -168,6 +198,27 @@ export const MILESTONES: Record<HeroKind, Milestone[]> = {
     { level: 15, skill: 'windVortex' },
     { level: 20, skill: 'windFire' },
     ...late('wind'),
+  ],
+  light: [
+    { level: 5, skill: 'lightGlare' },
+    { level: 10, perk: 'lightGlarePlus' },
+    { level: 15, skill: 'lightFocus' },
+    { level: 20, skill: 'lightFire' },
+    ...late('light'),
+  ],
+  metal: [
+    { level: 5, skill: 'metalCrush' },
+    { level: 10, perk: 'metalCrushPlus' },
+    { level: 15, skill: 'metalBreak' },
+    { level: 20, skill: 'metalFire' },
+    ...late('metal'),
+  ],
+  vine: [
+    { level: 5, skill: 'vineThorns' },
+    { level: 10, perk: 'vineThornsPlus' },
+    { level: 15, skill: 'vineSpread' },
+    { level: 20, skill: 'vinePoison' },
+    ...late('vine'),
   ],
 };
 
@@ -280,6 +331,32 @@ export interface Mods {
   vortex: boolean;
   /** Wind fans the fire on what it hits and blows it onto those around (the wind-and-fire recipe). */
   windFire: boolean;
+  /** Multiplier on the light beam's width. */
+  beamWidth: number;
+  /** The glare's slow on everything a beam crosses (a fraction); 0 without the skill. */
+  glareSlow: number;
+  /** The beam hits everything on it as hard as its target. */
+  focus: boolean;
+  /** Light beams scorch (the light-and-fire recipe). */
+  sunfire: boolean;
+  /** Quicksilver slugs splash this fraction around their target; 0 without the skill. */
+  shrapnel: number;
+  /** Permille chance a quicksilver slug knocks its target down; 0 without the skill. */
+  crush: number;
+  /** Multiplier on how long the knock-down lasts. */
+  crushTime: number;
+  /** Quicksilver hits leave the target brittle. */
+  armorBreak: boolean;
+  /** Quicksilver hits burning enemies harder (the quicksilver-and-fire recipe). */
+  forge: boolean;
+  /** Multiplier on how long a root holds. */
+  rootTime: number;
+  /** Thorns a root sets going, per second, as a fraction of the vine hit; 0 without the skill. */
+  thorns: number;
+  /** A vine kill sends its tendril on to the nearest enemy. */
+  vineSpread: boolean;
+  /** Vine hits poison (the vine-and-corrosion recipe). */
+  vinePoison: boolean;
 }
 
 export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()): Mods {
@@ -291,6 +368,9 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     lightning: 1 + s.classDamage * levels.lightningDamage,
     poison: 1 + s.classDamage * levels.poisonDamage,
     wind: 1 + s.classDamage * levels.windDamage,
+    light: 1 + s.classDamage * levels.lightDamage,
+    metal: 1 + s.classDamage * levels.metalDamage,
+    vine: 1 + s.classDamage * levels.vineDamage,
   };
   const p = BALANCE.heroes.poison;
   const w = (base: PerkId, kind: HeroKind) => perkWeight(perks, base, kind);
@@ -327,5 +407,18 @@ export function mods(levels: SkillLevels, perks: ReadonlySet<PerkId> = new Set()
     gust: levels.windGust > 0,
     vortex: levels.windVortex > 0,
     windFire: levels.windFire > 0,
+    beamWidth: 1 + s.lightWide * levels.lightWide,
+    glareSlow: s.lightGlareSlow * levels.lightGlare * (1 + s.lightGlarePlus * w('lightGlarePlus', 'light')),
+    focus: levels.lightFocus > 0,
+    sunfire: levels.lightFire > 0,
+    shrapnel: s.metalShrapnel * levels.metalShrapnel,
+    crush: Math.round(s.metalCrush * levels.metalCrush * 1000),
+    crushTime: 1 + s.metalCrushPlus * w('metalCrushPlus', 'metal'),
+    armorBreak: levels.metalBreak > 0,
+    forge: levels.metalFire > 0,
+    rootTime: 1 + s.vineRoot * levels.vineRoot,
+    thorns: s.vineThorns * levels.vineThorns * (1 + s.vineThornsPlus * w('vineThornsPlus', 'vine')),
+    vineSpread: levels.vineSpread > 0,
+    vinePoison: levels.vinePoison > 0,
   };
 }

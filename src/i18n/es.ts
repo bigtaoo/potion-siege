@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/es';
+import { potions } from './potions/es';
 
 // Spanish (neutral, informal "tú").
 export const es: Table = {
@@ -108,9 +109,10 @@ export const es: Table = {
     lightningStaticPlus: 'Estática: +50% de daño',
     poisonRustPlus: 'Cada capa de óxido: +50% de efecto',
     windPushPlus: 'Retroceso +50%: el gólem de caldera vuela tan lejos como un soldado de hojalata',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Daño +{p} %', deep: 'Bonus del Nv. 10 +{p} % más fuerte', keen: 'Daño +{p} % más', aura: 'Todas las pociones +{p} % de daño' },
-  role: { arcane: 'Un objetivo', fire: 'Área', ice: 'Ralentiza', lightning: 'Cadena', poison: 'Daño continuo', wind: 'Empuje' },
+  role: { arcane: 'Un objetivo', fire: 'Área', ice: 'Ralentiza', lightning: 'Cadena', poison: 'Daño continuo', wind: 'Empuje', ...potions.role },
   nextUnlock: 'Nv. {n}: {what}',
   maxed: 'MÁX',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const es: Table = {
     lightning: 'Tónico eléctrico',
     poison: 'Tónico corrosivo',
     wind: 'Tónico eólico',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Pociones', enemies: 'Enemigos', feats: 'Logros', reactions: 'Reacciones' },
-    rx: { steam: 'Vapor', superconduct: 'Superconducción', overload: 'Sobrecarga', electrolysis: 'Electrólisis', combustion: 'Combustión', firestorm: 'Tormenta de fuego', blizzard: 'Ventisca', resonance: 'Resonancia' },
+    rx: { steam: 'Vapor', superconduct: 'Superconducción', overload: 'Sobrecarga', electrolysis: 'Electrólisis', combustion: 'Combustión', firestorm: 'Tormenta de fuego', blizzard: 'Ventisca', resonance: 'Resonancia', ...potions.rx },
     rxDo: {
       steam: 'Escalda y ralentiza alrededor',
       superconduct: 'Rompe la escarcha: daño alrededor',
@@ -290,6 +293,7 @@ export const es: Table = {
       firestorm: 'Aviva las llamas sobre todo lo cercano',
       blizzard: 'Esparce la escarcha: ralentiza alrededor',
       resonance: 'El rayo resuena con el elemento: daño extra',
+      ...potions.rxDo,
     },
     rxShout: '¡{name}!',
     rxCount: 'Activada {n} {n|one:vez|other:veces}',
@@ -435,6 +439,7 @@ export const es: Table = {
     windGust: { name: 'Muro de viento', desc: 'Cada 4.º disparo eólico barre el campo con un muro de viento' },
     windVortex: { name: 'Torbellino', desc: 'Las bajas eólicas dejan un torbellino que atrae enemigos durante 2s' },
     windFire: { name: 'Avivar las llamas', desc: 'Los golpes eólicos a enemigos en llamas propagan el fuego a los de alrededor' },
+    ...potions.skill,
   },
   board: {
     button: 'Ranking',

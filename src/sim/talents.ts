@@ -42,6 +42,18 @@ export const TALENTS: Record<HeroKind, readonly [readonly [Grant, Grant], readon
     [[['windGust', 1]], [['windHaste', 2]]],
     [[['windVortex', 1]], [['windPush', 3]]],
   ],
+  light: [
+    [[['lightGlare', 1]], [['lightWide', 2]]],
+    [[['lightFocus', 1]], [['lightFire', 1]]],
+  ],
+  metal: [
+    [[['metalCrush', 1]], [['metalShrapnel', 2]]],
+    [[['metalBreak', 1]], [['metalCrush', 2]]],
+  ],
+  vine: [
+    [[['vineThorns', 1]], [['vineRoot', 2]]],
+    [[['vineSpread', 1]], [['vinePoison', 1]]],
+  ],
 };
 
 /** What option `pick` of `tier` (0, 1, 2 for Lv 10, 20, 30) gives `kind`. */

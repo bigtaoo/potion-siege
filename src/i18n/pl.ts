@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/pl';
+import { potions } from './potions/pl';
 
 // Polish.
 export const pl: Table = {
@@ -108,9 +109,10 @@ export const pl: Table = {
     lightningStaticPlus: 'Ładunek +50% obrażeń',
     poisonRustPlus: 'Każda warstwa rdzy +50% efektu',
     windPushPlus: 'Odrzut +50%, kotłowy golem leci tak daleko jak cynowy żołnierz',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Obrażenia +{p}%', deep: 'Bonus z Poz. 10 +{p}% silniejszy', keen: 'Obrażenia jeszcze +{p}%', aura: 'Każdy eliksir +{p}% obrażeń' },
-  role: { arcane: 'Pojedynczy cel', fire: 'Obszar', ice: 'Spowalnia', lightning: 'Łańcuch', poison: 'Obrażenia w czasie', wind: 'Odrzut' },
+  role: { arcane: 'Pojedynczy cel', fire: 'Obszar', ice: 'Spowalnia', lightning: 'Łańcuch', poison: 'Obrażenia w czasie', wind: 'Odrzut', ...potions.role },
   nextUnlock: 'Poz. {n}: {what}',
   maxed: 'MAKS',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const pl: Table = {
     lightning: 'Burzowy Eliksir',
     poison: 'Żrący Eliksir',
     wind: 'Wichrowy Eliksir',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Mikstury', enemies: 'Wrogowie', feats: 'Osiągnięcia', reactions: 'Reakcje' },
-    rx: { steam: 'Para', superconduct: 'Nadprzewodnictwo', overload: 'Przeciążenie', electrolysis: 'Elektroliza', combustion: 'Spalanie', firestorm: 'Burza ognia', blizzard: 'Zamieć', resonance: 'Rezonans' },
+    rx: { steam: 'Para', superconduct: 'Nadprzewodnictwo', overload: 'Przeciążenie', electrolysis: 'Elektroliza', combustion: 'Spalanie', firestorm: 'Burza ognia', blizzard: 'Zamieć', resonance: 'Rezonans', ...potions.rx },
     rxDo: {
       steam: 'Parzy i spowalnia wszystko wokół',
       superconduct: 'Kruszy szron: obrażenia wokół',
@@ -290,6 +293,7 @@ export const pl: Table = {
       firestorm: 'Rozdmuchuje płomienie na wszystko w pobliżu',
       blizzard: 'Rozwiewa szron: spowalnia wszystko wokół',
       resonance: 'Pocisk rezonuje z żywiołem: dodatkowe obrażenia',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Wywołana {n} {n|one:raz|few:razy|many:razy|other:razy}',
@@ -435,6 +439,7 @@ export const pl: Table = {
     windGust: { name: 'Ściana Wiatru', desc: 'Co 4. strzał wichru przetacza przez pole ścianę wiatru' },
     windVortex: { name: 'Wir', desc: 'Zabójstwa wichrem zostawiają wir, który przez 2 s wciąga wrogów' },
     windFire: { name: 'Rozdmuchaj Ogień', desc: 'Trafienia wichrem w płonących wrogów przenoszą ogień na sąsiadów' },
+    ...potions.skill,
   },
   board: {
     button: 'Ranking',

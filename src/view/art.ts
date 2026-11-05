@@ -100,7 +100,7 @@ export function restOfArt(): Promise<void> {
 /** The small figure a cell shows one to three of, for levels 1-3. */
 const FIGURE: Partial<Record<HeroKind, string>> = {};
 /** The single big hero of the top level. */
-const ULTIMATE: Partial<Record<HeroKind, string>> = { arcane: 'potion_arcane_ult', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult', poison: 'potion_poison_ult', wind: 'potion_wind_ult' };
+const ULTIMATE: Partial<Record<HeroKind, string>> = { arcane: 'potion_arcane_ult', fire: 'potion_fire_ult', ice: 'potion_ice_ult', lightning: 'potion_lightning_ult', poison: 'potion_poison_ult', wind: 'potion_wind_ult', light: 'potion_light_ult', metal: 'potion_metal_ult', vine: 'potion_vine_ult' };
 
 export function figureTexture(kind: HeroKind): Texture | undefined {
   const f = FIGURE[kind];
@@ -176,6 +176,38 @@ const POTIONS: Partial<Record<HeroKind, Omit<PotionLook, 'body'> & { file: strin
     glow: [0x2fae96, 0x9ff0d8, 0xffffff],
     neck: [0.5, 0.03],
     size: 0.9,
+  },
+  light: {
+    file: 'potion_light_body',
+    eyes: [[0.365, 0.518], [0.627, 0.518]],
+    eyeSize: [0.045, 0.036],
+    lid: 0xfbd602,
+    limb: 0xd7a203,
+    mark: 'ray',
+    glow: [0xf5b800, 0xfff27a, 0xffffff],
+    neck: [0.5, 0.03],
+    size: 0.9,
+  },
+  metal: {
+    file: 'potion_metal_body',
+    eyes: [[0.375, 0.512], [0.625, 0.512]],
+    eyeSize: [0.05, 0.048],
+    lid: 0xb0b0ae,
+    limb: 0x6e7378,
+    mark: 'drop',
+    glow: [0x8a949c, 0xd8dde2, 0xffffff],
+    neck: [0.502, 0.03],
+    size: 0.9,
+  },
+  vine: {
+    file: 'potion_vine_body',
+    eyes: [[0.374, 0.59], [0.661, 0.592]],
+    eyeSize: [0.056, 0.045],
+    lid: 0x66c114,
+    limb: 0x3d8a12,
+    mark: 'sprout',
+    glow: [0x2e8b1c, 0x7ed957, 0xdfffa0],
+    neck: [0.514, 0.03],
   },
 };
 

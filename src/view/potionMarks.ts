@@ -84,6 +84,9 @@ export function drawMark(g: Graphics, look: PotionLook, t: number, bh: number): 
   else if (look.mark === 'acid') drawAcid(m);
   else if (look.mark === 'spark') drawSpark(m);
   else if (look.mark === 'wind') drawWind(m);
+  else if (look.mark === 'ray') drawRay(m);
+  else if (look.mark === 'drop') drawDrop(m);
+  else if (look.mark === 'sprout') drawSprout(m);
   else drawStars(m);
 }
 
@@ -203,6 +206,61 @@ function drawWind({ f, look, t, bw, bh, line }: Mark): void {
     pts.push(lx + px * c - py * sn, ly + px * sn + py * c);
   }
   f.poly(pts).fill(0x7fcf4a).stroke({ width: line * 0.7, color: INK, join: 'round' });
+}
+
+/** A little sun over the neck: a bright disc, its rays turning slowly and pulsing. */
+function drawRay({ f, look, t, bh, line }: Mark): void {
+  const cy = -bh * 0.24 - Math.sin(t * W) * bh * 0.02;
+  const r = bh * 0.07;
+  // an eighth of a turn a loop: the rays look the same again
+  const spin = (t * W) / 4;
+  const pulse = 1 + 0.12 * Math.sin(t * W * 2);
+  for (let i = 0; i < 8; i++) {
+    const a = spin + (i * Math.PI) / 4;
+    const len = r * (i % 2 ? 1.6 : 2.2) * pulse;
+    const pts = [Math.cos(a) * r * 1.25, cy + Math.sin(a) * r * 1.25, Math.cos(a) * len, cy + Math.sin(a) * len];
+    f.poly(pts, false).stroke({ width: line * 2.4, color: INK, cap: 'round' });
+    f.poly(pts, false).stroke({ width: line * 1.1, color: look.glow[1], cap: 'round' });
+  }
+  f.circle(0, cy, r).fill(look.glow[1]).stroke({ width: line, color: INK });
+  f.circle(-r * 0.3, cy - r * 0.3, r * 0.35).fill(look.glow[2]);
+}
+
+/** A bead of quicksilver bobbing over the neck, and a smaller one dripping off it. */
+function drawDrop({ f, look, t, bw, bh, line }: Mark): void {
+  const cy = -bh * 0.2 - Math.sin(t * W) * bh * 0.03;
+  const r = bh * 0.07 * (1 + 0.06 * Math.sin(t * W * 2));
+  f.moveTo(-r, cy).quadraticCurveTo(0, cy - r * 2.6, r, cy).arc(0, cy, r, 0, Math.PI).closePath().fill(look.glow[1]).stroke({ width: line, color: INK });
+  f.circle(-r * 0.35, cy - r * 0.2, r * 0.3).fill(look.glow[2]);
+  // the small one falls back into the neck once a loop
+  const p = inLoop(t);
+  const dr = bh * 0.025 * (1 - p * 0.5);
+  f.circle(bw * 0.06, cy + r + p * bh * 0.14, dr).fill(look.glow[0]).stroke({ width: line * 0.6, color: INK });
+}
+
+/** A sprout curling up out of the neck, two leaves on it swaying. */
+function drawSprout({ f, look, t, bh, line }: Mark): void {
+  const sway = Math.sin(t * W) * bh * 0.04;
+  const top: [number, number] = [sway, -bh * 0.3];
+  const stem = [0, 0, sway * 0.3 - bh * 0.05, -bh * 0.15, top[0], top[1]];
+  f.moveTo(stem[0], stem[1]).quadraticCurveTo(stem[2], stem[3], stem[4], stem[5]).stroke({ width: line * 2.6, color: INK, cap: 'round' });
+  f.moveTo(stem[0], stem[1]).quadraticCurveTo(stem[2], stem[3], stem[4], stem[5]).stroke({ width: line * 1.2, color: look.glow[0], cap: 'round' });
+  // a curl at the tip
+  f.arc(top[0] + bh * 0.03, top[1], bh * 0.03, Math.PI, Math.PI * 2.6).stroke({ width: line * 1.2, color: look.glow[0], cap: 'round' });
+  for (const side of [-1, 1]) {
+    const lx = sway * 0.6 + side * bh * 0.07;
+    const ly = -bh * (side < 0 ? 0.16 : 0.22);
+    const a = side * (0.5 + 0.15 * Math.sin(t * W * 2 + side));
+    const c = Math.cos(a), sn = Math.sin(a);
+    const pts: number[] = [];
+    for (let j = 0; j < 12; j++) {
+      const u = (j / 12) * Math.PI * 2;
+      const px = Math.cos(u) * bh * 0.065;
+      const py = Math.sin(u) * bh * 0.03;
+      pts.push(lx + px * c - py * sn, ly + px * sn + py * c);
+    }
+    f.poly(pts).fill(look.glow[1]).stroke({ width: line * 0.8, color: INK, join: 'round' });
+  }
 }
 
 /** Three little stars circling over the neck, twinkling. */

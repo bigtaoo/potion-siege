@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/ko';
+import { potions } from './potions/ko';
 
 // Korean.
 export const ko: Table = {
@@ -108,9 +109,10 @@ export const ko: Table = {
     lightningStaticPlus: '정전기 피해 +50%',
     poisonRustPlus: '녹 중첩당 효과 +50%',
     windPushPlus: '넉백 +50%, 보일러 골렘도 양철 병정만큼 멀리 날아가요',
+    ...potions.perk,
   },
   perkLate: { sharp: '피해 +{p}%', deep: 'Lv 10 특전 +{p}% 강화', keen: '피해 +{p}% 추가', aura: '모든 포션 피해 +{p}%' },
-  role: { arcane: '단일 대상', fire: '범위', ice: '둔화', lightning: '연쇄', poison: '지속 피해', wind: '넉백' },
+  role: { arcane: '단일 대상', fire: '범위', ice: '둔화', lightning: '연쇄', poison: '지속 피해', wind: '넉백', ...potions.role },
   nextUnlock: '레벨 {n}: {what}',
   maxed: '최대',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const ko: Table = {
     lightning: '폭풍 토닉',
     poison: '부식 토닉',
     wind: '질풍 토닉',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: '포션', enemies: '적', feats: '업적', reactions: '반응' },
-    rx: { steam: '증기', superconduct: '초전도', overload: '과부하', electrolysis: '전기분해', combustion: '연소', firestorm: '화염 폭풍', blizzard: '눈보라', resonance: '공명' },
+    rx: { steam: '증기', superconduct: '초전도', overload: '과부하', electrolysis: '전기분해', combustion: '연소', firestorm: '화염 폭풍', blizzard: '눈보라', resonance: '공명', ...potions.rx },
     rxDo: {
       steam: '주변을 데우고 느리게 함',
       superconduct: '서리를 깨뜨림: 주변에 피해',
@@ -290,6 +293,7 @@ export const ko: Table = {
       firestorm: '주변 모두에게 불길을 퍼뜨림',
       blizzard: '서리를 흩뿌림: 주변을 느리게 함',
       resonance: '마탄이 원소와 공명: 추가 피해',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: '{n}회 발동',
@@ -435,6 +439,7 @@ export const ko: Table = {
     windGust: { name: '바람벽', desc: '질풍 4번째 공격마다 바람벽이 전장을 쓸어 냄' },
     windVortex: { name: '회오리', desc: '질풍으로 처치한 자리에 회오리가 남아 2초간 적을 빨아들임' },
     windFire: { name: '부채질', desc: '불타는 적을 질풍이 맞히면 불길이 주변으로 번짐' },
+    ...potions.skill,
   },
   board: {
     button: '순위',

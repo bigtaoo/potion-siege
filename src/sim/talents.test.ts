@@ -29,7 +29,7 @@ describe('talents', () => {
   });
 
   it('goes into a battle only for the lineup, only as far as its level reached', () => {
-    const levels = { arcane: 12, fire: 25, ice: 5, lightning: 1, poison: 30, wind: 30 };
+    const levels = { arcane: 12, fire: 25, ice: 5, lightning: 1, poison: 30, wind: 30, light: 1, metal: 1, vine: 1 };
     expect(battleTalents({ fire: [0, 1, 0], ice: [1], poison: [0] }, ['fire', 'ice', 'arcane', 'wind'], levels)).toEqual({ fire: [0, 1] });
     expect(battleTalents({}, ['fire'], levels)).toBeUndefined();
   });

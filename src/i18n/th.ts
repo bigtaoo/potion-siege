@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/th';
+import { potions } from './potions/th';
 
 // Thai.
 export const th: Table = {
@@ -108,9 +109,10 @@ export const th: Table = {
     lightningStaticPlus: 'ไฟฟ้าสถิต: ความเสียหาย +50%',
     poisonRustPlus: 'สนิมแต่ละชั้น ผล +50%',
     windPushPlus: 'ผลักถอย +50% โกเลมหม้อไอน้ำ ปลิวไกลเท่าทหารดีบุก',
+    ...potions.perk,
   },
   perkLate: { sharp: 'ความเสียหาย +{p}%', deep: 'โบนัส Lv 10 แรงขึ้น {p}%', keen: 'ความเสียหายเพิ่มอีก {p}%', aura: 'ยาทุกขวด ความเสียหาย +{p}%' },
-  role: { arcane: 'เป้าเดียว', fire: 'วงกว้าง', ice: 'ทำให้ช้า', lightning: 'โซ่', poison: 'ความเสียหายต่อเนื่อง', wind: 'กระแทกถอย' },
+  role: { arcane: 'เป้าเดียว', fire: 'วงกว้าง', ice: 'ทำให้ช้า', lightning: 'โซ่', poison: 'ความเสียหายต่อเนื่อง', wind: 'กระแทกถอย', ...potions.role },
   nextUnlock: 'เลเวล {n}: {what}',
   maxed: 'สูงสุด',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const th: Table = {
     lightning: 'โพชั่นพายุ',
     poison: 'โพชั่นกัดกร่อน',
     wind: 'โพชั่นลมกรด',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'โพชั่น', enemies: 'ศัตรู', feats: 'ความสำเร็จ', reactions: 'ปฏิกิริยา' },
-    rx: { steam: 'ไอน้ำ', superconduct: 'ตัวนำยิ่งยวด', overload: 'โอเวอร์โหลด', electrolysis: 'อิเล็กโทรไลซิส', combustion: 'การเผาไหม้', firestorm: 'พายุเพลิง', blizzard: 'พายุหิมะ', resonance: 'การสั่นพ้อง' },
+    rx: { steam: 'ไอน้ำ', superconduct: 'ตัวนำยิ่งยวด', overload: 'โอเวอร์โหลด', electrolysis: 'อิเล็กโทรไลซิส', combustion: 'การเผาไหม้', firestorm: 'พายุเพลิง', blizzard: 'พายุหิมะ', resonance: 'การสั่นพ้อง', ...potions.rx },
     rxDo: {
       steam: 'ลวกและทำให้ช้ารอบตัว',
       superconduct: 'ทุบน้ำแข็งแตก: ความเสียหายรอบตัว',
@@ -290,6 +293,7 @@ export const th: Table = {
       firestorm: 'โหมไฟใส่ทุกตัวรอบ ๆ',
       blizzard: 'พัดน้ำแข็งกระจาย: ทำให้ช้ารอบตัว',
       resonance: 'กระสุนสั่นพ้องกับธาตุ: ความเสียหายเพิ่ม',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'เกิดขึ้น {n} ครั้ง',
@@ -435,6 +439,7 @@ export const th: Table = {
     windGust: { name: 'กำแพงลม', desc: 'ลมกรดทุกนัดที่ 4 จะปล่อยกำแพงลมกวาดทั่วสนาม' },
     windVortex: { name: 'ลมหมุน', desc: 'ศัตรูที่ตายด้วยลมกรดทิ้งลมหมุนไว้ ดูดศัตรูเข้าหา 2 วิ' },
     windFire: { name: 'โหมไฟ', desc: 'ลมกรดโจมตีศัตรูที่ติดไฟจะพัดไฟไปติดศัตรูรอบ ๆ' },
+    ...potions.skill,
   },
   board: {
     button: 'อันดับ',

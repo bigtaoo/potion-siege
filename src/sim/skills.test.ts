@@ -167,7 +167,7 @@ describe('the corrosion line', () => {
   it('holds more rust with deep rust, and each stack counts more with the perk', () => {
     expect(mods(emptySkills()).rustMax).toBe(P.rustMax);
     expect(mods({ ...emptySkills(), poisonRust: 2 }).rustMax).toBe(P.rustMax + 2 * BALANCE.skills.rustExtra);
-    expect(mods(emptySkills(), perksFor({ arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 10, wind: 1 })).rustStep).toBeCloseTo(P.rustStep * (1 + BALANCE.skills.rustPlus));
+    expect(mods(emptySkills(), perksFor({ arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 10, wind: 1, light: 1, metal: 1, vine: 1 })).rustStep).toBeCloseTo(P.rustStep * (1 + BALANCE.skills.rustPlus));
     const b = withSkills(['poisonRust']);
     const e = enemy(b, 500, 600, 1e6);
     for (let i = 0; i < P.rustMax + BALANCE.skills.rustExtra + 2; i++) hit(b, 'poison', e, 1);

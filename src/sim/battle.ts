@@ -38,7 +38,7 @@ import { applyTalents } from './talents';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { startWave, stepWaves } from './spawn';
 import { stepFlasks } from './spells';
-import { BALANCE, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Pool, type Projectile, type Vortex } from './types';
+import { BALANCE, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Pool, type Projectile, type Vortex, zeroByKind } from './types';
 import type { Spawn } from './waves';
 
 /** Battle seconds from the first merge to the first of the setup's free summons, and between
@@ -130,10 +130,10 @@ export class Battle {
   readonly slots: (Hero | null)[] = new Array(SLOT_COUNT).fill(null);
   /** The damage each potion has dealt, overkill left out (the commander's flask is not counted), in FP:
    *  the result screen's MVP. */
-  readonly dealt: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
+  readonly dealt: Record<HeroKind, number> = zeroByKind();
   /** What each potion's hits had past the enemy's last hit points, and its shots that landed on
    *  nothing (the target was dead by then), in FP: the overkill, for the balance tools. */
-  readonly wasted: Record<HeroKind, number> = { arcane: 0, fire: 0, ice: 0, lightning: 0, poison: 0, wind: 0 };
+  readonly wasted: Record<HeroKind, number> = zeroByKind();
   /** Which cells exist: the wall row from the start, then whatever the commander builds. */
   readonly open: boolean[] = Array.from({ length: SLOT_COUNT }, (_, s) => Math.floor(s / B.grid.cols) === WALL_ROW);
   enemies: Enemy[] = [];

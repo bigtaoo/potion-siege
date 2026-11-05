@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/id';
+import { potions } from './potions/id';
 
 // Indonesian.
 export const id: Table = {
@@ -108,9 +109,10 @@ export const id: Table = {
     lightningStaticPlus: 'Statis +50% kerusakan',
     poisonRustPlus: 'Tiap tumpukan karat +50% efek',
     windPushPlus: 'Daya dorong +50%, Golem Ketel terlempar sejauh Prajurit Timah',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Damage +{p}%', deep: 'Bonus Lv 10 +{p}% lebih kuat', keen: 'Damage +{p}% lagi', aura: 'Semua ramuan +{p}% damage' },
-  role: { arcane: 'Satu target', fire: 'Area', ice: 'Memperlambat', lightning: 'Berantai', poison: 'Damage berkala', wind: 'Dorong mundur' },
+  role: { arcane: 'Satu target', fire: 'Area', ice: 'Memperlambat', lightning: 'Berantai', poison: 'Damage berkala', wind: 'Dorong mundur', ...potions.role },
   nextUnlock: 'Lv {n}: {what}',
   maxed: 'MAKS',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const id: Table = {
     lightning: 'Tonik Badai',
     poison: 'Tonik Korosi',
     wind: 'Tonik Angin',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Ramuan', enemies: 'Musuh', feats: 'Pencapaian', reactions: 'Reaksi' },
-    rx: { steam: 'Uap', superconduct: 'Superkonduksi', overload: 'Kelebihan Beban', electrolysis: 'Elektrolisis', combustion: 'Pembakaran', firestorm: 'Badai Api', blizzard: 'Badai Salju', resonance: 'Resonansi' },
+    rx: { steam: 'Uap', superconduct: 'Superkonduksi', overload: 'Kelebihan Beban', electrolysis: 'Elektrolisis', combustion: 'Pembakaran', firestorm: 'Badai Api', blizzard: 'Badai Salju', resonance: 'Resonansi', ...potions.rx },
     rxDo: {
       steam: 'Melepuhkan dan memperlambat sekitar',
       superconduct: 'Memecah es: kerusakan di sekitar',
@@ -290,6 +293,7 @@ export const id: Table = {
       firestorm: 'Mengipasi api ke semua di sekitar',
       blizzard: 'Meniup es ke mana-mana: memperlambat sekitar',
       resonance: 'Panah beresonansi dengan elemen: kerusakan ekstra',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Terpicu {n} kali',
@@ -435,6 +439,7 @@ export const id: Table = {
     windGust: { name: 'Dinding Angin', desc: 'Tiap tembakan angin ke-4 menyapu dinding angin melintasi arena' },
     windVortex: { name: 'Puting Beliung', desc: 'Musuh yang tumbang oleh angin meninggalkan puting beliung yang menarik musuh selama 2d' },
     windFire: { name: 'Kipasi Bara', desc: 'Serangan angin ke musuh terbakar meniup apinya ke sekitar' },
+    ...potions.skill,
   },
   board: {
     button: 'Peringkat',

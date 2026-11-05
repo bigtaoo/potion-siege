@@ -1,5 +1,6 @@
 // The source string table. Every other locale must match it key for key.
 import { alchemy } from './alchemy/en';
+import { potions } from './potions/en';
 export const en = {
   title: 'Potion Siege',
   summon: 'Summon',
@@ -108,9 +109,10 @@ export const en = {
     lightningStaticPlus: 'Static +50% damage',
     poisonRustPlus: 'Each rust stack +50% effect',
     windPushPlus: 'Knockback +50%, the boiler golem flies as far as a tin soldier',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Damage +{p}%', deep: 'Lv 10 perk +{p}% stronger', keen: 'Damage +{p}% more', aura: 'Every potion +{p}% damage' },
-  role: { arcane: 'Single target', fire: 'Area', ice: 'Slow', lightning: 'Chain', poison: 'Damage over time', wind: 'Knockback' },
+  role: { arcane: 'Single target', fire: 'Area', ice: 'Slow', lightning: 'Chain', poison: 'Damage over time', wind: 'Knockback', ...potions.role },
   nextUnlock: 'Lv {n}: {what}',
   maxed: 'MAX',
   reward: '+{n}',
@@ -278,11 +280,12 @@ export const en = {
     lightning: 'Storm Tonic',
     poison: 'Corrosion Tonic',
     wind: 'Gale Tonic',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Potions', enemies: 'Enemies', feats: 'Achievements', reactions: 'Reactions' },
-    rx: { steam: 'Steam', superconduct: 'Superconduct', overload: 'Overload', electrolysis: 'Electrolysis', combustion: 'Combustion', firestorm: 'Firestorm', blizzard: 'Blizzard', resonance: 'Resonance' },
+    rx: { steam: 'Steam', superconduct: 'Superconduct', overload: 'Overload', electrolysis: 'Electrolysis', combustion: 'Combustion', firestorm: 'Firestorm', blizzard: 'Blizzard', resonance: 'Resonance', ...potions.rx },
     rxDo: {
       steam: 'Scalds and slows all around',
       superconduct: 'Shatters the frost: damage all around',
@@ -292,6 +295,7 @@ export const en = {
       firestorm: 'Fans the flames onto everything around',
       blizzard: 'Blows the frost about: a slow all around',
       resonance: 'The bolt rings with the element: extra damage',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Set off {n} {n|one:time|other:times}',
@@ -437,6 +441,7 @@ export const en = {
     windGust: { name: 'Gust Wall', desc: 'Every 4th gale shot sweeps a wall of wind across the field' },
     windVortex: { name: 'Whirlwind', desc: 'Gale kills leave a whirlwind that pulls enemies in for 2s' },
     windFire: { name: 'Fan the Flames', desc: 'Gale hits on burning enemies blow the fire onto those around' },
+    ...potions.skill,
   },
   board: {
     button: 'Ranks',

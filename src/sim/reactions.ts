@@ -1,7 +1,8 @@
 // Potion reactions: when a potion's hit lands on an enemy still carrying another potion's
 // element, the two react, on their own, with no skill needed. Fire's element is its scorch, the
 // ice's the frost it leaves, lightning's the shock, poison's the poison itself; wind and arcane
-// leave none and only set reactions off.
+// leave none and only set reactions off. The light leaves its glare, the quicksilver its
+// magnet, the vine its tangle (only when it roots).
 //
 //   fire + ice        steam         a scalding cloud: damage and a slow all around
 //   lightning + ice   superconduct  the frozen one shatters the bolt out: damage all around
@@ -10,21 +11,28 @@
 //   fire + poison     combustion    the poison left goes up at once, on everything around
 //   wind + fire       firestorm     the wind fans the flames onto everything around
 //   wind + ice        blizzard      the frost blown about: a slow all around
+//   light + ice       prism         the frost splits the light: beams at the nearest around
+//   light + fire      flare         a burst of heat and glare: damage and a slow all around
+//   metal + lightning magnetize     the current makes the quicksilver a magnet: all around drawn in
+//   metal + fire      molten        the quicksilver boils on it: a heavy burn
+//   vine + poison     spores        the vine blooms poison: poison on everything around
+//   vine + ice        bramble       the frozen vine shoots thorns: all around held and hurt
 //   arcane + any      resonance     the bolt rings with the element: extra damage on it
 //
 // An enemy reacts at most once every `cooldown`; the element a reaction used up is gone.
 
 import type { Battle } from './battle';
 import { corrode, harm, slow, splash } from './damage';
-import { FP, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
+import { root } from './lateHits';
+import { dist, FP, muldiv, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
 import { reactionPower } from './reactionPower';
-import { within } from './targets';
-import { BALANCE, type Enemy, type HeroKind, type ReactionId } from './types';
+import { nearest, within } from './targets';
+import { BALANCE, isBoss, type Enemy, type HeroKind, type ReactionId } from './types';
 
 const R = () => BALANCE.reactions;
 
 /** The potions that leave an element behind (wind and arcane only set reactions off). */
-export const ELEMENTS = ['fire', 'ice', 'lightning', 'poison'] as const;
+export const ELEMENTS = ['fire', 'ice', 'lightning', 'poison', 'light', 'metal', 'vine'] as const;
 export type Element = (typeof ELEMENTS)[number];
 
 export function isElement(kind: HeroKind): kind is Element {
@@ -38,6 +46,9 @@ export function elementsOn(e: Enemy): Element[] {
   if ((e.frostTime ?? 0) > 0) out.push('ice');
   if ((e.shockTime ?? 0) > 0) out.push('lightning');
   if (e.poisonTime > 0) out.push('poison');
+  if ((e.glareTime ?? 0) > 0) out.push('light');
+  if ((e.magnetTime ?? 0) > 0) out.push('metal');
+  if ((e.tangleTime ?? 0) > 0) out.push('vine');
   return out;
 }
 
@@ -61,6 +72,18 @@ export function reactionOf(by: HeroKind, on: Element): ReactionId | null {
       return 'firestorm';
     case 'ice+wind':
       return 'blizzard';
+    case 'ice+light':
+      return 'prism';
+    case 'fire+light':
+      return 'flare';
+    case 'lightning+metal':
+      return 'magnetize';
+    case 'fire+metal':
+      return 'molten';
+    case 'poison+vine':
+      return 'spores';
+    case 'ice+vine':
+      return 'bramble';
   }
   return null;
 }
@@ -81,6 +104,8 @@ export function react(b: Battle, e: Enemy, by: HeroKind, damage: number): void {
   }
   if (by === 'ice') e.frostTime = ticks(R().frostTime);
   if (by === 'lightning') e.shockTime = ticks(R().shockTime);
+  if (by === 'light') e.glareTime = ticks(R().glareTime);
+  if (by === 'metal') e.magnetTime = ticks(R().magnetTime);
 }
 
 /** The element `on` is used up by the reaction. */
@@ -90,7 +115,10 @@ function useUp(e: Enemy, on: Element): void {
   else if (on === 'poison') {
     e.poisonTime = 0;
     e.poisonDps = 0;
-  } else e.scorchTime = 0;
+  } else if (on === 'light') e.glareTime = 0;
+  else if (on === 'metal') e.magnetTime = 0;
+  else if (on === 'vine') e.tangleTime = 0;
+  else e.scorchTime = 0;
 }
 
 /** Everything alive within `radius` (FP) of `e`, `e` first. */
@@ -113,12 +141,63 @@ function setOff(b: Battle, e: Enemy, id: ReactionId, on: Element, by: HeroKind, 
   const poisonDps = Math.max(e.poisonDps, b.fixed.poison[0]);
   useUp(e, on);
   switch (id) {
-    case 'steam': {
-      radius = reachOf(C.steam.radius);
-      const hit = times(damage, P(C.steam.damage));
+    case 'steam':
+    case 'flare': {
+      const c = C[id];
+      radius = reachOf(c.radius);
+      const hit = times(damage, P(c.damage));
       for (const o of around(b, e, toFp(radius))) {
         harm(b, o, o === e ? hit : times(hit, splash(o)), by);
-        slow(o, C.steam.slow, T(C.steam.slowTime));
+        slow(o, c.slow, T(c.slowTime));
+      }
+      break;
+    }
+    case 'prism': {
+      // beams from the frozen light to the nearest ones around
+      radius = reachOf(C.prism.range);
+      const hit = times(damage, P(C.prism.damage));
+      harm(b, e, hit, by);
+      const skip = new Set([e.id]);
+      for (let i = 0; i < C.prism.bolts; i++) {
+        const o = nearest(b, e, toFp(radius), skip);
+        if (!o) break;
+        skip.add(o.id);
+        harm(b, o, hit, by);
+        b.events.push({ type: 'beam', x1: e.x / FP, y1: e.y / FP, x2: o.x / FP, y2: o.y / FP });
+      }
+      break;
+    }
+    case 'magnetize': {
+      radius = reachOf(C.magnetize.radius);
+      const hit = times(damage, P(C.magnetize.damage));
+      const step = toFp(C.magnetize.pull);
+      for (const o of around(b, e, toFp(radius))) {
+        harm(b, o, o === e ? hit : times(hit, splash(o)), by);
+        if (o !== e && !isBoss(o.kind)) drawTo(o, e, step);
+      }
+      break;
+    }
+    case 'molten': {
+      const heat = times(Math.max(e.scorch, damage), P(C.molten.burn));
+      if (heat >= e.burnDps) {
+        e.burnDps = heat;
+        e.burnBy = by;
+      }
+      e.burnTime = Math.max(e.burnTime, T(C.molten.time));
+      break;
+    }
+    case 'spores': {
+      radius = reachOf(C.spores.radius);
+      const dps = times(poisonDps, P(1));
+      for (const o of around(b, e, toFp(radius))) corrode(b, o, dps, 0);
+      break;
+    }
+    case 'bramble': {
+      radius = reachOf(C.bramble.radius);
+      const hit = times(damage, P(C.bramble.damage));
+      for (const o of around(b, e, toFp(radius))) {
+        harm(b, o, o === e ? hit : times(hit, splash(o)), by);
+        root(o, T(C.bramble.root));
       }
       break;
     }
@@ -170,6 +249,22 @@ function setOff(b: Battle, e: Enemy, id: ReactionId, on: Element, by: HeroKind, 
 /** The enemy tick's part: the elements and the reaction cooldown wearing off. */
 export function wearReactions(e: Enemy): void {
   if (e.frostTime) e.frostTime--;
+  if (e.glareTime) e.glareTime--;
+  if (e.magnetTime) e.magnetTime--;
+  if (e.tangleTime) e.tangleTime--;
   if (e.shockTime) e.shockTime--;
   if (e.reactTime) e.reactTime--;
+}
+
+/** Moves `o` up to `step` (FP) towards `to`, not into it; a flyer's weave moves with it. */
+function drawTo(o: Enemy, to: Enemy, step: number): void {
+  const dx = to.x - o.x;
+  const dy = to.y - o.y;
+  const d = dist(dx, dy);
+  const gap = d - o.radius - to.radius;
+  if (gap <= 0) return;
+  const move = Math.min(step, gap);
+  if (o.kind === 'flyer') o.x0! += muldiv(dx, move, d);
+  else o.x += muldiv(dx, move, d);
+  o.y += muldiv(dy, move, d);
 }

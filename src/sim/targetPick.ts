@@ -7,6 +7,9 @@
 //  lightning  the front-most one the chain jumps on from the furthest
 //  poison     the front-most not poisoned yet
 //  wind       what it can catch: the flyer or the winder
+//  light      the front: its beam runs on through the ones behind
+//  metal      the toughest on the field: the slug is wasted on a grunt
+//  vine       the fastest not tangled yet
 // Any enemy at the wall or about to reach it comes first for every potion but the wind.
 
 import type { Battle } from './battle';
@@ -39,7 +42,7 @@ export class TargetPick {
   /** The enemy a `kind` potion throws its (first) shot at. Only call with enemies left. */
   pick(kind: HeroKind): Enemy {
     if (kind === 'wind') return this.front.find((e) => e.kind === 'flyer' || e.kind === 'winder') ?? this.front[0];
-    if (kind === 'arcane') return this.front[0];
+    if (kind === 'arcane' || kind === 'light') return this.front[0];
     const danger = this.atWall();
     if (danger) return danger;
     switch (kind) {
@@ -48,7 +51,11 @@ export class TargetPick {
       case 'lightning':
         return (this.chain ??= this.longestChain());
       case 'ice':
-        return this.claim(kind, this.fastestFree(kind));
+        return this.claim(kind, this.fastestFree(kind, (e) => e.slowTime > 0 || e.freezeTime > 0));
+      case 'vine':
+        return this.claim(kind, this.fastestFree(kind, (e) => (e.tangleTime ?? 0) > 0));
+      case 'metal':
+        return this.toughest();
       case 'poison':
         return this.claim(kind, this.front.find((e) => onField(e) && e.poisonTime <= 0 && !this.taken(kind, e)));
     }
@@ -103,10 +110,16 @@ export class TargetPick {
     return best;
   }
 
-  private fastestFree(kind: HeroKind): Enemy | undefined {
+  private toughest(): Enemy {
+    let best = this.front[0];
+    for (const e of this.front) if (onField(e) && e.hp > best.hp) best = e;
+    return best;
+  }
+
+  private fastestFree(kind: HeroKind, held: (e: Enemy) => boolean): Enemy | undefined {
     let best: Enemy | undefined;
     for (const e of this.front) {
-      if (!onField(e) || e.slowTime > 0 || e.freezeTime > 0 || this.taken(kind, e)) continue;
+      if (!onField(e) || held(e) || this.taken(kind, e)) continue;
       if (!best || e.speed > best.speed) best = e;
     }
     return best;

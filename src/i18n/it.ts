@@ -1,5 +1,6 @@
 import type { Table } from './en';
 import { alchemy } from './alchemy/it';
+import { potions } from './potions/it';
 
 // Italian.
 export const it: Table = {
@@ -108,9 +109,10 @@ export const it: Table = {
     lightningStaticPlus: 'Statica +50% danni',
     poisonRustPlus: 'Ogni carica di ruggine +50% effetto',
     windPushPlus: 'Respinta +50%, il Golem Caldaia vola lontano quanto un Soldatino di Latta',
+    ...potions.perk,
   },
   perkLate: { sharp: 'Danni +{p}%', deep: 'Bonus del Liv. 10 +{p}% più forte', keen: 'Danni +{p}% in più', aura: 'Ogni pozione +{p}% danni' },
-  role: { arcane: 'Bersaglio singolo', fire: 'Area', ice: 'Rallenta', lightning: 'Catena', poison: 'Danni nel tempo', wind: 'Respinta' },
+  role: { arcane: 'Bersaglio singolo', fire: 'Area', ice: 'Rallenta', lightning: 'Catena', poison: 'Danni nel tempo', wind: 'Respinta', ...potions.role },
   nextUnlock: 'Liv. {n}: {what}',
   maxed: 'MAX',
   reward: '+{n}',
@@ -276,11 +278,12 @@ export const it: Table = {
     lightning: 'Tonico Elettrico',
     poison: 'Tonico Corrosivo',
     wind: 'Tonico di Vento',
+    ...potions.hero,
   },
   alchemy,
   codex: {
     page: { potions: 'Pozioni', enemies: 'Nemici', feats: 'Obiettivi', reactions: 'Reazioni' },
-    rx: { steam: 'Vapore', superconduct: 'Superconduzione', overload: 'Sovraccarico', electrolysis: 'Elettrolisi', combustion: 'Combustione', firestorm: 'Tempesta di fuoco', blizzard: 'Bufera', resonance: 'Risonanza' },
+    rx: { steam: 'Vapore', superconduct: 'Superconduzione', overload: 'Sovraccarico', electrolysis: 'Elettrolisi', combustion: 'Combustione', firestorm: 'Tempesta di fuoco', blizzard: 'Bufera', resonance: 'Risonanza', ...potions.rx },
     rxDo: {
       steam: 'Ustiona e rallenta tutto intorno',
       superconduct: 'Spezza il gelo: danni tutto intorno',
@@ -290,6 +293,7 @@ export const it: Table = {
       firestorm: 'Attizza le fiamme su tutto ciò che è vicino',
       blizzard: 'Soffia il gelo ovunque: rallenta tutto intorno',
       resonance: 'Il dardo risuona con l’elemento: danni extra',
+      ...potions.rxDo,
     },
     rxShout: '{name}!',
     rxCount: 'Attivata {n} {n|one:volta|other:volte}',
@@ -435,6 +439,7 @@ export const it: Table = {
     windGust: { name: 'Muro di Vento', desc: "Ogni 4° colpo di vento spazza il campo con un muro d'aria" },
     windVortex: { name: 'Mulinello', desc: 'Le uccisioni del vento lasciano un mulinello che risucchia i nemici per 2s' },
     windFire: { name: 'Soffia sul Fuoco', desc: 'I colpi di vento sui nemici in fiamme spingono il fuoco su quelli vicini' },
+    ...potions.skill,
   },
   board: {
     button: 'Classifica',
