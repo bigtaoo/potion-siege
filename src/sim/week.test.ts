@@ -90,6 +90,9 @@ describe('the week', () => {
     expect(weekTasks(true)).toContain('tower');
     expect(bookWeekFloor(m, 12)).toBe(true);
     expect(bookWeekFloor(m, 8)).toBe(false);
+    // a climb begun last week books nothing into this one
+    expect(bookWeekFloor(m, 30, '2026-10-26')).toBe(false);
+    expect(m.alchemy.week.best).toBe(12);
     for (let i = 0; i < weekGoal('react'); i++) countWeekReaction(m, REACTION_IDS[i % REACTION_IDS.length]!);
     expect(weekProgress(m, 'react')).toBe(weekGoal('react'));
     expect(weekProgress(m, 'kinds')).toBe(Math.min(weekGoal('kinds'), REACTION_IDS.length));

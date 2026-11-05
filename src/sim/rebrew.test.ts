@@ -1,7 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { battleSetup, newMeta, parseMeta } from './meta';
+import { battleSetup, newMeta, parseMeta, runReward } from './meta';
 import { buyPerk, canRebrew, essenceFor, newRebrew, parseRebrew, perkCost, perkOf, PERK_IDS, reach, rebrew } from './rebrew';
-import { challengeOpen } from '../view/nudges';
 import { rackOpen, rackRate } from './rack';
 import { SAVES } from './setupCatalog';
 import { BALANCE, HERO_KINDS } from './types';
@@ -50,7 +49,22 @@ describe('rebrew', () => {
     rebrew(m, newMeta());
     expect(rackOpen(m)).toBe(true);
     expect(rackRate(m)).toBe(rate);
-    expect(challengeOpen(m)).toBe(true);
+  });
+
+  it('pays the first-clear bonus and the stars once only', () => {
+    const m = done();
+    rebrew(m, newMeta());
+    const win = { stage: 5, won: true, wave: 10, kills: 0 };
+    const again = runReward(m, win);
+    expect(again.firstClear).toBe(true);
+    // the same as a plain win of a stage cleared before, no bonus on top
+    expect(again.crystals).toBe(runReward({ ...m, cleared: 5 }, win).crystals);
+    expect(runReward({ ...m, alchemy: { ...m.alchemy, rebrew: { ...m.alchemy.rebrew, peak: 0 } } }, win).crystals).toBeGreaterThan(again.crystals);
+    // climbed back with no new star: only the stages pay
+    m.cleared = R.from;
+    expect(essenceFor(m)).toBe(Math.floor(R.from * R.perStage));
+    m.stars.normal[0] = (m.stars.normal[0] ?? 0) + 1;
+    expect(essenceFor(m)).toBe(Math.floor(R.from * R.perStage + R.perStar));
   });
 
   it('survives a save round trip', () => {

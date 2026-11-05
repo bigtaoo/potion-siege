@@ -5,7 +5,7 @@
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import type { MetaSave } from '../../sim/meta';
-import { daysLeft, weekGoal, weekProgress, weekReward, weekRule, weekTasks, type WeekRule } from '../../sim/week';
+import { daysLeft, weekBest, weekGoal, weekOf, weekProgress, weekReward, weekRule, weekTasks, type WeekRule } from '../../sim/week';
 import { fit as fitText, ink, inkWrapped, LIGHT, lightTile, P, PillButton } from '../kit';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
@@ -22,7 +22,8 @@ export function ruleDesc(rule: WeekRule): string {
 
 export function weekPanel(m: MetaSave, act: HomeActions, today: string, towerOpen: boolean, fit: MenuFit): Container {
   const w = m.alchemy.week;
-  const rule = weekRule(w.id);
+  // today's week, the one the climb rolls on to, even before the save has
+  const rule = weekRule(weekOf(today));
   const tasks = weekTasks(towerOpen);
   const RH = 150;
   const h = 560 + tasks.length * (RH + 18) + (towerOpen ? 160 : 0);
@@ -38,7 +39,7 @@ export function weekPanel(m: MetaSave, act: HomeActions, today: string, towerOpe
   const left = ink(t('alchemy.week.left', { n: daysLeft(today) }), 30, { fill: P.inkSoft });
   left.y = y;
   y += 46;
-  const best = ink(t('alchemy.week.best', { n: w.best }), 32, { fill: P.inkSoft, fontWeight: '900' });
+  const best = ink(t('alchemy.week.best', { n: weekBest(m, today) }), 32, { fill: P.inkSoft, fontWeight: '900' });
   best.y = y;
   box.addChild(name, desc, left, best);
   y += 60;

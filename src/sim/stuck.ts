@@ -1,11 +1,11 @@
-// A stage that keeps winning (plan 4a, 4c): losses in a row on one stage, normal mode. Past
+// A stage that keeps beating the player (plan 4a, 4c): losses in a row on one stage, normal mode. Past
 // stage 3 (lossStreak.ts helps there) the `assistAfter`th loss in a row brings the same start
 // gold help to the next try; the `exitsAfter`th makes the result screen offer three ways round
 // it: a lineup that sets off more reactions, hard mode of a chapter behind, the tower.
 
 import { ASSIST_GOLD, ASSIST_UNTIL } from './lossStreak';
 import { heroUnlocked, type BattleSetup, type MetaSave } from './meta';
-import { reactionOf } from './reactions';
+import { isElement, reactionOf } from './reactions';
 import { BALANCE, HERO_KINDS, type HeroKind, type ReactionId } from './types';
 
 const S = BALANCE.alchemy.stuck;
@@ -40,11 +40,9 @@ export interface LineupTip {
   reactions: ReactionId[];
 }
 
-const ELEMENTS: readonly string[] = ['fire', 'ice', 'lightning', 'poison'];
-
 /** The reaction `by` sets off on what `on` leaves behind, if `on` leaves an element. */
 function pairReaction(by: HeroKind, on: HeroKind): ReactionId | null {
-  return ELEMENTS.includes(on) ? reactionOf(by, on as Parameters<typeof reactionOf>[1]) : null;
+  return isElement(on) ? reactionOf(by, on) : null;
 }
 
 /** The reactions four potions set off between them. */

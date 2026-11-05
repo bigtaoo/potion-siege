@@ -8,8 +8,6 @@ import { endlessOpen } from './endless';
 import type { MetaSave } from './meta';
 import { int } from './parse';
 import { hash, Rng } from './rng';
-
-export { hash };
 import { BALANCE, REACTION_IDS } from './types';
 import { rollWeek } from './week';
 

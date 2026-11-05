@@ -4,7 +4,7 @@ import { ASSIST_GOLD } from './lossStreak';
 import { battleSetup, buyWorkshop, newMeta, parseMeta, workshopValue, type MetaSave } from './meta';
 import { openWorkshop } from './workshopOpen';
 import { claimRack, rackFill, rackFull, rackHours, rackOpen, rackRate, startRack } from './rack';
-import { bookReplay, isReplay, replayShare, replaysLeft, shareOf } from './replayPay';
+import { bookReplay, isReplay, replayCut, replayShare, replaysLeft, shareOf } from './replayPay';
 import { newRebrew } from './rebrew';
 import { stageSetup } from './stars';
 import { bookStuck, lossesOn, reactionsOf, showExits, stuckAssist, suggestLineup } from './stuck';
@@ -122,6 +122,18 @@ describe('replay pay', () => {
     expect(m.alchemy.replay.n).toBe(1);
     expect(bookReplay(m, 3, false, 'd')).toBe(1);
     expect(m.alchemy.replay.n).toBe(1);
+  });
+
+  it('shows the cut only on a replay that was paid less, never on a first clear', () => {
+    const m = at(8);
+    for (let i = 0; i <= A.replay.free; i++) bookReplay(m, 8, false, 'd');
+    expect(replayCut(m, 8, false)).toBe(true);
+    expect(replayCut(m, 8, true)).toBe(false);
+    // stage 9 won for the first time: settled, it is the latest stage, the count still stage 8's
+    m.cleared = 9;
+    expect(isReplay(m, 9, false)).toBe(true);
+    expect(replayCut(m, 9, false)).toBe(false);
+    expect(replayCut(m, 8, false)).toBe(false);
   });
 
   it('cuts only the crystals', () => {

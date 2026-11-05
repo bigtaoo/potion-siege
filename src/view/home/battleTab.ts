@@ -45,7 +45,7 @@ export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Are
   // the week's tower rule and tasks over the round button on the left
   if (endless) weekButton(root, m, act, cx - off, by - 2 * SIDE_R - 90);
   // the one goal worth chasing now, over the fight button
-  const next = nextThing(m);
+  const next = nextThing(m, today);
   const nextRoom = next ? NEXT_H + 24 : 0;
   if (next) nextCard(root, next, act, cx, by - START_H / 2 - NEXT_H / 2 - 16, a.wide ? a.w * 0.6 : a.w - 60);
   const toggle = toggleShown(m);

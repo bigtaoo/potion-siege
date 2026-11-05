@@ -181,6 +181,13 @@ describe('challenge gate', () => {
     expect(challengeOpen(m)).toBe(true);
   });
 
+  it('stays open after a rebrew, by the furthest stage ever cleared', () => {
+    const m = newMeta();
+    m.alchemy.rebrew.peak = BALANCE.meta.stageCount;
+    expect(m.cleared).toBe(0);
+    expect(challengeOpen(m)).toBe(true);
+  });
+
   it('stays open on a save that played a challenge already', () => {
     const m = newMeta();
     m.cleared = 1;

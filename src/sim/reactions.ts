@@ -23,8 +23,13 @@ import { BALANCE, type Enemy, type HeroKind, type ReactionId } from './types';
 
 const R = () => BALANCE.reactions;
 
+/** The potions that leave an element behind (wind and arcane only set reactions off). */
+export const ELEMENTS = ['fire', 'ice', 'lightning', 'poison'] as const;
+export type Element = (typeof ELEMENTS)[number];
 
-type Element = 'fire' | 'ice' | 'lightning' | 'poison';
+export function isElement(kind: HeroKind): kind is Element {
+  return (ELEMENTS as readonly HeroKind[]).includes(kind);
+}
 
 /** The elements `e` carries now. */
 export function elementsOn(e: Enemy): Element[] {

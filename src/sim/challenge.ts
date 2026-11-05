@@ -3,9 +3,8 @@
 // pays crystals by the wave it reached, once a day at the best tier, plus a bonus for every
 // seven days in a row it was played. Days are local calendar dates, as in `daily`.
 
-import { hash } from './daily';
 import { battleSetup, type BattleModifiers, type BattleSetup, type MetaSave } from './meta';
-import { Rng } from './rng';
+import { hash, Rng } from './rng';
 import { BALANCE, HERO_KINDS, type HeroKind } from './types';
 
 const C = BALANCE.challenge;

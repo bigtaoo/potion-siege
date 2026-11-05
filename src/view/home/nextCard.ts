@@ -8,7 +8,7 @@ import { endlessOpen } from '../../sim/endless';
 import type { MetaSave } from '../../sim/meta';
 import { canRebrew, essenceFor, perkCost, PERK_IDS } from '../../sim/rebrew';
 import { BALANCE, REACTION_IDS } from '../../sim/types';
-import { weekClaimable, weekRule } from '../../sim/week';
+import { weekBest, weekClaimable, weekOf, weekRule } from '../../sim/week';
 import { fit as fitText, LIGHT, P, tappable } from '../kit';
 import { label } from '../ui';
 import type { HomeActions } from './types';
@@ -19,7 +19,7 @@ export const NEXT_FROM = 10;
 
 export type NextThing = { text: string; go: 'rebrew' | 'week' | 'codex' | 'endless' };
 
-export function nextThing(m: MetaSave): NextThing | null {
+export function nextThing(m: MetaSave, today: string): NextThing | null {
   const r = m.alchemy.rebrew;
   if (m.cleared < NEXT_FROM && r.count === 0) return null;
   const tower = endlessOpen(m);
@@ -28,7 +28,7 @@ export function nextThing(m: MetaSave): NextThing | null {
   if (weekClaimable(m, tower)) return { text: t('alchemy.next.week'), go: 'week' };
   const found = REACTION_IDS.filter((id) => m.achievements.stats.reactions[id] > 0).length;
   if (found > 0 && found < REACTION_IDS.length) return { text: t('alchemy.next.find', { n: REACTION_IDS.length - found }), go: 'codex' };
-  if (tower && m.alchemy.week.id) return { text: t('alchemy.next.tower', { name: ruleName(weekRule(m.alchemy.week.id)), n: m.alchemy.week.best }), go: 'endless' };
+  if (tower) return { text: t('alchemy.next.tower', { name: ruleName(weekRule(weekOf(today))), n: weekBest(m, today) }), go: 'endless' };
   return null;
 }
 

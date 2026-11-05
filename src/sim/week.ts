@@ -104,6 +104,12 @@ export function weekRule(week: string): WeekRule {
   return { id: rng.pick(WEEK_RULES), reaction: rng.pick(REACTION_IDS) };
 }
 
+/** The furthest floor of `day`'s week: the save's best while its week is that one, else none
+ *  yet (the save rolls on with the next day roll or climb). */
+export function weekBest(m: MetaSave, day: string): number {
+  return m.alchemy.week.id === weekOf(day) ? m.alchemy.week.best : 0;
+}
+
 /** Starts the save on the week of `day` when it is a later one. */
 export function rollWeek(m: MetaSave, day: string): void {
   const id = weekOf(day);
@@ -125,9 +131,10 @@ export function weekSetup(s: BattleSetup, rule: WeekRule): BattleSetup {
 }
 
 /** A tower run that reached `wave` this week: true on a new best of the week. */
-export function bookWeekFloor(m: MetaSave, wave: number): boolean {
+export function bookWeekFloor(m: MetaSave, wave: number, week = m.alchemy.week.id): boolean {
   const w = m.alchemy.week;
-  if (wave <= w.best) return false;
+  // a climb begun under last week's rule ending in this week counts for neither
+  if (week !== w.id || wave <= w.best) return false;
   w.best = wave;
   return true;
 }

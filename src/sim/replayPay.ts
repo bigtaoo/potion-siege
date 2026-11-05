@@ -27,6 +27,13 @@ export function replayShare(n: number): number {
   return n > R.free ? R.factor : 1;
 }
 
+/** Whether the battle on `stage` that just ended was paid a cut share: booked as a replay of
+ *  that very stage. Read after the battle settled, so a first clear (which has moved `cleared`
+ *  onto its stage, while the count is still the stage before's) is never one. */
+export function replayCut(m: MetaSave, stage: number, hard: boolean): boolean {
+  return isReplay(m, stage, hard) && m.alchemy.replay.stage === stage && replayShare(m.alchemy.replay.n) < 1;
+}
+
 /** Battles on the latest stage left today at full pay. */
 export function replaysLeft(m: MetaSave, day: string): number {
   const r = m.alchemy.replay;

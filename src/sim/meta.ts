@@ -347,7 +347,8 @@ export function runReward(m: MetaSave, r: RunResult): Reward {
   const firstClear = r.won && r.stage > m.cleared;
   let base = R.perWave * r.wave + Math.floor(r.kills / R.perKills) + (r.won ? R.winBonus : 0);
   base *= 1 + R.stageStep * (r.stage - 1);
-  if (firstClear) base += R.firstClear * r.stage;
+  // after a rebrew the climb again opens its stages, but pays their bonus only past the old peak
+  if (firstClear && r.stage > m.alchemy.rebrew.peak) base += R.firstClear * r.stage;
   const unlocked = firstClear ? stageUnlocks(r.stage).filter((k) => !heroUnlocked(m, k)) : [];
   return { crystals: Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals) + perkOf(m, 'crystals'))), firstClear, unlocked };
 }

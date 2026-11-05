@@ -56,7 +56,7 @@ export function finish(g: Game, b: Battle): void {
   }
   g.store();
   // the portal's happytime is for rare moments: a stage beaten for the first time, not every win
-  if (b.result === 'won' && firstClear && !g.autoplay) g.platform.celebrate();
+  if (b.result === 'won' && firstClear && result.stage > g.save.alchemy.rebrew.peak && !g.autoplay) g.platform.celebrate();
   g.run?.onEnd();
   g.perf.end();
   g.analytics.track('crystals', { gain, total: g.save.crystals, stage: result.stage, first: firstClear, share });
@@ -99,7 +99,7 @@ export function finishEndless(g: Game, b: Battle, run: NonNullable<Game['endless
   const result = { stage: b.setup.stage, won: false, wave: b.wave, kills: b.kills };
   const { crystals: gain } = g.purse.settle(g.save, result, { crystals: endlessPay(g.save, b.wave), firstClear: false, unlocked: [] });
   const booked = bookEndless(g.save, b.wave);
-  if (bookWeekFloor(g.save, b.wave) && !g.autoplay) g.platform.leaderboard?.weekly?.(b.wave);
+  if (bookWeekFloor(g.save, b.wave, run.week) && !g.autoplay) g.platform.leaderboard?.weekly?.(b.wave);
   // a revived run ending again: the best before the run still counts, milestones add up
   run.result = run.result ? { ...booked, before: run.result.before, record: b.wave > run.result.before, milestones: run.result.milestones + booked.milestones } : booked;
   g.store();

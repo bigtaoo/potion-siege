@@ -185,7 +185,8 @@ export class Game {
    *  ended, what it booked. */
   challenge: { ch: Challenge; streakBonus: number; result: ChallengeResult | null } | null = null;
   /** The battle is an endless run: what its ends booked so far (a revived run ends twice). */
-  endless: { result: EndlessResult | null } | null = null;
+  /** The tower run on, and the week whose rule it climbs under. */
+  endless: { result: EndlessResult | null; week: string } | null = null;
   revived = false;
   /** The stars a won stage booked, for the result screen. */
   stars: StarsResult | null = null;
@@ -313,7 +314,7 @@ export class Game {
     const seed = fixed ?? (Math.random() * 2 ** 32) >>> 0;
     this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? towerSetup(this.save, gameDay(this.save, new Date())) : stageSetup(this.save));
     this.challenge = null;
-    this.endless = cause === 'endless' ? { result: null } : null;
+    this.endless = cause === 'endless' ? { result: null, week: this.save.alchemy.week.id } : null;
     this.purse = new Purse();
     this.run = cause ? new RunTracker(this.analytics, this.battle, this.save.runs + 1, cause) : null;
     // `ready` runs from here (past any break ad) for the runs a tap started; a run also frees the

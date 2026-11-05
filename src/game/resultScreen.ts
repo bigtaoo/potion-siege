@@ -7,7 +7,7 @@ import type { Battle } from '../sim/battle';
 import { nextMilestone } from '../sim/endless';
 import { FP } from '../sim/math/fixed';
 import { doublesLeft, endOffers, maxStage } from '../sim/meta';
-import { isReplay, replayShare } from '../sim/replayPay';
+import { replayCut } from '../sim/replayPay';
 import { HERO_KINDS } from '../sim/types';
 import { FEEDBACK_RUN, FeedbackAsk } from '../view/feedback';
 import type { HomeTab } from '../view/Home';
@@ -73,7 +73,7 @@ export function showEnd(g: Game, b: Battle): void {
     pointWait: g.autoplay ? null : pointWait(g.save, b.result === 'lost', !g.endless && !b.setup.hard),
     exits: g.endless ? undefined : exitsFor(g, b.setup.stage, b.result === 'lost', b.setup.hard === true),
     onExit: (kind) => takeExit(g, kind),
-    replayCut: !g.endless && !b.setup.hard && isReplay(g.save, b.setup.stage, false) && replayShare(g.save.alchemy.replay.n) < 1,
+    replayCut: !g.endless && replayCut(g.save, b.setup.stage, b.setup.hard === true),
   });
 }
 
