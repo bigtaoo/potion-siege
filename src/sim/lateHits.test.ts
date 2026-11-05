@@ -213,4 +213,17 @@ describe('the vine\'s root', () => {
     land(b, 'vine', t, 10);
     expect(t.poisonTime).toBeGreaterThan(0);
   });
+
+  it('flares with sunfire on a scorch the fire left, before leaving its own', () => {
+    const b = still();
+    b.mods.sunfire = true;
+    const t = enemy(b, 500, 800, 5000);
+    t.scorchTime = 30;
+    t.scorch = toFp(20);
+    t.scorchBy = 'fire';
+    land(b, 'light', t, 100);
+    expect(b.reactions.flare).toBe(1);
+    expect(t.scorchBy).toBe('light');
+    expect(t.scorchTime).toBeGreaterThan(0);
+  });
 });

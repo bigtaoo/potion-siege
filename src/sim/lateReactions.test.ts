@@ -5,6 +5,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'vitest';
 import { RESIST } from './enemies';
 import { FP, ticks, toFp } from './math/fixed';
 import { enemy, still } from './stillField';
+import { root } from './lateHits';
 import { elementsOn, react, reactionOf, wearReactions } from './reactions';
 import { BALANCE, type Enemy } from './types';
 
@@ -196,5 +197,25 @@ describe('the later potions\' reactions', () => {
     e.reactTime = 0;
     react(b, e, 'arcane', toFp(100));
     expect(b.reactions.resonance).toBe(1);
+  });
+
+  it('lets quicksilver boil a scorch the light left: only the potion that left it passes over it', () => {
+    const b = still();
+    const e = enemy(b, 500, 400);
+    e.scorchTime = 30;
+    e.scorchBy = 'light';
+    react(b, e, 'metal', toFp(100));
+    expect(b.reactions.molten).toBe(1);
+  });
+
+  it('makes a new tangle an element again once the used one has worn off', () => {
+    const b = still();
+    const e = enemy(b, 500, 400);
+    e.tangleTime = 1;
+    e.tangleUsed = true;
+    expect(root(e, 10)).toBe(false);
+    wearReactions(e);
+    expect(root(e, 10)).toBe(true);
+    expect(elementsOn(e)).toEqual(['vine']);
   });
 });

@@ -53,11 +53,14 @@ function beam(b: Battle, p: Projectile, target: Enemy): void {
   const share = m.focus ? 1000 : pm(L.pierce);
   for (const e of [target, ...others]) {
     const dealt = e === target ? p.damage : times(p.damage, share);
-    if (m.sunfire) scorch(b, e, dealt, 'light');
-    else harm(b, e, dealt, 'light');
+    if (m.sunfire) {
+      // a fire's scorch already on it flares before the beam leaves its own in its place
+      react(b, e, 'light', dealt);
+      if (e.hp > 0) scorch(b, e, dealt, 'light');
+    } else harm(b, e, dealt, 'light');
     discharge(b, e);
     if (m.glareSlow > 0) slow(e, m.glareSlow, ticks(S.lightGlareTime));
-    react(b, e, 'light', dealt);
+    if (!m.sunfire) react(b, e, 'light', dealt);
   }
   // the line the view draws: from the target on, as far as the beam reaches
   let dx = target.x - p.px;

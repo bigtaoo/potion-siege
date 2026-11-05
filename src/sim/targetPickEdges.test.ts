@@ -161,4 +161,15 @@ describe('the quicksilver\'s pick', () => {
     expect(tp.pick('metal')).toBe(tough);
     expect(tp.pick('metal')).toBe(next);
   });
+
+  it('passes over the toughest while a slug already flies at it, and takes the front when all are', () => {
+    const b = field();
+    const tough = enemy(b, 300, 600);
+    tough.hp = toFp(400);
+    const next = enemy(b, 700, 500);
+    b.projectiles.push({ kind: 'metal', targetId: tough.id } as Projectile);
+    expect(pick(b, 'metal')).toBe(next);
+    b.projectiles.push({ kind: 'metal', targetId: next.id } as Projectile);
+    expect(pick(b, 'metal')).toBe(new TargetPick(b).front[0]);
+  });
 });

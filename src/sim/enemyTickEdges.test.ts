@@ -105,4 +105,16 @@ describe('drawn back off the wall', () => {
     stepEnemies(b);
     expect(e.x).not.toBe(e.x0);
   });
+
+  it('lets a whirlwind draw one off the wall: it bites no more', () => {
+    const b = field();
+    const e = enemy(b);
+    e.atWall = true;
+    b.vortices.push({ x: toFp(500), y: toFp(520), time: 10 });
+    const wall = b.wall;
+    stepEnemies(b);
+    expect(e.y).toBeLessThan(toFp(600));
+    expect(e.atWall).toBe(false);
+    expect(b.wall).toBe(wall);
+  });
 });
