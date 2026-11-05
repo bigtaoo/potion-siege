@@ -28,9 +28,10 @@ function pool(fielded: HeroKind[], levels: Partial<Record<HeroKind, number>>): S
   return out;
 }
 
-/** No enemies, so only the test's own shots land. */
+/** No enemies, so only the test's own shots land, and no reactions between them. */
 function quiet(b: Battle): void {
   b.enemies = [];
+  b.reacting = false;
 }
 
 /** An enemy at (x, y) with `hp` hit points, all in world units. */

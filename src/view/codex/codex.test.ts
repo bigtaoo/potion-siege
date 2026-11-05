@@ -2,11 +2,14 @@
 // enemy card asks for that enemy's panel. What fits where is layout.test.ts's job.
 import '../layout/measure';
 import { afterAll, afterEach, describe, expect, it, vi } from 'vitest';
-import type { Container } from 'pixi.js';
-import { newMeta } from '../../sim/meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP, type EnemyKind } from '../../sim/types';
+import { Text, type Container } from 'pixi.js';
+import { t } from '../../i18n';
+import { REACTION_MASTERY } from '../../sim/achievements';
+import { newMeta, type MetaSave } from '../../sim/meta';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, LINEUP, REACTION_IDS, type EnemyKind } from '../../sim/types';
 import { fakeArt } from '../fakeArt';
 import { buildCodex, isEnemy, setCodexPage } from '.';
+import { masteryStars, REACTION_PAIRS } from './reactions';
 
 const AREA = { x: 0, y: 150, w: 1080, h: 1978, wide: false };
 
@@ -30,8 +33,8 @@ afterEach(() => setCodexPage('potions'));
 describe('codex', () => {
   it('turns to the tapped page and stays there', async () => {
     const root = buildCodex(newMeta(), AREA, () => {}, () => {});
-    // the open page's tab takes no tap: potions is lit, enemies and achievements are not
-    expect(taps(tabs(root))).toHaveLength(2);
+    // the open page's tab takes no tap: potions is lit, enemies, reactions and achievements are not
+    expect(taps(tabs(root))).toHaveLength(3);
     tap(taps(tabs(root))[0]);
     await Promise.resolve();
     expect(taps(page(root)).length).toBe(ENEMY_KINDS.length);
@@ -74,11 +77,31 @@ describe('the potions page', () => {
 
   it("keeps the wide page's tabs in the top bar's row while they fit there, else gives them a row", () => {
     const wide = { x: 230, y: 170, w: 1690, h: 910, wide: true };
-    const roomy = buildCodex(newMeta(), { ...wide, bar: 780 }, () => {}, () => {});
+    // four tabs: room for them in the row when the medals end early
+    const roomy = buildCodex(newMeta(), { ...wide, bar: 600 }, () => {}, () => {});
     expect(tabs(roomy).children[0].y).toBe(70);
     // a top bar of five medals leaves too little room
     const full = buildCodex(newMeta(), { ...wide, bar: 1140 }, () => {}, () => {});
     expect(tabs(full).children[0].y).toBe(wide.y + 58);
     expect(page(full).getBounds().y).toBeGreaterThan(page(roomy).getBounds().y);
+  });
+});
+
+describe('the reactions page', () => {
+  /** Each row's name, top to bottom. */
+  const names = (m: MetaSave): string[] => {
+    setCodexPage('reactions');
+    const board = page(buildCodex(m, AREA, () => {}, () => {})).children[0] as Container;
+    return (board.children.slice(-REACTION_IDS.length) as Container[]).map((r) => (r.children.find((c) => c instanceof Text && c.anchor.x === 0) as Text).text);
+  };
+
+  it('hides a reaction never set off, its pair shown as the hint, and names it once it went off', () => {
+    const m = newMeta();
+    expect(names(m)).toEqual(REACTION_IDS.map(() => '? ? ?'));
+    m.achievements.stats.reactions.blizzard = REACTION_MASTERY[1];
+    expect(names(m)[REACTION_IDS.indexOf('blizzard')]).toBe(t('codex.rx.blizzard'));
+    expect(masteryStars(REACTION_MASTERY[1])).toBe(2);
+    expect(masteryStars(REACTION_MASTERY[0] - 1)).toBe(0);
+    expect(Object.keys(REACTION_PAIRS)).toEqual([...REACTION_IDS]);
   });
 });

@@ -9,7 +9,7 @@ import type { BattleEvent } from './types';
 
 /** Bump when a change to the battle plays the same commands differently (the rules, the
  *  units, the trig table): an old replay then no longer checks. */
-export const REPLAY_VERSION = 6;
+export const REPLAY_VERSION = 7;
 
 export interface Replay {
   version: number;

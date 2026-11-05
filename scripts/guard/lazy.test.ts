@@ -1,7 +1,9 @@
 // Balance guard for chapter 1 (`npm run check:balance:quick`, part of `npm run check`): the idle
 // player's wall `npm run lazy` prints, on fewer cells and seeds, pinned after the horde opener (74fee89).
 // Re-pinned for each potion's own pick of target (src/sim/targetPick.ts) and the hero damage cut
-// that came with it (ref/design/targeting-prefs.md).
+// that came with it (ref/design/targeting-prefs.md). Re-pinned for the potion reactions
+// (src/sim/reactions.ts) and the 8% more enemy hit points that came with them: three idle potions
+// mix little, so a stage-4 idle wall falls further by wave 4.
 import { describe, it } from 'vitest';
 import type { Battle } from '../../src/sim/battle';
 import { battleSetup } from '../../src/sim/meta';
@@ -23,12 +25,12 @@ describe('chapter 1', () => {
     }
     expectNear('idle wall % at the end of the wave (30 seeds)', wall, {
       // before e770800 (no earlyHp) stage 1 kept 100% to the boss
-      'b0 s1 wave 3': 91.7, 'b0 s1 wave 4': 37.9,
-      'b0 s2 wave 3': 80.6, 'b0 s2 wave 4': 11.3,
-      'b0 s3 wave 3': 65.4, 'b0 s3 wave 4': 0.2,
-      'b500 s3 wave 3': 89.1, 'b500 s3 wave 4': 24.4,
-      'b500 s4 wave 3': 75.2, 'b500 s4 wave 4': 1,
-      'b1500 s4 wave 3': 94.5, 'b1500 s4 wave 4': 60,
+      'b0 s1 wave 3': 97.3, 'b0 s1 wave 4': 40.8,
+      'b0 s2 wave 3': 73.6, 'b0 s2 wave 4': 16.3,
+      'b0 s3 wave 3': 65.4, 'b0 s3 wave 4': 3.8,
+      'b500 s3 wave 3': 87.1, 'b500 s3 wave 4': 29.1,
+      'b500 s4 wave 3': 68.2, 'b500 s4 wave 4': 5.8,
+      'b1500 s4 wave 3': 96.2, 'b1500 s4 wave 4': 41.4,
     }, 20);
   }, 300_000);
 });

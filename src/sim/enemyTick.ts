@@ -6,6 +6,7 @@ import { brood, hop, rewind, slam } from './bosses';
 import { harm } from './damage';
 import { K } from './field';
 import { pull } from './hits';
+import { wearReactions } from './reactions';
 import { FP, muldiv, TICK_RATE, ticks, times, toFp } from './math/fixed';
 import { sinB, TRIG_ONE } from './math/trig';
 import { spawn } from './spawn';
@@ -39,6 +40,7 @@ export function stepEnemies(b: Battle): void {
     if (e.chillTime <= 0) e.chill = 0;
     e.slowTime = Math.max(0, e.slowTime - 1);
     e.pushTime = Math.max(0, e.pushTime - 1);
+    wearReactions(e);
     if (e.freezeTime > 0) {
       e.freezeTime--;
       continue;

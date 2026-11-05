@@ -27,6 +27,7 @@ import { FLIGHT, HeroCells } from './battleView/heroCells';
 import { BLOWS_PER_FRAME, HEAVY, wallBlow } from './battleView/wallBlows';
 import { Floaters } from './battleView/floaters';
 import { KillFx } from './battleView/killFx';
+import { ReactionFx } from './battleView/reactionFx';
 import { FxLayer } from './battleView/fxLayer';
 import { MergeAnims } from './battleView/merges';
 import { ShotLayer } from './battleView/shots';
@@ -68,6 +69,7 @@ export class BattleView extends Container {
   private readonly cmd = new CommanderArt();
   private readonly aim = new CastAim();
   private readonly floaters = new Floaters();
+  private readonly reactions = new ReactionFx();
   /** The coins flying off each kill and the kill streak; `kills.landed` is the HUD's to set. */
   readonly kills = new KillFx();
   private dragFrom: number | null = null;
@@ -118,6 +120,7 @@ export class BattleView extends Container {
     this.merges.clear();
     this.floaters.hideAll();
     this.kills.clear();
+    this.reactions.clear();
   }
 
   /** Lets the field and the floor reach past the board's ends into the screen's spare room. */
@@ -267,6 +270,9 @@ export class BattleView extends Container {
           this.shake = Math.max(this.shake, 0.4);
           break;
         }
+        case 'reaction':
+          this.reactions.show(this.fx, this.floaters, ev.id, ev.x, ev.y, ev.radius);
+          break;
         case 'gust':
           this.fx.effect(0.5, (g, life) => gustWave(g, F.left, F.right, ev.y, ev.depth, 1 - life), true);
           break;

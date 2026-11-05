@@ -10,6 +10,8 @@
 // Re-pinned for the player-aimed spells (docs/spells.md) and the stage 31-50 hit points that put
 // chapters 4-5 back on their old curve: on 40 seeds over stages 31-40 the anvil sits where it did
 // against the tank (49/51% before, 47/48% after), the gear too (37/45%, 39/47%).
+// Re-pinned for the potion reactions (src/sim/reactions.ts): their splash clears the clock's mice,
+// so its hit points went 42 -> 49 to put it back under the tank (it was 13 points over with 42).
 import { describe, it } from 'vitest';
 import { playOut } from '../../src/sim/bot';
 import { battleSetup } from '../../src/sim/meta';
@@ -39,10 +41,10 @@ describe('chapter bosses', () => {
       delta[`${kind} - tank`] = 100 * (mean(own) - mean(tank));
     }
     expectNear('boss win % and its edge over the tank (20 seeds, 3 stages)', delta, {
-      'clock win %': 56.7, 'clock - tank': -13.3,
-      'tripod win %': 83.3, 'tripod - tank': 11.7,
-      'anvil win %': 61.7, 'anvil - tank': 5,
-      'gear win %': 48.3, 'gear - tank': -3.3,
+      'clock win %': 73.3, 'clock - tank': -1.7,
+      'tripod win %': 88.3, 'tripod - tank': 13.3,
+      'anvil win %': 71.7, 'anvil - tank': 8.3,
+      'gear win %': 53.3, 'gear - tank': 0,
     }, 15);
   }, 300_000);
 });

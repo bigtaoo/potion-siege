@@ -18,6 +18,7 @@
 // potions firing), hits.ts (what each potion's hit does), damage.ts (damage and the statuses),
 // kills.ts, commander.ts, targets.ts (finding enemies) and field.ts (the grid and the units).
 
+import { noReactions } from './achievements';
 import { prepBoss } from './bossPrep';
 import { doCast, SPELLS, stepCommander } from './commander';
 import { stepEnemies } from './enemyTick';
@@ -131,6 +132,9 @@ export class Battle {
   projectiles: Projectile[] = [];
   /** Whirlwinds of the wind vortex skill still turning. */
   vortices: Vortex[] = [];
+  /** How often each reaction went off (reactions.ts); `reacting` off only for tests that pin one effect. */
+  readonly reactions = noReactions();
+  reacting = true;
   skills: SkillLevels = emptySkills();
   /** Milestone perks of the heroes' levels. */
   readonly perks: ReadonlySet<PerkId>;

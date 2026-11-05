@@ -4,14 +4,14 @@ import {
 } from './achievements';
 import { claimLogin } from './daily';
 import { newMeta, parseMeta } from './meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, type BattleEvent } from './types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, REACTION_IDS, type BattleEvent, type ReactionId } from './types';
 import { FIRST_STAGE } from './waves';
 
 const merge = (kind: (typeof HERO_KINDS)[number], star: number): BattleEvent => ({ type: 'merge', slot: 0, star, kind });
 const kill = (kind: (typeof ENEMY_KINDS)[number]): BattleEvent => ({ type: 'kill', kind, x: 0, y: 0, gold: 1, boss: kind === 'boss' });
 
 describe('achievements', () => {
-  it('pays about 7770 crystals in all (600 of them for endless waves, 3000 for stars and hard stages, 420 for challenge streaks), every tier above the one before', () => {
+  it('pays about 8220 crystals in all (600 of them for endless waves, 3000 for stars and hard stages, 420 for challenge streaks, 450 for the reactions found), every tier above the one before', () => {
     let total = 0;
     for (const id of TRACK_IDS) {
       TRACKS[id].forEach((tier, i) => {
@@ -19,7 +19,7 @@ describe('achievements', () => {
         if (i > 0) expect(tier.goal).toBeGreaterThan(TRACKS[id][i - 1].goal);
       });
     }
-    expect(total).toBe(7770);
+    expect(total).toBe(8220);
   });
 
   it('starts with nothing to claim', () => {
@@ -116,5 +116,21 @@ describe('achievements', () => {
     expect(junk.achievements.stats.beaten).toEqual([]);
     expect(junk.achievements.claimed.stages).toBe(TRACKS.stages.length);
     expect(junk.achievements.claimed.level).toBe(0);
+  });
+
+  it('counts each reaction set off, the kinds found towards the track, and keeps them through a save', () => {
+    const m = newMeta();
+    const rx = (id: ReactionId): BattleEvent => ({ type: 'reaction', id, x: 0, y: 0, radius: 80 });
+    expect(trackReady(m, 'reactions')).toBe(false);
+    recordEvents(m, [rx('steam'), rx('steam'), rx('overload')]);
+    expect(m.achievements.stats.reactions.steam).toBe(2);
+    expect(trackProgress(m, 'reactions', 1)).toBe(2);
+    expect(trackReady(m, 'reactions')).toBe(true);
+    expect(parseMeta(JSON.stringify(m)).achievements.stats.reactions).toEqual(m.achievements.stats.reactions);
+    // a save from before the reactions: none yet; junk counts are dropped
+    const old = parseMeta(JSON.stringify({ achievements: { stats: { merges: 3, reactions: { steam: 'x', blizzard: 4 } } } }));
+    expect(old.achievements.stats.reactions.steam).toBe(0);
+    expect(old.achievements.stats.reactions.blizzard).toBe(4);
+    expect(parseMeta(JSON.stringify({ cleared: 3 })).achievements.stats.reactions).toEqual(Object.fromEntries(REACTION_IDS.map((id) => [id, 0])));
   });
 });

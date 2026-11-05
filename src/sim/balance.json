@@ -127,7 +127,7 @@
       "gold": 12
     },
     "clock": {
-      "hp": 42,
+      "hp": 49,
       "speed": 30,
       "radius": 90,
       "wallDps": 140,
@@ -223,6 +223,20 @@
   "upgrade": {
     "costs": [100, 200, 400, 600, 1000, 1500],
     "costStep": 500
+  },
+  "reactions": {
+    "cooldown": 1.2,
+    "hpScale": 1.08,
+    "frostTime": 2.5,
+    "shockTime": 2,
+    "steam": { "damage": 0.35, "radius": 90, "slow": 0.35, "slowTime": 2 },
+    "superconduct": { "damage": 0.4, "radius": 70 },
+    "overload": { "damage": 0.4, "radius": 80 },
+    "electrolysis": { "radius": 90, "rust": 1 },
+    "combustion": { "damage": 1.2, "radius": 80 },
+    "firestorm": { "burn": 0.3, "radius": 90 },
+    "blizzard": { "slow": 0.4, "slowTime": 2, "radius": 100 },
+    "resonance": { "damage": 0.3 }
   },
   "skills": {
     "allDamage": 0.15,

@@ -6,6 +6,7 @@ import type { Battle } from './battle';
 import { corrode, discharge, freeze, harm, scorch, shock, slow, splash } from './damage';
 import { K } from './field';
 import { dist, FP, muldiv, pm, ticks, times, toFp } from './math/fixed';
+import { react } from './reactions';
 import { nearest, within } from './targets';
 import { BALANCE, isBoss, type Enemy, type Projectile, type Vortex } from './types';
 
@@ -20,8 +21,10 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
       const radius = b.fixed.fireRadius;
       for (const e of b.enemies) {
         if (!within(e, p.tx, p.ty, radius)) continue;
-        scorch(b, e, e.id === p.targetId ? p.damage : times(p.damage, splash(e)), by);
+        const dealt = e.id === p.targetId ? p.damage : times(p.damage, splash(e));
+        scorch(b, e, dealt, by);
         discharge(b, e);
+        react(b, e, by, dealt);
       }
       b.events.push({ type: 'hit', kind: 'fire', x: p.tx / FP, y: p.ty / FP, radius: radius / FP });
       return;
@@ -37,6 +40,7 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
       let damage = p.damage;
       for (let i = 0; cur && i <= h.lightning.chains + b.mods.extraChains; i++) {
         shock(b, cur, damage);
+        react(b, cur, 'lightning', damage);
         hit.add(cur.id);
         points.push({ x: cur.x / FP, y: cur.y / FP });
         damage = times(damage, pm(h.lightning.chainFalloff));
@@ -47,7 +51,11 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
         // the sky strike: a bolt from above onto the first target, hitting all around it
         const radius = toFp(S.thunderRadius);
         for (const e of b.enemies) {
-          if (e.hp > 0 && within(e, target.x, target.y, radius)) shock(b, e, times(p.damage, pm(S.thunderstrike)));
+          if (e.hp > 0 && within(e, target.x, target.y, radius)) {
+            const dealt = times(p.damage, pm(S.thunderstrike));
+            shock(b, e, dealt);
+            react(b, e, 'lightning', dealt);
+          }
         }
         const x = target.x / FP;
         const y = target.y / FP;
@@ -62,9 +70,11 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
       const depth = toFp(S.gustDepth);
       for (const e of b.enemies) {
         if (e.hp <= 0 || Math.abs(e.y - p.ty) > depth + e.radius) continue;
-        harm(b, e, times(p.damage, pm(S.gust)), by);
+        const dealt = times(p.damage, pm(S.gust));
+        harm(b, e, dealt, by);
         discharge(b, e);
         windHit(b, e, p, e.id === p.targetId);
+        react(b, e, by, dealt);
       }
       b.events.push({ type: 'gust', x: p.tx / FP, y: p.ty / FP, depth: S.gustDepth });
       return;
@@ -101,6 +111,7 @@ export function impact(b: Battle, p: Projectile, target: Enemy | null): void {
     }
   }
   if (p.kind === 'wind') windHit(b, target, p, true);
+  react(b, target, by, p.damage);
   b.events.push({ type: 'hit', kind: p.kind, x: target.x / FP, y: target.y / FP, radius: 30 });
 }
 

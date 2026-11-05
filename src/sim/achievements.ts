@@ -4,10 +4,10 @@
 // the battle's events; the rest is read straight off the save.
 
 import type { MetaSave } from './meta';
-import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP, type BattleEvent, type EnemyKind, type HeroKind } from './types';
+import { BALANCE, ENEMY_KINDS, HERO_KINDS, isBoss, LINEUP, REACTION_IDS, type BattleEvent, type EnemyKind, type HeroKind, type ReactionId } from './types';
 import { FIRST_STAGE } from './waves';
 
-export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'streak', 'endless', 'login', 'workshop', 'stars', 'hard'] as const;
+export const TRACK_IDS = ['stages', 'level', 'ultimates', 'unlock', 'enemies', 'merges', 'kills', 'battles', 'challenge', 'streak', 'endless', 'login', 'workshop', 'stars', 'hard', 'reactions'] as const;
 export type TrackId = (typeof TRACK_IDS)[number];
 
 export interface Tier {
@@ -25,6 +25,8 @@ export interface Stats {
   beaten: EnemyKind[];
   /** The best tier a daily challenge attempt ever reached. */
   challengeTier: number;
+  /** How often each potion reaction went off (reactions.ts), for the codex. */
+  reactions: Record<ReactionId, number>;
 }
 
 export interface AchievementSave {
@@ -54,12 +56,22 @@ export const TRACKS: Record<TrackId, readonly Tier[]> = {
   // stars over every stage, normal and hard (300 in all), and hard stages won
   stars: [T(30, 100), T(75, 200), T(150, 400), T(250, 800)],
   hard: [T(1, 100), T(10, 200), T(30, 400), T(50, 800)],
+  // kinds of reaction set off: the starting four potions reach four of the eight
+  reactions: [T(1, 50), T(4, 100), T(REACTION_IDS.length, 300)],
 };
+
+/** How many times it takes for each mastery star of a reaction in the codex. */
+export const REACTION_MASTERY = [100, 1000, 10000] as const;
+
+/** A count of each reaction, all at nought. */
+export function noReactions(): Record<ReactionId, number> {
+  return Object.fromEntries(REACTION_IDS.map((id) => [id, 0])) as Record<ReactionId, number>;
+}
 
 export function newAchievements(): AchievementSave {
   const claimed = {} as Record<TrackId, number>;
   for (const id of TRACK_IDS) claimed[id] = 0;
-  return { stats: { merges: 0, kills: 0, ultimates: [], beaten: [], challengeTier: 0 }, claimed };
+  return { stats: { merges: 0, kills: 0, ultimates: [], beaten: [], challengeTier: 0, reactions: noReactions() }, claimed };
 }
 
 /** Reads the stored part; a save from before achievements gets the enemies its cleared stages
@@ -72,6 +84,8 @@ export function parseAchievements(v: unknown, cleared: number): AchievementSave 
   out.stats.merges = n(s.merges);
   out.stats.kills = n(s.kills);
   out.stats.challengeTier = n(s.challengeTier, BALANCE.challenge.tiers.length);
+  const r = (s.reactions ?? {}) as Record<string, unknown>;
+  for (const id of REACTION_IDS) out.stats.reactions[id] = n(r[id]);
   const list = <K extends string>(x: unknown, all: readonly K[]): K[] => all.filter((k) => Array.isArray(x) && x.includes(k));
   out.stats.ultimates = list(s.ultimates, HERO_KINDS);
   out.stats.beaten = d.stats === undefined ? ENEMY_KINDS.filter((k) => cleared >= FIRST_STAGE[k]) : list(s.beaten, ENEMY_KINDS);
@@ -114,6 +128,8 @@ export function trackProgress(m: MetaSave, id: TrackId, tier: number): number {
       return [...m.stars.normal, ...m.stars.hard].reduce((a, n) => a + n, 0);
     case 'hard':
       return m.stars.hard.filter((n) => n > 0).length;
+    case 'reactions':
+      return REACTION_IDS.filter((id) => s.reactions[id] > 0).length;
   }
 }
 
@@ -165,7 +181,7 @@ export function recordEvents(m: MetaSave, events: readonly BattleEvent[]): void 
     } else if (ev.type === 'kill') {
       s.kills++;
       if (!s.beaten.includes(ev.kind)) s.beaten.push(ev.kind);
-    }
+    } else if (ev.type === 'reaction') s.reactions[ev.id]++;
   }
 }
 

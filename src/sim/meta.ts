@@ -228,13 +228,14 @@ export function maxStage(m: MetaSave): number {
 
 /** Enemy hit points of a stage: stageHpGrowth a stage, stageHpLate.growth a stage past
  *  stageHpLate.from and stageHpEnd.growth past stageHpEnd.from,
- *  times the stage's entry in stageHpScale (1 where it has none). */
+ *  times the stage's entry in stageHpScale (1 where it has none), and reactions.hpScale: the
+ *  enemies are that much tougher for the reactions the potions set off. */
 export function stageHp(stage: number): number {
   const late = M.stageHpLate;
   const end = M.stageHpEnd;
   const scale = (M.stageHpScale as Record<string, number | undefined>)[stage] ?? 1;
   const mid = Math.max(0, Math.min(stage, end.from) - late.from);
-  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** mid * end.growth ** Math.max(0, stage - end.from) * scale;
+  return M.stageHpGrowth ** (Math.min(stage, late.from) - 1) * late.growth ** mid * end.growth ** Math.max(0, stage - end.from) * scale * BALANCE.reactions.hpScale;
 }
 
 export function heroDamage(level: number): number {

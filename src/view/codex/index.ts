@@ -1,8 +1,9 @@
-// The codex tab, in three pages tabs at the top turn between, one board each. The potions: each
+// The codex tab, in four pages tabs at the top turn between, one board each. The potions: each
 // with its four star forms (the ones not in the game yet greyed out and locked) under one row of
 // stars. The clockwork army: a card per enemy with its art, what it is in a word and the one
 // element it fears and the one it shrugs off most; a tap opens its panel with the numbers and
-// the whole damage table. And the achievements: each track's next tier, how far along it is and
+// the whole damage table. The potion reactions, each with its pair (reactions.ts). And the
+// achievements: each track's next tier, how far along it is and
 // its claim button, the ones to claim on top.
 
 import { Container, Graphics } from 'pixi.js';
@@ -16,13 +17,14 @@ import { featsBoard, scrollFeats } from './achievements';
 import type { CodexArea } from './common';
 import { enemiesPage } from './enemies';
 import { potionsPage } from './potions';
+import { reactionsPage } from './reactions';
 
 export type { CodexArea } from './common';
 export { isEnemy } from './enemies';
 export { enemyPanel } from './enemyDetail';
 export { scrollFeats } from './achievements';
 
-export const CODEX_PAGES = ['potions', 'enemies', 'feats'] as const;
+export const CODEX_PAGES = ['potions', 'enemies', 'reactions', 'feats'] as const;
 export type CodexPage = (typeof CODEX_PAGES)[number];
 /** The page shown, kept while the tab is rebuilt. */
 let codexPage: CodexPage = 'potions';
@@ -48,6 +50,7 @@ export function buildCodex(m: MetaSave, a: CodexArea, claim: (id: TrackId | null
     for (const c of [...page.removeChildren(), ...bar.removeChildren()]) c.destroy({ children: true });
     if (codexPage === 'potions') potionsPage(page, m, a, top);
     else if (codexPage === 'enemies') enemiesPage(page, m, a, top, open);
+    else if (codexPage === 'reactions') reactionsPage(page, m, a, top);
     else featsBoard(page, m, a, top, claim);
     // rebuilt after the tap, which is still running on the tab about to go
     bar.addChild(pageTabs(m, a, inBar, () => queueMicrotask(show)));
@@ -64,22 +67,22 @@ const PURSE = 400;
 /** How wide each page tab can be in the top bar's row (0 on a portrait page). */
 function barTabWidth(a: CodexArea): number {
   if (!a.wide) return 0;
-  return Math.min(250, (a.x + a.w - PURSE - (a.bar ?? a.x + 450) - 16 - 40) / 3);
+  return Math.min(250, (a.x + a.w - PURSE - (a.bar ?? a.x + 450) - 16 - 40) / CODEX_PAGES.length);
 }
 
-/** The three page tabs, the one shown lit; a dot on the achievements while a tier waits.
+/** The page tabs, the one shown lit; a dot on the achievements while a tier waits.
  *  `inBar`: in the wide top bar's row. */
 function pageTabs(m: MetaSave, a: CodexArea, inBar: boolean, turned: () => void): Container {
   const c = new Container();
   // in the bar: midway between its medals and the crystals
   const from = a.bar ?? a.x + 450;
   c.position.set(inBar ? (from + a.x + a.w - PURSE) / 2 : a.x + a.w / 2, inBar ? 70 : a.y + 58);
-  const tw = inBar ? barTabWidth(a) : Math.min(320, (a.w - 76) / 3);
+  const tw = inBar ? barTabWidth(a) : Math.min(320, (a.w - 52 - 8 * CODEX_PAGES.length) / CODEX_PAGES.length);
   const th = 64;
   CODEX_PAGES.forEach((id, i) => {
     const on = codexPage === id;
     const tab = new Container();
-    tab.x = (i - 1) * (tw + 8);
+    tab.x = (i - (CODEX_PAGES.length - 1) / 2) * (tw + 8);
     tab.addChild(
       new Graphics()
         .roundRect(-tw / 2, -th / 2 + 6, tw, th, th / 2)

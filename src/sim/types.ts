@@ -3,6 +3,10 @@ import balanceJson from './balance.json';
 export type Balance = typeof balanceJson;
 export const BALANCE: Balance = balanceJson;
 
+/** What two potions' elements do when they meet on one enemy (reactions.ts). */
+export const REACTION_IDS = ['steam', 'superconduct', 'overload', 'electrolysis', 'combustion', 'firestorm', 'blizzard', 'resonance'] as const;
+export type ReactionId = (typeof REACTION_IDS)[number];
+
 export const HERO_KINDS = ['arcane', 'fire', 'ice', 'lightning', 'poison', 'wind'] as const;
 export type HeroKind = (typeof HERO_KINDS)[number];
 
@@ -92,6 +96,13 @@ export interface Enemy {
   chargeTime: number;
   /** Ticks before a wind hit can knock it back again. */
   pushTime: number;
+  /** Ticks left of the frost an ice hit leaves and of the shock a lightning hit leaves: what
+   *  another potion's hit reacts with (reactions.ts). Fire's mark is scorchTime, poison's
+   *  poisonTime. Absent reads as none. */
+  frostTime?: number;
+  shockTime?: number;
+  /** Ticks before it can react again. */
+  reactTime?: number;
   /** True once it reached the wall and is hitting it. */
   atWall: boolean;
   /** Permille of the usual kill gold (see Spawn.gold). */
@@ -220,6 +231,8 @@ export type BattleEvent =
   | { type: 'crack'; x: number; y: number }
   /** A wind gust swept the field `depth` deep either side of y. */
   | { type: 'gust'; x: number; y: number; depth: number }
+  /** Two potions' elements met on an enemy at (x, y): a reaction reaching `radius` (0: only it). */
+  | { type: 'reaction'; id: ReactionId; x: number; y: number; radius: number }
   /** A wind hit knocked an enemy back from (x, y). */
   | { type: 'push'; x: number; y: number; id: number }
   | { type: 'end'; won: boolean };

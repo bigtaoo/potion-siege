@@ -22,6 +22,7 @@ afterAll(() => {
 /** No enemies, so only the test's own shots land. */
 function quiet(b: Battle): void {
   b.enemies = [];
+  b.reacting = false;
 }
 
 /** An enemy at (x, y) with `hp` hit points, all in world units. */

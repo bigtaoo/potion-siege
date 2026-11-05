@@ -9,7 +9,7 @@ import { battleSetup, newMeta, type MetaSave } from '../../sim/meta';
 import { endlessSetup } from '../../sim/endless';
 import { MODIFIER_IDS } from '../../sim/challenge';
 import { emptySkills, SKILL_IDS, skillMax } from '../../sim/skills';
-import { ENEMY_KINDS, HERO_KINDS } from '../../sim/types';
+import { ENEMY_KINDS, HERO_KINDS, REACTION_IDS } from '../../sim/types';
 import { FIRST_STAGE, FIRST_WAVE } from '../../sim/waves';
 import { Battle } from '../../sim/battle';
 import { buildHome, HOME_TABS, type HomeActions, type HomePanel } from '../Home';
@@ -41,6 +41,8 @@ function rich(): MetaSave {
   m.unlocked = ['poison', 'wind'];
   for (const k of HERO_KINDS) m.heroes[k] = 23;
   m.workshop = { wall: 7, startGold: 5, crystals: 4 };
+  // every reaction found but resonance, the count of the longest a big one
+  for (const [i, id] of REACTION_IDS.entries()) if (id !== 'resonance') m.achievements.stats.reactions[id] = 7 * 10 ** i;
   return m;
 }
 
