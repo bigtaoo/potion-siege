@@ -14,29 +14,32 @@ import { board, FOOT, GAP, GREY, HEAD, type CodexArea } from './common';
 /** Room the row of stars over the forms takes. */
 const STARS = 52;
 
-/** Every potion a row, as tall as the page allows up to a roomy cap; the board ends under the
- *  last one. */
+/** Every potion a row, as tall as the page allows up to a roomy cap; on a wide page in two
+ *  columns side by side, each under its own row of stars, so nine rows still read. The board ends
+ *  under the last one. */
 export function potionsPage(root: Container, m: MetaSave, a: CodexArea, top: number): void {
-  const w = a.wide ? Math.min(1400, a.w - 80) : Math.min(1000, a.w - 60);
+  const cols = a.wide ? 2 : 1;
+  const w = a.wide ? Math.min(2000, a.w - 80) : Math.min(1000, a.w - 60);
   const gap = a.wide ? GAP : 22;
-  const n = HERO_KINDS.length;
+  const n = Math.ceil(HERO_KINDS.length / cols);
   const rh = Math.min(250, (a.y + a.h - 24 - top - HEAD - STARS - FOOT - gap * (n - 1)) / n);
   const h = HEAD + STARS + n * rh + (n - 1) * gap + FOOT;
   const c = board(t('codex.heroes'), w, h);
   c.position.set(a.x + a.w / 2, top + h / 2);
-  const rw = w - 60;
-  const { x0, slotW } = slots(rw, rh);
+  const colGap = 30;
+  const rw = (w - 60 - colGap * (cols - 1)) / cols;
+  const colX = (j: number) => -w / 2 + 30 + rw / 2 + j * (rw + colGap);
+  const { x0, slotW, sw } = slots(rw, rh);
   const g = new Graphics();
-  for (let s = 1; s <= BALANCE.maxStar; s++) stars(g, x0 + slotW * (s - 0.5), -h / 2 + HEAD + STARS / 2 - 6, s);
+  for (let j = 0; j < cols; j++) for (let s = 1; s <= BALANCE.maxStar; s++) stars(g, colX(j) + x0 + slotW * (s - 0.5), -h / 2 + HEAD + STARS / 2 - 6, s);
   c.addChild(g);
   // every name at the size of the longest, so the column reads as one
-  const { sw } = slots(rw, rh);
   const names = HERO_KINDS.map((kind) => label(t(`hero.${kind}`), Math.min(38, rh * 0.3), { stroke: { color: P.line, width: 7 } }));
   const k = Math.min(1, ...names.map((n) => (sw - 24) / n.width));
   HERO_KINDS.forEach((kind, i) => {
     names[i].scale.set(k);
     const r = heroRow(m, kind, rw, rh, names[i]);
-    r.y = -h / 2 + HEAD + STARS + rh / 2 + i * (rh + gap);
+    r.position.set(colX(Math.floor(i / n)), -h / 2 + HEAD + STARS + rh / 2 + (i % n) * (rh + gap));
     c.addChild(r);
   });
   root.addChild(c);
@@ -45,7 +48,7 @@ export function potionsPage(root: Container, m: MetaSave, a: CodexArea, top: num
 /** How wide a row's name plate is, where its forms start and how wide each form's slot is:
  *  shared by the rows and the stars over them. */
 function slots(rw: number, rh: number): { sw: number; x0: number; slotW: number } {
-  const sw = Math.min(240, rw * 0.27, rh * 1.6);
+  const sw = Math.min(300, rw * 0.32, rh * 2.2);
   const x0 = -rw / 2 + 20 + sw;
   return { sw, x0, slotW: (rw / 2 - 10 - x0) / BALANCE.maxStar };
 }
@@ -62,8 +65,9 @@ function heroRow(m: MetaSave, kind: HeroKind, rw: number, rh: number, name: Text
   r.addChild(new Graphics().roundRect(-rw / 2 + 10, -ph / 2, sw, ph, 16).fill(open ? HERO_COLORS[kind] : GREY).stroke({ width: 4, color: LIGHT.edge }));
   name.position.set(sx, -ph * 0.17);
   const at = unlockStage(kind);
-  const sub = fit(label(open ? t('level', { n: m.heroes[kind] }) : at ? t('unlockAt', { n: at }) : t('codex.locked'), Math.min(30, rh * 0.25), { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - 24);
-  sub.position.set(sx, ph * 0.23);
+  const sub = fit(label(open ? t('level', { n: m.heroes[kind] }) : at ? t('unlockAt', { n: at }) : t('codex.locked'), Math.min(30, rh * 0.25), { fill: P.cream, stroke: { color: P.line, width: 6 } }), sw - (open ? 24 : 64));
+  // a locked one's line leaves room on its left for the lock
+  sub.position.set(open ? sx : sx + 20, ph * 0.23);
   r.addChild(name, sub);
 
   // the forms go by the slot's size, its narrow side on a portrait page

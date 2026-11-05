@@ -74,6 +74,7 @@ describe('the small pictures', () => {
   it('draws each icon about 100 across, centred', () => {
     const all: Container[] = [
       icons.gearIcon(),
+      icons.hammerIcon(),
       icons.bookIcon(),
       icons.chestIcon(),
       icons.swordsIcon(),

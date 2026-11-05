@@ -3,7 +3,7 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { bookIcon, bottle, chestIcon, fit as fitText, gearIcon, ink, LIGHT, medal, P, redDot, swordsIcon, tappable } from '../kit';
+import { bookIcon, bottle, chestIcon, fit as fitText, hammerIcon, ink, LIGHT, medal, P, redDot, swordsIcon, tappable } from '../kit';
 import type { MenuFit } from '../viewport';
 import { pointer } from './pointer';
 import { HOME_TABS, type HomeActions, type HomeTab } from './types';
@@ -76,7 +76,7 @@ export function nav(root: Container, act: HomeActions, tab: HomeTab, fit: MenuFi
 }
 function navIcon(id: HomeTab): Container {
   if (id === 'potions') return bottle('fire', 110);
-  if (id === 'workshop') return gearIcon();
+  if (id === 'workshop') return hammerIcon();
   if (id === 'battle') return swordsIcon();
   if (id === 'codex') return bookIcon();
   return chestIcon();

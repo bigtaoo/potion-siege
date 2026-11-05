@@ -99,6 +99,38 @@ export function gearIcon(r = 46, color: number = P.brass): Graphics {
     .stroke({ width: 5, color: P.line });
 }
 
+/** The workshop's hammer, tilted: a steel head with a brass band on a wooden handle. `k` scales
+ *  it from the gear's size (about 96 across). */
+export function hammerIcon(k = 1): Container {
+  const g = new Graphics()
+    // the handle, with its grip
+    .roundRect(-12, -24, 24, 84, 10)
+    .fill(0xc68642)
+    .stroke({ width: 5, color: P.line })
+    .rect(-6, -18, 6, 70)
+    .fill({ color: 0xffffff, alpha: 0.25 })
+    .roundRect(-14, 32, 28, 30, 10)
+    .fill(P.wood)
+    .stroke({ width: 5, color: P.line })
+    // the head: a flat face on the left, a tapered peen on the right
+    .poly([-50, -60, 16, -60, 48, -52, 48, -32, 16, -24, -50, -24])
+    .fill(0xaab4be)
+    .stroke({ width: 6, color: P.line, join: 'round' })
+    .rect(-44, -54, 56, 8)
+    .fill({ color: 0xffffff, alpha: 0.5 })
+    .rect(-44, -34, 56, 6)
+    .fill({ color: 0x000000, alpha: 0.15 })
+    .rect(-18, -64, 20, 44)
+    .fill(P.brass)
+    .stroke({ width: 5, color: P.line });
+  g.rotation = Math.PI / 5;
+  g.position.set(6, 6);
+  const c = new Container();
+  c.addChild(g);
+  c.scale.set(k);
+  return c;
+}
+
 export function bookIcon(): Graphics {
   return new Graphics()
     .roundRect(-36, -44, 72, 88, 10)

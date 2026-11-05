@@ -1,6 +1,6 @@
-// The home screen's top bar: the daily login, the daily tasks, the settings, (in the first week)
-// the welcome gifts and (where the host has them) the leaderboards as medals, and the crystals
-// top right.
+// The home screen's top bar: the daily login, the daily tasks, (in the first week) the welcome
+// gifts, (where the host has them) the leaderboards and last the settings as medals, and the
+// crystals top right.
 
 import { Container, Graphics } from 'pixi.js';
 import { formatAmount, t } from '../../i18n';
@@ -47,10 +47,11 @@ export function topBar(root: Container, m: MetaSave, act: HomeActions, left: num
   };
   button('login', calendarIcon(), t('top.login'), dots.login, () => act.panel('login'));
   button('tasks', scrollIcon(), t('top.tasks'), dots.tasks, () => act.panel('tasks'));
-  button('settings', gearIcon(40), t('top.settings'), false, () => act.panel('settings'));
   // the welcome week's gifts, while there are any left
   if (welcomeOn(m)) button('welcome', chestIcon(), t('welcome.button'), dots.welcome, () => act.panel('welcome'));
   if (board) button('board', trophyIcon(), t('board.button'), false, () => act.panel('board'));
+  // the settings last, at the end of the row, as most games keep them
+  button('settings', gearIcon(40), t('top.settings'), false, () => act.panel('settings'));
 
   // the crystals in a dark inset, top right
   const count = ink(formatAmount(m.crystals), 50, { fill: LIGHT.crystal });

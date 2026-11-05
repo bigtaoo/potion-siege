@@ -11,6 +11,7 @@ import {
   bottle,
   fit,
   gearIcon,
+  hammerIcon,
   infinityIcon,
   ink,
   inkWrapped,
@@ -269,7 +270,7 @@ export function tips(onTip: (tab: TipTab) => void, dealt: EndExtras['dealt'], cw
   const best = [...dealt].sort((a, b) => b.damage - a.damage)[0]?.kind ?? 'fire';
   const all: [TipTab, 'potions' | 'workshop' | 'stage', () => Container][] = [
     ['potions', 'potions', () => bottle(best, 76)],
-    ['workshop', 'workshop', () => gearIcon(34)],
+    ['workshop', 'workshop', () => hammerIcon(0.74)],
     ['battle', 'stage', swordsIcon],
   ];
   const items = tabs.flatMap((tab) => all.filter((item) => item[0] === tab));
