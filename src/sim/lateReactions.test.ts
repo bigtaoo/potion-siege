@@ -170,4 +170,31 @@ describe('the later potions\' reactions', () => {
     expect(far.tangleTime ?? 0).toBe(0);
     expect(b.reactions.bramble).toBe(1);
   });
+
+  it('still flares light on a scorch the fire left, but not on one the light left itself', () => {
+    const b = still();
+    const fired = enemy(b, 300, 400);
+    fired.scorchTime = 30;
+    fired.scorchBy = 'fire';
+    const lit = enemy(b, 700, 400);
+    lit.scorchTime = 30;
+    lit.scorchBy = 'light';
+    react(b, lit, 'light', toFp(100));
+    expect(b.reactions.flare).toBe(0);
+    react(b, fired, 'light', toFp(100));
+    expect(b.reactions.flare).toBe(1);
+  });
+
+  it('keeps a used-up tangle as the guard against a new root, but it reacts no more', () => {
+    const b = still();
+    const e = enemy(b, 500, 400);
+    e.tangleTime = ticks(R.glareTime);
+    react(b, e, 'arcane', toFp(100));
+    expect(b.reactions.resonance).toBe(1);
+    expect(e.tangleTime).toBeGreaterThan(0);
+    expect(elementsOn(e)).toEqual([]);
+    e.reactTime = 0;
+    react(b, e, 'arcane', toFp(100));
+    expect(b.reactions.resonance).toBe(1);
+  });
 });

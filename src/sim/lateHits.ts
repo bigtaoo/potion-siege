@@ -98,6 +98,7 @@ export function root(e: Enemy, time: number): boolean {
   const V = B.heroes.vine;
   slow(e, isBoss(e.kind) ? V.bossSlow : 1, time);
   e.tangleTime = ticks(V.tangleTime);
+  e.tangleUsed = false;
   return true;
 }
 

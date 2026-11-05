@@ -55,7 +55,7 @@ export class TargetPick {
       case 'vine':
         return this.claim(kind, this.fastestFree(kind, (e) => (e.tangleTime ?? 0) > 0));
       case 'metal':
-        return this.toughest();
+        return this.claim(kind, this.toughest(kind));
       case 'poison':
         return this.claim(kind, this.front.find((e) => onField(e) && e.poisonTime <= 0 && !this.taken(kind, e)));
     }
@@ -110,9 +110,10 @@ export class TargetPick {
     return best;
   }
 
-  private toughest(): Enemy {
-    let best = this.front[0];
-    for (const e of this.front) if (onField(e) && e.hp > best.hp) best = e;
+  /** The one with the most hp on the field that no other shot of `kind` is flying at yet. */
+  private toughest(kind: HeroKind): Enemy | undefined {
+    let best: Enemy | undefined;
+    for (const e of this.front) if (onField(e) && !this.taken(kind, e) && (!best || e.hp > best.hp)) best = e;
     return best;
   }
 

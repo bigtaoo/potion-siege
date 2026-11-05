@@ -111,6 +111,8 @@ export interface Enemy {
   glareTime?: number;
   magnetTime?: number;
   tangleTime?: number;
+  /** The tangle has set off a reaction: it still keeps a new root off, but reacts no more. */
+  tangleUsed?: boolean;
   /** Ticks before it can react again. */
   reactTime?: number;
   /** True once it reached the wall and is hitting it. */

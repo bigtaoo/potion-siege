@@ -3,9 +3,9 @@
 // the arcane bolt's mark, burst and split.
 
 import type { Battle } from './battle';
-import { corrode, discharge, freeze, harm, scorch, shock, slow, splash } from './damage';
+import { corrode, discharge, freeze, harm, scorch, shift, shock, slow, splash } from './damage';
 import { K } from './field';
-import { dist, FP, muldiv, pm, ticks, times, toFp } from './math/fixed';
+import { dist, FP, pm, ticks, times, toFp } from './math/fixed';
 import { lateHit } from './lateHits';
 import { react } from './reactions';
 import { nearest, within } from './targets';
@@ -173,10 +173,7 @@ export function pull(e: Enemy, v: Vortex): void {
   const dy = v.y - e.y;
   const d = dist(dx, dy);
   if (d < FP || d > toFp(B.skills.vortexRadius) + e.radius) return;
-  const step = Math.min(d, K.vortexPull);
-  if (e.kind === 'flyer') e.x0! += muldiv(dx, step, d);
-  else e.x += muldiv(dx, step, d);
-  e.y += muldiv(dy, step, d);
+  shift(e, dx, dy, d, Math.min(d, K.vortexPull));
 }
 
 /** What the arcane line adds to a hero's bolt that has just hit. */

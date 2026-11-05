@@ -4,10 +4,18 @@
 import type { Battle } from './battle';
 import { crack } from './bosses';
 import { resistOf } from './enemies';
-import { FP, pm, ticks, times } from './math/fixed';
+import { FP, muldiv, pm, ticks, times } from './math/fixed';
 import { BALANCE, isBoss, type Enemy, type HeroKind } from './types';
 
 const B = BALANCE;
+
+/** Moves `e` `step` (FP) along (dx, dy), which is `d` long; a flyer's weave moves with it. One
+ *  drawn back off the wall walks again: the enemy tick clears its `atWall` as it does. */
+export function shift(e: Enemy, dx: number, dy: number, d: number, step: number): void {
+  if (e.kind === 'flyer') e.x0! += muldiv(dx, step, d);
+  else e.x += muldiv(dx, step, d);
+  e.y += muldiv(dy, step, d);
+}
 
 /** What a blast aimed at something else does to `e`, in permille: a flyer is up in the air,
  *  above most of it. */

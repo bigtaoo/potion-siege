@@ -22,9 +22,9 @@
 // An enemy reacts at most once every `cooldown`; the element a reaction used up is gone.
 
 import type { Battle } from './battle';
-import { corrode, harm, slow, splash } from './damage';
+import { corrode, harm, shift, slow, splash } from './damage';
 import { root } from './lateHits';
-import { dist, FP, muldiv, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
+import { dist, FP, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
 import { reactionPower } from './reactionPower';
 import { nearest, within } from './targets';
 import { BALANCE, isBoss, type Enemy, type HeroKind, type ReactionId } from './types';
@@ -48,7 +48,7 @@ export function elementsOn(e: Enemy): Element[] {
   if (e.poisonTime > 0) out.push('poison');
   if ((e.glareTime ?? 0) > 0) out.push('light');
   if ((e.magnetTime ?? 0) > 0) out.push('metal');
-  if ((e.tangleTime ?? 0) > 0) out.push('vine');
+  if ((e.tangleTime ?? 0) > 0 && !e.tangleUsed) out.push('vine');
   return out;
 }
 
@@ -95,6 +95,8 @@ export function react(b: Battle, e: Enemy, by: HeroKind, damage: number): void {
   if (!b.reacting) return;
   if (e.hp > 0 && (e.reactTime ?? 0) <= 0) {
     for (const on of elementsOn(e)) {
+      // a potion never sets off what it left itself: the light's sunfire scorch is no fire for it
+      if (on === 'fire' && e.scorchBy === by) continue;
       const id = reactionOf(by, on);
       if (!id) continue;
       e.reactTime = ticks(R().cooldown);
@@ -117,7 +119,8 @@ function useUp(e: Enemy, on: Element): void {
     e.poisonDps = 0;
   } else if (on === 'light') e.glareTime = 0;
   else if (on === 'metal') e.magnetTime = 0;
-  else if (on === 'vine') e.tangleTime = 0;
+  // the tangle stays on as the guard against a new root, only no longer an element
+  else if (on === 'vine') e.tangleUsed = true;
   else e.scorchTime = 0;
 }
 
@@ -263,8 +266,5 @@ function drawTo(o: Enemy, to: Enemy, step: number): void {
   const d = dist(dx, dy);
   const gap = d - o.radius - to.radius;
   if (gap <= 0) return;
-  const move = Math.min(step, gap);
-  if (o.kind === 'flyer') o.x0! += muldiv(dx, move, d);
-  else o.x += muldiv(dx, move, d);
-  o.y += muldiv(dy, move, d);
+  shift(o, dx, dy, d, Math.min(step, gap));
 }

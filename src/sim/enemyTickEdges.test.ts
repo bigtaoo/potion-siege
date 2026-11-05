@@ -88,3 +88,21 @@ describe('enemy tick edges', () => {
     expect(e.hopTime).toBe(ticks(BALANCE.bosses.anvil.slamEvery));
   });
 });
+
+describe('drawn back off the wall', () => {
+  it('walks again and no longer bites, and a flyer weaves again', () => {
+    const b = field();
+    const e = enemy(b, 'flyer');
+    e.x0 = e.x;
+    e.phase = 0;
+    e.atWall = true;
+    b.time = 7;
+    const wall = b.wall;
+    stepEnemies(b);
+    expect(e.atWall).toBe(false);
+    expect(b.wall).toBe(wall);
+    // the tick after, it weaves from side to side once more
+    stepEnemies(b);
+    expect(e.x).not.toBe(e.x0);
+  });
+});

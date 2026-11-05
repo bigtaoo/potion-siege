@@ -139,3 +139,26 @@ describe('the wall\'s reach', () => {
     expect(pick(b, 'ice')).toBe(fast);
   });
 });
+
+describe('the quicksilver\'s pick', () => {
+  it('takes the toughest on the field, never one still above the top edge', () => {
+    const b = field();
+    const above = enemy(b, 500, B.field.top - 100);
+    above.hp = toFp(5000);
+    const tough = enemy(b, 300, 600);
+    tough.hp = toFp(400);
+    enemy(b, 700, 700);
+    expect(pick(b, 'metal')).toBe(tough);
+  });
+
+  it('sends a second quicksilver at the next toughest, not the same one', () => {
+    const b = field();
+    const tough = enemy(b, 300, 600);
+    tough.hp = toFp(400);
+    const next = enemy(b, 700, 500);
+    next.hp = toFp(300);
+    const tp = new TargetPick(b);
+    expect(tp.pick('metal')).toBe(tough);
+    expect(tp.pick('metal')).toBe(next);
+  });
+});

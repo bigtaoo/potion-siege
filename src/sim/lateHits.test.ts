@@ -72,10 +72,13 @@ describe('the light\'s beam', () => {
     const t = enemy(b, 500, 800);
     const behind = enemy(b, 500, 600);
     land(b, 'light', t, 100);
-    // the scorch it leaves is set off at once by its own light: a flare, the scorch used up
-    expect(b.reactions.flare).toBeGreaterThanOrEqual(1);
-    expect(lost(behind)).toBeGreaterThanOrEqual(100);
-    expect(lost(t)).toBeGreaterThanOrEqual(100);
+    expect(lost(behind)).toBeCloseTo(100, 0);
+    expect(lost(t)).toBeCloseTo(100, 0);
+    expect(t.scorchTime).toBeGreaterThan(0);
+    expect(behind.scorchTime).toBeGreaterThan(0);
+    // its own scorch is no fire for the light: neither this beam nor the next sets off a flare
+    land(b, 'light', t, 100);
+    expect(b.reactions.flare).toBe(0);
   });
 
   it('slows what it crosses with glare, and reaches wider with the wide beam', () => {

@@ -69,6 +69,8 @@ export function stepEnemies(b: Battle): void {
     // a winder keeps behind the crowd it winds, and waits for it
     const stop = e.kind === 'winder' && front > -Infinity ? Math.min(wall, Math.max(e.y, front - toFp(B.winder.gap))) : wall;
     if (e.y < stop) {
+      // drawn or blown back off the wall: walking again, not biting
+      e.atWall = false;
       const step = e.slowTime > 0 ? times(e.speed, e.slowFactor) : e.speed;
       e.y = Math.min(stop, e.y + (e.kind === 'anvil' ? hop(b, e, step) : step));
     } else if (e.y >= wall) {
