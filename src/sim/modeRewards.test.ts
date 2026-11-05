@@ -13,7 +13,7 @@ import { bookStars, runStars } from './stars';
 
 const TODAY = '2026-10-22';
 /** Ticks the bot plays at most: forty minutes, past where even the maxed save falls in endless (about 31). */
-const CAP = 2400 * 30;
+const CAP = 3000 * 30;
 
 /** Plays the bot to the battle's end (or the cap); `b` may be one revived. */
 function botPlay(b: Battle): Battle {

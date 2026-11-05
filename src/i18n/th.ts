@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/th';
 
 // Thai.
 export const th: Table = {
@@ -152,6 +153,7 @@ export const th: Table = {
     wall: { name: 'กำแพงหนา', desc: 'พลังชีวิตกำแพง +{p}%' },
     startGold: { name: 'เงินติดกระเป๋า', desc: 'เริ่มด้วยทอง +{n}' },
     crystals: { name: 'ตะแกรงคริสตัล', desc: 'คริสตัล +{p}% ทุกการต่อสู้' },
+    lab: { name: 'ห้องแล็บเล่นแร่', desc: 'ยาทุกขวด ดาเมจ +{p}%' },
     now: 'ตอนนี้: {text}',
     next: 'ถัดไป: {text}',
     none: 'ยังไม่มีโบนัส',
@@ -225,6 +227,7 @@ export const th: Table = {
     boss: 'ปราบบอส {n} ตัว',
     challenge: 'เล่นชาเลนจ์รายวัน',
     endless: 'เล่นโหมดไม่สิ้นสุด 1 รอบ',
+    react: 'ทำให้เกิดปฏิกิริยา {n} ครั้ง',
   },
   endless: {
     title: 'โหมดไม่สิ้นสุด',
@@ -274,6 +277,7 @@ export const th: Table = {
     poison: 'โพชั่นกัดกร่อน',
     wind: 'โพชั่นลมกรด',
   },
+  alchemy,
   codex: {
     page: { potions: 'โพชั่น', enemies: 'ศัตรู', feats: 'ความสำเร็จ', reactions: 'ปฏิกิริยา' },
     rx: { steam: 'ไอน้ำ', superconduct: 'ตัวนำยิ่งยวด', overload: 'โอเวอร์โหลด', electrolysis: 'อิเล็กโทรไลซิส', combustion: 'การเผาไหม้', firestorm: 'พายุเพลิง', blizzard: 'พายุหิมะ', resonance: 'การสั่นพ้อง' },
@@ -443,5 +447,6 @@ export const th: Table = {
     wave: 'คลื่น {n}',
     starCount: '{n} ดาว',
     note: 'คะแนนจะส่งหลังจบแต่ละการต่อสู้',
+    weekly: 'สัปดาห์นี้',
   },
 };

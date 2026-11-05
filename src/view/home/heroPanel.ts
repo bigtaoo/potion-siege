@@ -6,8 +6,9 @@ import { t } from '../../i18n';
 import { heroCost, heroDamage, heroUnlocked, type MetaSave } from '../../sim/meta';
 import { lateStepOf } from '../../sim/latePerks';
 import { baseSkills, MILESTONES, skillHeroes } from '../../sim/skills';
+import { talentsToPick, talentTiers } from '../../sim/talents';
 import { BALANCE, type HeroKind } from '../../sim/types';
-import { bottle, fit as fitText, ink, inkWrapped, lightTile, lock, P, PillButton } from '../kit';
+import { bottle, fit as fitText, ink, inkWrapped, lightTile, lock, P, PillButton, redDot } from '../kit';
 import { HERO_COLORS, label } from '../ui';
 import type { MenuFit } from '../viewport';
 import { frame } from './frame';
@@ -33,6 +34,13 @@ export function heroPanel(m: MetaSave, act: HomeActions, kind: HeroKind, fit: Me
   dmg.anchor.set(0, 0.5);
   dmg.position.set(-150, top + 290);
   box.addChild(level, dmg);
+  if (talentTiers(lv) > 0) {
+    const tb = new PillButton(t('alchemy.talents.open'), 240, 92, 'brass', () => act.panel(`talents_${kind}`), 38);
+    tb.label = 'talents_open';
+    tb.position.set(300, top + 150);
+    if (talentsToPick(m.alchemy.talents, kind, lv) > 0) redDot(tb, 110, -36);
+    box.addChild(tb);
+  }
 
   const head = ink(t('baseCards'), 38, { fill: P.brassDark });
   head.position.set(0, top + 420);

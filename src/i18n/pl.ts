@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/pl';
 
 // Polish.
 export const pl: Table = {
@@ -152,6 +153,7 @@ export const pl: Table = {
     wall: { name: 'Grube mury', desc: 'PŻ muru +{p}%' },
     startGold: { name: 'Kieszonkowe', desc: '+{n} złota na start' },
     crystals: { name: 'Sito kryształów', desc: 'Kryształy +{p}% z każdej bitwy' },
+    lab: { name: 'Laboratorium', desc: 'Każda mikstura +{p}% obrażeń' },
     now: 'Teraz: {text}',
     next: 'Następny: {text}',
     none: 'brak bonusu',
@@ -225,6 +227,7 @@ export const pl: Table = {
     boss: 'Pokonaj {n} {n|one:bossa|few:bossów|many:bossów|other:bossa}',
     challenge: 'Zagraj w wyzwanie dnia',
     endless: 'Zagraj w trybie bez końca',
+    react: 'Wywołaj reakcje: {n}',
   },
   endless: {
     title: 'Tryb bez końca',
@@ -274,6 +277,7 @@ export const pl: Table = {
     poison: 'Żrący Eliksir',
     wind: 'Wichrowy Eliksir',
   },
+  alchemy,
   codex: {
     page: { potions: 'Mikstury', enemies: 'Wrogowie', feats: 'Osiągnięcia', reactions: 'Reakcje' },
     rx: { steam: 'Para', superconduct: 'Nadprzewodnictwo', overload: 'Przeciążenie', electrolysis: 'Elektroliza', combustion: 'Spalanie', firestorm: 'Burza ognia', blizzard: 'Zamieć', resonance: 'Rezonans' },
@@ -443,5 +447,6 @@ export const pl: Table = {
     wave: 'Fala {n}',
     starCount: 'Gwiazdki: {n}',
     note: 'Wyniki trafiają tu po każdej bitwie.',
+    weekly: 'Ten tydzień',
   },
 };

@@ -60,8 +60,7 @@ export const TRACKS: Record<TrackId, readonly Tier[]> = {
   reactions: [T(1, 50), T(4, 100), T(REACTION_IDS.length, 300)],
 };
 
-/** How many times it takes for each mastery star of a reaction in the codex. */
-export const REACTION_MASTERY = [100, 1000, 10000] as const;
+export { REACTION_MASTERY } from './reactionPower';
 
 /** A count of each reaction, all at nought. */
 export function noReactions(): Record<ReactionId, number> {

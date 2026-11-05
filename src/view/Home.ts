@@ -20,6 +20,10 @@ import { chaptersPanel, scrollChapters } from './home/chaptersPanel';
 import { consentPanel } from './home/consentPanel';
 import { frame } from './home/frame';
 import { heroPanel } from './home/heroPanel';
+import { talentPanel } from './home/talentPanel';
+import { rebrewPanel } from './home/rebrewPanel';
+import { weekPanel } from './home/weekPanel';
+import { endlessOpen } from '../sim/endless';
 import { languagePanel } from './home/languagePanel';
 import { loginPanel } from './home/loginPanel';
 import { nav, NAV, RAIL, TOP } from './home/nav';
@@ -61,7 +65,7 @@ export function buildHome(
   const area: Area = { x: left, y: top, w: w - left, h: (wide ? h : h - NAV) - top, wide };
   // the red-dot rules are in nudges.ts and homeDots.ts; never on the tab already open
   const dots = homeDots(m, today, tab, hint !== null || !!extras.guiding);
-  if (tab === 'battle') battleTab(root, m, act, area, today, dots.battle);
+  if (tab === 'battle') battleTab(root, m, act, area, today, dots.battle, extras.rack);
   else if (tab === 'potions') potionsTab(root, m, act, area, picked, hint);
   else if (tab === 'workshop') workshopTab(root, m, act, area);
   else if (tab === 'codex') root.addChild(buildCodex(m, { ...area, bar: left + barEnd(m, wide, !!extras.board) }, act.claimTier, act.panel));
@@ -81,6 +85,9 @@ export function buildHome(
   else if (panel === 'challenge') root.addChild(challengePanel(m, act, today, ads, fit));
   else if (panel === 'chapters') root.addChild(chaptersPanel(m, act, fit));
   else if (panel === 'board') root.addChild(boardPanel(act, fit, extras.board ?? { tab: 'endless', page: 'offline' }));
-  else if (panel) root.addChild(isEnemy(panel) ? enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)) : heroPanel(m, act, panel, fit));
+  else if (panel === 'rebrew' || panel === 'rebrewSure') root.addChild(rebrewPanel(m, act, fit, panel === 'rebrewSure'));
+  else if (panel === 'week') root.addChild(weekPanel(m, act, today, endlessOpen(m), fit));
+  else if (panel?.startsWith('talents_')) root.addChild(talentPanel(m, act, panel.slice(8) as HeroKind, fit));
+  else if (panel) root.addChild(isEnemy(panel) ? enemyPanel(m, panel, (title, ph) => frame(act, title, ph, fit)) : heroPanel(m, act, panel as HeroKind, fit));
   return root;
 }

@@ -11,6 +11,10 @@ export function botAct(b: Battle): void {
     b.choose(b.choices[0]);
     return;
   }
+  if (b.catalystChoices) {
+    b.apply({ type: 'catalyst', id: b.catalystChoices[0]! });
+    return;
+  }
   if (b.canCast()) b.cast();
   if (b.canUpgrade() && (b.freeSlots().length === 0 || b.gold >= b.upgradeCost() + b.summonCost())) {
     b.upgrade();

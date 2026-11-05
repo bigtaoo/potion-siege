@@ -5,9 +5,9 @@
 
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { REACTION_MASTERY } from '../../sim/achievements';
+import { masteryStars, REACTION_MASTERY } from '../../sim/reactionPower';
 import type { MetaSave } from '../../sim/meta';
-import { REACTION_IDS, type HeroKind, type ReactionId } from '../../sim/types';
+import { BALANCE, REACTION_IDS, type HeroKind, type ReactionId } from '../../sim/types';
 import { bottle, fit, ink, lightTile, P } from '../kit';
 import { INK, star } from '../potion';
 import { REACTION_COLORS } from '../battleView/reactionFx';
@@ -26,10 +26,7 @@ export const REACTION_PAIRS: Record<ReactionId, readonly [HeroKind, HeroKind | n
   resonance: ['arcane', null],
 };
 
-/** The stars a reaction set off `n` times has earned. */
-export function masteryStars(n: number): number {
-  return REACTION_MASTERY.filter((goal) => n >= goal).length;
-}
+export { masteryStars };
 
 /** A column of rows on a portrait page, two on a wide one. */
 export function reactionsPage(root: Container, m: MetaSave, a: CodexArea, top: number): void {
@@ -85,7 +82,9 @@ function reactionRow(id: ReactionId, count: number, rw: number, rh: number): Con
       const glow: [number, number, number] = s < got ? [P.brass, P.brass, P.brassLight] : [GREY, GREY, GREY];
       star(g, sx + (s - 1) * sr * 2.3, -rh * 0.14, sr, 0, glow, 3);
     }
-    const n = fit(ink(t('codex.rxCount', { n: count }), Math.min(26, rh * 0.17), { fill: P.inkSoft }), sw);
+    // each star's power, under the count once there is one
+    const words = got > 0 ? `${t('codex.rxCount', { n: count })} · ${t('alchemy.power', { p: Math.round(BALANCE.reactions.masteryStep * got * 100) })}` : t('codex.rxCount', { n: count });
+    const n = fit(ink(words, Math.min(26, rh * 0.17), { fill: got > 0 ? P.greenInk : P.inkSoft }), sw);
     n.position.set(sx, rh * 0.2);
     r.addChild(g, n);
   }

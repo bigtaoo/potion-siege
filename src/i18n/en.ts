@@ -1,4 +1,5 @@
 // The source string table. Every other locale must match it key for key.
+import { alchemy } from './alchemy/en';
 export const en = {
   title: 'Potion Siege',
   summon: 'Summon',
@@ -152,6 +153,7 @@ export const en = {
     wall: { name: 'Thick Walls', desc: 'Wall HP +{p}%' },
     startGold: { name: 'Pocket Money', desc: 'Start with +{n} gold' },
     crystals: { name: 'Crystal Sieve', desc: 'Crystals +{p}% from every battle' },
+    lab: { name: 'Alchemy Lab', desc: 'Every potion +{p}% damage' },
     now: 'Now: {text}',
     next: 'Next: {text}',
     none: 'no bonus yet',
@@ -227,6 +229,7 @@ export const en = {
     boss: 'Defeat {n} {n|one:boss|other:bosses}',
     challenge: 'Play the daily challenge',
     endless: 'Play an endless run',
+    react: 'Set off {n} {n|one:reaction|other:reactions}',
   },
   endless: {
     title: 'Endless Mode',
@@ -276,6 +279,7 @@ export const en = {
     poison: 'Corrosion Tonic',
     wind: 'Gale Tonic',
   },
+  alchemy,
   codex: {
     page: { potions: 'Potions', enemies: 'Enemies', feats: 'Achievements', reactions: 'Reactions' },
     rx: { steam: 'Steam', superconduct: 'Superconduct', overload: 'Overload', electrolysis: 'Electrolysis', combustion: 'Combustion', firestorm: 'Firestorm', blizzard: 'Blizzard', resonance: 'Resonance' },
@@ -445,6 +449,7 @@ export const en = {
     wave: 'Wave {n}',
     starCount: '{n} stars',
     note: 'Your scores go up after each battle.',
+    weekly: 'This week',
   },
 };
 

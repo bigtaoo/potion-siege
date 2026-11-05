@@ -12,8 +12,8 @@ const DIR = process.env.OUT_DIR ?? 'ref/balance/economy';
 const PROFILES = (process.env.PROFILES ?? 'casual,regular,heavy').split(',');
 const DAYS = { casual: Number(process.env.DAYS_CASUAL ?? 180), regular: Number(process.env.DAYS_REGULAR ?? 120), heavy: Number(process.env.DAYS_HEAVY ?? 60) };
 const PLAYERS = Number(process.env.PLAYERS ?? 3);
-const SOURCES = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'stars', 'endless', 'welcome'];
-const SOURCE_NAMES = { runs: '战斗', double: '×2', login: '登录', tasks: '任务', chest: '宝箱', ads: '广告', challenge: '挑战', achievements: '成就', chapter: '章节', stars: '星箱', endless: '无尽', welcome: '欢迎' };
+const SOURCES = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'stars', 'endless', 'welcome', 'rack'];
+const SOURCE_NAMES = { runs: '战斗', double: '×2', login: '登录', tasks: '任务', chest: '宝箱', ads: '广告', challenge: '挑战', achievements: '成就', chapter: '章节', stars: '星箱', endless: '无尽', welcome: '欢迎', rack: '酿造架' };
 
 function runShard(env) {
   return new Promise((resolve, reject) => {
@@ -58,7 +58,7 @@ function load(tag) {
 /** The numbers of one player's run. */
 function stats(days) {
   const first = (f) => days.find(f)?.day ?? null;
-  const total = days.reduce((s, d) => s + SOURCES.reduce((a, x) => a + d.earned[x], 0), 0);
+  const total = days.reduce((s, d) => s + SOURCES.reduce((a, x) => a + (d.earned[x] ?? 0), 0), 0);
   const cap = days.length;
   const stageCount = Math.max(...days.map((d) => d.cleared));
   const maxedDay = first((d) => d.maxed);
@@ -78,12 +78,12 @@ function stats(days) {
   const before = days.filter((d) => d.day <= upTo && !d.maxed);
   const income = (from, to) => {
     const ds = days.filter((d) => d.day >= from && d.day <= to);
-    return ds.length ? ds.reduce((s, d) => s + SOURCES.reduce((a, x) => a + d.earned[x], 0), 0) / ds.length : null;
+    return ds.length ? ds.reduce((s, d) => s + SOURCES.reduce((a, x) => a + (d.earned[x] ?? 0), 0), 0) / ds.length : null;
   };
   const shares = {};
   const d30 = days.filter((d) => d.day <= 30);
-  const t30 = d30.reduce((s, d) => s + SOURCES.reduce((a, x) => a + d.earned[x], 0), 0) || 1;
-  for (const x of SOURCES) shares[x] = d30.reduce((s, d) => s + d.earned[x], 0) / t30;
+  const t30 = d30.reduce((s, d) => s + SOURCES.reduce((a, x) => a + (d.earned[x] ?? 0), 0), 0) || 1;
+  for (const x of SOURCES) shares[x] = d30.reduce((s, d) => s + (d.earned[x] ?? 0), 0) / t30;
   const at = (n) => days.find((d) => d.day === n) ?? days[days.length - 1];
   return {
     cap,

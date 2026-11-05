@@ -1,9 +1,10 @@
-// A battle's events counted toward today's tasks and the achievements (Game.tick, live runs only).
+// A battle's events counted toward today's and this week's tasks and the achievements (Game.tick, live runs only).
 
 import { recordEvents } from '../sim/achievements';
 import { addProgress } from '../sim/daily';
 import type { MetaSave } from '../sim/meta';
 import { BALANCE, type BattleEvent } from '../sim/types';
+import { countWeekReaction } from '../sim/week';
 
 export function countDaily(m: MetaSave, events: readonly BattleEvent[]): void {
   recordEvents(m, events);
@@ -15,6 +16,9 @@ export function countDaily(m: MetaSave, events: readonly BattleEvent[]): void {
     } else if (ev.type === 'kill') {
       addProgress(m, 'kill');
       if (ev.boss) addProgress(m, 'boss');
+    } else if (ev.type === 'reaction') {
+      addProgress(m, 'react');
+      countWeekReaction(m, ev.id);
     }
   }
 }

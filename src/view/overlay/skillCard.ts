@@ -2,6 +2,7 @@
 
 import { Container, Graphics, Sprite } from 'pixi.js';
 import { t } from '../../i18n';
+import { boostedBy } from '../../sim/reactionPower';
 import { skillHeroes, skillMax, skillRarity, type Rarity, type SkillId } from '../../sim/skills';
 import type { HeroKind } from '../../sim/types';
 import { coinsIcon, LIGHT, medal, P, paperCard, stopwatchIcon, swordIcon, wallIcon } from '../kit';
@@ -54,11 +55,15 @@ export function skillCard(id: SkillId, level: number, look: CardLook = cardLook(
     icon.scale.set(pic.scale);
     card.addChild(icon);
   }
+  // a legend recipe's tag names the reaction it boosts, on gold
+  const rx = boostedBy(id);
   if (other) {
     const tag = new Container();
-    const text = label(t('recipe'), 32, { stroke: { color: P.line, width: 6 } });
+    const text = label(rx ? t('alchemy.legendBoost', { name: t(`codex.rx.${rx}`) }) : t('recipe'), 32, { stroke: { color: P.line, width: 6 } });
+    if (text.width > w - 60) text.scale.set((w - 60) / text.width);
     const tw = text.width + 40;
-    tag.addChild(new Graphics().roundRect(-tw / 2, -24, tw, 48, 24).fill(0x8f5ce0).stroke({ width: 4, color: P.line }), text);
+    tag.addChild(new Graphics().roundRect(-tw / 2, -24, tw, 48, 24).fill(rx ? RARITY_COLORS.legend : 0x8f5ce0).stroke({ width: 4, color: P.line }), text);
+    tag.label = rx ? `boosts_${rx}` : 'recipe';
     tag.position.set(0, iy + pic.r);
     card.addChild(tag);
   }

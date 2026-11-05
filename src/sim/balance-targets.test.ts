@@ -8,7 +8,7 @@ import { HERO_KINDS, LINEUP } from './types';
 function runs(stage: number, seeds: number, heroLevel = 1, workshop = 0) {
   const m = newMeta();
   for (const k of HERO_KINDS) m.heroes[k] = heroLevel;
-  m.workshop = { wall: workshop, startGold: workshop, crystals: workshop };
+  m.workshop = { wall: workshop, startGold: workshop, crystals: workshop, lab: 0 };
   const setup = battleSetup(m, stage);
   return Array.from({ length: seeds }, (_, i) => playOut(1000 + i, 1200, setup));
 }

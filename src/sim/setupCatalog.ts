@@ -3,6 +3,7 @@
 // run and the daily challenge under each modifier and each pair or triple of them, on saves from
 // a brand-new one to a maxed one. Nothing in the game imports it.
 
+import { openWorkshop } from './workshopOpen';
 import { challengeSetup, challengeStage, MODIFIER_IDS, type Challenge, type ModifierId } from './challenge';
 import { endlessSetup } from './endless';
 import { battleSetup, buyHero, buyWorkshop, heroCost, newMeta, WORKSHOP_IDS, workshopCost, type BattleSetup, type MetaSave } from './meta';
@@ -35,7 +36,7 @@ export function spentSave(cleared: number, budget: number, lineup: readonly Hero
       const c = heroCost(m.heroes[k]);
       if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyHero(m, k) };
     }
-    for (const id of WORKSHOP_IDS) {
+    for (const id of openWorkshop(m)) {
       const c = workshopCost(id, m.workshop[id]);
       if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyWorkshop(m, id) };
     }

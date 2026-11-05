@@ -17,6 +17,7 @@
 import type { Battle } from './battle';
 import { corrode, harm, slow, splash } from './damage';
 import { FP, pm, TICK_RATE, ticks, times, toFp } from './math/fixed';
+import { reactionPower } from './reactionPower';
 import { within } from './targets';
 import { BALANCE, type Enemy, type HeroKind, type ReactionId } from './types';
 
@@ -96,6 +97,11 @@ function around(b: Battle, e: Enemy, radius: number): Enemy[] {
 
 function setOff(b: Battle, e: Enemy, id: ReactionId, on: Element, by: HeroKind, damage: number): void {
   const C = R();
+  // the mastery stars and the legend recipe's boost: harder, longer and (the recipe) further
+  const { power, reach } = reactionPower(b, id);
+  const P = (x: number) => pm(x * power);
+  const T = (x: number) => ticks(x * power);
+  const reachOf = (x: number) => Math.round(x * reach);
   let radius = 0;
   // what the poison left would still have done, before it is used up
   const poisonLeft = Math.trunc((e.poisonDps * e.poisonTime) / TICK_RATE);
@@ -103,36 +109,37 @@ function setOff(b: Battle, e: Enemy, id: ReactionId, on: Element, by: HeroKind, 
   useUp(e, on);
   switch (id) {
     case 'steam': {
-      radius = C.steam.radius;
-      const hit = times(damage, pm(C.steam.damage));
+      radius = reachOf(C.steam.radius);
+      const hit = times(damage, P(C.steam.damage));
       for (const o of around(b, e, toFp(radius))) {
         harm(b, o, o === e ? hit : times(hit, splash(o)), by);
-        slow(o, C.steam.slow, ticks(C.steam.slowTime));
+        slow(o, C.steam.slow, T(C.steam.slowTime));
       }
       break;
     }
     case 'superconduct':
     case 'overload': {
       const c = C[id];
-      radius = c.radius;
-      const hit = times(damage, pm(c.damage));
+      radius = reachOf(c.radius);
+      const hit = times(damage, P(c.damage));
       for (const o of around(b, e, toFp(radius))) harm(b, o, o === e ? hit : times(hit, splash(o)), by);
       break;
     }
     case 'electrolysis': {
-      radius = C.electrolysis.radius;
-      for (const o of around(b, e, toFp(radius))) corrode(b, o, o === e ? 0 : poisonDps, C.electrolysis.rust);
+      radius = reachOf(C.electrolysis.radius);
+      const dps = times(poisonDps, P(1));
+      for (const o of around(b, e, toFp(radius))) corrode(b, o, o === e ? 0 : dps, C.electrolysis.rust);
       break;
     }
     case 'combustion': {
-      radius = C.combustion.radius;
-      const hit = times(Math.max(poisonLeft, damage), pm(C.combustion.damage));
+      radius = reachOf(C.combustion.radius);
+      const hit = times(Math.max(poisonLeft, damage), P(C.combustion.damage));
       for (const o of around(b, e, toFp(radius))) harm(b, o, o === e ? hit : times(hit, splash(o)), by);
       break;
     }
     case 'firestorm': {
-      radius = C.firestorm.radius;
-      const heat = times(Math.max(e.scorch, damage), pm(C.firestorm.burn));
+      radius = reachOf(C.firestorm.radius);
+      const heat = times(Math.max(e.scorch, damage), P(C.firestorm.burn));
       for (const o of around(b, e, toFp(radius))) {
         if (heat >= o.burnDps) {
           o.burnDps = heat;
@@ -143,12 +150,12 @@ function setOff(b: Battle, e: Enemy, id: ReactionId, on: Element, by: HeroKind, 
       break;
     }
     case 'blizzard': {
-      radius = C.blizzard.radius;
-      for (const o of around(b, e, toFp(radius))) slow(o, C.blizzard.slow, ticks(C.blizzard.slowTime));
+      radius = reachOf(C.blizzard.radius);
+      for (const o of around(b, e, toFp(radius))) slow(o, C.blizzard.slow, T(C.blizzard.slowTime));
       break;
     }
     case 'resonance':
-      harm(b, e, times(damage, pm(C.resonance.damage)), by);
+      harm(b, e, times(damage, P(C.resonance.damage)), by);
       break;
   }
   b.reactions[id]++;

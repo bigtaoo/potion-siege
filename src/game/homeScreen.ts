@@ -11,6 +11,7 @@ import { canClaimLogin, claimBonus, claimLogin, claimTask, gameDay, rollDay } fr
 import { buyHero, buyUnlock, buyWorkshop, claimChest } from '../sim/meta';
 import { openStarChests } from '../sim/starChest';
 import { setHardMode, stageOpen, stepStage } from '../sim/stars';
+import { claimRack, rackFill, rackFull, rackOpen, startRack } from '../sim/rack';
 import { buildHome, type HomeExtras, type HomePanel } from '../view/Home';
 import { loginPops, markSeen, upgradeHintKind } from '../view/nudges';
 import { flipSwitch } from '../view/soundSwitches';
@@ -23,12 +24,16 @@ import { challengeAd, playChallenge, playEndless } from './modes';
 import { reminderBook } from './reminderBook';
 import { claimWelcomeGift, enterHome, remindAnswer, welcomePops, welcomeVisit } from './returnHooks';
 import { beginTutorial } from './tutorialFlow';
+import { setTalent } from '../sim/talents';
+import { doClaimWeek, doPerk, doRebrew } from './alchemyActions';
 
 /** The home screen over an idle battle of the chosen stage; the login reward opens by itself
  *  the first time each day it can be claimed. */
 export function home(g: Game, panel: HomePanel = null): void {
   const today = gameDay(g.save, new Date());
   rollDay(g.save, today);
+  // the brewing rack starts brewing the first time it is open (and again after the clock went back)
+  if (startRack(g.save, Date.now())) g.store();
   const entering = !g.menu.visible;
   if (entering) {
     g.consentVisit = false;
@@ -149,6 +154,12 @@ export function home(g: Game, panel: HomePanel = null): void {
       if (ok && hint) hintDone(g, true);
       buy(g, ok, `hero_${kind}`, g.save.heroes[kind]);
     },
+    talent: (kind, tier, pick) => {
+      if (!setTalent(g.save.alchemy.talents, kind, g.save.heroes[kind], tier, pick)) return;
+      g.store();
+      g.analytics.track('talent', { kind, tier, pick, run: g.save.runs });
+      home(g, `talents_${kind}`);
+    },
     lineup: (kind) => lineup(g, kind),
     workshop: (id) => buy(g, buyWorkshop(g.save, id), `shop_${id}`, g.save.workshop[id]),
     claimChest: (at) => {
@@ -160,6 +171,13 @@ export function home(g: Game, panel: HomePanel = null): void {
     challenge: () => playChallenge(g, false),
     challengeAd: () => void challengeAd(g),
     endless: () => playEndless(g),
+    rebrew: () => doRebrew(g),
+    perk: (id) => doPerk(g, id),
+    claimWeek: (id, at) => doClaimWeek(g, id, at),
+    rack: (at) => {
+      const n = claimRack(g.save, Date.now());
+      if (n > 0) claimed(g, 'rack', n, panel, at);
+    },
     sound: (which) => {
       flipSwitch(g.save, which);
       g.audio.prefs(g.save.sound);
@@ -225,5 +243,6 @@ export function extras(g: Game): HomeExtras {
     data: { sending: g.analytics.sending, id: g.analytics.playerId, copy: !!g.platform.copyText, note: g.idNote },
     remind: reminderBook(g)?.state(),
     board: boardView(g),
+    rack: rackOpen(g.save) ? { fill: rackFill(g.save, Date.now()), full: rackFull(g.save, Date.now()) } : undefined,
   };
 }

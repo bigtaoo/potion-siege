@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/ko';
 
 // Korean.
 export const ko: Table = {
@@ -152,6 +153,7 @@ export const ko: Table = {
     wall: { name: '두꺼운 성벽', desc: '성벽 체력 +{p}%' },
     startGold: { name: '용돈', desc: '시작 골드 +{n}' },
     crystals: { name: '크리스탈 거름망', desc: '전투마다 크리스탈 +{p}%' },
+    lab: { name: '연금술 연구소', desc: '모든 물약 피해 +{p}%' },
     now: '현재: {text}',
     next: '다음: {text}',
     none: '보너스 없음',
@@ -225,6 +227,7 @@ export const ko: Table = {
     boss: '보스 {n}마리 처치',
     challenge: '일일 도전 플레이',
     endless: '무한 모드 한 판 플레이',
+    react: '반응 {n}회 일으키기',
   },
   endless: {
     title: '무한 모드',
@@ -274,6 +277,7 @@ export const ko: Table = {
     poison: '부식 토닉',
     wind: '질풍 토닉',
   },
+  alchemy,
   codex: {
     page: { potions: '포션', enemies: '적', feats: '업적', reactions: '반응' },
     rx: { steam: '증기', superconduct: '초전도', overload: '과부하', electrolysis: '전기분해', combustion: '연소', firestorm: '화염 폭풍', blizzard: '눈보라', resonance: '공명' },
@@ -443,5 +447,6 @@ export const ko: Table = {
     wave: '{n} 웨이브',
     starCount: '별 {n}개',
     note: '전투가 끝날 때마다 점수가 올라가요.',
+    weekly: '이번 주',
   },
 };

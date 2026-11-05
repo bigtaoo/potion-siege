@@ -4,7 +4,7 @@
 
 import type { PlaygamaBridge } from '../platform/playgama/bridge';
 import type { BoardId, BoardPage, BoardRow, Leaderboard, Scores } from './types';
-import { BOARD_IDS } from './types';
+import { SCORE_IDS } from './types';
 
 /** The daily challenge's board, which the home screen does not show (Bridge ranks it itself). */
 export const DAILY = 'daily_challenge';
@@ -18,7 +18,7 @@ export class BridgeBoard implements Leaderboard {
   constructor(private readonly bridge: Pick<PlaygamaBridge, 'setScore' | 'entries' | 'accountId'>) {}
 
   submit(scores: Scores): void {
-    for (const board of BOARD_IDS) {
+    for (const board of SCORE_IDS) {
       if (scores[board] <= this.sent[board]) continue;
       this.sent[board] = scores[board];
       this.bridge.setScore(board, scores[board]);
@@ -30,6 +30,7 @@ export class BridgeBoard implements Leaderboard {
   }
 
   async top(board: BoardId): Promise<BoardPage | null> {
+    if (board === 'weekly') return null;
     const entries = await this.bridge.entries(board);
     if (!entries) return null;
     const me = this.bridge.accountId();

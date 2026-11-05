@@ -3,8 +3,12 @@
 // up (bridgeBoard.ts), with every score sent to ours there too (backedBoard.ts). Two boards shown:
 // endless's best wave and the total stars; the daily challenge's wave goes to the boards that rank it.
 
-export type BoardId = 'endless' | 'stars';
-export const BOARD_IDS: readonly BoardId[] = ['endless', 'stars'];
+/** The boards a save's standing scores go to. */
+export type ScoreId = 'endless' | 'stars';
+export const SCORE_IDS: readonly ScoreId[] = ['endless', 'stars'];
+/** The boards the panel shows: the standing ones and this week's tower (ours only; sim/week.ts). */
+export type BoardId = ScoreId | 'weekly';
+export const BOARD_IDS: readonly BoardId[] = ['endless', 'stars', 'weekly'];
 
 export interface BoardRow {
   rank: number;
@@ -22,7 +26,7 @@ export interface BoardPage {
   me: BoardRow | null;
 }
 
-export type Scores = Record<BoardId, number>;
+export type Scores = Record<ScoreId, number>;
 
 export interface Leaderboard {
   /** Puts this player's scores on the boards (after a battle, at boot); never throws. */
@@ -32,4 +36,6 @@ export interface Leaderboard {
   /** The wave a daily challenge run reached, for the boards that rank it ('daily_challenge' on
    *  Playgama's and on ours). Never throws. */
   daily?(wave: number): void;
+  /** A new best tower floor this week, for the weekly board (ours only). Never throws. */
+  weekly?(floor: number): void;
 }

@@ -236,7 +236,11 @@
     "combustion": { "damage": 1.2, "radius": 80 },
     "firestorm": { "burn": 0.3, "radius": 90 },
     "blizzard": { "slow": 0.4, "slowTime": 2, "radius": 100 },
-    "resonance": { "damage": 0.3 }
+    "resonance": { "damage": 0.3 },
+    "masteryStep": 0.05,
+    "legendPower": 1.5,
+    "legendReach": 1.3,
+    "findReward": 100
   },
   "skills": {
     "allDamage": 0.15,
@@ -316,7 +320,39 @@
     "workshop": {
       "wall": { "max": 10, "step": 0.1, "base": 60, "growth": 1.5 },
       "startGold": { "max": 10, "step": 15, "base": 50, "growth": 1.5 },
-      "crystals": { "max": 10, "step": 0.05, "base": 80, "growth": 1.55 }
+      "crystals": { "max": 10, "step": 0.05, "base": 80, "growth": 1.55 },
+      "lab": { "max": 20, "step": 0.03, "base": 400, "growth": 1.3, "from": 50 }
+    }
+  },
+  "alchemy": {
+    "rack": { "from": 3, "base": 6, "perStage": 1.5, "capHours": 8 },
+    "replay": { "free": 3, "factor": 0.5 },
+    "stuck": { "assistAfter": 2, "exitsAfter": 3 },
+    "rebrew": {
+      "from": 50,
+      "perStage": 0.4,
+      "perStar": 0.1,
+      "keepLab": 0.5,
+      "perks": {
+        "reaction": { "max": 5, "step": 0.1, "cost": 6 },
+        "wall": { "max": 5, "step": 0.08, "cost": 5 },
+        "gold": { "max": 5, "step": 25, "cost": 4 },
+        "crystals": { "max": 5, "step": 0.1, "cost": 8 }
+      }
+    },
+    "week": {
+      "rules": {
+        "surge": { "power": 2, "hp": 1.3 },
+        "focus": { "power": 4 },
+        "glass": { "power": 2.5, "damage": 0.8 },
+        "brittle": { "power": 1.8, "wall": 0.75 }
+      },
+      "tasks": {
+        "kinds": { "n": 4, "reward": 150 },
+        "react": { "n": 400, "reward": 150 },
+        "tower": { "n": 15, "reward": 200 },
+        "challenge": { "n": 4, "reward": 150 }
+      }
     }
   },
   "daily": {
@@ -333,7 +369,8 @@
       "skill": { "n": 6, "reward": 80 },
       "boss": { "n": 2, "reward": 130 },
       "challenge": { "n": 1, "reward": 100 },
-      "endless": { "n": 1, "reward": 100 }
+      "endless": { "n": 1, "reward": 100 },
+      "react": { "n": 40, "reward": 100 }
     }
   },
   "welcome": {
@@ -378,6 +415,7 @@
     "winderMax": 4,
     "bossEvery": 5,
     "chapterEvery": 10,
+    "catalyst": { "every": 5, "max": 2, "volatile": 0.25, "wide": 0.15, "potent": 0.1, "quick": 0.08, "bulwark": 0.2, "bounty": 1 },
     "hpScale": 0.856,
     "perWave": 10,
     "runCap": 300,

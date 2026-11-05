@@ -3,6 +3,7 @@
 // growing until the wall falls. It pays a little for every wave reached, capped per run so a
 // long run is no crystal farm, and a bigger sum the first time each milestone wave is reached.
 
+import { perkOf, reach } from './rebrew';
 import { battleSetup, workshopValue, type BattleSetup, type MetaSave } from './meta';
 import { BALANCE } from './types';
 
@@ -45,7 +46,7 @@ export function parseEndless(v: unknown): EndlessSave {
 
 /** Endless mode is open: the first chapter is cleared. */
 export function endlessOpen(m: MetaSave): boolean {
-  return m.cleared >= E.unlock;
+  return reach(m) >= E.unlock;
 }
 
 /** The battle setup of an endless run: the player's potions and workshop on the endless stage,
@@ -65,7 +66,7 @@ export function beginEndless(m: MetaSave): void {
  *  through the battle's purse like a stage's reward, so a revive pays only the rest. */
 export function endlessPay(m: MetaSave, wave: number): number {
   const base = Math.min(E.runCap, E.perWave * wave);
-  return Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals)));
+  return Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals) + perkOf(m, 'crystals')));
 }
 
 /** The milestones reached by `wave` (a count, into `endless.milestones`). */

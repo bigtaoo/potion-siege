@@ -3,7 +3,11 @@ Third-party software in this game
 
 The game's code is bundled with the open-source libraries below. Each keeps its own
 copyright; the licence texts follow. The game bundles no font (it draws with the device's
-own) and makes its sound and music in code, so neither needs a notice.
+own) and makes its music and most of its sound in code.
+
+The potion reaction sounds (sfx/rx_*.mp3) are cut from Kenney's "Impact Sounds" and
+"Sci-Fi Sounds" packs (https://kenney.nl), released under CC0 1.0 (public domain); credit
+is not required but given with thanks.
 
 
 MIT License

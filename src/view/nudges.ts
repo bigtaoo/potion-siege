@@ -1,10 +1,12 @@
 // The home screen's nudges, as plain rules over the save: which tabs get a red dot, when the
 // daily challenge starts showing, and the stage the codex quotes an enemy's numbers for.
 
+import { openWorkshop } from '../sim/workshopOpen';
 import { nextTier, TRACK_IDS, trackReady } from '../sim/achievements';
 import { CHAPTER_COUNT, chestWaiting } from '../sim/chapters';
 import { guideLeft } from '../sim/guide';
-import { chestReady, heroCost, heroUnlocked, maxStage, unlockPrice, WORKSHOP_IDS, workshopCost, type MetaSave, type SeenTab } from '../sim/meta';
+import { chestReady, heroCost, heroUnlocked, maxStage, unlockPrice, workshopCost, type MetaSave, type SeenTab } from '../sim/meta';
+import { reach } from '../sim/rebrew';
 import { anyStarChestWaiting } from '../sim/starChest';
 import { HERO_KINDS, LINEUP, type EnemyKind, type HeroKind } from '../sim/types';
 import { FIRST_STAGE } from '../sim/waves';
@@ -37,7 +39,7 @@ export function canUpgradeLineup(m: MetaSave): boolean {
 export function dotKeys(m: MetaSave, tab: SeenTab, today: string, ready = true): string[] {
   if (tab === 'potions') return HERO_KINDS.filter((k) => !LINEUP.includes(k) && (!ready || heroUnlocked(m, k))).map((k) => `new:${k}`);
   if (tab === 'workshop') {
-    return WORKSHOP_IDS.filter((id) => {
+    return openWorkshop(m).filter((id) => {
       const cost = workshopCost(id, m.workshop[id]);
       return cost !== null && (!ready || cost <= m.crystals);
     }).map((id) => `${id}:${m.workshop[id]}`);
@@ -96,7 +98,7 @@ export const CHALLENGE_AFTER = 3;
 /** The daily challenge is offered: enough stages won, or it was played already (a save from
  *  before the gate keeps it). */
 export function challengeOpen(m: MetaSave): boolean {
-  return m.cleared >= CHALLENGE_AFTER || m.challenge.date !== '';
+  return reach(m) >= CHALLENGE_AFTER || m.challenge.date !== '';
 }
 
 /** Stages to clear before a task asking for the challenge brings its banner out early: not
@@ -170,7 +172,7 @@ export function pointWait(m: MetaSave, lost: boolean, stage: boolean): number | 
  *  them is there to do. */
 export function lossStep(m: MetaSave): 'potions' | 'workshop' | 'battle' | null {
   if (canUpgradeLineup(m)) return 'potions';
-  if (WORKSHOP_IDS.some((id) => {
+  if (openWorkshop(m).some((id) => {
     const cost = workshopCost(id, m.workshop[id]);
     return cost !== null && cost <= m.crystals;
   })) return 'workshop';

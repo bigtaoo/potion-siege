@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/ja';
 
 // Japanese.
 export const ja: Table = {
@@ -152,6 +153,7 @@ export const ja: Table = {
     wall: { name: '厚い城壁', desc: '城壁HP +{p}%' },
     startGold: { name: 'おこづかい', desc: '初期ゴールド +{n}' },
     crystals: { name: 'クリスタルふるい', desc: '毎バトルのクリスタル +{p}%' },
+    lab: { name: '錬金ラボ', desc: '全ポーションのダメージ +{p}%' },
     now: '現在：{text}',
     next: '次：{text}',
     none: 'ボーナスなし',
@@ -225,6 +227,7 @@ export const ja: Table = {
     boss: 'ボスを{n}体倒す',
     challenge: 'デイリーチャレンジをプレイ',
     endless: 'エンドレスモードを1回プレイ',
+    react: '反応を{n}回起こす',
   },
   endless: {
     title: 'エンドレスモード',
@@ -274,6 +277,7 @@ export const ja: Table = {
     poison: '腐食ポーション',
     wind: '疾風ポーション',
   },
+  alchemy,
   codex: {
     page: { potions: 'ポーション', enemies: '敵', feats: '実績', reactions: '反応' },
     rx: { steam: '蒸気', superconduct: '超電導', overload: '過負荷', electrolysis: '電気分解', combustion: '燃焼', firestorm: '火炎嵐', blizzard: '吹雪', resonance: '共鳴' },
@@ -443,5 +447,6 @@ export const ja: Table = {
     wave: 'ウェーブ {n}',
     starCount: 'スター {n}',
     note: 'スコアはバトルごとに送られます。',
+    weekly: '今週',
   },
 };

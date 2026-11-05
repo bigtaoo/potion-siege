@@ -15,7 +15,12 @@ import { chapterOf, isFinale, openChapterChest, stageModifiers } from './chapter
 import type { SkillId } from './skills';
 import type { WaveMods } from './waves';
 import { parseGuide } from './guide';
-import { BALANCE, HERO_KINDS, LINEUP, type HeroKind } from './types';
+import { masteryOf } from './reactionPower';
+import { battleTalents, type TalentPicks } from './talents';
+import { newAlchemy, parseAlchemy, type AlchemySave } from './alchemySave';
+import { workshopOpen } from './workshopOpen';
+import { perkOf, reach } from './rebrew';
+import { BALANCE, HERO_KINDS, LINEUP, type HeroKind, type ReactionId } from './types';
 
 const M = BALANCE.meta;
 const S = BALANCE.shop;
@@ -24,7 +29,7 @@ const S = BALANCE.shop;
  *  does not know and never lowers what the newer one may allow higher (cleared, hero levels). */
 export const SAVE_VERSION = 2;
 
-export const WORKSHOP_IDS = ['wall', 'startGold', 'crystals'] as const;
+export const WORKSHOP_IDS = ['wall', 'startGold', 'crystals', 'lab'] as const;
 export type WorkshopId = (typeof WORKSHOP_IDS)[number];
 
 export interface MetaSave {
@@ -73,6 +78,8 @@ export interface MetaSave {
   stars: StarSave;
   /** Losses in a row on stages 1-3, reset by a win there (lossStreak.ts). */
   lossStreak: number;
+  /** The brewing rack, replays and stuck stages (alchemySave.ts). */
+  alchemy: AlchemySave;
 }
 
 /** The home tabs whose dot lights once per new thing. */
@@ -111,6 +118,14 @@ export interface BattleSetup {
   giftSummons?: number;
   /** Summons free from the start, after losses in a row on an early stage (lossStreak.ts). */
   freeSummons?: number;
+  /** The mastery stars of the reactions that have one (reactionPower.ts). */
+  mastery?: Partial<Record<ReactionId, number>>;
+  /** The lineup's talent picks (talents.ts). */
+  talents?: TalentPicks;
+  /** What multiplies every reaction's power: rebrew's perk and the week's rule (week.ts); 1 absent. */
+  reactionScale?: number;
+  /** The reaction the week's rule favours, and what its power is multiplied by on top. */
+  focus?: { id: ReactionId; power: number };
 }
 
 /** What a daily challenge or a stage's chapter changes inside the battle (the wall, enemy hit
@@ -135,7 +150,7 @@ export function newMeta(): MetaSave {
     v: SAVE_VERSION,
     crystals: 0,
     heroes: { arcane: 1, fire: 1, ice: 1, lightning: 1, poison: 1, wind: 1 },
-    workshop: { wall: 0, startGold: 0, crystals: 0 },
+    workshop: { wall: 0, startGold: 0, crystals: 0, lab: 0 },
     cleared: 0,
     stage: 1,
     bestWave: 0,
@@ -157,6 +172,7 @@ export function newMeta(): MetaSave {
     seen: {},
     stars: newStars(),
     lossStreak: 0,
+    alchemy: newAlchemy(),
   };
 }
 
@@ -204,7 +220,8 @@ export function parseMeta(raw: string | null): MetaSave {
   out.endless = parseEndless(data.endless);
   const sound = (data.sound ?? {}) as Record<string, unknown>;
   out.sound = { music: sound.music !== false, sfx: sound.sfx !== false, shake: typeof sound.shake === 'boolean' ? sound.shake : null, haptics: sound.haptics !== false, hints: sound.hints !== false };
-  out.achievements = parseAchievements(data.achievements, out.cleared);
+  out.alchemy = parseAlchemy(data.alchemy);
+  out.achievements = parseAchievements(data.achievements, reach(out));
   // a save from before chapters keeps the chests of the chapters it finished for the home
   // screen to open
   const chests = Array.isArray(data.chapterChests) ? data.chapterChests : [];
@@ -215,7 +232,7 @@ export function parseMeta(raw: string | null): MetaSave {
     const keys = seen[tab];
     if (Array.isArray(keys)) out.seen[tab] = keys.filter((k): k is string => typeof k === 'string').slice(0, 64);
   }
-  out.stars = parseStars(data.stars, out.cleared);
+  out.stars = parseStars(data.stars, reach(out));
   out.lossStreak = int(data.lossStreak, 0, 99, 0);
   // only a newer build's save has fields worth keeping; this build's own junk is dropped as before
   return newer ? carry(data, out) : out;
@@ -254,7 +271,8 @@ export function workshopCost(id: WorkshopId, level: number): number | null {
   return Math.round((w.base * w.growth ** level) / 5) * 5;
 }
 
-/** The workshop bonus at a level: a fraction for wall and crystals, gold for startGold. */
+/** The workshop bonus at a level: a fraction for wall, crystals and the lab (every potion's
+ *  damage), gold for startGold. */
 export function workshopValue(id: WorkshopId, level: number): number {
   return M.workshop[id].step * level;
 }
@@ -269,46 +287,35 @@ export function buyHero(m: MetaSave, kind: HeroKind): boolean {
 
 export function buyWorkshop(m: MetaSave, id: WorkshopId): boolean {
   const cost = workshopCost(id, m.workshop[id]);
-  if (cost === null || !(m.crystals >= cost)) return false;
+  if (cost === null || !workshopOpen(m, id) || !(m.crystals >= cost)) return false;
   m.crystals -= cost;
   m.workshop[id]++;
   return true;
 }
 
-/** The seed of a new player's battles: the first one, and stage 1 again until it is won, so
- *  their telemetry compares run for run (the waves are the same whatever the player does).
- *  Picked by scripts/first-seed.test.ts over seeds 1-2000 on the stage 1 base setup: the first
- *  two summons are a fire pair side by side on the wall (cells 18 and 17, at and just right of
- *  the middle), so the tutorial's merge is one short drag on the first potions the art shows off,
- *  clear of the hands on 召唤 and 强化 that sit over the outer two columns on each side on a tall
- *  screen; the third is an arcane one in cell 16, so there is one pair to point at and it too stays
- *  in sight; wave 1 comes down both halves of the field evenly (18 / 20 of the first 38); and the
- *  bot wins with the wall untouched whether it acts every tick or only every 0.5, 1 or 2 s.
- *  It took over from 609, whose pair stood under the hand on 召唤.
- *  Summons roll on their own stream, so this opening holds however long the player waits between
- *  taps. A change to what the battle rolls its dice for, or in what order, changes what this
- *  seed plays: run the script again
- *  (SEEDS=2000 npx vitest run --config scripts/vitest.seed.config.js) and repick. */
-export const FIRST_SEED = 1764;
-
-/** FIRST_SEED for a save that has not won a battle yet on stage 1, else null (a random one). */
-export function firstSeed(m: MetaSave): number | null {
-  return m.cleared === 0 && m.stage === 1 ? FIRST_SEED : null;
-}
+export { FIRST_SEED, firstSeed } from './firstSeed';
 
 export function battleSetup(m: MetaSave, stage = m.stage): BattleSetup {
   const heroes = {} as Record<HeroKind, number>;
-  for (const k of Object.keys(m.heroes) as HeroKind[]) heroes[k] = heroDamage(m.heroes[k]);
+  // the lab adds its share to every potion alike
+  const lab = 1 + workshopValue('lab', m.workshop.lab);
+  for (const k of Object.keys(m.heroes) as HeroKind[]) heroes[k] = heroDamage(m.heroes[k]) * lab;
   const modifiers = stageModifiers(stage);
+  const mastery = masteryOf(m);
+  const talents = battleTalents(m.alchemy.talents, m.lineup, m.heroes);
+  const reactionScale = 1 + perkOf(m, 'reaction');
   return {
     stage,
     enemyHp: stageHp(stage),
     heroDamage: heroes,
     heroLevels: { ...m.heroes },
     lineup: [...m.lineup],
-    wallHp: BALANCE.wallHp * (1 + workshopValue('wall', m.workshop.wall)),
-    startGold: BALANCE.startGold + workshopValue('startGold', m.workshop.startGold),
+    wallHp: BALANCE.wallHp * (1 + workshopValue('wall', m.workshop.wall) + perkOf(m, 'wall')),
+    startGold: BALANCE.startGold + workshopValue('startGold', m.workshop.startGold) + perkOf(m, 'gold'),
     ...(modifiers && { modifiers }),
+    ...(mastery && { mastery }),
+    ...(talents && { talents }),
+    ...(reactionScale > 1 && { reactionScale }),
   };
 }
 
@@ -342,7 +349,7 @@ export function runReward(m: MetaSave, r: RunResult): Reward {
   base *= 1 + R.stageStep * (r.stage - 1);
   if (firstClear) base += R.firstClear * r.stage;
   const unlocked = firstClear ? stageUnlocks(r.stage).filter((k) => !heroUnlocked(m, k)) : [];
-  return { crystals: Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals))), firstClear, unlocked };
+  return { crystals: Math.round(base * (1 + workshopValue('crystals', m.workshop.crystals) + perkOf(m, 'crystals'))), firstClear, unlocked };
 }
 
 /** Books a finished battle into the save; a first clear opens the next stage and moves to it. */

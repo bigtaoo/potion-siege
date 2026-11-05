@@ -9,7 +9,10 @@
 // played (more stars than battles, a wave no run reaches) posts nothing.
 //
 // The daily challenge's board ranks one day's furthest wave (the save's challenge.best on
-// challenge.date); a later day's post starts the entry over.
+// challenge.date); a later day's post starts the entry over. The weekly board ranks the tower's
+// furthest floor under the week's rule (alchemy.week.best in the week starting alchemy.week.id),
+// the same way by week. A rebrewed save starts the campaign over (cleared back to 0): its stars
+// and its tower stand on the furthest it ever cleared (alchemy.rebrew.peak).
 //
 // One `<board>.json` per board in `<data>/boards`: each entry the copy's id, its score, when it
 // first reached it and when it was last posted. The boards show a short tag hashed from the id,
@@ -32,7 +35,9 @@ export const MAX_ROWS = 50;
 /** A POST /l body: an id and a secret. */
 export const MAX_POST = 1024;
 
-export const BOARDS = ['endless', 'stars', 'daily_challenge'];
+export const BOARDS = ['endless', 'stars', 'daily_challenge', 'weekly'];
+/** The boards that rank one day's (or week's) score, and start over on the next. */
+const DATED = ['daily_challenge', 'weekly'];
 
 /** A platform as the game names itself (Platform.name: web, crazygames, ios, playgama). */
 const PLATFORM = /^[a-z][a-z0-9_]{1,23}$/;
@@ -60,8 +65,15 @@ function dailyOf(c) {
   return typeof c?.date === 'string' && DAY.test(c.date) ? { score: best, day: c.date } : { score: 0, day: '' };
 }
 
+/** The week's tower best and the Monday that names the week. */
+function weekOf(w) {
+  const best = count(w?.best ?? 0, ENDLESS_MAX);
+  if (best === null) return null;
+  return typeof w?.id === 'string' && DAY.test(w.id) ? { score: best, day: w.id } : { score: 0, day: '' };
+}
+
 /**
- * A save's scores, { endless, stars, daily_challenge, day }, or null when the save could not have been played: stars on
+ * A save's scores, { endless, stars, daily_challenge, weekly, days: { daily_challenge, weekly } }, or null when the save could not have been played: stars on
  * a stage not cleared, more stars than battles, an endless wave before endless opens or past any run.
  */
 export function scoresOf(saveText) {
@@ -74,18 +86,22 @@ export function scoresOf(saveText) {
   if (!save || typeof save !== 'object') return null;
   const runs = count(save.runs ?? 0, Number.MAX_SAFE_INTEGER);
   const cleared = count(save.cleared ?? 0, STAGES);
+  const peak = count(save.alchemy?.rebrew?.peak ?? 0, STAGES);
+  const week = weekOf(save.alchemy?.week);
   const en = save.endless ?? {};
   const best = count(en.best ?? 0, ENDLESS_MAX);
   const endlessRuns = count(en.runs ?? 0, Number.MAX_SAFE_INTEGER);
   const normal = starList(save.stars?.normal);
   const hard = starList(save.stars?.hard);
   const daily = dailyOf(save.challenge);
-  if (!daily || runs === null || cleared === null || best === null || endlessRuns === null || !normal || !hard) return null;
-  if (normal.some((s, i) => s > 0 && i >= cleared) || hard.some((s, i) => s > 0 && normal[i] === 0)) return null;
+  if (!daily || !week || peak === null || runs === null || cleared === null || best === null || endlessRuns === null || !normal || !hard) return null;
+  const reach = Math.max(cleared, peak);
+  if (normal.some((s, i) => s > 0 && i >= reach) || hard.some((s, i) => s > 0 && normal[i] === 0)) return null;
   const stars = [...normal, ...hard].reduce((a, b) => a + b, 0);
   if (stars > 3 * runs) return null;
-  if (best > 0 && (cleared < ENDLESS_UNLOCK || endlessRuns === 0)) return null;
-  return { endless: best, stars, daily_challenge: daily.score, day: daily.day };
+  if ((best > 0 || week.score > 0) && (reach < ENDLESS_UNLOCK || endlessRuns === 0)) return null;
+  if (week.score > best) return null;
+  return { endless: best, stars, daily_challenge: daily.score, weekly: week.score, days: { daily_challenge: daily.day, weekly: week.day } };
 }
 
 /** What the collector takes of a posted body: the copy's id and secret and the platform it came
@@ -131,7 +147,7 @@ export class Leaderboards {
    * ('' for none named): 'posted', or
    * 'implausible' when the save could not have been played. A score of 0 is not ranked; a lower
    * score than the entry's replaces it (a save restored from an older copy), and only a higher one
-   * moves when it was reached; on the daily board a new day starts the entry over.
+   * moves when it was reached; on the daily and weekly boards a new day or week starts the entry over.
    */
   post(id, save, now, platform = '') {
     const scores = scoresOf(save);
@@ -141,10 +157,11 @@ export class Leaderboards {
       const i = list.findIndex((e) => e.id === id);
       const was = i >= 0 ? list[i] : null;
       const score = scores[board];
-      const daily = board === 'daily_challenge';
-      const same = was && (!daily || was.day === scores.day);
+      const daily = DATED.includes(board);
+      const day = daily ? scores.days[board] : '';
+      const same = was && (!daily || was.day === day);
       if (i >= 0) list.splice(i, 1);
-      if (score > 0) list.push({ id, score, reached: same && was.score >= score ? was.reached : now, at: now, ...(platform ? { platform } : {}), ...(daily ? { day: scores.day } : {}) });
+      if (score > 0) list.push({ id, score, reached: same && was.score >= score ? was.reached : now, at: now, ...(platform ? { platform } : {}), ...(daily ? { day } : {}) });
       list.sort(order);
       if (list.length > MAX_ENTRIES) list.length = MAX_ENTRIES;
       if (was || score > 0) this.write(board);
@@ -157,7 +174,7 @@ export class Leaderboards {
    *  posted). Ties share a rank. */
   top(board, n, me = null, { platform = null, day = null } = {}) {
     const all = this.boards[board];
-    const on = board === 'daily_challenge' ? (day ?? all.reduce((d, e) => (e.day > d ? e.day : d), '')) : null;
+    const on = DATED.includes(board) ? (day ?? all.reduce((d, e) => (e.day > d ? e.day : d), '')) : null;
     const list = all.filter((e) => (!platform || e.platform === platform) && (on === null || e.day === on));
     const rows = [];
     let mine = null;

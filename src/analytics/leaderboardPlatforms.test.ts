@@ -54,8 +54,8 @@ describe('scores by platform', () => {
 
 describe('the daily challenge board', () => {
   it("reads a save's challenge wave and its day, and none without a day", () => {
-    expect(scoresOf(save({ wave: 14, day: '2026-10-31' }))).toMatchObject({ daily_challenge: 14, day: '2026-10-31' });
-    expect(scoresOf(save({ wave: 14, day: 'soon' }))).toMatchObject({ daily_challenge: 0, day: '' });
+    expect(scoresOf(save({ wave: 14, day: '2026-10-31' }))).toMatchObject({ daily_challenge: 14, days: { daily_challenge: '2026-10-31' } });
+    expect(scoresOf(save({ wave: 14, day: 'soon' }))).toMatchObject({ daily_challenge: 0, days: { daily_challenge: '' } });
     expect(scoresOf(save({ wave: ENDLESS_MAX + 1, day: '2026-10-31' }))).toBeNull();
   });
 

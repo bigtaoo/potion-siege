@@ -52,6 +52,7 @@ export class ServerBoard implements Leaderboard {
   private timer: unknown = null;
   private scores: Scores = { endless: 0, stars: 0 };
   private wave = 0;
+  private floor = 0;
 
   constructor(
     private readonly url: string,
@@ -72,10 +73,17 @@ export class ServerBoard implements Leaderboard {
     this.post();
   }
 
+  /** The server reads the week's floor from the copy too; this only says a new best was set. */
+  weekly(floor: number): void {
+    if (!(floor >= 1)) return;
+    this.floor = Math.floor(floor);
+    this.post();
+  }
+
   private post(): void {
     const { endless, stars } = this.scores;
-    const key = `${endless}/${stars}/${this.wave}`;
-    if (key === this.sent || (endless === 0 && stars === 0 && this.wave === 0) || this.timer !== null) return;
+    const key = `${endless}/${stars}/${this.wave}/${this.floor}`;
+    if (key === this.sent || (endless === 0 && stars === 0 && this.wave === 0 && this.floor === 0) || this.timer !== null) return;
     try {
       this.copies.flush();
     } catch {

@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/tr';
 
 // Turkish.
 export const tr: Table = {
@@ -152,6 +153,7 @@ export const tr: Table = {
     wall: { name: 'Kalın Surlar', desc: 'Sur canı +%{p}' },
     startGold: { name: 'Cep Harçlığı', desc: '+{n} altınla başla' },
     crystals: { name: 'Kristal Eleği', desc: 'Her savaşta kristal +%{p}' },
+    lab: { name: 'Simya Lab', desc: 'Tüm iksirler +%{p} hasar' },
     now: 'Şu an: {text}',
     next: 'Sonraki: {text}',
     none: 'henüz bonus yok',
@@ -225,6 +227,7 @@ export const tr: Table = {
     boss: '{n} patron yen',
     challenge: 'Günlük meydan okumayı oyna',
     endless: 'Bir sonsuz mod turu oyna',
+    react: '{n} tepkime başlat',
   },
   endless: {
     title: 'Sonsuz Mod',
@@ -274,6 +277,7 @@ export const tr: Table = {
     poison: 'Asit İksiri',
     wind: 'Rüzgâr İksiri',
   },
+  alchemy,
   codex: {
     page: { potions: 'İksirler', enemies: 'Düşmanlar', feats: 'Başarımlar', reactions: 'Tepkimeler' },
     rx: { steam: 'Buhar', superconduct: 'Süperiletken', overload: 'Aşırı Yük', electrolysis: 'Elektroliz', combustion: 'Yanma', firestorm: 'Ateş Fırtınası', blizzard: 'Tipi', resonance: 'Rezonans' },
@@ -443,5 +447,6 @@ export const tr: Table = {
     wave: '{n}. dalga',
     starCount: '{n} yıldız',
     note: 'Skorların her savaştan sonra gönderilir.',
+    weekly: 'Bu hafta',
   },
 };

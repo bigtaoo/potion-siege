@@ -1,4 +1,4 @@
-// The leaderboards as a panel over the home screen: the endless and stars boards, the top rows
+// The leaderboards as a panel over the home screen: the endless, stars and this week's boards, the top rows
 // and the player's own (board/types.ts; Bridge on Playgama, the collector elsewhere).
 
 import { Container, Graphics } from 'pixi.js';
@@ -34,7 +34,7 @@ export function trophyIcon(): Graphics {
 
 /** A row's score in words: the endless wave, or the stars. */
 export function scoreText(board: BoardId, score: number): string {
-  return board === 'endless' ? t('board.wave', { n: score }) : t('board.starCount', { n: score });
+  return board === 'stars' ? t('board.starCount', { n: score }) : t('board.wave', { n: score });
 }
 
 function row(board: BoardId, r: BoardRow, y: number): Container {
@@ -64,8 +64,8 @@ export function boardPanel(act: HomeActions, fit: MenuFit, view: BoardView): Con
   const top = -h / 2;
   BOARD_IDS.forEach((id, i) => {
     const on = id === view.tab;
-    const pill = new PillButton(t(`board.${id}`), 380, 100, on ? 'green' : 'brass', () => act.boardTab(id), 40);
-    pill.position.set((i - 0.5) * 400, top + 150);
+    const pill = new PillButton(t(`board.${id}`), 270, 100, on ? 'green' : 'brass', () => act.boardTab(id), 38);
+    pill.position.set((i - (BOARD_IDS.length - 1) / 2) * 284, top + 150);
     pill.alpha = on ? 1 : 0.8;
     box.addChild(pill);
   });

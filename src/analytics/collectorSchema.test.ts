@@ -102,8 +102,8 @@ describe('collector event names', () => {
     const all = game.map(([, text]) => text).join('\n');
     expect(all).toContain('first(`first_star${');
     expect(all).toContain('first(`first_${ev.reason}`');
-    expect(all).toMatch(/type OfferReason = 'upgrade' \| 'ultimate' \| 'boss';/);
-    expect(all).toContain("if (ev.reason !== 'boss') this.a.first(`first_${ev.reason}`");
+    expect(all).toMatch(/type OfferReason = 'upgrade' \| 'ultimate' \| 'boss' \| 'catalyst';/);
+    expect(all).toContain("if (ev.reason === 'upgrade' || ev.reason === 'ultimate') this.a.first(`first_${ev.reason}`");
     expect(all).toMatch(/FeedbackSend = \(name: 'feedback' \| 'feedback_skip'/);
   });
 });

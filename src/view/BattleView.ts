@@ -271,7 +271,7 @@ export class BattleView extends Container {
           break;
         }
         case 'reaction':
-          this.reactions.show(this.fx, this.floaters, ev.id, ev.x, ev.y, ev.radius);
+          this.reactions.show(this.fx, this.floaters, ev.id, ev.x, ev.y, ev.radius, this.battle?.setup.mastery?.[ev.id]);
           break;
         case 'gust':
           this.fx.effect(0.5, (g, life) => gustWave(g, F.left, F.right, ev.y, ev.depth, 1 - life), true);

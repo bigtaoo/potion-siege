@@ -38,9 +38,9 @@ describe('leaderboard scores', () => {
   it("reads a real save's endless best and its stars, normal and hard", () => {
     const m = JSON.parse(save({ best: 23 })) as ReturnType<typeof newMeta>;
     m.stars.hard[0] = 3;
-    expect(scoresOf(JSON.stringify(m))).toEqual({ endless: 23, stars: totalStars(m), daily_challenge: 0, day: '' });
-    expect(scoresOf(JSON.stringify(newMeta()))).toEqual({ endless: 0, stars: 0, daily_challenge: 0, day: '' });
-    expect(scoresOf('{}')).toEqual({ endless: 0, stars: 0, daily_challenge: 0, day: '' });
+    expect(scoresOf(JSON.stringify(m))).toEqual({ endless: 23, stars: totalStars(m), daily_challenge: 0, weekly: 0, days: { daily_challenge: '', weekly: '' } });
+    expect(scoresOf(JSON.stringify(newMeta()))).toEqual({ endless: 0, stars: 0, daily_challenge: 0, weekly: 0, days: { daily_challenge: '', weekly: '' } });
+    expect(scoresOf('{}')).toEqual({ endless: 0, stars: 0, daily_challenge: 0, weekly: 0, days: { daily_challenge: '', weekly: '' } });
   });
 
   it('turns down saves no one could have played', () => {

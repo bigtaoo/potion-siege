@@ -7,9 +7,9 @@ export const ENDLESS_MAX: number;
 export const MAX_ENTRIES: number;
 export const MAX_ROWS: number;
 export const MAX_POST: number;
-export const BOARDS: readonly ('endless' | 'stars' | 'daily_challenge')[];
+export const BOARDS: readonly ('endless' | 'stars' | 'daily_challenge' | 'weekly')[];
 
-export type BoardId = 'endless' | 'stars' | 'daily_challenge';
+export type BoardId = 'endless' | 'stars' | 'daily_challenge' | 'weekly';
 
 /** One row of a board as GET /l hands it out. */
 export interface BoardRow {
@@ -24,7 +24,7 @@ export interface BoardPage {
   total: number;
   rows: BoardRow[];
   me: BoardRow | null;
-  /** The day the daily board was read for. */
+  /** The day (or the week's Monday) the daily or weekly board was read for. */
   day?: string;
 }
 
@@ -37,7 +37,7 @@ export interface BoardQuery {
 }
 
 export function tagOf(id: string): string;
-export function scoresOf(saveText: string): { endless: number; stars: number; daily_challenge: number; day: string } | null;
+export function scoresOf(saveText: string): { endless: number; stars: number; daily_challenge: number; weekly: number; days: { daily_challenge: string; weekly: string } } | null;
 export function cleanPost(body: unknown): { id: string; token: string; platform: string } | null;
 export function boardQuery(url: string): BoardQuery | null;
 

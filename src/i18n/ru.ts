@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/ru';
 
 // Russian.
 export const ru: Table = {
@@ -152,6 +153,7 @@ export const ru: Table = {
     wall: { name: 'Толстые стены', desc: 'ОЗ стены +{p}%' },
     startGold: { name: 'Заначка', desc: 'Золото на старте +{n}' },
     crystals: { name: 'Кристальное сито', desc: 'Кристаллы +{p}% за каждый бой' },
+    lab: { name: 'Лаборатория', desc: 'Урон всех зелий +{p}%' },
     now: 'Сейчас: {text}',
     next: 'Далее: {text}',
     none: 'бонуса пока нет',
@@ -225,6 +227,7 @@ export const ru: Table = {
     boss: 'Победи {n} {n|one:босса|few:боссов|many:боссов|other:босса}',
     challenge: 'Сыграй испытание дня',
     endless: 'Сыграй в бесконечном режиме',
+    react: 'Вызови реакции: {n}',
   },
   endless: {
     title: 'Бесконечный режим',
@@ -274,6 +277,7 @@ export const ru: Table = {
     poison: 'Зелье кислоты',
     wind: 'Зелье ветра',
   },
+  alchemy,
   codex: {
     page: { potions: 'Зелья', enemies: 'Враги', feats: 'Достижения', reactions: 'Реакции' },
     rx: { steam: 'Пар', superconduct: 'Сверхпроводимость', overload: 'Перегрузка', electrolysis: 'Электролиз', combustion: 'Возгорание', firestorm: 'Огненная буря', blizzard: 'Метель', resonance: 'Резонанс' },
@@ -443,5 +447,6 @@ export const ru: Table = {
     wave: 'Волна {n}',
     starCount: 'Звёзд: {n}',
     note: 'Результаты отправляются после каждого боя.',
+    weekly: 'Эта неделя',
   },
 };

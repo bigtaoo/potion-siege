@@ -5,6 +5,7 @@ import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
 import { CHAPTER_SIZE } from '../../sim/chapters';
 import type { MetaSave } from '../../sim/meta';
+import { reach } from '../../sim/rebrew';
 import { STARS, stageStars } from '../../sim/stars';
 import { fit as fitText, ink, LIGHT, P, refuse, starRow, tappable } from '../kit';
 import { label } from '../ui';
@@ -16,7 +17,7 @@ export const TOGGLE_ROOM = TOGGLE_H + 24;
 
 /** The switch shows once the first chapter is cleared, before any hard mode can be open. */
 export function toggleShown(m: MetaSave): boolean {
-  return m.cleared >= CHAPTER_SIZE;
+  return reach(m) >= CHAPTER_SIZE;
 }
 
 /** The stage's best stars, small on a dark pill, to hang under the stage plate at (x, y). */

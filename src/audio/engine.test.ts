@@ -40,7 +40,7 @@ describe('the audio context', () => {
     audio.prefs({ music: false, sfx: true });
     audio.battle([{ type: 'summon' } as never]);
     expect(FakeContext.made).toHaveLength(0);
-    expect(audio.status()).toEqual({ state: 'none', sfx: 0, tracks: [], playing: null });
+    expect(audio.status()).toEqual({ state: 'none', sfx: 0, clips: 0, tracks: [], playing: null });
   });
 
   it('the first tap, touch or key makes one context and starts it; later ones make no other', () => {
@@ -94,7 +94,7 @@ describe('the audio context', () => {
     audio.play('tap');
     audio.music('workshop');
     expect(FakeWorker.made).toHaveLength(0);
-    expect(audio.status()).toEqual({ state: 'none', sfx: 0, tracks: [], playing: null });
+    expect(audio.status()).toEqual({ state: 'none', sfx: 0, clips: 0, tracks: [], playing: null });
   });
 
   it('a context the browser refuses to make is tried again on the next tap', () => {

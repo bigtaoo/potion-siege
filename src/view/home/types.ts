@@ -5,13 +5,16 @@ import type { Container } from 'pixi.js';
 import type { BoardId, BoardPage } from '../../board/types';
 import type { Locale } from '../../i18n';
 import type { TrackId } from '../../sim/achievements';
+import type { PerkId } from '../../sim/rebrew';
+import type { TalentPick } from '../../sim/talents';
+import type { WeekTaskId } from '../../sim/week';
 import type { WorkshopId } from '../../sim/meta';
 import type { EnemyKind, HeroKind } from '../../sim/types';
 import type { SoundSwitch } from '../soundSwitches';
 
 export type HomeTab = 'potions' | 'workshop' | 'battle' | 'codex' | 'shop';
 export const HOME_TABS: readonly HomeTab[] = ['potions', 'workshop', 'battle', 'codex', 'shop'];
-export type HomePanel = 'login' | 'welcome' | 'remind' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | 'board' | HeroKind | EnemyKind | null;
+export type HomePanel = 'login' | 'welcome' | 'remind' | 'tasks' | 'settings' | 'language' | 'challenge' | 'chapters' | 'privacy' | 'board' | 'rebrew' | 'rebrewSure' | 'week' | HeroKind | EnemyKind | `talents_${HeroKind}` | null;
 
 export interface HomeActions {
   tab(tab: HomeTab): void;
@@ -35,6 +38,8 @@ export interface HomeActions {
   /** The star chests a chapter's stars have reached (starChest.ts). */
   claimStarChest(chapter: number, at: Container): void;
   hero(kind: HeroKind): void;
+  /** A talent card tapped (sim/talents.ts): -1 takes the tier's pick back. */
+  talent(kind: HeroKind, tier: number, pick: TalentPick): void;
   /** A potion on the potions tab's lineup strip was tapped. */
   lineup(kind: HeroKind): void;
   workshop(id: WorkshopId): void;
@@ -49,6 +54,14 @@ export interface HomeActions {
   challengeAd(): void;
   /** An endless run. */
   endless(): void;
+  /** Pours the campaign back for essence (sim/rebrew.ts), after the panel's second tap. */
+  rebrew(): void;
+  /** Buys the next level of a lasting perk with essence. */
+  perk(id: PerkId): void;
+  /** A weekly task's crystals (sim/week.ts). */
+  claimWeek(id: WeekTaskId, at: Container): void;
+  /** Empties the brewing rack (sim/rack.ts) into the crystals. */
+  rack(at: Container): void;
   /** Flips a switch: music, sound effects, screen shake or vibration. */
   sound(which: SoundSwitch): void;
   /** A language picked on the language panel. */
@@ -92,6 +105,8 @@ export interface HomeExtras {
   remind?: RemindState;
   /** The leaderboards, where the host has them (board/types.ts). */
   board?: BoardView;
+  /** The brewing rack once it is open: what emptying it pays now, and whether it is full. */
+  rack?: { fill: number; full: boolean };
 }
 
 /** What the leaderboard panel shows: the board picked, and its page, or where it is at. */

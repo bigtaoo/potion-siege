@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/de';
 
 // German.
 export const de: Table = {
@@ -152,6 +153,7 @@ export const de: Table = {
     wall: { name: 'Dicke Mauern', desc: 'Mauer-LP +{p}%' },
     startGold: { name: 'Taschengeld', desc: 'Start mit +{n} Gold' },
     crystals: { name: 'Kristallsieb', desc: 'Kristalle +{p}% aus jedem Kampf' },
+    lab: { name: 'Alchemielabor', desc: 'Jeder Trank +{p}% Schaden' },
     now: 'Jetzt: {text}',
     next: 'Danach: {text}',
     none: 'noch kein Bonus',
@@ -225,6 +227,7 @@ export const de: Table = {
     boss: 'Besiege {n} {n|one:Boss|other:Bosse}',
     challenge: 'Spiel die Tagesherausforderung',
     endless: 'Spiel eine Endlos-Runde',
+    react: 'Löse {n} Reaktionen aus',
   },
   endless: {
     title: 'Endlosmodus',
@@ -274,6 +277,7 @@ export const de: Table = {
     poison: 'Ätztrank',
     wind: 'Windtrank',
   },
+  alchemy,
   codex: {
     page: { potions: 'Tränke', enemies: 'Gegner', feats: 'Erfolge', reactions: 'Reaktionen' },
     rx: { steam: 'Dampf', superconduct: 'Supraleitung', overload: 'Überladung', electrolysis: 'Elektrolyse', combustion: 'Verbrennung', firestorm: 'Feuersturm', blizzard: 'Schneesturm', resonance: 'Resonanz' },
@@ -443,5 +447,6 @@ export const de: Table = {
     wave: 'Welle {n}',
     starCount: '{n} Sterne',
     note: 'Deine Werte zählen nach jedem Kampf.',
+    weekly: 'Diese Woche',
   },
 };

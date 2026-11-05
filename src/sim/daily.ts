@@ -7,8 +7,11 @@
 import { endlessOpen } from './endless';
 import type { MetaSave } from './meta';
 import { int } from './parse';
-import { Rng } from './rng';
-import { BALANCE } from './types';
+import { hash, Rng } from './rng';
+
+export { hash };
+import { BALANCE, REACTION_IDS } from './types';
+import { rollWeek } from './week';
 
 const D = BALANCE.daily;
 
@@ -73,22 +76,21 @@ export function parseDaily(v: unknown): DailySave {
   return out;
 }
 
-/** A day string (or any string) as a seed. */
-export function hash(s: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
 /** On a new day, rolls that day's tasks (the same for everyone on that date who has the same
  *  modes open: the endless task only comes once endless mode is open). */
 export function rollDay(m: MetaSave, today: string): void {
+  rollWeek(m, today);
   if (!(today > m.daily.day)) return;
   m.daily.day = today;
   m.daily.bonus = false;
   m.daily.doubles = 0;
-  const pool = TASK_IDS.filter((id) => id !== 'endless' || endlessOpen(m));
+  const pool = TASK_IDS.filter((id) => (id !== 'endless' || endlessOpen(m)) && (id !== 'react' || reacted(m)));
   m.daily.tasks = new Rng(hash(today)).sample(pool, D.taskCount).map((id) => ({ id, progress: 0, claimed: false }));
+}
+
+/** Some reaction has gone off: before that a reaction task would ask for what the player cannot know. */
+function reacted(m: MetaSave): boolean {
+  return REACTION_IDS.some((id) => m.achievements.stats.reactions[id] > 0);
 }
 
 export function taskGoal(id: TaskId): number {

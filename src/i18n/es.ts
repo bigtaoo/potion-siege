@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/es';
 
 // Spanish (neutral, informal "tú").
 export const es: Table = {
@@ -152,6 +153,7 @@ export const es: Table = {
     wall: { name: 'Muralla gruesa', desc: 'PV de la muralla +{p}%' },
     startGold: { name: 'Ahorros', desc: 'Empiezas con +{n} de oro' },
     crystals: { name: 'Criba de cristales', desc: 'Cristales +{p}% en cada batalla' },
+    lab: { name: 'Laboratorio', desc: 'Todas las pociones +{p}% de daño' },
     now: 'Ahora: {text}',
     next: 'Siguiente: {text}',
     none: 'aún sin bonus',
@@ -225,6 +227,7 @@ export const es: Table = {
     boss: 'Derrota a {n} {n|one:jefe|other:jefes}',
     challenge: 'Juega el desafío diario',
     endless: 'Juega en modo infinito',
+    react: 'Provoca {n} reacciones',
   },
   endless: {
     title: 'Modo infinito',
@@ -274,6 +277,7 @@ export const es: Table = {
     poison: 'Tónico corrosivo',
     wind: 'Tónico eólico',
   },
+  alchemy,
   codex: {
     page: { potions: 'Pociones', enemies: 'Enemigos', feats: 'Logros', reactions: 'Reacciones' },
     rx: { steam: 'Vapor', superconduct: 'Superconducción', overload: 'Sobrecarga', electrolysis: 'Electrólisis', combustion: 'Combustión', firestorm: 'Tormenta de fuego', blizzard: 'Ventisca', resonance: 'Resonancia' },
@@ -443,5 +447,6 @@ export const es: Table = {
     wave: 'Oleada {n}',
     starCount: '{n} estrellas',
     note: 'Tus puntuaciones se envían tras cada batalla.',
+    weekly: 'Esta semana',
   },
 };

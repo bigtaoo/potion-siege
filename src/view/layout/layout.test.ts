@@ -40,7 +40,7 @@ function rich(): MetaSave {
   m.runs = 60;
   m.unlocked = ['poison', 'wind'];
   for (const k of HERO_KINDS) m.heroes[k] = 23;
-  m.workshop = { wall: 7, startGold: 5, crystals: 4 };
+  m.workshop = { wall: 7, startGold: 5, crystals: 4, lab: 0 };
   // every reaction found but resonance, the count of the longest a big one
   for (const [i, id] of REACTION_IDS.entries()) if (id !== 'resonance') m.achievements.stats.reactions[id] = 7 * 10 ** i;
   return m;

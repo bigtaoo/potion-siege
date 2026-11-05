@@ -20,6 +20,8 @@
 
 import { noReactions } from './achievements';
 import { prepBoss } from './bossPrep';
+import { doRevive } from './revive';
+import { catalyzed, offerCatalyst, pickCatalyst, type CatalystId } from './tower';
 import { doCast, SPELLS, stepCommander } from './commander';
 import { stepEnemies } from './enemyTick';
 import { K, SLOT_COUNT, WALL_ROW } from './field';
@@ -32,10 +34,11 @@ import { Prng } from './math/prng';
 import { mergedKind } from './mergeKind';
 import { BASE_SETUP, type BattleSetup } from './meta';
 import { stepHeroes, stepProjectiles } from './shots';
+import { applyTalents } from './talents';
 import { emptySkills, mods, perksFor, rollChoices, type Mods, type PerkId, type SkillId, type SkillLevels } from './skills';
 import { startWave, stepWaves } from './spawn';
 import { stepFlasks } from './spells';
-import { BALANCE, isBoss, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Pool, type Projectile, type Vortex } from './types';
+import { BALANCE, type BattleEvent, type CommanderSkill, type Enemy, type Flask, type Hero, type HeroKind, type OfferReason, type Pool, type Projectile, type Vortex } from './types';
 import type { Spawn } from './waves';
 
 /** Battle seconds from the first merge to the first of the setup's free summons, and between
@@ -61,6 +64,8 @@ export type Command =
   /** The reroll was offered and not taken (the ad failed): the offer keeps its cards. */
   | { type: 'noReroll' }
   | { type: 'revive' }
+  /** A catalyst from the tower's pick (tower.ts). */
+  | { type: 'catalyst'; id: CatalystId }
   /** The commander's next spell once it is charged, thrown at (x, y) in FP where the player
    *  dragged it; with no point (a plain tap, and every replay from before the drag) at the
    *  thickest crowd. */
@@ -116,6 +121,9 @@ export class Battle {
   /** The skill offer waiting for the player; the battle is paused while it is set. */
   choices: SkillId[] | null = null;
   choiceReason: OfferReason = 'upgrade';
+  /** The tower's catalyst pick waiting (it pauses too), and those picked this climb (tower.ts). */
+  catalystChoices: CatalystId[] | null = null;
+  catalysts: CatalystId[] = [];
   /** Whether the waiting offer has been rerolled already (once per offer). */
   rerolled = false;
   result: 'won' | 'lost' | null = null;
@@ -166,8 +174,9 @@ export class Battle {
     this.summonRng = new Prng(seed ^ STREAM.summon);
     this.shotRng = new Prng(seed ^ STREAM.shot);
     this.cardRng = new Prng(seed ^ STREAM.card);
+    applyTalents(this.skills, setup.talents);
     this.perks = perksFor(setup.heroLevels);
-    this.mods = mods(this.skills, this.perks);
+    this.mods = catalyzed(mods(this.skills, this.perks), this.catalysts);
     this.fixed = fixedMods(this.mods, setup);
     this.gold = setup.startGold;
     this.wallMax = this.wall = toFp(setup.wallHp);
@@ -175,7 +184,7 @@ export class Battle {
   }
 
   get paused(): boolean {
-    return this.choices !== null || this.result !== null;
+    return this.choices !== null || this.catalystChoices !== null || this.result !== null;
   }
 
   /** Seconds played. */
@@ -308,7 +317,10 @@ export class Battle {
         if (done) this.rerolled = true;
         break;
       case 'revive':
-        done = this.doRevive();
+        done = doRevive(this);
+        break;
+      case 'catalyst':
+        done = pickCatalyst(this, cmd.id);
         break;
       case 'cast':
         done = doCast(this, Number.isFinite(cmd.x) && Number.isFinite(cmd.y) ? { x: cmd.x!, y: cmd.y! } : undefined);
@@ -417,21 +429,9 @@ export class Battle {
       this.wallMax = times(this.wallMax, 1000 + pm(B.skills.wallMax));
       this.wall = Math.min(this.wallMax, this.wall + times(this.wallMax, pm(B.skills.wallRepair)));
     }
-    this.mods = mods(this.skills, this.perks);
+    this.mods = catalyzed(mods(this.skills, this.perks), this.catalysts);
     this.fixed = fixedMods(this.mods, this.setup);
     this.choices = null;
-    return true;
-  }
-
-  /** The wall comes back whole and the alchemist full, so the bomb is ready for the next wave:
-   *  with half a wall and no charge a revive saved far fewer early runs than the plain attack did. */
-  private doRevive(): boolean {
-    if (this.result !== 'lost') return false;
-    this.wall = this.wallMax;
-    this.enemies = this.enemies.filter((e) => isBoss(e.kind));
-    this.charge = C.charge;
-    this.chargedFor = 0;
-    this.result = null;
     return true;
   }
 
@@ -459,6 +459,7 @@ export class Battle {
     }
     stepWaves(this);
     prepBoss(this);
+    offerCatalyst(this);
     stepEnemies(this);
     stepHeroes(this);
     stepCommander(this);
@@ -474,7 +475,6 @@ export class Battle {
     this.events.push({ type: 'end', won });
   }
 
-  /** Opens a skill offer (the battle pauses); false when there is nothing left to offer. */
   /** Pauses on three skill cards (leaning to `focus`); false when none is left to offer. */
   offer(reason: OfferReason, focus?: HeroKind): boolean {
     const offer = this.roll(focus);

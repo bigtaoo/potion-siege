@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/vi';
 
 // Vietnamese.
 export const vi: Table = {
@@ -152,6 +153,7 @@ export const vi: Table = {
     wall: { name: 'Tường Dày', desc: 'HP tường +{p}%' },
     startGold: { name: 'Tiền Túi', desc: 'Bắt đầu với +{n} vàng' },
     crystals: { name: 'Rây Pha Lê', desc: 'Pha lê +{p}% mỗi trận' },
+    lab: { name: 'Phòng giả kim', desc: 'Mọi bình thuốc +{p}% sát thương' },
     now: 'Hiện tại: {text}',
     next: 'Tiếp theo: {text}',
     none: 'chưa có thưởng',
@@ -225,6 +227,7 @@ export const vi: Table = {
     boss: 'Hạ {n} Boss',
     challenge: 'Chơi thử thách hằng ngày',
     endless: 'Chơi một lượt vô tận',
+    react: 'Kích hoạt {n} phản ứng',
   },
   endless: {
     title: 'Chế độ Vô tận',
@@ -274,6 +277,7 @@ export const vi: Table = {
     poison: 'Bình Ăn Mòn',
     wind: 'Bình Gió',
   },
+  alchemy,
   codex: {
     page: { potions: 'Bình thuốc', enemies: 'Kẻ địch', feats: 'Thành tựu', reactions: 'Phản ứng' },
     rx: { steam: 'Hơi nước', superconduct: 'Siêu dẫn', overload: 'Quá tải', electrolysis: 'Điện phân', combustion: 'Bùng cháy', firestorm: 'Bão lửa', blizzard: 'Bão tuyết', resonance: 'Cộng hưởng' },
@@ -443,5 +447,6 @@ export const vi: Table = {
     wave: 'Đợt {n}',
     starCount: '{n} sao',
     note: 'Điểm được gửi sau mỗi trận.',
+    weekly: 'Tuần này',
   },
 };

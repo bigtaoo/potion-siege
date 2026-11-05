@@ -7,12 +7,14 @@ import type { Battle } from '../sim/battle';
 import { nextMilestone } from '../sim/endless';
 import { FP } from '../sim/math/fixed';
 import { doublesLeft, endOffers, maxStage } from '../sim/meta';
+import { isReplay, replayShare } from '../sim/replayPay';
 import { HERO_KINDS } from '../sim/types';
 import { FEEDBACK_RUN, FeedbackAsk } from '../view/feedback';
 import type { HomeTab } from '../view/Home';
 import { lossStep, lossTips, offersNext, pointWait } from '../view/nudges';
 import { starsTip } from './battleTips';
 import { home } from './homeScreen';
+import { exitsFor, takeExit } from './stuckExits';
 
 export function showEnd(g: Game, b: Battle): void {
   const secs = Math.round(b.seconds);
@@ -69,11 +71,14 @@ export function showEnd(g: Game, b: Battle): void {
     stars: g.stars ?? undefined,
     starsTip: starsTip(g),
     pointWait: g.autoplay ? null : pointWait(g.save, b.result === 'lost', !g.endless && !b.setup.hard),
+    exits: g.endless ? undefined : exitsFor(g, b.setup.stage, b.result === 'lost', b.setup.hard === true),
+    onExit: (kind) => takeExit(g, kind),
+    replayCut: !g.endless && !b.setup.hard && isReplay(g.save, b.setup.stage, false) && replayShare(g.save.alchemy.replay.n) < 1,
   });
 }
 
 /** `result_action`: the result screen's tap, and how long after it came up. */
-export function resultAction(g: Game, action: 'next' | 'home' | 'tip' | 'revive' | 'double', tab?: HomeTab): void {
+export function resultAction(g: Game, action: 'next' | 'home' | 'tip' | 'revive' | 'double' | 'exit', tab?: HomeTab): void {
   const secs = Math.round((performance.now() - g.resultAt) / 1000);
   g.analytics.track('result_action', { action, tab: tab ?? null, secs, run: g.save.runs });
   // leaving the result screen takes the question with it (the ×2 stays on it)

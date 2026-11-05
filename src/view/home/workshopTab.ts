@@ -1,10 +1,12 @@
-// The home screen's workshop tab: a row per upgrade with its level, what it gives and its price.
+// The home screen's workshop tab: a card per upgrade with its level, what it gives and its price.
 
+import { openWorkshop } from '../../sim/workshopOpen';
 import { Container, Graphics } from 'pixi.js';
 import { t } from '../../i18n';
-import { WORKSHOP_IDS, workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../../sim/meta';
+import { workshopCost, workshopValue, type MetaSave, type WorkshopId } from '../../sim/meta';
 import { BALANCE } from '../../sim/types';
-import { coinsIcon, fit as fitText, ink, LIGHT, medal, P, paperCard, PillButton, plate, wallIcon } from '../kit';
+import { canRebrew } from '../../sim/rebrew';
+import { coinsIcon, redDot, fit as fitText, flask, ink, LIGHT, medal, P, paperCard, PillButton, plate, wallIcon } from '../kit';
 import { gem } from '../ui';
 import { priced, type Area } from './shared';
 import type { HomeActions } from './types';
@@ -16,12 +18,26 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
   // clear of the top bar's captions
   head.position.set(a.x + a.w / 2, a.y + 76);
   root.addChild(head);
-  // big cards, the three together centred in the room under the heading
-  const rw = Math.min(a.wide ? 1200 : 1000, a.w - 60);
+  // the rebrew, once the campaign is cleared or one is done: a pill beside the heading
+  const r = m.alchemy.rebrew;
+  if (canRebrew(m) || r.count > 0) {
+    const text = r.count > 0 ? `${t('alchemy.rebrew.button')} ×${r.count}` : t('alchemy.rebrew.button');
+    const b = new PillButton(text, 280, 84, 'purple', () => act.panel('rebrew'), 34);
+    b.label = 'rebrewOpen';
+    b.position.set(a.x + a.w - 170, a.y + 76);
+    root.addChild(b);
+    if (canRebrew(m) && r.count === 0) redDot(b, 120, -34);
+  }
+  // big cards, together centred in the room under the heading: one column, or two on wide screens
+  const ids = openWorkshop(m);
+  const cols = a.wide ? 2 : 1;
+  const rows = Math.ceil(ids.length / cols);
   const gap = 36;
-  const rh = Math.max(230, Math.min(a.wide ? 280 : 360, (a.h - 186 - gap * 2) / 3));
-  const y0 = a.y + 156 + rh / 2 + Math.max(0, (a.h - 186 - 3 * rh - 2 * gap) / 2);
-  WORKSHOP_IDS.forEach((id, i) => {
+  const rw = Math.min(1000, (a.w - 60 - (cols - 1) * gap) / cols);
+  const rh = Math.max(230, Math.min(a.wide ? 300 : 360, (a.h - 186 - gap * (rows - 1)) / rows));
+  const y0 = a.y + 156 + rh / 2 + Math.max(0, (a.h - 186 - rows * rh - (rows - 1) * gap) / 2);
+  const xc = (c: number) => a.x + a.w / 2 + (c - (cols - 1) / 2) * (rw + gap);
+  ids.forEach((id, i) => {
     const lv = m.workshop[id];
     const max = BALANCE.meta.workshop[id].max;
     const cost = workshopCost(id, lv);
@@ -30,7 +46,7 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
       return t(`shop.${id}.desc`, { p: Math.round(v * 100), n: v });
     };
     const r = new Container();
-    r.position.set(a.x + a.w / 2, y0 + i * (rh + gap));
+    r.position.set(xc(i % cols), y0 + Math.floor(i / cols) * (rh + gap));
     r.addChild(paperCard(rw, rh));
     const icon = new Container();
     icon.addChild(medal(62, P.paperDark), shopIcon(id));
@@ -79,5 +95,6 @@ export function workshopTab(root: Container, m: MetaSave, act: HomeActions, a: A
 function shopIcon(id: WorkshopId): Container {
   if (id === 'wall') return wallIcon();
   if (id === 'startGold') return coinsIcon();
+  if (id === 'lab') return flask(new Graphics(), 0, 40, 84, 0x8f5ce0, false);
   return gem(new Graphics(), 0, 0, 38);
 }

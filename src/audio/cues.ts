@@ -2,10 +2,11 @@
 
 import type { BattleEvent } from '../sim/types';
 import { isHordeWave } from '../sim/horde';
+import type { SampleId } from './samples';
 import type { SfxId } from './sfx';
 
 export interface Cue {
-  id: SfxId;
+  id: SfxId | SampleId;
   /** Stereo position, -1 (left) .. 1 (right). */
   pan?: number;
   /** Playback rate on top of the sound's own random spread. */
@@ -65,6 +66,9 @@ export function battleCues(events: readonly BattleEvent[]): Cue[] {
         break;
       case 'wallHit':
         out.push({ id: 'wallHit' });
+        break;
+      case 'reaction':
+        out.push({ id: `rx_${ev.id}`, pan: pan(ev.x) });
         break;
       case 'end':
         out.push({ id: ev.won ? 'win' : 'lose' });

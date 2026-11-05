@@ -7,6 +7,7 @@ import { battleCues, type Cue } from './cues';
 import { Mix, Throttle, type SoundPrefs } from './mix';
 import { MUSIC_RATE, renderMusic, TRACK_IDS, type TrackId } from './music';
 import type { RenderDone, RenderJob } from './render.worker';
+import { isSample, loadSamples, SAMPLES, type SampleId } from './samples';
 import { renderSfx, SFX, SFX_IDS, type SfxId } from './sfx';
 
 const SFX_RATE = 44100;
@@ -23,6 +24,7 @@ export class GameAudio {
   private musicBus!: GainNode;
   private sfxBus!: GainNode;
   private readonly sfx = new Map<SfxId, AudioBuffer>();
+  private readonly clips = new Map<SampleId, AudioBuffer>();
   private readonly tracks = new Map<TrackId, AudioBuffer>();
   private readonly throttle = new Throttle();
   private want: TrackId | null = null;
@@ -63,20 +65,24 @@ export class GameAudio {
     this.handOver();
   }
 
-  play(id: SfxId, cue: Omit<Cue, 'id'> = {}): void {
+  /** A synthesized effect, or a recorded clip (samples.ts). */
+  play(id: SfxId | SampleId, cue: Omit<Cue, 'id'> = {}): void {
     const ctx = this.ctx;
-    const buf = this.sfx.get(id);
+    const clip = isSample(id);
+    const buf = clip ? this.clips.get(id) : this.sfx.get(id);
     if (!ctx || !buf || ctx.state !== 'running' || !this.mix.sfxLevel) return;
-    const spec = SFX[id];
+    const spec = clip ? SAMPLES[id] : SFX[id];
+    // a synthesized effect has its level rendered in; a clip is played at its own
+    const level = (cue.gain ?? 1) * (clip ? SAMPLES[id].gain : 1);
     const rate = (cue.rate ?? 1) * (1 + (Math.random() * 2 - 1) * spec.vary);
     if (!this.throttle.admit(id, spec, ctx.currentTime, buf.duration / rate)) return;
     const src = ctx.createBufferSource();
     src.buffer = buf;
     src.playbackRate.value = rate;
     let node: AudioNode = src;
-    if (cue.gain !== undefined && cue.gain !== 1) {
+    if (level !== 1) {
       const g = ctx.createGain();
-      g.gain.value = cue.gain;
+      g.gain.value = level;
       node = node.connect(g);
     }
     if (cue.pan && ctx.createStereoPanner) {
@@ -95,8 +101,8 @@ export class GameAudio {
   }
 
   /** For the audition page and checks: what is loaded and running. */
-  status(): { state: string; sfx: number; tracks: TrackId[]; playing: TrackId | null } {
-    return { state: this.ctx?.state ?? 'none', sfx: this.sfx.size, tracks: [...this.tracks.keys()], playing: this.voice?.id ?? null };
+  status(): { state: string; sfx: number; clips: number; tracks: TrackId[]; playing: TrackId | null } {
+    return { state: this.ctx?.state ?? 'none', sfx: this.sfx.size, clips: this.clips.size, tracks: [...this.tracks.keys()], playing: this.voice?.id ?? null };
   }
 
   /** A user gesture: make the context (it may only start now) or wake it. */
@@ -138,6 +144,7 @@ export class GameAudio {
     ctx.addEventListener('statechange', () => this.sync());
     this.sync();
     this.render();
+    loadSamples(ctx, (id, buf) => this.clips.set(id, buf));
   }
 
   /** The short sounds first, then the loop wanted now, then the other one. */

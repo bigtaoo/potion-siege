@@ -36,3 +36,12 @@ export function pickSkill(g: Game, id: Parameters<Battle['choose']>[0]): void {
   g.battle?.choose(id);
   g.overlay.hide();
 }
+
+/** The tower's catalyst pick on screen (sim/tower.ts). */
+export function showCatalysts(g: Game, b: Battle): void {
+  g.overlay.showCatalysts(b.catalystChoices ?? [], b.catalysts, (id) => {
+    g.audio.play('levelup');
+    b.apply({ type: 'catalyst', id });
+    g.overlay.hide();
+  });
+}

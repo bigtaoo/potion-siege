@@ -15,12 +15,17 @@ export class BackedBoard implements Leaderboard {
   }
 
   top(board: BoardId): Promise<BoardPage | null> {
-    return this.shown.top(board);
+    // the week's board is ours alone
+    return (board === 'weekly' ? this.backup : this.shown).top(board);
   }
 
   daily(wave: number): void {
     this.shown.daily?.(wave);
     this.backup.daily?.(wave);
+  }
+
+  weekly(floor: number): void {
+    this.backup.weekly?.(floor);
   }
 }
 

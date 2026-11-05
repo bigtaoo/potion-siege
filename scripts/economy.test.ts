@@ -14,6 +14,7 @@
 // CHAPTER_CHEST (crystals × the chapter on the first clear of every tenth stage), LATE_GROWTH
 // (enemy hit points a stage past 20 instead of stageHpLate.growth), TAG, OUT_DIR. The result ×2
 // keeps to shop.doublesPerDay as in the game (BAL='{"shop":{"doublesPerDay":999}}' lifts it).
+import { openWorkshop } from '../src/sim/workshopOpen';
 import { it } from 'vitest';
 import { claimTier, recordChallenge, recordEvents, TRACK_IDS } from '../src/sim/achievements';
 import { Battle } from '../src/sim/battle';
@@ -21,13 +22,18 @@ import { botAct } from '../src/sim/bot';
 import { beginAttempt, bookAttempt, challengeSetup, todaysChallenge } from '../src/sim/challenge';
 import { addProgress, claimBonus, claimLogin, claimTask, rollDay } from '../src/sim/daily';
 import { TICK_RATE } from '../src/sim/math/fixed';
-import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, doublesLeft, heroCost, heroUnlocked, newMeta, Purse, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
+import { battleSetup, stageHp, buyHero, buyWorkshop, claimAd, claimChest, doublesLeft, heroCost, heroUnlocked, newMeta, Purse, runReward, workshopCost, WORKSHOP_IDS, type BattleSetup, type MetaSave } from '../src/sim/meta';
 import { bookStars, hardReward, hardSetup, runStars } from '../src/sim/stars';
 import { BALANCE, HERO_KINDS } from '../src/sim/types';
 import { claimWelcome } from '../src/sim/welcome';
 import { openStarChests } from '../src/sim/starChest';
 import { CHAPTER_COUNT } from '../src/sim/chapters';
 import { offFrontier } from './economyStars';
+import { claimRack, startRack } from '../src/sim/rack';
+import { bookReplay, shareOf } from '../src/sim/replayPay';
+import { bookStuck, stuckAssist } from '../src/sim/stuck';
+
+const DAY_MS = 86_400_000;
 
 function merge(into: Record<string, unknown>, from: Record<string, unknown>): void {
   for (const [k, v] of Object.entries(from)) {
@@ -54,8 +60,8 @@ const OVERHEAD = 0.4;
 const AD_MIN = 0.5;
 const ENDLESS_MIN = 6;
 
-type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'stars' | 'endless' | 'welcome';
-const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'stars', 'endless', 'welcome'];
+type Source = 'runs' | 'double' | 'login' | 'tasks' | 'chest' | 'ads' | 'challenge' | 'achievements' | 'chapter' | 'stars' | 'endless' | 'welcome' | 'rack';
+const SOURCES: Source[] = ['runs', 'double', 'login', 'tasks', 'chest', 'ads', 'challenge', 'achievements', 'chapter', 'stars', 'endless', 'welcome', 'rack'];
 
 interface Day {
   day: number;
@@ -83,7 +89,7 @@ function nextBuy(m: MetaSave): { cost: number; buy: () => boolean } | null {
     const c = heroCost(m.heroes[k]);
     if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyHero(m, k) };
   }
-  for (const id of WORKSHOP_IDS) {
+  for (const id of openWorkshop(m)) {
     const c = workshopCost(id, m.workshop[id]);
     if (c !== null && (!best || c < best.cost)) best = { cost: c, buy: () => buyWorkshop(m, id) };
   }
@@ -158,8 +164,12 @@ it('economy', () => {
   const chapterChest = Number(env.CHAPTER_CHEST ?? 0);
   const stars = env.STARS !== '0';
   const lateGrowth = env.LATE_GROWTH ? Number(env.LATE_GROWTH) : null;
+  // the long-term plan's economy (RACK=0, REPLAY=0, STUCK=0 play without each, for a baseline)
+  const rack = env.RACK !== '0';
+  const replay = env.REPLAY !== '0';
+  const stuck = env.STUCK !== '0';
   const setupFor = (m: MetaSave, stage: number): BattleSetup => {
-    const s = battleSetup(m, stage);
+    const s = stuck ? stuckAssist(m, battleSetup(m, stage)) : battleSetup(m, stage);
     if (lateGrowth !== null && stage > 20) s.enemyHp = stageHp(20) * lateGrowth ** (stage - 20);
     return s;
   };
@@ -204,6 +214,11 @@ it('economy', () => {
       };
 
       rollDay(m, today);
+      // the brewing rack: a session a day comes back to a full one (one at the same hour)
+      if (rack) {
+        const now = (d + 1) * DAY_MS;
+        if (!startRack(m, now)) book('rack', claimRack(m, now));
+      }
       book('login', claimLogin(m, today));
       book('chest', claimChest(m, today));
       book('welcome', claimWelcome(m, today)?.crystals ?? 0);
@@ -262,7 +277,9 @@ it('economy', () => {
         if (won) addProgress(m, 'win');
         const before = m.cleared;
         const run = { stage, won, wave: b.wave, kills: b.kills };
-        const r = purse.settle(m, run, hard ? hardReward(m, run) : undefined);
+        const share = replay ? bookReplay(m, stage, hard, today) : 1;
+        if (stuck) bookStuck(m, stage, won, hard);
+        const r = purse.settle(m, run, hard ? hardReward(m, run) : shareOf(runReward(m, run), share));
         if (won && stars) bookStars(m, stage, hard, runStars(true, pl.revived, Math.max(0, b.wall) / b.wallMax));
         book('runs', r.crystals);
         if (r.firstClear && chapterChest > 0 && stage % 10 === 0 && stage > before) {

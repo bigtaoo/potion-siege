@@ -120,6 +120,10 @@ export class FakeContext {
   createBuffer(channels: number, length: number, sr: number): FakeBuffer {
     return new FakeBuffer(channels, length, sr);
   }
+  /** A clip's bytes as a buffer as long as the data (enough to tell the clips apart). */
+  decodeAudioData(data: ArrayBuffer): Promise<FakeBuffer> {
+    return Promise.resolve(new FakeBuffer(1, data.byteLength, this.sampleRate));
+  }
   addEventListener(type: string, fn: () => void): void {
     if (type === 'statechange') this.listeners.push(fn);
   }

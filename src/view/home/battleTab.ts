@@ -12,18 +12,20 @@ import { stageStars, stepStage } from '../../sim/stars';
 import { ENEMY_KINDS, isBoss } from '../../sim/types';
 import { onStage } from '../../sim/waves';
 import { commanderTexture } from '../art';
-import type { HomeActions } from './types';
-import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, infinityIcon, ink, LIGHT, medal, P, PillButton, plate, redDot, tappable } from '../kit';
+import type { HomeActions, HomeExtras } from './types';
+import { bossTag, bottle, calendarIcon, enemySprite, fit as fitText, flask, infinityIcon, ink, LIGHT, medal, P, PillButton, plate, redDot, tappable } from '../kit';
 import { challengeShown } from '../nudges';
 import { gem, label } from '../ui';
 import { hardToggle, plateStars, TOGGLE_ROOM, toggleShown } from './hardToggle';
+import { NEXT_H, nextCard, nextThing } from './nextCard';
+import { weekClaimable } from '../../sim/week';
 import { caption, chapterTitle, type Area } from './shared';
 
 /** The main line, top to bottom: the stage between its arrows and what it sends, the commander
  *  with the four fielded potions in front, and the big button into battle low down where a
  *  thumb reaches it, today's challenge and endless mode as round buttons beside it once they
  *  are open. A wide page stands the commander on the left of the stage and the buttons. */
-export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, chestDot: boolean): void {
+export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Area, today: string, chestDot: boolean, rack?: RackView): void {
   // a wide page puts the commander on the left and the stage and the buttons on the right
   const cx = a.wide ? a.x + a.w * 0.69 : a.x + a.w / 2;
   const sy = a.y + (a.wide ? 110 : 80);
@@ -38,10 +40,18 @@ export function battleTab(root: Container, m: MetaSave, act: HomeActions, a: Are
   const off = sw / 2 + 40 + SIDE_R;
   if (challenge) challengeButton(root, m, act, today, cx - off, by);
   if (endless) endlessButton(root, act, cx + off, by);
+  // the brewing rack over the round button on the right
+  if (rack) rackButton(root, act, rack, cx + off, by - 2 * SIDE_R - 90);
+  // the week's tower rule and tasks over the round button on the left
+  if (endless) weekButton(root, m, act, cx - off, by - 2 * SIDE_R - 90);
+  // the one goal worth chasing now, over the fight button
+  const next = nextThing(m);
+  const nextRoom = next ? NEXT_H + 24 : 0;
+  if (next) nextCard(root, next, act, cx, by - START_H / 2 - NEXT_H / 2 - 16, a.wide ? a.w * 0.6 : a.w - 60);
   const toggle = toggleShown(m);
   if (toggle) hardToggle(root, m, act, cx, sy + CARD_BOTTOM + TOGGLE_ROOM / 2 + 4);
   if (a.wide) commander(root, m, act, a.x + a.w * 0.25, a.y + 20, a.y + a.h - 40, 130);
-  else commander(root, m, act, cx, sy + CARD_BOTTOM + 20 + (toggle ? TOGGLE_ROOM : 0), by - START_H / 2 - 30);
+  else commander(root, m, act, cx, sy + CARD_BOTTOM + 20 + (toggle ? TOGGLE_ROOM : 0), by - START_H / 2 - 30 - nextRoom);
 }
 
 const START_H = 180;
@@ -222,4 +232,32 @@ function endlessButton(root: Container, act: HomeActions, x: number, y: number):
   const loop = infinityIcon();
   loop.scale.set(0.95);
   sideButton(root, loop, t('endless.title'), x, y, act.endless).label = 'endless';
+}
+
+type RackView = NonNullable<HomeExtras['rack']>;
+
+/** The brewing rack: a flask on a medal, what it holds on a crystal badge, a red dot when full. */
+function rackButton(root: Container, act: HomeActions, rack: RackView, x: number, y: number): void {
+  const icon = flask(new Graphics(), 0, 40, 84, 0x8f5ce0);
+  const c = sideButton(root, icon, t('alchemy.rack.name'), x, y, () => act.rack(c));
+  c.label = 'rack';
+  if (rack.fill <= 0) return;
+  const n = label(t('alchemy.rack.claim', { n: rack.fill }), 30, { stroke: { color: P.line, width: 5 } });
+  const bw = n.width + 50;
+  const badge = new Container();
+  badge.position.set(SIDE_R * 0.55, -SIDE_R * 0.95);
+  badge.addChild(new Graphics().roundRect(-bw / 2, -19, bw, 38, 19).fill(LIGHT.crystal).stroke({ width: 4, color: P.line }), gem(new Graphics(), -bw / 2 + 18, 0, 11));
+  n.x = 12;
+  badge.addChild(n);
+  c.addChild(badge);
+  if (rack.full) redDot(c, -SIDE_R * 0.7, -SIDE_R * 0.7);
+}
+
+/** This week's tower rule and tasks, a red dot while a task waits to be claimed. */
+function weekButton(root: Container, m: MetaSave, act: HomeActions, x: number, y: number): void {
+  const cal = calendarIcon();
+  cal.scale.set(0.8);
+  const c = sideButton(root, cal, t('alchemy.week.button'), x, y, () => act.panel('week'));
+  c.label = 'week';
+  if (weekClaimable(m, true)) redDot(c, SIDE_R * 0.7, -SIDE_R * 0.7);
 }

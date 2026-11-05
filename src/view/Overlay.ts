@@ -10,6 +10,7 @@ import { LIGHT, lightPanel, plate, tappable } from './kit';
 import { COLORS, label } from './ui';
 import { DESIGN_H, DESIGN_W } from './viewport';
 import { adButton } from './overlay/adButton';
+import { exits } from './overlay/endExits';
 import {
   challengeTrack,
   damageChart,
@@ -28,6 +29,8 @@ import type { EndExtras } from './overlay/endTypes';
 import { CardNudge, topTag } from './overlay/cardNudge';
 import { starNotes } from './overlay/endStars';
 import { skillCard } from './overlay/skillCard';
+import { catalystCard } from './overlay/catalystCard';
+import { catalystCount, type CatalystId } from '../sim/tower';
 import { cardLook } from './overlay/cardFit';
 
 /** The skill pick's box, centred on the page (shrunk to fit), which the tutorial keeps clear of. */
@@ -94,6 +97,21 @@ export class Overlay extends Container {
     if (this.nudge && !this.nudge.destroyed) this.nudge.update(dt);
   }
 
+  /** The tower's pick of three catalysts (sim/tower.ts); `held` the climb's so far. */
+  showCatalysts(choices: readonly CatalystId[], held: readonly CatalystId[], onPick: (id: CatalystId) => void): void {
+    this.open(0.7, () => this.showCatalysts(choices, held, onPick));
+    const box = this.box(SKILL_BOX.w, SKILL_BOX.h);
+    const head = plate(t('alchemy.catalyst.title'), 54, 520, 'brass', SKILL_BOX.w - 120);
+    head.y = -450;
+    box.addChild(head);
+    choices.forEach((id, i) => {
+      const card = catalystCard(id, catalystCount(held, id));
+      card.x = (i - (choices.length - 1) / 2) * 340;
+      tappable(card, () => onPick(id));
+      box.addChild(card);
+    });
+  }
+
   /** Three tall cards side by side, and under them the rewarded refresh when `onReroll` is
    *  given. `levels` says how far each skill has been taken. In the first battles the card at
    *  index `top` carries the "推荐" tag and, left alone, a hand tapping it. */
@@ -158,11 +176,14 @@ export class Overlay extends Container {
     if (reward.firstClear) left.push(section(ribbon(t('firstClear'), W - 200), 120));
     if (reward.chest) left.push(section(ribbon(t('chapter.cleared', { c: reward.chest }), W - 200), 110));
     for (const kind of reward.unlocked) left.push(section(ribbon(t('unlockHero', { name: t(`hero.${kind}`) }), W - 200), 110));
+    if (more.replayCut) left.push(section(ribbon(t('alchemy.replayCut'), W - 200), 110));
     left.push(...starNotes(more.stars, W - 200, !!more.starsTip));
     const right: Section[] = [];
     if (more.dealt.length > 0) right.push(damageChart(more.dealt, cw));
     const tipRows = more.onTip ? tips(more.onTip, more.dealt, cw, more.tipTabs, more.ready ?? null) : null;
     if (tipRows) right.push(tipRows);
+    const ways = more.exits && more.onExit ? exits(more.exits, more.onExit, cw) : null;
+    if (ways) right.push(ways);
     const buttons = endButtons(onContinue, onRevive, more.onNext ?? null, more.adBlocked);
     const wide = this.w > this.h && right.length > 0;
     const cols = wide ? [[...left, buttons], right] : [[...left, ...right, buttons]];

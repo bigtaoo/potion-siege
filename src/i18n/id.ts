@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/id';
 
 // Indonesian.
 export const id: Table = {
@@ -152,6 +153,7 @@ export const id: Table = {
     wall: { name: 'Tembok Tebal', desc: 'HP tembok +{p}%' },
     startGold: { name: 'Uang Saku', desc: 'Mulai dengan +{n} emas' },
     crystals: { name: 'Ayakan Kristal', desc: 'Kristal +{p}% tiap pertempuran' },
+    lab: { name: 'Lab Alkimia', desc: 'Semua ramuan +{p}% damage' },
     now: 'Kini: {text}',
     next: 'Berikut: {text}',
     none: 'belum ada bonus',
@@ -225,6 +227,7 @@ export const id: Table = {
     boss: 'Kalahkan {n} bos',
     challenge: 'Mainkan tantangan harian',
     endless: 'Main sekali mode tanpa batas',
+    react: 'Picu {n} reaksi',
   },
   endless: {
     title: 'Mode Tanpa Batas',
@@ -274,6 +277,7 @@ export const id: Table = {
     poison: 'Tonik Korosi',
     wind: 'Tonik Angin',
   },
+  alchemy,
   codex: {
     page: { potions: 'Ramuan', enemies: 'Musuh', feats: 'Pencapaian', reactions: 'Reaksi' },
     rx: { steam: 'Uap', superconduct: 'Superkonduksi', overload: 'Kelebihan Beban', electrolysis: 'Elektrolisis', combustion: 'Pembakaran', firestorm: 'Badai Api', blizzard: 'Badai Salju', resonance: 'Resonansi' },
@@ -443,5 +447,6 @@ export const id: Table = {
     wave: 'Gelombang {n}',
     starCount: '{n} bintang',
     note: 'Skormu dikirim setelah tiap pertempuran.',
+    weekly: 'Minggu ini',
   },
 };

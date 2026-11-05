@@ -35,7 +35,23 @@ export interface EndExtras {
   /** A hand taps the way on (a lost result's lit tip, else 下一关 or Continue) after this many
    *  seconds of quiet, or none (nudges.ts pointWait). */
   pointWait?: number | null;
+  /** The third loss in a row on a stage: the ways round it (endExits.ts), and what a tap does. */
+  exits?: ExitsEnd;
+  /** This battle replayed the latest stage past today's full-pay ones: a ribbon says it paid half. */
+  replayCut?: boolean;
+  onExit?: ((kind: ExitKind) => void) | null;
 }
+
+/** The ways round a stage lost three times in a row: a lineup to try (its potions and how many
+ *  reactions they set off), a chapter of hard mode open to play, and whether the tower is open. */
+export interface ExitsEnd {
+  lineup: HeroKind[] | null;
+  reactions: number;
+  hardChapter: number | null;
+  tower: boolean;
+}
+
+export type ExitKind = 'lineup' | 'hard' | 'tower';
 
 export interface EndlessEnd {
   result: EndlessResult;

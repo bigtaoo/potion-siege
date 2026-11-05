@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/fr';
 
 // French.
 export const fr: Table = {
@@ -152,6 +153,7 @@ export const fr: Table = {
     wall: { name: 'Murs épais', desc: 'PV du mur +{p}%' },
     startGold: { name: 'Argent de poche', desc: 'Commence avec +{n} or' },
     crystals: { name: 'Tamis à cristaux', desc: 'Cristaux +{p}% à chaque combat' },
+    lab: { name: 'Labo d\'alchimie', desc: 'Toutes les potions +{p}% de dégâts' },
     now: 'Actuel : {text}',
     next: 'Suivant : {text}',
     none: 'aucun bonus',
@@ -225,6 +227,7 @@ export const fr: Table = {
     boss: 'Vaincs {n} boss',
     challenge: 'Joue le défi du jour',
     endless: 'Joue en mode infini',
+    react: 'Déclenche {n} réactions',
   },
   endless: {
     title: 'Mode infini',
@@ -274,6 +277,7 @@ export const fr: Table = {
     poison: 'Élixir corrosif',
     wind: 'Élixir de vent',
   },
+  alchemy,
   codex: {
     page: { potions: 'Potions', enemies: 'Ennemis', feats: 'Succès', reactions: 'Réactions' },
     rx: { steam: 'Vapeur', superconduct: 'Supraconduction', overload: 'Surcharge', electrolysis: 'Électrolyse', combustion: 'Combustion', firestorm: 'Tempête de feu', blizzard: 'Blizzard', resonance: 'Résonance' },
@@ -443,5 +447,6 @@ export const fr: Table = {
     wave: 'Vague {n}',
     starCount: '{n} étoiles',
     note: 'Tes scores sont envoyés après chaque combat.',
+    weekly: 'Cette semaine',
   },
 };

@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/zh';
 
 export const zh: Table = {
   title: '药水围城',
@@ -151,6 +152,7 @@ export const zh: Table = {
     wall: { name: '厚墙', desc: '城墙生命 +{p}%' },
     startGold: { name: '零花钱', desc: '开局金币 +{n}' },
     crystals: { name: '晶石筛', desc: '每场战斗晶石 +{p}%' },
+    lab: { name: '炼金实验室', desc: '所有药水伤害 +{p}%' },
     now: '当前：{text}',
     next: '下一级：{text}',
     none: '暂无加成',
@@ -225,6 +227,7 @@ export const zh: Table = {
     boss: '击败 {n} 个 BOSS',
     challenge: '完成每日挑战',
     endless: '玩一局无尽模式',
+    react: '触发 {n} 次反应',
   },
   endless: {
     title: '无尽模式',
@@ -274,6 +277,7 @@ export const zh: Table = {
     poison: '腐蚀药剂',
     wind: '疾风药剂',
   },
+  alchemy,
   codex: {
     page: { potions: '药剂', enemies: '敌人', feats: '成就', reactions: '反应' },
     rx: { steam: '蒸汽', superconduct: '超导', overload: '超载', electrolysis: '电解', combustion: '燃爆', firestorm: '火焰风暴', blizzard: '暴风雪', resonance: '共鸣' },
@@ -443,5 +447,6 @@ export const zh: Table = {
     wave: '第 {n} 波',
     starCount: '{n} 星',
     note: '每场战斗结束后成绩自动上传。',
+    weekly: '本周',
   },
 };

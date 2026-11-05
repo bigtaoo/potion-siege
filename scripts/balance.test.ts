@@ -34,16 +34,16 @@ const LEVELS: Record<string, (m: MetaSave) => void> = {
   fresh: () => {},
   mid: (m) => {
     for (const k of HERO_KINDS) m.heroes[k] = 5;
-    m.workshop = { wall: 3, startGold: 3, crystals: 2 };
+    m.workshop = { wall: 3, startGold: 3, crystals: 2, lab: 0 };
   },
   late: (m) => {
     for (const k of HERO_KINDS) m.heroes[k] = 12;
-    m.workshop = { wall: 8, startGold: 8, crystals: 6 };
+    m.workshop = { wall: 8, startGold: 8, crystals: 6, lab: 0 };
   },
   // every milestone open, so the recipes (plasma, burst bolts, ...) and fireChain turn up
   max: (m) => {
     for (const k of HERO_KINDS) m.heroes[k] = BALANCE.meta.heroMax;
-    m.workshop = { wall: 10, startGold: 10, crystals: 10 };
+    m.workshop = { wall: 10, startGold: 10, crystals: 10, lab: 0 };
   },
 };
 

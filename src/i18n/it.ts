@@ -1,4 +1,5 @@
 import type { Table } from './en';
+import { alchemy } from './alchemy/it';
 
 // Italian.
 export const it: Table = {
@@ -152,6 +153,7 @@ export const it: Table = {
     wall: { name: 'Mura Spesse', desc: 'PV mura +{p}%' },
     startGold: { name: 'Paghetta', desc: 'Inizi con +{n} oro' },
     crystals: { name: 'Setaccio Cristalli', desc: 'Cristalli +{p}% da ogni battaglia' },
+    lab: { name: 'Laboratorio', desc: 'Ogni pozione +{p}% di danno' },
     now: 'Ora: {text}',
     next: 'Prossimo: {text}',
     none: 'nessun bonus',
@@ -225,6 +227,7 @@ export const it: Table = {
     boss: 'Sconfiggi {n} boss',
     challenge: 'Gioca la sfida del giorno',
     endless: 'Gioca in modalità infinita',
+    react: 'Innesca {n} reazioni',
   },
   endless: {
     title: 'Modalità Infinita',
@@ -274,6 +277,7 @@ export const it: Table = {
     poison: 'Tonico Corrosivo',
     wind: 'Tonico di Vento',
   },
+  alchemy,
   codex: {
     page: { potions: 'Pozioni', enemies: 'Nemici', feats: 'Obiettivi', reactions: 'Reazioni' },
     rx: { steam: 'Vapore', superconduct: 'Superconduzione', overload: 'Sovraccarico', electrolysis: 'Elettrolisi', combustion: 'Combustione', firestorm: 'Tempesta di fuoco', blizzard: 'Bufera', resonance: 'Risonanza' },
@@ -443,5 +447,6 @@ export const it: Table = {
     wave: 'Ondata {n}',
     starCount: '{n} stelle',
     note: 'I tuoi punteggi salgono dopo ogni battaglia.',
+    weekly: 'Questa settimana',
   },
 };

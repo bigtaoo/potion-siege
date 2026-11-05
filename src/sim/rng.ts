@@ -35,3 +35,10 @@ export class Rng {
     return out;
   }
 }
+
+/** FNV-1a of a string: a seed everyone with the same text shares. */
+export function hash(s: string): number {
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) h = Math.imul(h ^ s.charCodeAt(i), 16777619);
+  return h >>> 0;
+}

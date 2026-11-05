@@ -22,7 +22,8 @@ import type { Platform } from './platform/types';
 import { Battle } from './sim/battle';
 import { canHurry, FAST } from './game/battleSpeed';
 import { challengeSetup, type Challenge, type ChallengeResult } from './sim/challenge';
-import { endlessSetup, type EndlessResult } from './sim/endless';
+import { type EndlessResult } from './sim/endless';
+import { towerSetup } from './sim/weekTower';
 import { gameDay, rollDay } from './sim/daily';
 import { chapterOf } from './sim/chapters';
 import { firstSeed, parseMeta, Purse, type MetaSave } from './sim/meta';
@@ -52,6 +53,7 @@ import { placeBattle } from './game/battleLayout';
 import { tapToSummon } from './game/tutorialTap';
 import { shakeOn } from './view/media';
 import { countDaily } from './game/countDaily';
+import { announceReactions } from './game/reactionNews';
 import { finish } from './game/ending';
 import { faultHandler } from './game/faultRecover';
 import { gameHandle, type GameHandle } from './game/handle';
@@ -60,7 +62,7 @@ import { home, homeFrame } from './game/homeScreen';
 import { LANG_KEY, SAVE_KEY } from './game/keys';
 import { openPause, pauseFrame, PauseLayer } from './game/pause';
 import { urlSwitches } from './game/switches';
-import { showSkills } from './game/skillOffer';
+import { showCatalysts, showSkills } from './game/skillOffer';
 import { createAnalytics, device, loadedBeacon, showLocale, trackSessionStart } from './game/startup';
 import { pageLink, staleNotice, TabLock } from './game/tabLock';
 import { beginTutorial, endTutorial, lesson, pace } from './game/tutorialFlow';
@@ -309,7 +311,7 @@ export class Game {
     // a new player's runs on stage 1 share one seed until the first win, for comparable telemetry
     const fixed = cause === 'first' || cause === 'again' ? firstSeed(this.save) : null;
     const seed = fixed ?? (Math.random() * 2 ** 32) >>> 0;
-    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? endlessSetup(this.save) : stageSetup(this.save));
+    this.battle = ch ? new Battle(ch.seed, challengeSetup(this.save, ch)) : new Battle(seed, cause === 'endless' ? towerSetup(this.save, gameDay(this.save, new Date())) : stageSetup(this.save));
     this.challenge = null;
     this.endless = cause === 'endless' ? { result: null } : null;
     this.purse = new Purse();
@@ -385,7 +387,7 @@ export class Game {
     let events: BattleEvent[] = [];
     if (b && !this.overlay.visible && !this.ended && !this.pause.open) {
       // the bot picks its cards at once, so autoplay never stops for an offer
-      if (this.autoplay && b.choices) botAct(b);
+      if (this.autoplay && (b.choices || b.catalystChoices)) botAct(b);
       // a tutorial step slows the battle (the same ticks, fewer a second) or, short of the wall,
       // stops it up front: no time added, so the drawn board stands still too
       const p = b.paused ? 0 : pace(this, b);
@@ -399,14 +401,18 @@ export class Game {
       }
       events = b.drain();
       this.run?.onEvents(events);
-      if (this.run && !this.autoplay) countDaily(this.save, events);
+      if (this.run && !this.autoplay) {
+        announceReactions(this, events);
+        countDaily(this.save, events);
+      }
       this.view.react(events);
       this.audio.battle(events);
       this.haptics.react(events);
       this.hud.react(events);
       // an offer made on the tick's last step (or by the bot's own upgrade) would otherwise open the overlay
-      if (this.autoplay && b.choices) botAct(b);
+      if (this.autoplay && (b.choices || b.catalystChoices)) botAct(b);
       if (b.choices) showSkills(this, b);
+      else if (b.catalystChoices) showCatalysts(this, b);
       else if (b.result) finish(this, b);
     }
     lesson(this, b, events, m, this.pause.open ? 0 : dt);

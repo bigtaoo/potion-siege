@@ -5,6 +5,7 @@
 // for each hard stage's first win.
 // Called `stageStars` / `hardStars` where it reads better, as "star" is a potion's merge level.
 
+import { stuckAssist } from './stuck';
 import { CHAPTER_COUNT, CHAPTER_SIZE, chapterOf, chapterProgress, chapterStages } from './chapters';
 import { lossAssist } from './lossStreak';
 import { battleSetup, stageHp, workshopValue, type BattleSetup, type MetaSave, type Reward, type RunResult } from './meta';
@@ -149,7 +150,8 @@ export function stageSetup(m: MetaSave): BattleSetup {
   const setup = battleSetup(m);
   if (playingHard(m)) return hardSetup(setup);
   // the tutorial's 召唤 twice more while 强化's gold comes in, free so 强化 comes no later
-  return lossAssist(m.tutorial || setup.stage !== 1 ? setup : { ...setup, giftSummons: EXTRA_SUMMONS }, m.lossStreak);
+  // past stage 3 losses in a row on one stage bring the same help (stuck.ts)
+  return stuckAssist(m, lossAssist(m.tutorial || setup.stage !== 1 ? setup : { ...setup, giftSummons: EXTRA_SUMMONS }, m.lossStreak));
 }
 
 export function hardSetup(setup: BattleSetup): BattleSetup {

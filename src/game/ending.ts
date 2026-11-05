@@ -7,9 +7,13 @@ import { recordChallenge } from '../sim/achievements';
 import type { Battle } from '../sim/battle';
 import { bookAttempt } from '../sim/challenge';
 import { addProgress, gameDay, rollDay } from '../sim/daily';
+import { bookWeekFloor } from '../sim/week';
 import { bookEndless, endlessPay } from '../sim/endless';
 import { bookLoss } from '../sim/lossStreak';
+import { runReward } from '../sim/meta';
+import { bookReplay, shareOf } from '../sim/replayPay';
 import { bookStars, hardReward, runStars } from '../sim/stars';
+import { bookStuck } from '../sim/stuck';
 import { again, showEnd } from './resultScreen';
 import { endTutorial } from './tutorialFlow';
 
@@ -27,7 +31,8 @@ export function finish(g: Game, b: Battle): void {
   g.platform.gameplayStop();
   // the tutorial belongs to the first battle only, however far it got
   if (g.tutorial) endTutorial(g, true);
-  rollDay(g.save, gameDay(g.save, new Date()));
+  const day = gameDay(g.save, new Date());
+  rollDay(g.save, day);
   if (!g.revived) {
     g.save.runs++; // a revived run ending again is still one run
     if (!g.autoplay) addProgress(g.save, 'play');
@@ -36,9 +41,15 @@ export function finish(g: Game, b: Battle): void {
   const result = { stage: b.setup.stage, won: b.result === 'won', wave: b.wave, kills: b.kills };
   const hard = b.setup.hard === true;
   // a revived run losing again is still one loss
-  if (!g.autoplay && !(g.revived && !result.won)) bookLoss(g.save, result.stage, result.won, hard);
+  if (!g.autoplay && !(g.revived && !result.won)) {
+    bookLoss(g.save, result.stage, result.won, hard);
+    bookStuck(g.save, result.stage, result.won, hard);
+  }
+  // the latest stage pays less from its 4th battle of the day; hard mode pays as stages on
+  const share = bookReplay(g.save, result.stage, hard, day, g.revived);
+  const reward = hard ? hardReward(g.save, result) : shareOf(runReward(g.save, result), share);
   // a revived battle ending again pays only what it earned on top
-  const { crystals: gain, firstClear } = g.purse.settle(g.save, result, hard ? hardReward(g.save, result) : undefined);
+  const { crystals: gain, firstClear } = g.purse.settle(g.save, result, reward);
   if (result.won) {
     g.stars = bookStars(g.save, result.stage, hard, runStars(true, g.revived, Math.max(0, b.wall) / b.wallMax));
     g.analytics.track('stars', { stage: result.stage, hard, stars: g.stars.stars, before: g.stars.before });
@@ -48,7 +59,7 @@ export function finish(g: Game, b: Battle): void {
   if (b.result === 'won' && firstClear && !g.autoplay) g.platform.celebrate();
   g.run?.onEnd();
   g.perf.end();
-  g.analytics.track('crystals', { gain, total: g.save.crystals, stage: result.stage, first: firstClear });
+  g.analytics.track('crystals', { gain, total: g.save.crystals, stage: result.stage, first: firstClear, share });
   showEnd(g, b);
   if (g.autoplay) setTimeout(() => void again(g), 1500);
 }
@@ -61,6 +72,7 @@ export function finishChallenge(g: Game, b: Battle, run: NonNullable<Game['chall
   g.save.runs++;
   addProgress(g.save, 'play');
   addProgress(g.save, 'challenge');
+  g.save.alchemy.week.challenges = Math.min(7, g.save.alchemy.week.challenges + 1);
   if (b.result === 'won') addProgress(g.save, 'win');
   run.result = bookAttempt(g.save, b.wave);
   recordChallenge(g.save, run.result.tier);
@@ -87,6 +99,7 @@ export function finishEndless(g: Game, b: Battle, run: NonNullable<Game['endless
   const result = { stage: b.setup.stage, won: false, wave: b.wave, kills: b.kills };
   const { crystals: gain } = g.purse.settle(g.save, result, { crystals: endlessPay(g.save, b.wave), firstClear: false, unlocked: [] });
   const booked = bookEndless(g.save, b.wave);
+  if (bookWeekFloor(g.save, b.wave) && !g.autoplay) g.platform.leaderboard?.weekly?.(b.wave);
   // a revived run ending again: the best before the run still counts, milestones add up
   run.result = run.result ? { ...booked, before: run.result.before, record: b.wave > run.result.before, milestones: run.result.milestones + booked.milestones } : booked;
   g.store();

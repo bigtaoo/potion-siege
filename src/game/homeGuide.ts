@@ -6,6 +6,7 @@
 // After a claim in a panel the next step is elsewhere, so the hand goes to the panel's close, or to
 // its own claim while that is still there to take (a tap on it then goes round no step).
 
+import { openWorkshop } from '../sim/workshopOpen';
 import type { Container } from "pixi.js";
 import type { Game } from "../app";
 import { t } from "../i18n";
@@ -23,7 +24,6 @@ import {
 } from "../sim/guide";
 import {
   chestReady,
-  WORKSHOP_IDS,
   workshopCost,
   type MetaSave,
   type WorkshopId,
@@ -97,7 +97,7 @@ export function guideWorkshop(m: MetaSave): WorkshopId | null {
   if (wall !== null && wall <= m.crystals) return "wall";
   let best: WorkshopId | null = null;
   let low = Infinity;
-  for (const id of WORKSHOP_IDS) {
+  for (const id of openWorkshop(m)) {
     const cost = workshopCost(id, m.workshop[id]);
     if (cost !== null && cost <= m.crystals && cost < low)
       [best, low] = [id, cost];

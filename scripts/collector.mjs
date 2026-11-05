@@ -130,7 +130,7 @@ const EVENTS = new Set([
   'feedback', 'feedback_shown', 'feedback_skip', 'first_input', 'guide_step', 'idle_hint', 'first_merge', 'first_summon', 'first_ultimate',
   'first_upgrade', 'first_win', 'hint_upgrade_button', 'hint_upgrade_done', 'hint_upgrade_tab', 'home_view', 'iap',
   'language', 'lineup', 'meta_buy', 'perf', 'privacy', 'result_action', 'result_shown', 'run_end', 'run_hidden',
-  'run_quit', 'run_start', 'session_end', 'session_start', 'skill_pick', 'stars', 'tutorial_assist', 'tutorial_end',
+  'run_quit', 'run_start', 'session_end', 'session_start', 'skill_pick', 'stars', 'rebrew', 'stuck_exit', 'talent', 'tutorial_assist', 'tutorial_end',
   'tutorial_step', 'viewport', 'wave_start',
 ]);
 const knownName = (n) => typeof n === 'string' && (EVENTS.has(n) || /^first_star\d$/.test(n));
